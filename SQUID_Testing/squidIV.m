@@ -11,9 +11,13 @@ dropbox = 'C:\Users\root\Dropbox\TeamData\';
 time = char(datetime('now','TimeZone','local','Format', 'yyyyMMdd_HHmmss'));
 
 paramsavepath = strcat(dropbox, 'Montana\squid_testing\'); % Where the parameters will be saved
-datapath = strcat(dropbox, 'Montana\squid_testing\'); % Where the data will be saved
 paramsavefile = strcat('squidIV_params_', time, '.csv'); % What the parameters will be called
+
+datapath = strcat(dropbox, 'Montana\squid_testing\'); % Where the data will be saved
 datafile = strcat('squidIV_data_', time, '.csv'); % What the data will be called
+
+plotpath = strcat(dropbox, 'Montana\squid_testing\');
+plotfile = strcat('squidIV_plot_IV_', time, '.pdf');
 
 %% Edit before running
 
@@ -48,6 +52,7 @@ copyfile(parampath, strcat(paramsavepath,paramsavefile)); %copies parameter file
 %% Plot
 plot_squidIV(IsquidR/p.squid.Rbias, Vsquid); 
 title({['Parameter file: ' paramsavefile];['Data file: ' datafile];['Rate: ' num2str(p.daq.rate) ' Hz']; ['Imod: ' num2str(p.squid.Imod) ' A']},'Interpreter','none');
+print('-dpdf', strcat(plotpath, plotfile));
 % plot_modIV(data)
 % plot_mod2D(data) % different plotting functions for different types of plots
 
