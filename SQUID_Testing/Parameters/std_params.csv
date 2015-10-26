@@ -1,5 +1,5 @@
 Name,Value,Units,Type
-rate,500,Hz,daq
+rate,90,Hz,daq
 range,10,V,daq
 gain,250,none,preamp
 rolloff_low,0,Hz,preamp
