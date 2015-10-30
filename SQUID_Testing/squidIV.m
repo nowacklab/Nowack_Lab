@@ -37,19 +37,32 @@ parampath = strcat('./Parameters/',paramfile);
 % Check parameters
 param_prompt = input(strcat('Parameter file is: ',paramfile,'\nContinue? y/n [y]: '),'s');
 if ~(isempty(param_prompt) || param_prompt=='y' || param_prompt=='Y')
-    return
+    error('Check those params');
 end
 
 % Double check no squid
 if no_squid
     squid_prompt = input('No SQUID present. Correct? y/n [y]: ','s');
     if ~(isempty(squid_prompt) || squid_prompt=='y' || squid_prompt=='Y')
-        return
+        error('Edit the no_squid=true line!');
     end
 end
 
 % Ask for notes
 notes = input('Notes about this run: ','s');
+
+%% Some initial checks
+
+% Check for potential SQUIDicide
+if ~no_squid
+    check_currents(max(abs(p.squid.Irampmax), abs(p.squid.Irampmin)), abs(p.squid.Imod));
+end
+
+% Check to make sure preamp doesn't filter out your signal
+if p.preamp.rolloff_high < p.daq.rate
+    error('You''re filtering out your signal -____-');
+end
+
 
 %% Send and collect data
 nidaq = NI_DAQ(p.daq); % Initializes DAQ parameters
@@ -59,10 +72,7 @@ nidaq.set_io('squid'); % For setting input/output channels for measurements done
 IsquidR = IVramp(p);
 Vmod = p.squid.Imod * p.squid.Rmod * ones(1,length(IsquidR)); % constant mod current
 
-% Check for potential SQUIDicide
-if ~no_squid
-    check_currents(max(abs(p.squid.Irampmax), abs(p.squid.Irampmin)), abs(p.squid.Imod));
-end
+
     
 % prep and send output to the daq
 output = [IsquidR; Vmod]; % puts Vsquid into first row and Vmod into second row
