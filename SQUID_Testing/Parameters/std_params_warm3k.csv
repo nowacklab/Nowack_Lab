@@ -4,9 +4,9 @@ range,10,V,daq
 gain,500,none,preamp
 rolloff_low,0,Hz,preamp
 rolloff_high,100,Hz,preamp
-Rbias,2.50E+03,Ohm,squid
-Irampmin,-50.00E-06,A,squid
+Rbias,5.50E+03,Ohm,squid
+Irampmin,-100.00E-06,A,squid
 Irampstep,5.00E-08,A,squid
-Irampmax,50.00E-06,A,squid
-Imod,0.0E-06,A,squid
+Irampmax,100.00E-06,A,squid
+Imod,0,A,squid
 Rmod,2.50E+03,Ohm,squid

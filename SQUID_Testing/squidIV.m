@@ -23,10 +23,10 @@ plotfile2 = strcat('squidIV_plot_IV_', time, '.png');
 %% Edit before running
 
 % If testing without a squid, for wiring, etc
-no_squid = true;
+no_squid = false;
 
 % Choose parameter file
-paramfile = 'hunting_resistance.csv';
+paramfile = 'std_params.csv';
 parampath = strcat('./Parameters/',paramfile);
 [p, ptable] = param_parse(parampath); % use ptable to see parameters in table form
 
@@ -41,9 +41,11 @@ if ~(isempty(param_prompt) || param_prompt=='y' || param_prompt=='Y')
 end
 
 % Double check no squid
-squid_prompt = input('No SQUID present. Correct? y/n [y]: ','s');
-if ~(isempty(squid_prompt) || squid_prompt=='y' || squid_prompt=='Y')
-    return
+if no_squid
+    squid_prompt = input('No SQUID present. Correct? y/n [y]: ','s');
+    if ~(isempty(squid_prompt) || squid_prompt=='y' || squid_prompt=='Y')
+        return
+    end
 end
 
 % Ask for notes
@@ -88,7 +90,7 @@ end
 
 % Check currents function - prevents accidental SQUIDicide
 function check_currents(Isquid, Imod)
-    if Isquid >= 100e-6 || Imod >= 300e-6
+    if Isquid > 100e-6 || Imod > 300e-6
         error('Current too high! Don''t kill the squid!')
     end
 end
