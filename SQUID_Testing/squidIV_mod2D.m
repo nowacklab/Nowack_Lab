@@ -1,4 +1,4 @@
-function [ptable, Vsquid] = squidIV()
+function [ptable, Vsquid] = squidIV_mod2D()
 
 clear all % MATLAB is complaining but this function will only be run like a script
 close all
@@ -26,7 +26,7 @@ plotfile2 = strcat('squidIV_plot_IV_', time, '.png');
 no_squid = false;
 
 % Choose parameter file
-paramfile = 'std_params.csv';
+paramfile = 'mod2D_params.csv';
 parampath = strcat('./Parameters/',paramfile);
 [p, ptable] = param_parse(parampath); % use ptable to see parameters in table form
 
@@ -69,27 +69,46 @@ nidaq = NI_DAQ(p.daq); % Initializes DAQ parameters
 nidaq.set_io('squid'); % For setting input/output channels for measurements done on a SQUID
 
 % Set output data
-IsquidR = IVramp(p);
-Vmod = p.squid.Imod * p.squid.Rmod * ones(1,length(IsquidR)); % constant mod current
-
-
+IsquidR = IVramp(p.squid);
+Vmod = IVramp(p.mod);
     
+% Set up input variables
+Vsquid = zeros(length(Vmod), length(IsquidR));
+
+% Set up figures
+figure('units','normalized','position',[.1 .1 .5 .5]);
+
+IVplot = subplot(121);
+axis square
+
+twoDplot = subplot(122);
+axis square
+colormap(hot)
+
 % prep and send output to the daq
-output = [IsquidR; Vmod]; % puts Vsquid into first row and Vmod into second row
-[Vsquid, ~] = nidaq.run(output); % Sends a signal to the daq and gets data back
-Vsquid = Vsquid/p.preamp.gain; % corrects for gain of preamp
+for i = 1:length(Vmod) % cycles over all mod currents
+    Vmodstep = Vmod(i); 
+    output = [IsquidR; Vmodstep]; % puts Vsquid into first row and Vmod into second row
+    [Vsquidstep, ~] = nidaq.run(output); % Sends a signal to the daq and gets data back
+    Vsquid(i,:) = Vsquidstep/p.preamp.gain; % corrects for gain of preamp and saves data into master array
+    
+    % Make plots
+    plot_squidIV(IVplot, IsquidR/p.squid.Rbias, Vsquidstep);
+    plot_mod2D(twoDplot, IsquidR/p.squid.Rbias, Vsquid, Vmodstep/p.mod.Rbias);
+    
+end
 
 %% Save data, parameters, and notes
-data_dump(datafile, datapath,[IsquidR' Vsquid'],['IsquidR (V)', 'Vsquid (A)']); % 10 is for testing multiple columns
+data_dump(datafile, datapath,[IsquidR' Vmod' Vsquid'],['IsquidR (V)', 'Vmod (V)', 'Vsquid (A)']); % 10 is for testing multiple columns
 copyfile(parampath, strcat(paramsavepath,paramsavefile)); %copies parameter file to permanent location 
 fid = fopen(strcat(paramsavepath,paramsavefile), 'a+');
 fprintf(fid, '%s', notes);
 fclose(fid);
 
-%% Plot
-figure;
-plot_squidIV(gca, IsquidR/p.squid.Rbias, Vsquid); 
-title({['Parameter file: ' paramsavefile];['Data file: ' datafile];['Rate: ' num2str(p.daq.rate) ' Hz']; ['Imod: ' num2str(p.squid.Imod) ' A']},'Interpreter','none');
+%% Finalize plots
+close all
+plot_mod2D(twoDplot, IsquidR/p.squid.Rbias, Vsquid, Vmodstep/p.mod.Rbias); %No subplot this time
+title({['Parameter file: ' paramsavefile];['Data file: ' datafile];['Rate: ' num2str(p.daq.rate) ' Hz']},'Interpreter','none');
 print('-dpdf', strcat(plotpath, plotfile));
 print('-dpng', strcat(plotpath, plotfile2));
 % plot_modIV(data)
@@ -106,7 +125,7 @@ function check_currents(Isquid, Imod)
     end
 end
 
-function ramped = IVramp(p)         
-    half = p.squid.Irampmin:p.squid.Irampstep:p.squid.Irampmax;
-    ramped = [half flip(half)] * p.squid.Rbias; % ramp up then down
+function ramped = IVramp(param)         
+    half = param.Irampmin:param.Irampstep:param.Irampmax;
+    ramped = [half flip(half)] * param.Rbias; % ramp up then down
 end
