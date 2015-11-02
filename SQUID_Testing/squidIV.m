@@ -55,7 +55,7 @@ notes = input('Notes about this run: ','s');
 
 % Check for potential SQUIDicide
 if ~no_squid
-    check_currents(max(abs(p.squid.Irampmax), abs(p.squid.Irampmin)), abs(p.squid.Imod));
+    check_currents(max(abs(p.squid.Irampmax), abs(p.squid.Irampmin)), abs(p.mod.Imod));
 end
 
 % Check to make sure preamp doesn't filter out your signal
@@ -69,11 +69,9 @@ nidaq = NI_DAQ(p.daq); % Initializes DAQ parameters
 nidaq.set_io('squid'); % For setting input/output channels for measurements done on a SQUID
 
 % Set output data
-IsquidR = IVramp(p);
-Vmod = p.squid.Imod * p.squid.Rmod * ones(1,length(IsquidR)); % constant mod current
+IsquidR = IVramp(p.squid);
+Vmod = p.mod.Imod * p.mod.Rbias * ones(1,length(IsquidR)); % constant mod current
 
-
-    
 % prep and send output to the daq
 output = [IsquidR; Vmod]; % puts Vsquid into first row and Vmod into second row
 [Vsquid, ~] = nidaq.run(output); % Sends a signal to the daq and gets data back
@@ -88,7 +86,7 @@ fclose(fid);
 
 %% Plot
 plot_squidIV(IsquidR/p.squid.Rbias, Vsquid); 
-title({['Parameter file: ' paramsavefile];['Data file: ' datafile];['Rate: ' num2str(p.daq.rate) ' Hz']; ['Imod: ' num2str(p.squid.Imod) ' A']},'Interpreter','none');
+title({['Parameter file: ' paramsavefile];['Data file: ' datafile];['Rate: ' num2str(p.daq.rate) ' Hz']; ['Imod: ' num2str(p.mod.Imod) ' A']},'Interpreter','none');
 print('-dpdf', strcat(plotpath, plotfile));
 print('-dpng', strcat(plotpath, plotfile2));
 % plot_modIV(data)
@@ -105,7 +103,7 @@ function check_currents(Isquid, Imod)
     end
 end
 
-function ramped = IVramp(p)         
-    half = p.squid.Irampmin:p.squid.Irampstep:p.squid.Irampmax;
-    ramped = [half flip(half)] * p.squid.Rbias; % ramp up then down
+function ramped = IVramp(param)         
+    half = param.Irampmin:param.Irampstep:param.Irampmax;
+    ramped = [half flip(half)] * param.Rbias; % ramp up then down
 end

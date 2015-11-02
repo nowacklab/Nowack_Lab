@@ -8,5 +8,5 @@ Rbias,2.50E+03,Ohm,squid
 Irampmin,-3.00E-04,A,squid
 Irampstep,5.00E-07,A,squid
 Irampmax,3.00E-04,A,squid
-Imod,0,A,squid
-Rmod,2.50E+03,Ohm,squid
+Imod,0,A,mod
+Rbias,2.50E+03,Ohm,mod

@@ -1,0 +1,14 @@
+Name,Value,Units,Type
+rate,90,Hz,daq
+range,1,V,daq
+gain,500,none,preamp
+rolloff_low,0,Hz,preamp
+rolloff_high,100,Hz,preamp
+Rbias,2.50E+03,Ohm,squid
+Irampmin,-25.00E-06,A,squid
+Irampstep,0.01E-06,A,squid
+Irampmax,25.00E-06,A,squid
+Rbias,2.50E+03,Ohm,mod
+Irampmin,-100.00E-06,A,mod
+Irampstep,0.5E-06,A,mod
+Irampmax,100.00E-06,A,mod
