@@ -38,11 +38,11 @@ down_out = output(split_index+1:end);
 up_data = data(:,1:split_index); % splits up and down ramps
 down_data = data(:,split_index+1:end);
 
-imagesc(1e6*up_out,1e6*Imod,up_data,'Parent',IVplot); % plots I_squid (uA) on x-axis, I_mod (uA) on y-axis, and V_squid as color
+imagesc(1e6*up_out,1e6*Imod,up_data,'Parent',axes); % plots I_squid (uA) on x-axis, I_mod (uA) on y-axis, and V_squid as color
 
 xlabel(axes,'I_{squid} = V_{squid}/R_{bias} (\mu A)','fontsize',20);
 ylabel(axes,'I_{mod} = V_{mod}/R_{bias} (\mu A)','fontsize',20);
-c = colorbar;
+c = colorbar(axes);
 ylabel(c,'V_{squid} (V)','fontsize',20);
 end
 

@@ -1,0 +1,12 @@
+function ramped = IVramp(param, down)
+    if nargin < 2
+        down = true
+    end
+
+    half = param.Irampmin:param.Irampstep:param.Irampmax * param.Rbias;
+    if down
+        ramped = [half flip(half)]; % ramp up then down
+    end
+    else
+
+end

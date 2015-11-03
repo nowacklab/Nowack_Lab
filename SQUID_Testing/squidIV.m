@@ -3,6 +3,19 @@ function [ptable, Vsquid] = squidIV()
 clear all % MATLAB is complaining but this function will only be run like a script
 close all
 
+%% Edit before running
+
+% If testing without a squid, for wiring, etc
+no_squid = false;
+
+% Choose parameter file
+paramfile = 'std_params.csv';
+parampath = strcat('./Parameters/',paramfile);
+[p, ptable] = param_parse(parampath); % use ptable to see parameters in table form
+
+% Git dump? Uncomment if you want a cluttered git.
+% git_dump();
+
 %% Add paths and define file locations
 addpath('C:\Users\root\Nowack_Lab\Equipment_Drivers');
 addpath('C:\Users\root\Nowack_Lab\Utilities');
@@ -20,33 +33,12 @@ plotpath = strcat(dropbox, 'Montana\squid_testing\');
 plotfile = strcat('squidIV_plot_IV_', time, '.pdf');
 plotfile2 = strcat('squidIV_plot_IV_', time, '.png');
 
-%% Edit before running
-
-% If testing without a squid, for wiring, etc
-no_squid = false;
-
-% Choose parameter file
-paramfile = 'std_params.csv';
-parampath = strcat('./Parameters/',paramfile);
-[p, ptable] = param_parse(parampath); % use ptable to see parameters in table form
-
-% Git dump? Uncomment if you want a cluttered git.
-% git_dump();
-
 %% Ask the user for information
 % Check parameters
-param_prompt = input(strcat('Parameter file is: ',paramfile,'\nContinue? y/n [y]: '),'s');
-if ~(isempty(param_prompt) || param_prompt=='y' || param_prompt=='Y')
-    error('Check those params');
-end
+param_prompt(paramfile);
 
 % Double check no squid
-if no_squid
-    squid_prompt = input('No SQUID present. Correct? y/n [y]: ','s');
-    if ~(isempty(squid_prompt) || squid_prompt=='y' || squid_prompt=='Y')
-        error('Edit the no_squid=true line!');
-    end
-end
+squid_prompt(no_squid);
 
 % Ask for notes
 notes = input('Notes about this run: ','s');
@@ -87,25 +79,9 @@ fclose(fid);
 %% Plot
 figure;
 plot_squidIV(gca, IsquidR/p.squid.Rbias, Vsquid); 
-title({['Parameter file: ' paramsavefile];['Data file: ' datafile];['Rate: ' num2str(p.daq.rate) ' Hz']; ['Imod: ' num2str(p.squid.Imod) ' A']},'Interpreter','none');
+title({['Parameter file: ' paramsavefile];['Data file: ' datafile];['Rate: ' num2str(p.daq.rate) ' Hz']; ['Imod: ' num2str(p.mod.Imod) ' A']},'Interpreter','none');
 
 print('-dpdf', strcat(plotpath, plotfile));
 print('-dpng', strcat(plotpath, plotfile2));
-% plot_modIV(data)
-% plot_mod2D(data) % different plotting functions for different types of plots
 
-end
-
-%% Sub-functions used in this function/script
-
-% Check currents function - prevents accidental SQUIDicide
-function check_currents(Isquid, Imod)
-    if Isquid > 100e-6 || Imod > 300e-6
-        error('Current too high! Don''t kill the squid!')
-    end
-end
-
-function ramped = IVramp(param)         
-    half = param.Irampmin:param.Irampstep:param.Irampmax;
-    ramped = [half flip(half)] * param.Rbias; % ramp up then down
 end

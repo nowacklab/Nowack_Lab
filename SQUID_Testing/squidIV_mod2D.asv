@@ -3,6 +3,23 @@ function [ptable, Vsquid] = squidIV_mod2D()
 clear all % MATLAB is complaining but this function will only be run like a script
 close all
 
+%% Add paths and define file locations
+addpath('C:\Users\root\Nowack_Lab\Equipment_Drivers');
+addpath('C:\Users\root\Nowack_Lab\Utilities');
+
+dropbox = 'C:\Users\root\Dropbox\TeamData\';
+time = char(datetime('now','TimeZone','local','Format', 'yyyyMMdd_HHmmss'));
+
+paramsavepath = strcat(dropbox, 'Montana\squid_testing\'); % Where the parameters will be saved
+paramsavefile = strcat('squidIV_params_', time, '.csv'); % What the parameters will be called
+
+datapath = strcat(dropbox, 'Montana\squid_testing\'); % Where the data will be saved
+datafile = strcat('squidIV_data_', time, '.csv'); % What the data will be called
+
+plotpath = strcat(dropbox, 'Montana\squid_testing\');
+plotfile = strcat('squidIV_plot_IV_', time, '.pdf');
+plotfile2 = strcat('squidIV_plot_IV_', time, '.png');
+
 %% Edit before running
 
 % If testing without a squid, for wiring, etc
@@ -16,29 +33,20 @@ parampath = strcat('./Parameters/',paramfile);
 % Git dump? Uncomment if you want a cluttered git.
 % git_dump();
 
-%% Add paths and define file locations
-addpath('C:\Users\root\Nowack_Lab\Equipment_Drivers');
-addpath('C:\Users\root\Nowack_Lab\Utilities');
-
-dropbox = 'C:\Users\root\Dropbox\TeamData\';
-time = char(datetime('now','TimeZone','local','Format', 'yyyyMMdd_HHmmss'));
-
-paramsavepath = strcat(dropbox, 'Montana\squid_testing\'); % Where the parameters will be saved
-paramsavefile = strcat('mod2D_params_', time, '.csv'); % What the parameters will be called
-
-datapath = strcat(dropbox, 'Montana\squid_testing\'); % Where the data will be saved
-datafile = strcat('mod2D_data_', time, '.csv'); % What the data will be called
-
-plotpath = strcat(dropbox, 'Montana\squid_testing\');
-plotfile = strcat('mod2D_plot_2D_', time, '.pdf');
-plotfile2 = strcat('mod2D_plot_2D_', time, '.png');
-
 %% Ask the user for information
 % Check parameters
-param_prompt(paramfile);
+param_prompt = input(strcat('Parameter file is: ',paramfile,'\nContinue? y/n [y]: '),'s');
+if ~(isempty(param_prompt) || param_prompt=='y' || param_prompt=='Y')
+    error('Check those params');
+end
 
 % Double check no squid
-squid_prompt(no_squid);
+if no_squid
+    squid_prompt = input('No SQUID present. Correct? y/n [y]: ','s');
+    if ~(isempty(squid_prompt) || squid_prompt=='y' || squid_prompt=='Y')
+        error('Edit the no_squid=true line!');
+    end
+end
 
 % Ask for notes
 notes = input('Notes about this run: ','s');
@@ -56,14 +64,14 @@ if p.preamp.rolloff_high < p.daq.rate
 end
 
 
-%% Setup
+%% Send and collect data
 nidaq = NI_DAQ(p.daq); % Initializes DAQ parameters
 nidaq.set_io('squid'); % For setting input/output channels for measurements done on a SQUID
 
 % Set output data
 IsquidR = IVramp(p.squid);
-Vmod = IVramp(p.mod, false); % false: do not ramp down
-     
+Vmod = IVramp(p.mod);
+    
 % Set up input variables
 Vsquid = zeros(length(Vmod), length(IsquidR));
 
@@ -75,20 +83,9 @@ axis square
 
 twoDplot = subplot(122);
 axis square
-colormap(coolwarm)
+colormap(hot)
 
-%% Set up stop button
-uicontrol(gcf,'style','pushbutton',...
-                                 'string','End',...
-                                 'callback',@Button_Callback...
-                                );
-global STOP
-STOP = false;
-function Button_Callback(~,~,~)
-    STOP=true;
-end
-                            
-%% prep and send output to the daq
+% prep and send output to the daq
 for i = 1:length(Vmod) % cycles over all mod currents
     Vmodstep = Vmod(i); 
     output = [IsquidR; Vmodstep * ones(1,length(IsquidR))]; % puts Vsquid into first row and array of Vmods into second row
@@ -96,20 +93,14 @@ for i = 1:length(Vmod) % cycles over all mod currents
     Vsquid(i,:) = Vsquidstep/p.preamp.gain; % corrects for gain of preamp and saves data into master array
     
     % Make plots
-    hold(IVplot,'off')
     plot_squidIV(IVplot, IsquidR/p.squid.Rbias, Vsquidstep);
-    title(IVplot,'last IV trace');
+    title(IV
     plot_mod2D(twoDplot, IsquidR/p.squid.Rbias, Vsquid, Vmodstep/p.mod.Rbias);
-    if STOP
-        break
-    end
+    
 end
 
 %% Save data, parameters, and notes
-% CAN BE LARGE DATA FILE: ~70 MB with some "reasonable" parameters. Takes a long time to save.
-data_dump(datafile, datapath,Vsquid,'Vsquid (A): rows are for each Imod, columns are for each IsquidR');
-
-% parameter file
+data_dump(datafile, datapath,[IsquidR' Vmod' Vsquid'],['IsquidR (V)', 'Vmod (V)', 'Vsquid (A)']); % 10 is for testing multiple columns
 copyfile(parampath, strcat(paramsavepath,paramsavefile)); %copies parameter file to permanent location 
 fid = fopen(strcat(paramsavepath,paramsavefile), 'a+');
 fprintf(fid, '%s', notes);
@@ -117,12 +108,25 @@ fclose(fid);
 
 %% Finalize plots
 close all
-figure;
-axis square
-colormap(coolwarm)
-
-plot_mod2D(gca, IsquidR/p.squid.Rbias, Vsquid, Vmodstep/p.mod.Rbias); %No subplot this time
+plot_mod2D(twoDplot, IsquidR/p.squid.Rbias, Vsquid, Vmodstep/p.mod.Rbias); %No subplot this time
 title({['Parameter file: ' paramsavefile];['Data file: ' datafile];['Rate: ' num2str(p.daq.rate) ' Hz']},'Interpreter','none');
 print('-dpdf', strcat(plotpath, plotfile));
 print('-dpng', strcat(plotpath, plotfile2));
+% plot_modIV(data)
+% plot_mod2D(data) % different plotting functions for different types of plots
+
+end
+
+%% Sub-functions used in this function/script
+
+% Check currents function - prevents accidental SQUIDicide
+function check_currents(Isquid, Imod)
+    if Isquid > 100e-6 || Imod > 300e-6
+        error('Current too high! Don''t kill the squid!')
+    end
+end
+
+function ramped = IVramp(param)         
+    half = param.Irampmin:param.Irampstep:param.Irampmax;
+    ramped = [half flip(half)] * param.Rbias; % ramp up then down
 end
