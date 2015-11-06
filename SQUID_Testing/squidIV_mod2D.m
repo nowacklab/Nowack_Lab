@@ -8,18 +8,20 @@ close all
 % If testing without a squid, for wiring, etc
 no_squid = false;
 
+%% Add paths
+addpath('C:\Users\root\Nowack_Lab\Equipment_Drivers');
+addpath('C:\Users\root\Nowack_Lab\Utilities');
+
 % Choose parameter file
-paramfile = 'mod2D_params.csv';
+paramfile = 'mod2D_params_warm3k_davidplay.csv';
 parampath = strcat('./Parameters/',paramfile);
 [p, ptable] = param_parse(parampath); % use ptable to see parameters in table form
 
 % Git dump? Uncomment if you want a cluttered git.
 % git_dump();
 
-%% Add paths and define file locations
-addpath('C:\Users\root\Nowack_Lab\Equipment_Drivers');
-addpath('C:\Users\root\Nowack_Lab\Utilities');
 
+%%  Define file locations
 dropbox = 'C:\Users\root\Dropbox\TeamData\';
 time = char(datetime('now','TimeZone','local','Format', 'yyyyMMdd_HHmmss'));
 
@@ -75,7 +77,10 @@ axis square
 
 twoDplot = subplot(122);
 axis square
+hold(twoDplot, 'on')
 colormap(coolwarm)
+ylim(twoDplot, 1e6*[Vmod(1)/p.mod.Rbias,Vmod(end)/p.mod.Rbias]) %converts to uA
+xlim(twoDplot, 1e6*[p.squid.Irampmin, p.squid.Irampmax]) %converts to uA
 
 %% Set up stop button
 uicontrol(gcf,'style','pushbutton',...
@@ -99,10 +104,12 @@ for i = 1:length(Vmod) % cycles over all mod currents
     hold(IVplot,'off')
     plot_squidIV(IVplot, IsquidR/p.squid.Rbias, Vsquidstep);
     title(IVplot,'last IV trace');
-    plot_mod2D(twoDplot, IsquidR/p.squid.Rbias, Vsquid, Vmodstep/p.mod.Rbias);
+    
+    plot_mod2D(twoDplot, IsquidR/p.squid.Rbias, Vsquid, Vmod/p.mod.Rbias);
     if STOP
         break
     end
+    
 end
 
 %% Save data, parameters, and notes
@@ -121,8 +128,10 @@ figure;
 axis square
 colormap(coolwarm)
 
-plot_mod2D(gca, IsquidR/p.squid.Rbias, Vsquid, Vmodstep/p.mod.Rbias); %No subplot this time
+plot_mod2D(gca, IsquidR/p.squid.Rbias, Vsquid, Vmod/p.mod.Rbias); %No subplot this time
 title({['Parameter file: ' paramsavefile];['Data file: ' datafile];['Rate: ' num2str(p.daq.rate) ' Hz']},'Interpreter','none');
+set(gca,'YDir','normal')
+
 print('-dpdf', strcat(plotpath, plotfile));
 print('-dpng', strcat(plotpath, plotfile2));
 end

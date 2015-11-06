@@ -8,18 +8,19 @@ close all
 % If testing without a squid, for wiring, etc
 no_squid = false;
 
-% Choose parameter file
-paramfile = 'std_params.csv';
+%% Add paths 
+addpath('C:\Users\root\Nowack_Lab\Equipment_Drivers');
+addpath('C:\Users\root\Nowack_Lab\Utilities');
+
+%% Choose parameter file
+paramfile = 'std_params_warm3k_davidplay.csv';
 parampath = strcat('./Parameters/',paramfile);
 [p, ptable] = param_parse(parampath); % use ptable to see parameters in table form
 
 % Git dump? Uncomment if you want a cluttered git.
 % git_dump();
 
-%% Add paths and define file locations
-addpath('C:\Users\root\Nowack_Lab\Equipment_Drivers');
-addpath('C:\Users\root\Nowack_Lab\Utilities');
-
+%% D efine file locations
 dropbox = 'C:\Users\root\Dropbox\TeamData\';
 time = char(datetime('now','TimeZone','local','Format', 'yyyyMMdd_HHmmss'));
 
