@@ -3,14 +3,13 @@ function [ptable, Vsquid] = squidIV_mod2D()
 clear all % MATLAB is complaining but this function will only be run like a script
 close all
 
-%% Edit before running
-
-% If testing without a squid, for wiring, etc
-no_squid = false;
-
 %% Add paths
 addpath('C:\Users\root\Nowack_Lab\Equipment_Drivers');
 addpath('C:\Users\root\Nowack_Lab\Utilities');
+
+%% Edit before running
+% If testing without a squid, for wiring, etc
+no_squid = false;
 
 % Choose parameter file
 paramfile = 'mod2D_params_warm3k_davidplay.csv';

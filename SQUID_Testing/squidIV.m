@@ -2,17 +2,16 @@ function [ptable, Vsquid] = squidIV()
 
 clear all % MATLAB is complaining but this function will only be run like a script
 close all
+%% Add paths 
+addpath('C:\Users\root\Nowack_Lab\Equipment_Drivers');
+addpath('C:\Users\root\Nowack_Lab\Utilities');
 
 %% Edit before running
 
 % If testing without a squid, for wiring, etc
 no_squid = false;
 
-%% Add paths 
-addpath('C:\Users\root\Nowack_Lab\Equipment_Drivers');
-addpath('C:\Users\root\Nowack_Lab\Utilities');
-
-%% Choose parameter file
+% Choose parameter file
 paramfile = 'std_params_warm3k_davidplay.csv';
 parampath = strcat('./Parameters/',paramfile);
 [p, ptable] = param_parse(parampath); % use ptable to see parameters in table form
@@ -20,7 +19,7 @@ parampath = strcat('./Parameters/',paramfile);
 % Git dump? Uncomment if you want a cluttered git.
 % git_dump();
 
-%% D efine file locations
+%% Define file locations
 dropbox = 'C:\Users\root\Dropbox\TeamData\';
 time = char(datetime('now','TimeZone','local','Format', 'yyyyMMdd_HHmmss'));
 
