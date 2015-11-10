@@ -4,12 +4,12 @@ function [up_data, down_data] = plot_squidIV(varargin) % pass (axis handle, outp
 
 if nargin == 1
     % On Squidward
-%     dropbox = 'C:\Users\root\Dropbox\TeamData\';
-%     path = strcat(dropbox, 'Montana\squid_testing\', varargin{1});
+    dropbox = 'C:\Users\root\Dropbox\TeamData\';
+    path = strcat(dropbox, 'Montana\squid_testing\', varargin{1});
 
     % For testing on Mac
-    dropbox = '~/Dropbox (Nowack lab)/TeamData/';
-    path = strcat(dropbox, 'Montana/squid_testing/', varargin{1});
+%     dropbox = '~/Dropbox (Nowack lab)/TeamData/';
+%     path = strcat(dropbox, 'Montana/squid_testing/', varargin{1});
 
     matrix = csvread(path,1,0); % 1,0 gets rid of title row
     output = matrix(:,1);

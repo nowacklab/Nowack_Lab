@@ -77,7 +77,6 @@ axis square
 twoDplot = subplot(122);
 axis square
 hold(twoDplot, 'on')
-colormap(coolwarm)
 ylim(twoDplot, 1e6*[Vmod(1)/p.mod.Rbias,Vmod(end)/p.mod.Rbias]) %converts to uA
 xlim(twoDplot, 1e6*[p.squid.Irampmin, p.squid.Irampmax]) %converts to uA
 
