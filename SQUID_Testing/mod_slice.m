@@ -1,7 +1,8 @@
-function [ptable, Vsquid] = squidIV()
+function [ptable, Vsquid] = mod_slice()
 
 clear all % MATLAB is complaining but this function will only be run like a script
 close all
+
 %% Add paths 
 addpath('C:\Users\root\Nowack_Lab\Equipment_Drivers');
 addpath('C:\Users\root\Nowack_Lab\Utilities');
@@ -24,14 +25,14 @@ dropbox = 'C:\Users\root\Dropbox\TeamData\';
 time = char(datetime('now','TimeZone','local','Format', 'yyyyMMdd_HHmmss'));
 
 paramsavepath = strcat(dropbox, 'Montana\squid_testing\'); % Where the parameters will be saved
-paramsavefile = strcat('squidIV_params_', time, '.csv'); % What the parameters will be called
+paramsavefile = strcat('mod_slice_params_', time, '.csv'); % What the parameters will be called
 
 datapath = strcat(dropbox, 'Montana\squid_testing\'); % Where the data will be saved
-datafile = strcat('squidIV_data_', time, '.csv'); % What the data will be called
+datafile = strcat('mod_slice_data_', time, '.csv'); % What the data will be called
 
 plotpath = strcat(dropbox, 'Montana\squid_testing\');
-plotfile = strcat('squidIV_plot_IV_', time, '.pdf');
-plotfile2 = strcat('squidIV_plot_IV_', time, '.png');
+plotfile = strcat('mod_slice_plot_', time, '.pdf');
+plotfile2 = strcat('mod_slice_plot_', time, '.png');
 
 %% Ask the user for information
 % Check parameters
@@ -47,7 +48,7 @@ notes = input('Notes about this run: ','s');
 
 % Check for potential SQUIDicide
 if ~no_squid
-    check_currents(max(abs(p.squid.Irampmax), abs(p.squid.Irampmin)), abs(p.mod.I));
+    check_currents(abs(p.squid.I), max(abs(p.mod.Irampmin), abs(p.mod.Irampmax)));
 end
 
 % Check to make sure preamp doesn't filter out your signal
@@ -60,9 +61,9 @@ end
 nidaq = NI_DAQ(p.daq); % Initializes DAQ parameters
 nidaq.set_io('squid'); % For setting input/output channels for measurements done on a SQUID
 
-% Set output data
-IsquidR = IVramp(p.squid);
-Vmod = p.mod.I * p.mod.Rbias * ones(1,length(IsquidR)); % constant mod current
+% Set output data 
+Vmod = IVramp(p.mod, false); % false: do not ramp down
+IsquidR = p.squid.I * p.squid.Rbias * ones(1,length(Vmod)); % constant squid current
 
 % prep and send output to the daq
 output = [IsquidR; Vmod]; % puts Vsquid into first row and Vmod into second row
@@ -70,7 +71,7 @@ output = [IsquidR; Vmod]; % puts Vsquid into first row and Vmod into second row
 Vsquid = Vsquid/p.preamp.gain; % corrects for gain of preamp
 
 %% Save data, parameters, and notes
-data_dump(datafile, datapath,[IsquidR' Vsquid'],['IsquidR (V)', 'Vsquid (V)']); % 10 is for testing multiple columns
+data_dump(datafile, datapath,[Vmod' Vsquid'],['Vmod (V)', 'Vsquid (V)']);
 copyfile(parampath, strcat(paramsavepath,paramsavefile)); %copies parameter file to permanent location 
 fid = fopen(strcat(paramsavepath,paramsavefile), 'a+');
 fprintf(fid, '%s', notes);
@@ -78,8 +79,8 @@ fclose(fid);
 
 %% Plot
 figure;
-plot_squidIV(gca, IsquidR/p.squid.Rbias, Vsquid); 
-title({['Parameter file: ' paramsavefile];['Data file: ' datafile];['Rate: ' num2str(p.daq.rate) ' Hz']; ['Imod: ' num2str(p.mod.I) ' A']},'Interpreter','none');
+plot_mod_slice(gca, Vmod/p.mod.Rbias, Vsquid); 
+title({['Parameter file: ' paramsavefile];['Data file: ' datafile];['Rate: ' num2str(p.daq.rate) ' Hz']; ['Isquid: ' num2str(p.squid.I) ' A']},'Interpreter','none');
 
 print('-dpdf', strcat(plotpath, plotfile));
 print('-dpng', strcat(plotpath, plotfile2));

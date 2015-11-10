@@ -112,7 +112,7 @@ end
 
 %% Save data, parameters, and notes
 % CAN BE LARGE DATA FILE: ~70 MB with some "reasonable" parameters. Takes a long time to save.
-data_dump(datafile, datapath,Vsquid,'Vsquid (A): rows are for each Imod, columns are for each IsquidR');
+data_dump(datafile, datapath,Vsquid,'Vsquid (V): rows are for each Imod, columns are for each IsquidR');
 
 % parameter file
 copyfile(parampath, strcat(paramsavepath,paramsavefile)); %copies parameter file to permanent location 
