@@ -45,6 +45,9 @@ squid_prompt(no_squid);
 
 % Ask for notes
 notes = input('Notes about this run: ','s');
+fid = fopen('tempnotes.csv', 'w');
+fprintf(fid, '%s', strcat(notes, '\n'));
+fclose(fid);
 
 %% Some initial checks
 
@@ -67,7 +70,7 @@ nidaq.set_io('squid'); % For setting input/output channels for measurements done
 IsquidR = IVramp(p.squid);
 Vmod = IVramp(p.mod, false); % false: do not ramp down
 %Save output before running
-data_dump(datafile, datapath,[IsquidR Vmod],{'First two rows are: ', 'IsquidR (V)', 'Vmod (V)'}); % pass cell array to prevent concatentation
+data_dump(datafile, datapath,[IsquidR; Vmod],{'First two rows are: ', 'IsquidR (V)', 'Vmod (V)'}); % pass cell array to prevent concatentation
      
 % Set up input variables
 Vsquid = zeros(length(Vmod), length(IsquidR));
@@ -119,11 +122,14 @@ end
 % CAN BE LARGE DATA FILE: ~70 MB with some "reasonable" parameters. Takes a long time to save.
 data_dump(datafile, datapath,Vsquid,'Vsquid (V): rows are for each Imod, columns are for each IsquidR');
 
-% parameter file
-copyfile(parampath, strcat(paramsavepath,paramsavefile)); %copies parameter file to permanent location 
-fid = fopen(strcat(paramsavepath,paramsavefile), 'a+');
-fprintf(fid, '%s', strcat('notes',notes,'none','notes'));
-fclose(fid);
+%% Save data, parameters, and notes
+data_dump(datafile, datapath,[IsquidR' Vsquid'],{'IsquidR (V)', 'Vsquid (V)'}); % pass cell array to prevent concatentation
+% copyfile(parampath, strcat(paramsavepath,paramsavefile)); %copies parameter file to permanent location % changed to following line
+system(strcat('copy tempnotes.csv+',parampath,' ',strcat(paramsavepath,paramsavefile))) %prepends notes and saves parameter file in permanent location
+% fid = fopen(strcat(paramsavepath,paramsavefile), 'a+'); %moved up above
+% fprintf(fid, '%s', strcat('notes',notes,'none','notes'));
+% fclose(fid);
+delete('tempnotes.csv');
 
 %% Finalize plots
 close all

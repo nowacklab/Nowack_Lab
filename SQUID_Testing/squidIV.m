@@ -42,6 +42,9 @@ squid_prompt(no_squid);
 
 % Ask for notes
 notes = input('Notes about this run: ','s');
+fid = fopen('tempnotes.csv', 'w');
+fprintf(fid, '%s', strcat(notes, '\n'));
+fclose(fid);
 
 %% Some initial checks
 
@@ -71,10 +74,12 @@ Vsquid = Vsquid/p.preamp.gain; % corrects for gain of preamp
 
 %% Save data, parameters, and notes
 data_dump(datafile, datapath,[IsquidR' Vsquid'],{'IsquidR (V)', 'Vsquid (V)'}); % pass cell array to prevent concatentation
-copyfile(parampath, strcat(paramsavepath,paramsavefile)); %copies parameter file to permanent location 
-fid = fopen(strcat(paramsavepath,paramsavefile), 'a+');
-fprintf(fid, '%s', strcat('notes',notes,'none','notes'));
-fclose(fid);
+% copyfile(parampath, strcat(paramsavepath,paramsavefile)); %copies parameter file to permanent location % changed to following line
+system(strcat('copy tempnotes.csv+',parampath,' ',strcat(paramsavepath,paramsavefile))) %prepends notes and saves parameter file in permanent location
+% fid = fopen(strcat(paramsavepath,paramsavefile), 'a+'); %moved up above
+% fprintf(fid, '%s', strcat('notes',notes,'none','notes'));
+% fclose(fid);
+delete('tempnotes.csv');
 
 %% Plot
 figure;
