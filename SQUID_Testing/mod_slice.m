@@ -71,15 +71,15 @@ output = [IsquidR; Vmod]; % puts Vsquid into first row and Vmod into second row
 Vsquid = Vsquid/p.preamp.gain; % corrects for gain of preamp
 
 %% Save data, parameters, and notes
-data_dump(datafile, datapath,[Vmod' Vsquid'],['Vmod (V)', 'Vsquid (V)']);
+data_dump(datafile, datapath,[Vmod' Vsquid'],{'Vmod (V)', 'Vsquid (V)'}); % pass cell array to prevent concatentation
 copyfile(parampath, strcat(paramsavepath,paramsavefile)); %copies parameter file to permanent location 
 fid = fopen(strcat(paramsavepath,paramsavefile), 'a+');
-fprintf(fid, '%s', notes);
+fprintf(fid, '%s', strcat('notes',notes,'none','notes'));
 fclose(fid);
 
 %% Plot
 figure;
-plot_mod_slice(gca, Vmod/p.mod.Rbias, Vsquid); 
+plot_mod_slice(gca, Vmod, Vsquid,p); 
 title({['Parameter file: ' paramsavefile];['Data file: ' datafile];['Rate: ' num2str(p.daq.rate) ' Hz']; ['Isquid: ' num2str(p.squid.I) ' A']},'Interpreter','none');
 
 print('-dpdf', strcat(plotpath, plotfile));

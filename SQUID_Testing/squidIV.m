@@ -70,15 +70,15 @@ output = [IsquidR; Vmod]; % puts Vsquid into first row and Vmod into second row
 Vsquid = Vsquid/p.preamp.gain; % corrects for gain of preamp
 
 %% Save data, parameters, and notes
-data_dump(datafile, datapath,[IsquidR' Vsquid'],['IsquidR (V)', 'Vsquid (V)']); % 10 is for testing multiple columns
+data_dump(datafile, datapath,[IsquidR' Vsquid'],{'IsquidR (V)', 'Vsquid (V)'}); % pass cell array to prevent concatentation
 copyfile(parampath, strcat(paramsavepath,paramsavefile)); %copies parameter file to permanent location 
 fid = fopen(strcat(paramsavepath,paramsavefile), 'a+');
-fprintf(fid, '%s', notes);
+fprintf(fid, '%s', strcat('notes',notes,'none','notes'));
 fclose(fid);
 
 %% Plot
 figure;
-plot_squidIV(gca, IsquidR/p.squid.Rbias, Vsquid); 
+plot_squidIV(gca, IsquidR, Vsquid, p); 
 title({['Parameter file: ' paramsavefile];['Data file: ' datafile];['Rate: ' num2str(p.daq.rate) ' Hz']; ['Imod: ' num2str(p.mod.I) ' A']},'Interpreter','none');
 
 print('-dpdf', strcat(plotpath, plotfile));

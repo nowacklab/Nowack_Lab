@@ -16,6 +16,7 @@ paramfile = 'mod2D_params_warm3k_davidplay.csv';
 parampath = strcat('./Parameters/',paramfile);
 [p, ptable] = param_parse(parampath); % use ptable to see parameters in table form
 
+
 % Git dump? Uncomment if you want a cluttered git.
 % git_dump();
 
@@ -33,6 +34,7 @@ datafile = strcat('mod2D_data_', time, '.csv'); % What the data will be called
 plotpath = strcat(dropbox, 'Montana\squid_testing\');
 plotfile = strcat('mod2D_plot_2D_', time, '.pdf');
 plotfile2 = strcat('mod2D_plot_2D_', time, '.png');
+
 
 %% Ask the user for information
 % Check parameters
@@ -64,6 +66,8 @@ nidaq.set_io('squid'); % For setting input/output channels for measurements done
 % Set output data
 IsquidR = IVramp(p.squid);
 Vmod = IVramp(p.mod, false); % false: do not ramp down
+%Save output before running
+data_dump(datafile, datapath,[IsquidR Vmod],{'First two rows are: ', 'IsquidR (V)', 'Vmod (V)'}); % pass cell array to prevent concatentation
      
 % Set up input variables
 Vsquid = zeros(length(Vmod), length(IsquidR));
@@ -108,6 +112,7 @@ for i = 1:length(Vmod) % cycles over all mod currents
         break
     end
     
+    
 end
 
 %% Save data, parameters, and notes
@@ -117,7 +122,7 @@ data_dump(datafile, datapath,Vsquid,'Vsquid (V): rows are for each Imod, columns
 % parameter file
 copyfile(parampath, strcat(paramsavepath,paramsavefile)); %copies parameter file to permanent location 
 fid = fopen(strcat(paramsavepath,paramsavefile), 'a+');
-fprintf(fid, '%s', notes);
+fprintf(fid, '%s', strcat('notes',notes,'none','notes'));
 fclose(fid);
 
 %% Finalize plots
