@@ -1,9 +1,6 @@
 function [up_data, down_data] = plot_squidIV_multiple(varargin) % pass (csvfilestring1, label1, ...) in pairs
 %plot_squidIV Summary of this function goes here
 %   Detailed explanation goes here
-
-    close all
-    clear all
     
     figure;
     axes = gca;
