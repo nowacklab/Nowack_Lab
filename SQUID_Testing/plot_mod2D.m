@@ -32,7 +32,7 @@ if (nargin == 1 || nargin == 2)
     output = IsquidR/p.squid.Rbias;
     
     % arg 3: data
-    data = csvread(path,1,0); % 1,0 gets rid of title row
+    data = csvread(path,5,0); % 5,0 gets rid of title rows and IsquidR and Imod rows
     % this matrix will be the 2D values of Vsquid, with rows for each Imod,
     % columns for each IsquidR
 
@@ -44,7 +44,8 @@ if (nargin == 1 || nargin == 2)
     fig = figure;
     axes = gca;
     colormap(coolwarm)
-    
+end
+
 if nargin == 2
     Imod_slice = varargin{2};
     diffs = abs(Imod-Imod_slice); % trying to find closest Imod

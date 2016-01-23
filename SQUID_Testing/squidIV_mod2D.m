@@ -4,16 +4,16 @@ clear all % MATLAB is complaining but this function will only be run like a scri
 close all
 
 %% Add paths
-addpath('C:\Users\root\Nowack_Lab\Equipment_Drivers');
-addpath('C:\Users\root\Nowack_Lab\Utilities');
+addpath('C:\Users\root\Documents\GitHub\Nowack_Lab\Equipment_Drivers');
+addpath('C:\Users\root\Documents\GitHub\Nowack_Lab\Utilities');
 
 %% Edit before running
 % If testing without a squid, for wiring, etc
 no_squid = false;
 
 % Choose parameter file
-paramfile = 'mod2D_params_warm3k_davidplay.csv';
-parampath = strcat('./Parameters/',paramfile);
+paramfile = 'mod2D_params.csv';
+parampath = strcat('.\Parameters\',paramfile);
 [p, ptable] = param_parse(parampath); % use ptable to see parameters in table form
 
 
@@ -45,8 +45,11 @@ squid_prompt(no_squid);
 
 % Ask for notes
 notes = input('Notes about this run: ','s');
+% if notes==''
+%     notes = 'no notes given -_____-';
+% end
 fid = fopen('tempnotes.csv', 'w');
-fprintf(fid, '%s', strcat(notes, '\n'));
+fprintf(fid, '%s', notes);
 fclose(fid);
 
 %% Some initial checks
@@ -70,8 +73,11 @@ nidaq.set_io('squid'); % For setting input/output channels for measurements done
 IsquidR = IVramp(p.squid);
 Vmod = IVramp(p.mod, false); % false: do not ramp down
 %Save output before running
-data_dump(datafile, datapath,[IsquidR; Vmod],{'First two rows are: ', 'IsquidR (V)', 'Vmod (V)'}); % pass cell array to prevent concatentation
-     
+% cannot cat two arrays of different length.  length(IsquidR) !=
+% length(Vmod)
+data_dump(datafile, datapath,IsquidR,{'Next row: ', 'IsquidR (V)'}); % pass cell array to prevent concatentation     
+data_dump(datafile, datapath,Vmod,   {'Next row: ', 'Vmod (V)'}); % pass cell array to prevent concatentation
+
 % Set up input variables
 Vsquid = zeros(length(Vmod), length(IsquidR));
 
@@ -107,7 +113,7 @@ for i = 1:length(Vmod) % cycles over all mod currents
     
     % Make plots
     hold(IVplot,'off')
-    plot_squidIV(IVplot, IsquidR/p.squid.Rbias, Vsquidstep);
+    plot_squidIV(IVplot, IsquidR/p.squid.Rbias, Vsquidstep, p);
     title(IVplot,'last IV trace');
     
     plot_mod2D(twoDplot, IsquidR/p.squid.Rbias, Vsquid, Vmod/p.mod.Rbias);
@@ -120,12 +126,16 @@ end
 
 %% Save data, parameters, and notes
 % CAN BE LARGE DATA FILE: ~70 MB with some "reasonable" parameters. Takes a long time to save.
-data_dump(datafile, datapath,Vsquid,'Vsquid (V): rows are for each Imod, columns are for each IsquidR');
+data_dump(datafile, datapath,Vsquid,{'Vsquid (V): rows are for each Imod, columns are for each IsquidR'});
 
-%% Save data, parameters, and notes
-data_dump(datafile, datapath,[IsquidR' Vsquid'],{'IsquidR (V)', 'Vsquid (V)'}); % pass cell array to prevent concatentation
-% copyfile(parampath, strcat(paramsavepath,paramsavefile)); %copies parameter file to permanent location % changed to following line
-system(strcat('copy tempnotes.csv+',parampath,' ',strcat(paramsavepath,paramsavefile))) %prepends notes and saves parameter file in permanent location
+copyfile('tempnotes.csv', strcat(paramsavepath,paramsavefile)); %copies parameter file to permanent location % changed to following line
+disp(['copy tempnotes.csv + ', ...
+        parampath, ' ', ...
+        strcat(paramsavepath,paramsavefile), ' /b'])
+system(['copy tempnotes.csv + ', ...
+        parampath, ' ', ...
+        strcat(paramsavepath,paramsavefile), ' /b']); 
+    %prepends notes and saves parameter file in permanent location
 % fid = fopen(strcat(paramsavepath,paramsavefile), 'a+'); %moved up above
 % fprintf(fid, '%s', strcat('notes',notes,'none','notes'));
 % fclose(fid);

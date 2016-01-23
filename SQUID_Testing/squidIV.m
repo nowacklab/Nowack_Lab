@@ -3,8 +3,8 @@ function [ptable, Vsquid] = squidIV()
 clear all % MATLAB is complaining but this function will only be run like a script
 close all
 %% Add paths 
-addpath('C:\Users\root\Nowack_Lab\Equipment_Drivers');
-addpath('C:\Users\root\Nowack_Lab\Utilities');
+addpath('C:\Users\root\Documents\GitHub\Nowack_Lab\Equipment_Drivers');
+addpath('C:\Users\root\Documents\GitHub\Nowack_Lab\Utilities');
 
 %% Edit before running
 
@@ -12,8 +12,8 @@ addpath('C:\Users\root\Nowack_Lab\Utilities');
 no_squid = false;
 
 % Choose parameter file
-paramfile = 'std_params_warm3k_davidplay.csv';
-parampath = strcat('./Parameters/',paramfile);
+paramfile = 'std_params.csv';
+parampath = strcat('C:\Users\root\Documents\GitHub\Nowack_Lab\SQUID_Testing\Parameters\',paramfile);
 [p, ptable] = param_parse(parampath); % use ptable to see parameters in table form
 
 % Git dump? Uncomment if you want a cluttered git.
@@ -43,7 +43,7 @@ squid_prompt(no_squid);
 % Ask for notes
 notes = input('Notes about this run: ','s');
 fid = fopen('tempnotes.csv', 'w');
-fprintf(fid, '%s', strcat(notes, '\n'));
+fprintf(fid, '%s', notes);
 fclose(fid);
 
 %% Some initial checks
@@ -74,9 +74,14 @@ Vsquid = Vsquid/p.preamp.gain; % corrects for gain of preamp
 
 %% Save data, parameters, and notes
 data_dump(datafile, datapath,[IsquidR' Vsquid'],{'IsquidR (V)', 'Vsquid (V)'}); % pass cell array to prevent concatentation
-% copyfile(parampath, strcat(paramsavepath,paramsavefile)); %copies parameter file to permanent location % changed to following line
-system(strcat('copy tempnotes.csv+',parampath,' ',strcat(paramsavepath,paramsavefile))) %prepends notes and saves parameter file in permanent location
-% fid = fopen(strcat(paramsavepath,paramsavefile), 'a+'); %moved up above
+copyfile('tempnotes.csv', strcat(paramsavepath,paramsavefile)); %copies parameter file to permanent location % changed to following line
+disp(['copy tempnotes.csv + ', ...
+        parampath, ' ', ...
+        strcat(paramsavepath,paramsavefile), ' /b'])
+system(['copy tempnotes.csv + ', ...
+        parampath, ' ', ...
+        strcat(paramsavepath,paramsavefile), ' /b']); 
+    % fid = fopen(strcat(paramsavepath,paramsavefile), 'a+'); %moved up above
 % fprintf(fid, '%s', strcat('notes',notes,'none','notes'));
 % fclose(fid);
 delete('tempnotes.csv');

@@ -25,7 +25,7 @@ elseif nargin==4
     axes = varargin{1};
     output = varargin{2};
     data = varargin{3};
-    p = varagin{4};
+    p = varargin{4};
 else
     error('check arguments');
 end
