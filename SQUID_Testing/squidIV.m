@@ -13,6 +13,8 @@ no_squid = false;
 
 % Choose parameter file
 paramfile = 'std_params.csv';
+% paramfile = 'StarCryo_IV.csv';
+
 parampath = strcat('C:\Users\root\Documents\GitHub\Nowack_Lab\SQUID_Testing\Parameters\',paramfile);
 [p, ptable] = param_parse(parampath); % use ptable to see parameters in table form
 
