@@ -56,7 +56,7 @@ fclose(fid);
 
 % Check for potential SQUIDicide
 if ~no_squid
-    check_currents(max(abs(p.squid.Irampmax), abs(p.squid.Irampmin)), max(abs(p.squid.Irampmax), abs(p.mod.Irampmin)));
+    check_currents(max(abs(p.squid.Irampmax), abs(p.squid.Irampmin)), max(abs(p.squid.Irampmax)));
 end
 
 % Check to make sure preamp doesn't filter out your signal
@@ -113,7 +113,7 @@ for i = 1:length(Vmod) % cycles over all mod currents
     
     % Make plots
     hold(IVplot,'off')
-    plot_squidIV(IVplot, IsquidR/p.squid.Rbias, Vsquidstep, p);
+    plot_squidIV(IVplot, IsquidR, Vsquidstep, p);
     title(IVplot,'last IV trace');
     
     plot_mod2D(twoDplot, IsquidR/p.squid.Rbias, Vsquid, Vmod/p.mod.Rbias);
