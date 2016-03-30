@@ -128,18 +128,29 @@ end
 % CAN BE LARGE DATA FILE: ~70 MB with some "reasonable" parameters. Takes a long time to save.
 data_dump(datafile, datapath,Vsquid,{'Vsquid (V): rows are for each Imod, columns are for each IsquidR'});
 
+% Get temperature data
+temps = get_temps;
+temptypes = fieldnames(temps);
+fid = fopen('temperatures.csv', 'w');
+for i=1:size(temps,1)+1
+    fprintf(fid, '%s\n', strcat(char(temptypes(i)),',',char(temps.(char(temptypes(i)))),',K,montana'));
+end
+fclose(fid);
+
+% Dress up parameters file
 copyfile('tempnotes.csv', strcat(paramsavepath,paramsavefile)); %copies parameter file to permanent location % changed to following line
+copyfile('temperatures.csv', strcat(paramsavepath,paramsavefile)); %copies temperatures file to permanent location % changed to following line
 disp(['copy tempnotes.csv + ', ...
-        parampath, ' ', ...
+        parampath, ' + temperatures.csv ', ...
         strcat(paramsavepath,paramsavefile), ' /b'])
 system(['copy tempnotes.csv + ', ...
-        parampath, ' ', ...
+        parampath, ' + temperatures.csv ', ...
         strcat(paramsavepath,paramsavefile), ' /b']); 
-    %prepends notes and saves parameter file in permanent location
-% fid = fopen(strcat(paramsavepath,paramsavefile), 'a+'); %moved up above
+    % fid = fopen(strcat(paramsavepath,paramsavefile), 'a+'); %moved up above
 % fprintf(fid, '%s', strcat('notes',notes,'none','notes'));
 % fclose(fid);
 delete('tempnotes.csv');
+delete('temperatures.csv');
 
 %% Finalize plots
 close all

@@ -74,17 +74,32 @@ output = [IsquidR; Vmod]; % puts Vsquid into first row and Vmod into second row
 Vsquid = Vsquid/p.preamp.gain; % corrects for gain of preamp
 
 %% Save data, parameters, and notes
+%Data file dump
 data_dump(datafile, datapath,[IsquidR' Vsquid'],{'IsquidR (V)', 'Vsquid (V)'}); % pass cell array to prevent concatentation
+
+% Get temperature data
+temps = get_temps;
+temptypes = fieldnames(temps);
+fid = fopen('temperatures.csv', 'w');
+for i=1:size(temps,1)+1
+    fprintf(fid, '%s\n', strcat(char(temptypes(i)),',',char(temps.(char(temptypes(i)))),',K,montana'));
+end
+fclose(fid);
+
+% Dress up parameters file
 copyfile('tempnotes.csv', strcat(paramsavepath,paramsavefile)); %copies parameter file to permanent location % changed to following line
+copyfile('temperatures.csv', strcat(paramsavepath,paramsavefile)); %copies temperatures file to permanent location % changed to following line
 disp(['copy tempnotes.csv + ', ...
-        parampath, ' ', ...
+        parampath, ' + temperatures.csv ', ...
         strcat(paramsavepath,paramsavefile), ' /b'])
 system(['copy tempnotes.csv + ', ...
-        parampath, ' ', ...
-        strcat(paramsavepath,paramsavefile), ' /b']); % fid = fopen(strcat(paramsavepath,paramsavefile), 'a+'); %moved up above
+        parampath, ' + temperatures.csv ', ...
+        strcat(paramsavepath,paramsavefile), ' /b']); 
+    % fid = fopen(strcat(paramsavepath,paramsavefile), 'a+'); %moved up above
 % fprintf(fid, '%s', strcat('notes',notes,'none','notes'));
 % fclose(fid);
 delete('tempnotes.csv');
+delete('temperatures.csv');
 
 %% Plot
 figure;
