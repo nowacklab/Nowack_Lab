@@ -1,0 +1,83 @@
+PCS = PCSquid software for the PCI100/PFL102
+SAP = squidarray.py, based on OpenSQUID, for the PCI100/PFL102
+
+=== Setting values of everything ===
+A-bias: with pin 11 oscilloscope, pin 14 ground
+PCS: 10 uA array bias is ~-1 V
+SAP: pfl.A_bias = 10e-6 works, can return to zero as well
+PCS: 100 uA array bias (limit) is ~-9 V
+SAP: pfl.A_bias = 100e-6 works
+PCS limits 100 uA as maximum
+SAP caps it as well
+PCS doesn't allow negative
+SAP brings it to zero
+
+A-flux: with pin 12 oscilloscope, pin 13 ground (reverse did nothing!)
+PCS: 200 uA array flux is ~-1.55 V
+SAP: pfl.A_flux = 200e-6... didn't work
+FIXED: S-flux and A-flux control registers were swapped (0x0000 correct for SQUID flux, 0x0001 correct for Array flux)
+Limits are correct
+
+Tried setting A-flux, then A-bias. A-flux value remained. :)
+
+S-bias: with pin 4 oscilloscope pin 5 ground
+PCS: 100 uA S bias is ~-0.5 V, 2mA is ~-10 V
+SAP: pfl.S_bias = 100e-6 and 2e-3 did as expected
+limits work
+
+S-flux: with pin 9 oscilloscope, pin 10 ground
+PCS: 10 uA is ~0.5 V, 100 uA is ~5 V (why not maxed?)
+SAP: pfl.S_flux = 10e-6, 100e-6
+
+Offset: looking at WB output with oscilloscope
+PCS: at zero offset, maxed at 10 V, bring to 0V with -2.5852 mV offset
+SAP: pfl.offset = -2.5852e-3 works!
+limits also work. Pretty sure this works.
+
+=== Heater ===
+looking at pin 6, ground 7.
+SAP: with pfl.heat(), saw blip (0.2 seconds of heating only, hard to see!)
+slowing down oscilloscope helped
+1 second heat was perfectly flat over time, voltage at 9.8 V-ish
+PCS: see similar thing.
+
+Heating should zero everything, right?
+PCS: looking at A-bias & offset : zeroed only when cooling; 
+SAP: A-bias and offset stay on during entire heat-cool cycle
+After code edited:
+PCS: test signal does not drop when heating
+SAP: test signal drops from 10V to -10V when heating - this is because I originally had set to zero as well, don't want this! especially if locked!
+SAP: all parameters zeroed while cooling
+
+PCS: test signal stays on during heating, switches off during cooling - I'll just disable it for full cycle
+
+
+=== TEST SIGNAL ===
+Monitoring test signal sent to array-flux
+changed sensitivity to low, med, high
+PCS: amplitude increases low, med, high - looks like some RC for high most pronounced
+SAP: same thing! cap, resistor setter functions work, as well as sensitivity function!
+PCS: test signal off: output goes to zero
+SAP: works! check later for auto
+
+Monitor a-bias - no RC, amplitude doesn't change with sens. All good!
+Monitor s-flux - RC, ampliutude doesn't change, all good
+Monitor S-bias - same as a-bias
+
+Test heater: test signal turned off for both heating and cooling cycles
+
+=== Normal operation ===
+Ready for normal operation tests: make sure to try test signal auto and reset integrator
+
+Looks promising! Heater needed a quick change: restore parameter values, and then reset integrator. Or else the array falls out of lock.
+
+**Changed name of unlock function to tune
+
+Test signal on, auto, off works as expected
+Integrator reset works fine.
+Sensitivity change works
+Test input works as well
+
+All tests done with just array, but SQUID should work the same
+
+**Changed parameter units to uA/mV. Writing e-6 all the time got annoying

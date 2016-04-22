@@ -28,8 +28,7 @@ which_temps = {'PT','ST'};
 % GUT - Get User Temperature
 
 for i = 1:size(which_temps,1)+1 % Loops over table "P" to extract parameter names and values
-    disp(i)
-    [~,temp] = cryo.SendCommandAndGetResponse(char(strcat('G',which_temps(i))), '')
+    [~,temp] = cryo.SendCommandAndGetResponse(char(strcat('G',which_temps(i))), '');
     temps.(char(which_temps(i))) = temp; 
 end
 

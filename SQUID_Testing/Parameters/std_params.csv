@@ -6,8 +6,8 @@ gain,500,none,preamp
 rolloff_low,0,Hz,preamp
 rolloff_high,100,Hz,preamp
 Rbias,2.00E+03,Ohm,squid
-Irampmin,-40.00E-06,A,squid
+Irampmin,-100.00E-06,A,squid
 Irampstep,500.00E-09,A,squid
-Irampmax,40.00E-06,A,squid
+Irampmax,100.00E-06,A,squid
 I,0.00E+00,A,mod
 Rbias,2.00E+03,Ohm,mod
