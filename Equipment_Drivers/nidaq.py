@@ -35,6 +35,12 @@ class NIDAQ():
         if numpy.isscalar(data):
             getattr(self._daq,chan).write('%sV' %data)
     
+    def monitor(self, chan_in, duration, freq=100): # similar to send_receive definition
+        received = getattr(self._daq, chan_in).read(duration = '%fs' %duration, fsamp='%fHz' %freq)
+        data_in = received[bytes(chan_in, 'utf-8')].magnitude
+        t = received['t'].magnitude
+        return list(data_in), list(t)
+    
     def send_receive(self, chan_out, chan_in, data, freq=100):
         setattr(self, chan_out, data[0]) # initialize output
         
@@ -50,7 +56,7 @@ class NIDAQ():
         data_in = received[chan_in].magnitude #.magnitude from pint units package; 
         time = received['t'].magnitude
         return list(data_in[1:len(data_in)]), list(time[0:len(time)-1]) #list limits undo extra point added for daq weirdness
-
+        
     def sweep(self, chan_out, chan_in, Vstart, Vend, Vstep = 0.01, freq=100, numsteps=None):   
         if Vstart == Vend:
             return

@@ -32,8 +32,8 @@ class Piezo():
     def V(self, value):
         if abs(value) > self.Vmax:
             raise Exception('Voltage too high, max is %f' %self.Vmax)
-        # self.sweep(self._V, value)
-        setattr(self.daq, self.out_channel, value)
+        self.sweep(self._V, value)
+        # setattr(self.daq, self.out_channel, value)
         self._V = value
     
     def apply_gain(self, value):
@@ -58,6 +58,14 @@ class Piezo():
         self._V = V[len(V)-1] # end of sweep, for keeping track of voltage 
         
         return V, response, time
+        
+    def split_sweep(self, Vstart, Vend, Vstep, freq, iter, num_iter):
+        Vrange = Vend-Vstart
+        if Vstart < Vend: # sweep up
+            V, response, time = self.sweep(Vstart + iter/num_iter*Vrange, Vstart + (iter+1)/num_iter*Vrange, Vstep, freq)
+        elif Vstart > Vend: # sweep up
+            V, response, time = self.sweep(Vend - iter/num_iter*Vrange, Vstart - (iter+1)/num_iter*Vrange, Vstep, freq)
+        return V, response, time 
     
     def full_sweep(self, Vstep, freq):
         Vup, responseup, timeup = (self.sweep(0, self.Vmax, Vstep=Vstep, freq=freq)) # up sweep
