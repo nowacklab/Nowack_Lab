@@ -51,7 +51,12 @@ class SR830():
     @sensitivity.setter
     def sensitivity(self, value):
         '''Set the sensitivity'''
-        self._visa_handle.write('SENS%d' %self.sensitivity_options.index(value))
+        if value > 1:
+            value = 1
+        index = abs(numpy.array([v - value  if (v - value)>=0 else -100000 for v in self.sensitivity_options])).argmin() #finds sensitivity just above input
+        good_value = self.sensitivity_options[index]
+        
+        self._visa_handle.write('SENS%d' %self.sensitivity_options.index(good_value))
 
     @property
     def amplitude(self):
@@ -157,6 +162,11 @@ class SR830():
         else:
             self._visa_handle.write('DDEF%i,1,0' %chan)
             self._visa_handle.write('FPOP%i,0' %chan)
+            
+    def convert_output(self, value):
+        if not numpy.isscalar(value):
+            value = numpy.array(value)
+        return list(value/10*self.sensitivity) # will give actual output in volts, since output is scaled to 10 V == sensitivity
 
     def exit(self):
         self._visa_handle.close()
