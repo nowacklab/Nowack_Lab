@@ -10,9 +10,9 @@ class HVA():
         
     def get_data(self):
         data = self._ser.read(2)
-        print(data)
+        print(data, data.decode('utf-8'))
         #print(struct.unpack(">L", data)[0])
-        return hex(data)
+        return int(data.decode('utf-8'))
         
     def checkSupply(self):
         return bool(0x0200&self.get_data() >> 9)
@@ -54,6 +54,6 @@ if __name__ == '__main__':
     """ Testing the code.  """
     amp = HVA()
    
-    amp.isEnabled('x')
-    amp.get_gain('x')
+    print('isenabled', amp.isEnabled('x'))
+    print('get gain', amp.get_gain('x'))
    

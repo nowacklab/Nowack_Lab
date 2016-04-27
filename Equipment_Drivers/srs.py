@@ -8,10 +8,14 @@ class SR830():
     Instrument driver for SR830, modified from Guen's squidpy driver
     '''
     def __init__(self, gpib_address=''):
-        self._visa_handle = visa.ResourceManager().open_resource(gpib_address)
-        self._visa_handle.read_termination = '\n'
-        self._visa_handle.write('OUTX 1') #1=GPIB
+        self.gpib_address = gpib_address
+        
+        self.init_visa()
+
         atexit.register(self.exit)
+        
+        self.ch1_daq_input = None
+        self.ch2_daq_input = None
         
         self.time_constant_options = {
                 "10 us": 0,
@@ -99,6 +103,7 @@ class SR830():
     @property
     def time_constant(self):
         options = {self.time_constant_options[key]: key for key in self.time_constant_options.keys()}
+
         #return options[int(self._visa_handle.ask('OFLT?'))]
         return self.time_constant_values[int(self._visa_handle.ask('OFLT?'))]
         
@@ -132,6 +137,11 @@ class SR830():
 
     def auto_phase(self):
         self._visa_handle.write('APHS')
+        
+    def init_visa(self):
+        self._visa_handle = visa.ResourceManager().open_resource(self.gpib_address)
+        self._visa_handle.read_termination = '\n'
+        self._visa_handle.write('OUTX 1') #1=GPIB
     
     def get_all(self):
         table = []

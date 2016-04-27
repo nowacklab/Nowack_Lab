@@ -1,4 +1,3 @@
-import nidaq
 import nanonis
 import numpy
 import time
@@ -8,10 +7,10 @@ class Piezo():
     '''
     Piezo benders on the scanner. Signal sent to NIDAQ goes through Nanonis HVA4 High Voltage Amplifier. Sweeps between voltages smoothly. One hiccup is that it jumps to zero upon creating the Piezo object.
     '''    
-    daq = nidaq.NIDAQ()
     # amp = nanonis.HVA4('COM2')
     
-    def __init__(self, axis, gain, bipolar, out_channel, in_channel = None, Vmax=120):
+    def __init__(self, axis, gain, bipolar, daq, out_channel, in_channel = None, Vmax=120):
+        self.daq = daq
         self.axis = axis
         self.Vmax = Vmax
         self.gain = gain
@@ -19,10 +18,14 @@ class Piezo():
         if bipolar:
             self.bipolar_multiplier = 2
         self.out_channel = out_channel
-        self.in_channel = in_channel
-        self._V = 0
+        if in_channel == None:
+            self.in_channel = 'ai23'
+        else:
+            self.in_channel = in_channel
+        
+        self._V = self.apply_gain(getattr(self.daq, out_channel))
+        # self._V = 0 #DEBUG
         self.V = 0
-        atexit.register(self.exit)
         
     @property
     def V(self):
@@ -30,7 +33,7 @@ class Piezo():
     
     @V.setter
     def V(self, value):
-        if abs(value) > self.Vmax:
+        if abs(value) > self.Vmax*self.bipolar_multiplier:
             raise Exception('Voltage too high, max is %f' %self.Vmax)
         self.sweep(self._V, value)
         # setattr(self.daq, self.out_channel, value)
@@ -45,6 +48,10 @@ class Piezo():
         if numpy.isscalar(value):
             return value/self.gain/self.bipolar_multiplier
         return list(numpy.array(value)/self.gain/self.bipolar_multiplier)
+        
+    def check_lim(self, A):
+        if A.max() > self.Vmax or A.min() < -self.Vmax:
+            raise Exception('Voltage out of range for piezo!')
         
     def sweep(self, Vstart, Vend, Vstep = .1, freq = 150): #max rate in volts/second, including gain
         if Vstart == Vend:
@@ -89,18 +96,15 @@ class Piezo():
             # responsetot = responsetot + responsedown
             
         # return Vtot, responsetot
-        
-    def exit(self):
-        self.sweep(self._V, 0)
     
 if __name__ == '__main__':
     """ Testing the code.  """
-    import matplotlib.pyplot as plt
+    # import matplotlib.pyplot as plt
     
-    piezo = Piezo('z', 15, False, 'ao2', 'ai22')
-    sweep_data = piezo.full_sweep(1000)
-    plt.plot(sweep_data[0],sweep_data[1])
-    plt.show()
+    # piezo = Piezo('z', 15, False, 'ao2', 'ai22')
+    # sweep_data = piezo.full_sweep(1000)
+    # plt.plot(sweep_data[0],sweep_data[1])
+    # plt.show()
     
     
     ##### OLD DUMB CODE
