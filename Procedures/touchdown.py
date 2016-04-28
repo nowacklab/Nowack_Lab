@@ -173,8 +173,9 @@ class Touchdown():
         
 if __name__ == '__main__':
     import sys
-    sys.path.append(r'C:\Users\root\Documents\GitHub\Nowack_Lab\Equipment_Drivers')
-    sys.path.append(r'C:\Users\root\Documents\GitHub\Nowack_Lab\Procedures')
+    sys.path.append(r'C:\Users\Hemlock\Documents\GitHub\Nowack_Lab\Equipment_Drivers')
+    sys.path.append(r'C:\Users\Hemlock\Documents\GitHub\Nowack_Lab\Procedures')
+    sys.path.append(r'C:\Users\Hemlock\Documents\GitHub\Instrumental')
     import piezo as pz
 
     import attocube, srs, nidaq, time, touchdown 
@@ -188,7 +189,7 @@ if __name__ == '__main__':
     lockin.ch1_daq_input = 'ai2'
 
     td = touchdown.Touchdown(z_piezo, atto, lockin, daq)
-    daq.ao3 = 0.0001
+    daq.ao3 = 0.00000001
     print('ao3', daq.ao3)
     
     print('end td init')

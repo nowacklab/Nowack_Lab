@@ -1,4 +1,7 @@
+*.pyc
 *.asv
 *.m~
+Equipment_Drivers/__pycache__
+Utilities/__pycache__
 Utilities/test.csv
 Utilities/.test.txt

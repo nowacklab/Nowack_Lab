@@ -19,8 +19,12 @@ class NIDAQ():
         for chan in self._daq.get_AO_channels():
         
             setattr(self, '_%s' %chan, None)# privately store value
-            # setattr(NIDAQ,chan,property(fset=eval('lambda self, value: self.set_chan(\'%s\',value)' %chan)))
-            setattr(NIDAQ,chan,property(fset=eval('lambda self, value: self.set_chan(\'%s\',value)' %chan), fget=eval('lambda self: self.get_internal_chan(\'%s\')' %chan))) #property for output channels NIDAQ.ao# (0-3); monitor using internal channels
+            # The following line works with instrumental modified to add read function to AnalogOut
+            setattr(NIDAQ,chan,property(fset=eval('lambda self, value: self.set_chan(\'%s\',value)' %chan), fget=eval('lambda self: self.get_chan(\'%s\')' %chan)))
+            # This works with instrumental after names of input channels added manually
+            # setattr(NIDAQ,chan,property(fset=eval('lambda self, value: self.set_chan(\'%s\',value)' %chan), fget=eval('lambda self: self.get_chan(\'_%s_vs_aognd\')' %chan)))
+            # This works with the current code, since I couldn't figure out internal channels with instrumental:
+            # setattr(NIDAQ,chan,property(fset=eval('lambda self, value: self.set_chan(\'%s\',value)' %chan), fget=eval('lambda self: self.get_internal_chan(\'%s\')' %chan))) #property for output channels NIDAQ.ao# (0-3); monitor using internal channels
             self._freq[chan] = freq
 
             # DEBUG
