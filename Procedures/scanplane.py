@@ -1,10 +1,10 @@
 import numpy
 from numpy.linalg import lstsq
-import touchdown, navigation
+import navigation
 import time
         
-class Planefit():
-    def __init__(self, instruments, span, center, numpts, cap_input):
+class Scanplane():
+    def __init__(self, instruments, span, center, numpts, plane):
         self.x_piezo = instruments[0]
         self.y_piezo = instruments[1]
         self.z_piezo = instruments[2]
@@ -16,22 +16,22 @@ class Planefit():
         self.center = center
         self.numpts = numpts
     
-        self.cap_input = cap_input
+        self.plane = plane
         
-        self.td = touchdown.Touchdown(self.z_piezo, self.atto, self.lockin, self.daq, self.cap_input)
         self.nav = navigation.Goto(self.x_piezo, self.y_piezo, self.z_piezo)
                 
         self.x = numpy.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
         self.y = numpy.linspace(center[1]-span[1]/2, center[1]+span[1]/2, numpts[1])
         
         self.X, self.Y = numpy.meshgrid(self.x, self.y)
-        self.Z = numpy.nan*self.X # makes array of zeros same size as grid
-        
-        self.a = None
-        self.b = None
-        self.c = None
+        self.Z = self.plane.plane(self.X, self.Y)
         
     def do(self):
+        for i in range(self.X.shape[0]):
+            
+        ### EVERYTHING BELOW IS COPYPASTA'D FROM PLANEFIT
+            
+    
         start_pos = [self.center[0], self.center[1], 0]
         self.nav.goto(start_pos[0], start_pos[1], start_pos[2])
         self.td.do(planescan=False) # to position z attocube so that V_td is near the center of sweep range at the center of the scan
@@ -46,15 +46,6 @@ class Planefit():
         self.nav.goto(start_pos[0], start_pos[1], start_pos[2])
         self.plane(0, 0, True) # calculates plane then returns origin z-value
         
-    def plane(self, x, y, recal=False):
-        X = self.X.flatten()
-        Y = self.Y.flatten()
-        Z = self.Z.flatten()
-        if self.a == None or recal: #calculate plane from current X, Y data
-            A = numpy.vstack([X, Y, numpy.ones(len(X))]).T
-            self.a, self.b, self.c = lstsq(A, Z)[0]
-
-        return self.a*x + self.b*y + self.c
         
 if __name__ == '__main__':
     """ just testing fitting algorithm """

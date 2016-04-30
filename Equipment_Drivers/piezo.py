@@ -52,6 +52,7 @@ class Piezo():
     def check_lim(self, A):
         if A.max() > self.Vmax or A.min() < -self.Vmax:
             raise Exception('Voltage out of range for piezo!')
+           
         
     def sweep(self, Vstart, Vend, Vstep = .1, freq = 150): #max rate in volts/second, including gain
         if Vstart == Vend:

@@ -176,8 +176,9 @@ class SR830():
     def convert_output(self, value):
         if not numpy.isscalar(value):
             value = numpy.array(value)
-        return list(value/10*self.sensitivity) # will give actual output in volts, since output is scaled to 10 V == sensitivity
-
+            return list(value/10*self.sensitivity) # will give actual output in volts, since output is scaled to 10 V == sensitivity
+        return value/10*self.sensitivity
+            
     def exit(self):
         self._visa_handle.close()
         
