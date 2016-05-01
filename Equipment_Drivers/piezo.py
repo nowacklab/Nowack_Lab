@@ -54,7 +54,7 @@ class Piezo():
             raise Exception('Voltage out of range for piezo!')
            
         
-    def sweep(self, Vstart, Vend, Vstep = .1, freq = 150): #max rate in volts/second, including gain
+    def sweep(self, Vstart, Vend, Vstep = .01, freq = 1500):
         if Vstart == Vend:
             return 1, 1, 1
         if Vstart != self._V:

@@ -130,7 +130,7 @@ class NIDAQ():
             Vstep = (Vend-Vstart)/(numsteps-1)
         
         V = list(numpy.linspace(Vstart, Vend, numsteps))
-        if abs(max(V)) > 10:
+        if max(abs(Vstart), abs(Vend)) > 10:
             raise Exception('NIDAQ out of range!')
             
         response, time = self.send_receive(chan_out, chan_in, V, freq=freq)
