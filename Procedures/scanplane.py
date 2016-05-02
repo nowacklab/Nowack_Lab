@@ -4,7 +4,7 @@ import navigation
 import time
         
 class Scanplane():
-    def __init__(self, instruments, span, center, numpts, plane):
+    def __init__(self, instruments, span, center, numpts, plane, scanheight):
         self.x_piezo = instruments[0]
         self.y_piezo = instruments[1]
         self.z_piezo = instruments[2]
@@ -17,6 +17,7 @@ class Scanplane():
         self.numpts = numpts
     
         self.plane = plane
+        self.scanheight = scanheight
         
         self.nav = navigation.Goto(self.x_piezo, self.y_piezo, self.z_piezo)
                 
@@ -24,14 +25,16 @@ class Scanplane():
         self.y = numpy.linspace(center[1]-span[1]/2, center[1]+span[1]/2, numpts[1])
         
         self.X, self.Y = numpy.meshgrid(self.x, self.y)
-        self.Z = self.plane.plane(self.X, self.Y)
+        self.Z = self.plane.plane(self.X, self.Y) - self.scanheight
         
     def do(self):
         for i in range(self.X.shape[0]):
+            self.nav.goto(self.X[i][0], self.Y[i][0], self.Z[i][0]) # goes to starting position
+            # next need to sweep all piezos at once, can't use piezo sweep function anymore, need send/receive
+            # maybe just make piezos all one object
             
         ### EVERYTHING BELOW IS COPYPASTA'D FROM PLANEFIT
-            
-    
+        
         start_pos = [self.center[0], self.center[1], 0]
         self.nav.goto(start_pos[0], start_pos[1], start_pos[2])
         self.td.do(planescan=False) # to position z attocube so that V_td is near the center of sweep range at the center of the scan

@@ -1,6 +1,6 @@
 import numpy
 from numpy.linalg import lstsq
-import touchdown, navigation
+import touchdown2, navigation
 import time
         
 class Planefit():
@@ -18,7 +18,7 @@ class Planefit():
     
         self.cap_input = cap_input
         
-        self.td = touchdown.Touchdown(self.z_piezo, self.atto, self.lockin, self.daq, self.cap_input)
+        self.td = touchdown2.Touchdown(self.z_piezo, self.atto, self.lockin, self.daq, self.cap_input)
         self.nav = navigation.Goto(self.x_piezo, self.y_piezo, self.z_piezo)
                 
         self.x = numpy.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
@@ -41,7 +41,7 @@ class Planefit():
         for i in range(self.X.shape[0]): #SWAPPED INDICES 0 1 i j
             for j in range(self.X.shape[1]):
                 self.nav.goto(self.X[i,j], self.Y[i,j], -40)
-                self.td = touchdown.Touchdown(self.z_piezo, self.atto, self.lockin, self.daq, self.cap_input) #refresh touchdown object
+                self.td = touchdown2.Touchdown(self.z_piezo, self.atto, self.lockin, self.daq, self.cap_input) #refresh touchdown object
                 self.Z[i,j] = self.td.do(planescan=True)
         self.nav.goto(start_pos[0], start_pos[1], start_pos[2])
         self.plane(0, 0, True) # calculates plane then returns origin z-value

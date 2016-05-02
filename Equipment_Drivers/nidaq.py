@@ -120,26 +120,20 @@ class NIDAQ():
         
         return data_in, list(time[0:len(time)-1]) #list limits undo extra point added for daq weirdness
         
-    def sweep(self, chan_out, chan_in, Vstart, Vend, Vstep = 0.01, freq=100, numsteps=None):   
-        if Vstart == Vend:
-            return
-        
-        if numsteps == None:
-            numsteps = int(abs(Vstart-Vend)/Vstep)+1
-        else:
-            Vstep = (Vend-Vstart)/(numsteps-1)
-        
-        V = list(numpy.linspace(Vstart, Vend, numsteps))
-        if max(abs(Vstart), abs(Vend)) > 10:
-            raise Exception('NIDAQ out of range!')
+    def sweep(self, chan_out, chan_in, Vstart, Vend, freq=100, numsteps=1000):   
+        V = {}       
+        for k in Vstart.keys():        
+            V[k] = list(numpy.linspace(Vstart[k], Vend[k], numsteps))
+            if max(abs(Vstart[k]), abs(Vend[k])) > 10:
+                raise Exception('NIDAQ out of range!')
             
         response, time = self.send_receive(chan_out, chan_in, V, freq=freq)
          
-        return V, response[chan_in], time
+        return V, response, time
         
     def zero(self):
         for chan in self._daq.get_AO_channels():
-            self.sweep(chan, 'ai0', getattr(self, chan), 0)
+            self.sweep(chan, 'ai0', {chan: getattr(self, chan)}, {chan: 0})
                         
     def get_internal_chan(self, chan):
         """
