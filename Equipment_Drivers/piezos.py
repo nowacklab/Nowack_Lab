@@ -11,12 +11,11 @@ class Piezos():
     '''    
     # amp = nanonis.HVA4('COM2')
     
-    def __init__(self, daq, gain, chan_out, chan_in = [None]*3, Vmax=[120]*3, bipolar = [True]*3):
+    def __init__(self, daq, gain, chan_out, Vmax=[120]*3, bipolar = [True]*3):
         """ Pass args ars array [xvalue, yvalue, zvalue] """
         self.daq = daq
         self.gain = {}
         self.chan_out = {} 
-        self.chan_in = {}
         self.Vmax = {}
         self.bipolar = {}
         self._V = {}
@@ -24,10 +23,6 @@ class Piezos():
         for i in range(len(KEYS)):
             self.gain[KEYS[i]] = gain[i]
             self.chan_out[KEYS[i]] = chan_out[i]
-            if chan_in[i] == None:
-                self.chan_in[KEYS[i]] = 'ai2%i' %i # Dummy channel
-            else:
-                self.chan_in[KEYS[i]] = chan_in[i]   
             self.Vmax[KEYS[i]] = Vmax[i]
             self.bipolar[KEYS[i]] = int(bipolar[i])+1 # = 1 if bipolar is False, =2 if bipolar is true
         self._V = self.apply_gain({KEYS[i]: getattr(self.daq, chan_out[i]) for i in range(len(KEYS))})
@@ -67,22 +62,24 @@ class Piezos():
         return gains
 
     def check_lim(self, A):
-        for k in KEYS:
+        for k in A.keys():
             if A[k].max() > self.Vmax[k] or A[k].min() < -self.Vmax[k]:
                 raise Exception('Voltage out of range for piezo %s!' %k)
            
     def sweep(self, Vstart, Vend, Vstep = {k: .01 for k in KEYS}, freq = 1500):
         Vs = {}
-        keys = Vstart.keys()
+        
         for k in KEYS:
-            if k not in keys: # makes sure that all keys are listed, but will do a pointless nowhere-sweep
+            if k not in Vstart.keys(): # makes sure that all keys are listed, but will do a pointless nowhere-sweep
                 Vstart[k] = self._V[k]
+            if k not in Vend.keys(): # makes sure that all keys are listed, but will do a pointless nowhere-sweep
                 Vend[k] = self._V[k]
+            if k not in Vstep.keys(): # makes sure that all keys are listed, but will do a pointless nowhere-sweep
                 Vstep[k] = 0.01
             if Vstart[k] != self._V[k]:
-                self.sweep(self._V[k], Vstart[k])
-  
-        numsteps = int(abs(Vstart[k]-Vend[k])/Vstep[k])+1
+                self.V = Vstart
+                # self.sweep(self._V, Vstart)
+        numsteps = max([int(abs(Vstart[k]-Vend[k])/Vstep[k])+1 if Vstep[k]!= 0 else 0 for k in KEYS])
         
         #Convert keys to the channel names that the daq expects and remove gain
         Vstart = self.remove_gain(Vstart)
@@ -91,15 +88,14 @@ class Piezos():
             Vstart[self.chan_out[k]] = Vstart.pop(k)
             Vend[self.chan_out[k]] = Vend.pop(k)
 
-        V, response, time = self.daq.sweep([self.chan_out[k] for k in KEYS], [self.chan_in[k] for k in KEYS], Vstart, Vend, freq=freq, numsteps=numsteps)
+        V, response, time = self.daq.sweep([self.chan_out[k] for k in KEYS], Vstart, Vend, freq=freq, numsteps=numsteps)
  
         # Go back to piezo keys
         for k in KEYS:   
             V[k] = V.pop(self.chan_out[k])
-            response[k] = response.pop(self.chan_in[k])
             
         V = self.apply_gain(V)
-        for k in keys:
+        for k in KEYS:
             self._V[k] = V[k][len(V[k])-1] # end of sweep, for keeping track of voltage 
         
         return V, response, time

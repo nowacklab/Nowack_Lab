@@ -7,17 +7,17 @@ import numpy as np
 from msvcrt import getch
 
 class Touchdown():
-    def __init__(self, z_piezo, atto, lockin, daq, cap_input, low_temp = False):    
+    def __init__(self, piezos, atto, lockin, daq, cap_input, low_temp = False):    
         self.touchdown = False
         self.V_to_C = 2530e3 # 2530 pF/V * (1e3 fF/pF), calibrated 20160423 by BTS, see ipython notebook
         self.attosteps = 100 #number of attocube steps between sweeps
         self.numfit = 10       # number of points to fit line to while collecting data  
                 
-        self.z_piezo = z_piezo
+        self.piezos = piezos
         self.atto = atto
         self.lockin = lockin
         self.daq = daq
-        
+                
         self.lockin.ch1_daq_input = cap_input
                 
         self.low_temp = low_temp
@@ -47,8 +47,8 @@ class Touchdown():
         if planescan:
             attosteps = None # don't move the attocubes if doing a planescan - remember, 0 is continuous!
         
-        numsteps = int(2*self.z_piezo.Vmax/self.z_piezo_step)
-        self.V = np.linspace(-self.z_piezo.Vmax, self.z_piezo.Vmax, numsteps)
+        numsteps = int(2*self.piezos.Vmax['z']/self.z_piezo_step)
+        self.V = np.linspace(-self.piezos.Vmax['z'], self.piezos.Vmax['z'], numsteps)
         
         self.check_balance()
         
@@ -59,7 +59,7 @@ class Touchdown():
             self.extra = 0
             
             for i in range(numsteps):
-                self.z_piezo.V = self.V[i]
+                self.piezos.V = {'z': self.V[i]}
                 Vcap = getattr(self.daq, self.lockin.ch1_daq_input)
                 Vcap = self.lockin.convert_output(Vcap) # convert to a lockin voltage
                 Cap = Vcap*self.V_to_C
@@ -69,7 +69,6 @@ class Touchdown():
                 if i >= self.numfit: # start checking after min number of pts
                     self.check_touchdown(i)
                 self.plot_cap(i)
-
                     
                 if self.touchdown:
                     if self.extra < 3: # take three extra points for fit
@@ -77,23 +76,25 @@ class Touchdown():
                     else:    
                         V_td = self.get_touchdown_voltage(i, plot=False)   
                         if not planescan: #Don't want to move attocubes during planescan
-                            if V_td > 0.6*self.z_piezo.Vmax:
+                            if V_td > 0.6*self.piezos.Vmax['z']:
                                 self.touchdown = False
                                 attosteps = self.attosteps/4 #make sure we don't crash! Don't keep on updating attosteps, otherwise it will go to zero eventually, and that means continuous!!!
-                            elif V_td < 0.4*self.z_piezo.Vmax:
+                            elif V_td < 0.4*self.piezos.Vmax['z']:
                                 self.touchdown = False
                                 attosteps = -self.attosteps/4 #move the other direction to bring V_td closer to midway #make sure we don't crash! Don't keep on updating attosteps, otherwise it will go to zero eventually, and that means continuous!!!
                         break
-                                
+            
+            if self.extra != 3: # did not take enough extra steps, TD is at end of range
+                self.touchdown = False 
             # if planescan:
                 # if V_td == None:
                     # raise Exception('Need to adjust attocubes, piezo couldn\'t make it to the plane or touchdown has already happened!') # only check once, or else attocubes are aligned!
                   
-            self.z_piezo.V = 0
+            self.piezos.V = {'z': 0}
                 
             #self.touchdown = True
             if not self.touchdown:
-                self.z_piezo.V = -self.z_piezo.Vmax # before moving attocubes, make sure we're far away from the sample!
+                self.piezos.V = {'z': -self.piezos.Vmax['z']} # before moving attocubes, make sure we're far away from the sample!
                 self.atto.up([attosteps, None, None]) 
         
         V_td = self.get_touchdown_voltage(i, plot=True) # just for plotting
@@ -133,7 +134,6 @@ class Touchdown():
             
     def configure_piezo(self):
         """ Set up z piezo parameters """
-        self.z_piezo.in_channel = self.lockin.ch1_daq_input
         self.z_piezo_max_rate = 30 #V/s
         self.z_piezo_step = 4 # For full 120 V to -120 V sweep, this is 120 points
         self.z_piezo_freq = self.z_piezo_max_rate/self.z_piezo_max_rate
@@ -173,7 +173,7 @@ class Touchdown():
             plt.title('Touchdown detected!')
         plt.xlabel('Piezo voltage (V)')
         plt.ylabel(r'$C - C_{balance}$ (fF)')
-        plt.xlim(-self.z_piezo.Vmax, self.z_piezo.Vmax)
+        plt.xlim(-self.piezos.Vmax['z'], self.piezos.Vmax['z'])
         plt.ylim(-2,5)
                 
         if i+1 >= self.numfit: # start fitting after min number of points

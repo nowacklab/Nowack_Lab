@@ -5,12 +5,10 @@ import time
         
 class Planefit():
     def __init__(self, instruments, span, center, numpts, cap_input):
-        self.x_piezo = instruments[0]
-        self.y_piezo = instruments[1]
-        self.z_piezo = instruments[2]
-        self.atto = instruments[3]
-        self.lockin = instruments[4]
-        self.daq = instruments[5]
+        self.piezos = instruments[0]
+        self.atto = instruments[1]
+        self.lockin = instruments[2]
+        self.daq = instruments[3]
         
         self.span = span
         self.center = center
@@ -18,8 +16,8 @@ class Planefit():
     
         self.cap_input = cap_input
         
-        self.td = touchdown2.Touchdown(self.z_piezo, self.atto, self.lockin, self.daq, self.cap_input)
-        self.nav = navigation.Goto(self.x_piezo, self.y_piezo, self.z_piezo)
+        self.td = touchdown2.Touchdown(self.piezos, self.atto, self.lockin, self.daq, self.cap_input)
+        self.nav = navigation.Goto(self.piezos)
                 
         self.x = numpy.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
         self.y = numpy.linspace(center[1]-span[1]/2, center[1]+span[1]/2, numpts[1])
@@ -33,17 +31,16 @@ class Planefit():
         
     def do(self):
         start_pos = [self.center[0], self.center[1], 0]
-        self.nav.goto(start_pos[0], start_pos[1], start_pos[2])
+        self.nav.goto_seq(start_pos[0], start_pos[1], start_pos[2])
         self.td.do(planescan=False) # to position z attocube so that V_td is near the center of sweep range at the center of the scan
         input('good?')
-        self.x_piezo.check_lim(self.X)
-        self.y_piezo.check_lim(self.Y)
+        self.piezos.check_lim({'x': self.X, 'y': self.Y})
         for i in range(self.X.shape[0]): #SWAPPED INDICES 0 1 i j
             for j in range(self.X.shape[1]):
-                self.nav.goto(self.X[i,j], self.Y[i,j], -40)
-                self.td = touchdown2.Touchdown(self.z_piezo, self.atto, self.lockin, self.daq, self.cap_input) #refresh touchdown object
+                self.nav.goto_seq(self.X[i,j], self.Y[i,j], -40)
+                self.td = touchdown2.Touchdown(self.piezos, self.atto, self.lockin, self.daq, self.cap_input) #refresh touchdown object
                 self.Z[i,j] = self.td.do(planescan=True)
-        self.nav.goto(start_pos[0], start_pos[1], start_pos[2])
+        self.nav.goto_seq(start_pos[0], start_pos[1], start_pos[2])
         self.plane(0, 0, True) # calculates plane then returns origin z-value
         
     def plane(self, x, y, recal=False):

@@ -18,7 +18,6 @@ class NIDAQ():
             setattr(NIDAQ,chan,property(fget=eval('lambda self: self.get_chan(\'%s\')' %chan))) # set up property for input channels NIDAQ.ai#(0-31)
         
         for chan in self._daq.get_AO_channels():
-        
             setattr(self, '_%s' %chan, None)# privately store value
             # The following line works with instrumental modified to add read function to AnalogOut
             setattr(NIDAQ,chan,property(fset=eval('lambda self, value: self.set_chan(\'%s\',value)' %chan), fget=eval('lambda self: self.get_chan(\'%s\')' %chan)))
@@ -33,7 +32,8 @@ class NIDAQ():
             # setattr(self._daq, chan, ni.AnalogIn(self._daq, '%s'%chan))
             # setattr(NIDAQ,chan,property(fget=eval('lambda self: self.get_chan(\'%s\')' %chan)))
             # print(chan)
-            
+         
+        self.inputs_to_monitor = ['ai23']# at least monitor one input
         
         if zero:
             self.zero()
@@ -64,7 +64,7 @@ class NIDAQ():
         t = received['t'].magnitude
         return list(data_in), list(t)
     
-    def send_receive(self, chan_out, chan_in, orig_data, freq=100):
+    def send_receive(self, chan_out, orig_data, freq=100):
         """
          chan_out is list of output channel names, data is list of datasets sent to each channel, in order
          """
@@ -74,15 +74,11 @@ class NIDAQ():
         if numpy.isscalar(chan_out):
             data = {chan_out: data}
             chan_out = [chan_out]
-            
-
-        if numpy.isscalar(chan_in):
-            chan_in = [chan_in]
 
         if len(chan_out) != len(data):
             raise Exception('Must have data for each output channel!')
 
-        taskargs = tuple([getattr(self._daq, ch) for ch in chan_out + chan_in])
+        taskargs = tuple([getattr(self._daq, ch) for ch in chan_out + self.inputs_to_monitor])
         task = ni.Task(*taskargs) # * will take tuple as args
         write_data = {}
        
@@ -107,12 +103,12 @@ class NIDAQ():
         data_in = {}
         
         # Find lowest number channel, need to do this because the lowest number input channel will have garbage point. it's the lowest number because I modded instrumental to order them from low to high. It's really whichever channel is specified first.
-        ch_nums = [int(''.join(x for x in y if x.isdigit())) for y in chan_in] #finds the channel numbers    
+        ch_nums = [int(''.join(x for x in y if x.isdigit())) for y in self.inputs_to_monitor] #finds the channel numbers    
         min_chan = 'ai%i' %min(ch_nums)
         
-        for ch in chan_in:
+        for ch in self.inputs_to_monitor:
             d = received[ch].magnitude #.magnitude from pint units package; 
-            if ch == min_chan:#chan_in[0]:
+            if ch == min_chan:#self.inputs_to_monitor[0]:
                 data_in[ch] = list(d[1:len(d)]) # get rid of the first data point because of the weird thing we died earlier
             else:
                 data_in[ch] = list(d[0:len(d)-1]) # last data point should be a dupe
@@ -120,14 +116,14 @@ class NIDAQ():
         
         return data_in, list(time[0:len(time)-1]) #list limits undo extra point added for daq weirdness
         
-    def sweep(self, chan_out, chan_in, Vstart, Vend, freq=100, numsteps=1000):   
+    def sweep(self, chan_out, Vstart, Vend, freq=100, numsteps=1000):   
         V = {}       
         for k in Vstart.keys():        
             V[k] = list(numpy.linspace(Vstart[k], Vend[k], numsteps))
             if max(abs(Vstart[k]), abs(Vend[k])) > 10:
                 raise Exception('NIDAQ out of range!')
             
-        response, time = self.send_receive(chan_out, chan_in, V, freq=freq)
+        response, time = self.send_receive(chan_out, V, freq=freq)
          
         return V, response, time
         
