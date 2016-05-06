@@ -9,6 +9,7 @@ class Attocube():
     For remote operation of the Attocubes. Order of axes is Z, Y, X (controllers 1,2,3 are in that order). 
     
     To test: up/down fanciness with negative signs. I think it works, but not 100%
+    To do: write dictionaries for three axes instead of array
     '''
     Stages = {'z': 1, 'y': 2, 'x':3}
     

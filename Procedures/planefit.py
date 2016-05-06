@@ -30,18 +30,26 @@ class Planefit():
         self.c = None
         
     def do(self):
-        start_pos = [self.center[0], self.center[1], 0]
-        self.nav.goto_seq(start_pos[0], start_pos[1], start_pos[2])
-        self.td.do(planescan=False) # to position z attocube so that V_td is near the center of sweep range at the center of the scan
-        input('good?')
-        self.piezos.check_lim({'x': self.X, 'y': self.Y})
-        for i in range(self.X.shape[0]): #SWAPPED INDICES 0 1 i j
+        ## Initial touchdown
+        start_pos = [self.center[0], self.center[1], 0] # center of plane
+        self.nav.goto_seq(start_pos[0], start_pos[1], start_pos[2]) # go to center of plane
+        self.td.do(planescan=False) # Will to initial touchdown at center of plane to (1) find the plane (2) make touchdown voltage near center of piezo's positive voltage range
+        
+        check_td = input('Does the initial touchdown look good? Enter \'quit\' to abort.')
+        if check_td == 'quit':
+            raise Exception('Terminated by user')
+        
+        self.piezos.check_lim({'x': self.X, 'y': self.Y}) # make sure we won't scan outside X, Y piezo ranges!
+        
+        ## Loop over points sampled from plane.
+        for i in range(self.X.shape[0]): 
             for j in range(self.X.shape[1]):
-                self.nav.goto_seq(self.X[i,j], self.Y[i,j], -40)
-                self.td = touchdown2.Touchdown(self.piezos, self.atto, self.lockin, self.daq, self.cap_input) #refresh touchdown object
-                self.Z[i,j] = self.td.do(planescan=True)
-        self.nav.goto_seq(start_pos[0], start_pos[1], start_pos[2])
-        self.plane(0, 0, True) # calculates plane then returns origin z-value
+                self.nav.goto_seq(self.X[i,j], self.Y[i,j], -self.piezos.Vmax['z']) #Retract Z, then move to (X,Y)
+                self.td = touchdown2.Touchdown(self.piezos, self.atto, self.lockin, self.daq, self.cap_input) # new touchdown at this point
+                self.Z[i,j] = self.td.do(planescan=True) # Do the touchdown. Planescan True prevents attocubes from moving and only does one touchdown
+       
+        self.nav.goto_seq(start_pos[0], start_pos[1], start_pos[2]) # return to center of plane
+        self.plane(0, 0, True) # calculates plane. Calculates origin voltage too, but we won't use it.
         
     def plane(self, x, y, recal=False):
         X = self.X.flatten()
@@ -52,6 +60,21 @@ class Planefit():
             self.a, self.b, self.c = lstsq(A, Z)[0]
 
         return self.a*x + self.b*y + self.c
+        
+    def plot():
+        import matplotlib.pyplot as plt
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        X = self.X
+        Y = self.Y
+        Z = self.Z
+
+        ax.scatter(X, Y, Z)
+
+        Zfit = self.plane(X,Y)
+        ax.plot_surface(X,Y,Zfit,alpha=0.2, color = [0,1,0])
+        xlabel('x')
         
 if __name__ == '__main__':
     """ just testing fitting algorithm """

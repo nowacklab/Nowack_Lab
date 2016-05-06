@@ -10,7 +10,7 @@ class Touchdown():
     def __init__(self, piezos, atto, lockin, daq, cap_input, low_temp = False):    
         self.touchdown = False
         self.V_to_C = 2530e3 # 2530 pF/V * (1e3 fF/pF), calibrated 20160423 by BTS, see ipython notebook
-        self.attosteps = 100 #number of attocube steps between sweeps
+        self.attosteps = 200 #number of attocube steps between sweeps
         self.numfit = 10       # number of points to fit line to while collecting data  
                 
         self.piezos = piezos
@@ -43,30 +43,35 @@ class Touchdown():
        
     def do(self, planescan=False):
         V_td = None
-        attosteps = self.attosteps
+        attosteps = self.attosteps # This is how many steps the attocubes will move if no touchdown detected.
         if planescan:
             attosteps = None # don't move the attocubes if doing a planescan - remember, 0 is continuous!
         
+        ## voltage sweep is from -Vmax to Vmax, step size determined in configure_piezo. 4 V looks good.
         numsteps = int(2*self.piezos.Vmax['z']/self.z_piezo_step)
         self.V = np.linspace(-self.piezos.Vmax['z'], self.piezos.Vmax['z'], numsteps)
         
-        self.check_balance()
+        self.check_balance() # Make sure capacitance bridge is well-balanced
         
         while not self.touchdown: # loop will move up attocubes every time
 
-            self.C = [None]*numsteps # Capacitance       
-            self.C0 = None # Cap offset
-            self.extra = 0
+            self.C = [None]*numsteps # Capacitance (fF)
+            self.C0 = None # Cap offset... will take on value of the first point
+            self.extra = 0 # Counter to keep track of extra points after touchdown (for fitting the line)
             
-            for i in range(numsteps):
-                self.piezos.V = {'z': self.V[i]}
-                Vcap = getattr(self.daq, self.lockin.ch1_daq_input)
+            for i in range(numsteps): # Loop over each piezo voltage
+                self.piezos.V = {'z': self.V[i]} # Set the current voltage
+                
+                ## Get capacitance
+                Vcap = getattr(self.daq, self.lockin.ch1_daq_input) # Read the voltage from the daq
                 Vcap = self.lockin.convert_output(Vcap) # convert to a lockin voltage
-                Cap = Vcap*self.V_to_C
+                Cap = Vcap*self.V_to_C # convert to true capacitance (fF)
+                
                 if self.C0 == None: 
-                    self.C0 = Cap # make the first point zero
-                self.C[i] = Cap - self.C0
-                if i >= self.numfit: # start checking after min number of pts
+                    self.C0 = Cap # Sets the offset datum   
+                self.C[i] = Cap - self.C0 # remove offset
+                
+                if i >= self.numfit: # start fitting the line after min number of points have come in
                     self.check_touchdown(i)
                 self.plot_cap(i)
                     
@@ -75,7 +80,8 @@ class Touchdown():
                         self.extra = self.extra + 1 
                     else:    
                         V_td = self.get_touchdown_voltage(i, plot=False)   
-                        if not planescan: #Don't want to move attocubes during planescan
+                        if not planescan: # Don't want to move attocubes during planescan
+                            # For central touchdown of plane, we want to get the touchdown voltage near the center of the piezo's positive voltage range.
                             if V_td > 0.6*self.piezos.Vmax['z']:
                                 self.touchdown = False
                                 attosteps = self.attosteps/4 #make sure we don't crash! Don't keep on updating attosteps, otherwise it will go to zero eventually, and that means continuous!!!
@@ -86,19 +92,21 @@ class Touchdown():
             
             if self.extra != 3: # did not take enough extra steps, TD is at end of range
                 self.touchdown = False 
+            
+              ## This following code probably only for super extremely tilted samples... may not need to worry about this
             # if planescan:
                 # if V_td == None:
                     # raise Exception('Need to adjust attocubes, piezo couldn\'t make it to the plane or touchdown has already happened!') # only check once, or else attocubes are aligned!
                   
-            self.piezos.V = {'z': 0}
+            self.piezos.V = {'z': 0} # bring the piezo back to zero
                 
-            #self.touchdown = True
+            ## Move the attocubes; either we're too far away for a touchdown or TD voltage not centered    
             if not self.touchdown:
                 self.piezos.V = {'z': -self.piezos.Vmax['z']} # before moving attocubes, make sure we're far away from the sample!
                 self.atto.up([attosteps, None, None]) 
         
-        V_td = self.get_touchdown_voltage(i, plot=True) # just for plotting
-        self.lockin.amplitude = 0            
+        V_td = self.get_touchdown_voltage(i, plot=True) # we didn't plot the intersecting lines before, so let's do that now.
+        self.lockin.amplitude = 0  # turn off the lockin          
                     
         return V_td
 
@@ -119,13 +127,12 @@ class Touchdown():
         else:
             self.atto.voltage = [40, None, None] #RT values    
     
-    
     def configure_lockin(self):
         """ Set up lockin amplifier for capacitance detection """
         self.lockin.amplitude = 1
         self.lockin.frequency = 24989 # prime number ^_^
-        self.lockin.set_out(1, 'R')
-        self.lockin.set_out(2, 'theta')
+        self.lockin.set_out(1, 'R') # Possibly X is better?
+        self.lockin.set_out(2, 'theta') # not used, but may be good to see
         self.lockin.sensitivity = 50e-6 # set this relatively high to make sure get good reading of lockin.R
         self.lockin.sensitivity = 10*self.lockin.R # lockin voltage should not increase by more than a factor of 10 during touchdown
         self.lockin.time_constant = 1/(5*self.z_piezo_freq) # time constant five times shorter than dwell time for measurement
@@ -134,11 +141,13 @@ class Touchdown():
             
     def configure_piezo(self):
         """ Set up z piezo parameters """
+        # As of 5/3/2016, only z_piezo_step is used, and the daq sends points one at a time as fast as possible. But this seems fast enough. Might as well just hard-code a time constant.
         self.z_piezo_max_rate = 30 #V/s
         self.z_piezo_step = 4 # For full 120 V to -120 V sweep, this is 120 points
         self.z_piezo_freq = self.z_piezo_max_rate/self.z_piezo_max_rate
  
     def line(self, x, y):
+        """ Fits a line given x data, y data. Not sure if curve_fit or linregress is better, or if there is no difference. """
         # m, b, r, _, _ = linregress(x,y)
         # return m,b
         def f(x, m, b):
@@ -148,11 +157,11 @@ class Touchdown():
  
     def get_touchdown_voltage(self, i, plot=False):
         minfit = 3 # at minimum, fit 3 points from the end
-        j = i-minfit
-        k = j-minfit  # so we don't fit approach too close
+        j = i-minfit # lower index of touchdown line
+        k = j-minfit  # upper index of approach line, a little buffer added to avoid fitting actual touchdown points
         m_td, b_td = self.line(self.V[j:i+1], self.C[j:i+1])
         m_app, b_app = self.line(self.V[int(0.85*k):k+1], self.C[int(0.85*k):k+1]) # fit the last quarter of points
-        V_td = (b_td - b_app)/(m_app - m_td)
+        V_td = (b_td - b_app)/(m_app - m_td) # intersection of two lines. Remember high school algebra?
         
         if plot:
             plt.clf()
@@ -174,7 +183,7 @@ class Touchdown():
         plt.xlabel('Piezo voltage (V)')
         plt.ylabel(r'$C - C_{balance}$ (fF)')
         plt.xlim(-self.piezos.Vmax['z'], self.piezos.Vmax['z'])
-        plt.ylim(-2,5)
+        plt.ylim(-2,10)
                 
         if i+1 >= self.numfit: # start fitting after min number of points
             Vfit = self.V[i+1-self.numfit:i+1] # take slice of last self.numfit points

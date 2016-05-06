@@ -11,8 +11,8 @@ import atexit
 class PCI100:
     """Connects to the PCI-100 controller for the SQUID array"""
 
-    def __init__(self, visaResource=None):
-        self.setVisaResource(visaResource) # should be something like 'COM1', what port is it plugged into?
+    def __init__(self, visaResource='COM3'):
+        self.setVisaResource(visaResource) # should be something like 'COM3', what port is it plugged into?
         atexit.register(self.close)        
 	
     def setVisaResource(self, visaResource):
