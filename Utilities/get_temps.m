@@ -3,7 +3,7 @@ function [ temps ] = get_temps
 %   Detailed explanation goes here
 
 %Set up communication 
-path_to_dll = strcat('C:\Users\root\Documents\GitHub\Nowack_Lab\Utilities','\CryostationComm.dll');
+path_to_dll = strcat('C:\Users\Hemlock\Documents\GitHub\Nowack_Lab\Utilities','\CryostationComm.dll');
 NET.addAssembly(path_to_dll);
 cryo = CryostationComm.CryoComm;
 cryo.IP_Address = '192.168.69.101'; % 069 does not work!

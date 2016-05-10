@@ -2,7 +2,7 @@
 Name,Value,Units,Type
 rate,90,Hz,daq
 range,10,V,daq
-gain,500,none,preamp
+gain,250,none,preamp
 rolloff_low,0,Hz,preamp
 rolloff_high,100,Hz,preamp
 Rbias,2.00E+03,Ohm,squid

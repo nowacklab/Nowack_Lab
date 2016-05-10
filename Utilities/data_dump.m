@@ -2,6 +2,7 @@ function data_dump( file, path, data, labels )
 %DATA_DUMP Summary of this function goes here
 %   Detailed explanation goes here
 filename = strcat(path,file);
+disp(filename);
 
 fid = fopen(filename, 'a');
 fprintf(fid, '# ');% add comment char so easy to filter

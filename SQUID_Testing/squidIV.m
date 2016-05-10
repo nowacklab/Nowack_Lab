@@ -3,8 +3,8 @@ function [ptable, Vsquid] = squidIV()
 clear all % MATLAB is complaining but this function will only be run like a script
 close all
 %% Add paths 
-addpath('C:\Users\root\Documents\GitHub\Nowack_Lab\Equipment_Drivers');
-addpath('C:\Users\root\Documents\GitHub\Nowack_Lab\Utilities');
+addpath('C:\Users\Hemlock\Documents\GitHub\Nowack_Lab\Equipment_Drivers');
+addpath('C:\Users\Hemlock\Documents\GitHub\Nowack_Lab\Utilities');
 
 %% Edit before running
 
@@ -15,14 +15,14 @@ no_squid = false;
 paramfile = 'std_params.csv';
 % paramfile = 'StarCryo_IV.csv';
 
-parampath = strcat('C:\Users\root\Documents\GitHub\Nowack_Lab\SQUID_Testing\Parameters\',paramfile);
+parampath = strcat('C:\Users\Hemlock\Documents\GitHub\Nowack_Lab\SQUID_Testing\Parameters\',paramfile);
 [p, ptable] = param_parse(parampath); % use ptable to see parameters in table form
 
 % Git dump? Uncomment if you want a cluttered git.
 % git_dump();
 
 %% Define file locations
-dropbox = 'C:\Users\root\Dropbox\TeamData\';
+dropbox = 'C:\Users\Hemlock\Dropbox (Nowack Lab)\TeamData\';
 time = char(datetime('now','TimeZone','local','Format', 'yyyyMMdd_HHmmss'));
 
 paramsavepath = strcat(dropbox, 'Montana\squid_testing\'); % Where the parameters will be saved
@@ -92,15 +92,16 @@ copyfile('tempnotes.csv', strcat(paramsavepath,paramsavefile)); %copies paramete
 copyfile('temperatures.csv', strcat(paramsavepath,paramsavefile)); %copies temperatures file to permanent location % changed to following line
 disp(['copy tempnotes.csv + ', ...
         parampath, ' + temperatures.csv ', ...
-        strcat(paramsavepath,paramsavefile), ' /b'])
+        '"', strcat(paramsavepath,paramsavefile), '"', ' /b']);
+disp('asjkof');
 system(['copy tempnotes.csv + ', ...
         parampath, ' + temperatures.csv ', ...
-        strcat(paramsavepath,paramsavefile), ' /b']); 
+        '"', strcat(paramsavepath,paramsavefile), '"', ' /b']); 
     % fid = fopen(strcat(paramsavepath,paramsavefile), 'a+'); %moved up above
 % fprintf(fid, '%s', strcat('notes',notes,'none','notes'));
 % fclose(fid);
-delete('tempnotes.csv');
-delete('temperatures.csv');
+%delete('tempnotes.csv');
+%delete('temperatures.csv');
 
 
 %% Plot

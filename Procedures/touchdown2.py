@@ -115,7 +115,7 @@ class Touchdown():
         last_std = np.std(self.C[i-int(self.numfit):i]) # looks at standard deviation of last self.numfit points up to i
         deviation = abs(self.C[i] - np.mean(self.C[i+1-int(self.numfit):i+1])) # deviation of the ith point from average of last self.numfit points, including i
               
-        if deviation > 6*last_std and self.C[i]-self.C[i-1] > 0.2: # Touchdown if further than 6 standard deviations away and capacitance change between last two points above 0.2 fF
+        if deviation > 4*last_std and abs(self.C[i]-self.C[i-1]) > 0.2: # Touchdown if further than 4 standard deviations away and capacitance change between last two points above 0.2 fF.. will also account for dip
             self.touchdown = True
             
     def configure_attocube(self):

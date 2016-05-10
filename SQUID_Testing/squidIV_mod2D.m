@@ -4,8 +4,8 @@ clear all % MATLAB is complaining but this function will only be run like a scri
 close all
 
 %% Add paths
-addpath('C:\Users\root\Documents\GitHub\Nowack_Lab\Equipment_Drivers');
-addpath('C:\Users\root\Documents\GitHub\Nowack_Lab\Utilities');
+addpath('C:\Users\Hemlock\Documents\GitHub\Nowack_Lab\Equipment_Drivers');
+addpath('C:\Users\Hemlock\Documents\GitHub\Nowack_Lab\Utilities');
 
 %% Edit before running
 % If testing without a squid, for wiring, etc
@@ -22,7 +22,7 @@ parampath = strcat('.\Parameters\',paramfile);
 
 
 %%  Define file locations
-dropbox = 'C:\Users\root\Dropbox\TeamData\';
+dropbox = 'C:\Users\Hemlock\Dropbox (Nowack Lab)\TeamData\';
 time = char(datetime('now','TimeZone','local','Format', 'yyyyMMdd_HHmmss'));
 
 paramsavepath = strcat(dropbox, 'Montana\squid_testing\'); % Where the parameters will be saved
