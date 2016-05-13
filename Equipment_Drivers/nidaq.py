@@ -116,7 +116,12 @@ class NIDAQ():
         
         return data_in, list(time[0:len(time)-1]) #list limits undo extra point added for daq weirdness
         
-    def sweep(self, chan_out, Vstart, Vend, freq=100, numsteps=1000):   
+    def sweep(self, chan_out, Vstart, Vend, freq=100, numsteps=1000, accel=False):   
+        if numpy.isscalar(chan_out): #Make these dicts and lists
+            Vstart = {chan_out: Vstart}
+            Vend = {Vend: Vend}
+            chan_out = [chan_out]
+            
         V = {}       
         for k in Vstart.keys():        
             V[k] = list(numpy.linspace(Vstart[k], Vend[k], numsteps))
