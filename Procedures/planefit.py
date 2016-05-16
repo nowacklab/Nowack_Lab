@@ -1,14 +1,15 @@
 import numpy
 from numpy.linalg import lstsq
-import touchdown2, navigation
+import touchdown, navigation
 import time
         
 class Planefit():
     def __init__(self, instruments, span, center, numpts, cap_input):
-        self.piezos = instruments[0]
-        self.atto = instruments[1]
-        self.lockin = instruments[2]
-        self.daq = instruments[3]
+        self.instruments = instruments
+        self.piezos = instruments['piezos']
+        self.atto = instruments['atto']
+        self.lockin = instruments['lockin']
+        self.daq = instruments['daq']
         
         self.span = span
         self.center = center
@@ -16,7 +17,7 @@ class Planefit():
     
         self.cap_input = cap_input
         
-        self.td = touchdown2.Touchdown(self.piezos, self.atto, self.lockin, self.daq, self.cap_input)
+        self.td = touchdown.Touchdown(self.instruments, self.cap_input)
         self.nav = navigation.Goto(self.piezos)
                 
         self.x = numpy.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
@@ -33,7 +34,7 @@ class Planefit():
         ## Initial touchdown
         start_pos = [self.center[0], self.center[1], 0] # center of plane
         self.nav.goto_seq(start_pos[0], start_pos[1], start_pos[2]) # go to center of plane
-        self.td.do(planescan=False) # Will to initial touchdown at center of plane to (1) find the plane (2) make touchdown voltage near center of piezo's positive voltage range
+        self.td.do(planescan=False) # Will do initial touchdown at center of plane to (1) find the plane (2) make touchdown voltage near center of piezo's positive voltage range
         
         check_td = input('Does the initial touchdown look good? Enter \'quit\' to abort.')
         if check_td == 'quit':
@@ -45,7 +46,7 @@ class Planefit():
         for i in range(self.X.shape[0]): 
             for j in range(self.X.shape[1]):
                 self.nav.goto_seq(self.X[i,j], self.Y[i,j], -self.piezos.Vmax['z']) #Retract Z, then move to (X,Y)
-                self.td = touchdown2.Touchdown(self.piezos, self.atto, self.lockin, self.daq, self.cap_input) # new touchdown at this point
+                self.td = touchdown.Touchdown(self.instruments, self.cap_input) # new touchdown at this point
                 self.Z[i,j] = self.td.do(planescan=True) # Do the touchdown. Planescan True prevents attocubes from moving and only does one touchdown
        
         self.nav.goto_seq(start_pos[0], start_pos[1], start_pos[2]) # return to center of plane
@@ -61,7 +62,7 @@ class Planefit():
 
         return self.a*x + self.b*y + self.c
         
-    def plot():
+    def plot(self):
         from mpl_toolkits.mplot3d import Axes3D
         import matplotlib.pyplot as plt
         fig = plt.figure()
@@ -75,7 +76,7 @@ class Planefit():
 
         Zfit = self.plane(X,Y)
         ax.plot_surface(X,Y,Zfit,alpha=0.2, color = [0,1,0])
-        xlabel('x')
+        plt.xlabel('x')
         
 if __name__ == '__main__':
     """ just testing fitting algorithm """

@@ -89,7 +89,7 @@ class Piezos():
             Vend[self.chan_out[k]] = Vend.pop(k)
 
         V, response, time = self.daq.sweep([self.chan_out[k] for k in KEYS], Vstart, Vend, freq=freq, numsteps=numsteps)
- 
+
         # Go back to piezo keys
         for k in KEYS:   
             V[k] = V.pop(self.chan_out[k])

@@ -1,10 +1,10 @@
 
 Name,Value,Units,Type
-rate,90,Hz,daq
+rate,9,Hz,daq
 range,10,V,daq
-gain,250,none,preamp
+gain,500,none,preamp
 rolloff_low,0,Hz,preamp
-rolloff_high,100,Hz,preamp
+rolloff_high,10,Hz,preamp
 Rbias,2.00E+03,Ohm,squid
 Irampmin,-100.00E-06,A,squid
 Irampstep,500.00E-09,A,squid

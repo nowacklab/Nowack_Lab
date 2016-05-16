@@ -9,10 +9,10 @@ from numpy import ma
         
 class Scanplane():
     def __init__(self, instruments, span, center, numpts, plane, scanheight, chan_in, swap=False):
-        self.piezos = instruments[0]
-        self.atto = instruments[1]
-        self.lockin = instruments[2]
-        self.daq = instruments[3]
+        self.piezos = instruments['piezos']
+        self.atto = instruments['atto']
+        self.lockin = instruments['lockin']
+        self.daq = instruments['daq']
         
         self.chan_in = chan_in
         if chan_in not in self.daq.inputs_to_monitor:

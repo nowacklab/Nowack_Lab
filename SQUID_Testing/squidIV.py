@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 class SquidIV():
-    def __init__(self, instruments, squidout, squidin, modout:    
+    def __init__(self, instruments, squidout, squidin, modout, rate):    
         self.daq = instruments['daq']
         self.preamp = instruments['preamp']
         
@@ -19,18 +19,18 @@ class SquidIV():
         
         self.savepath = 'C:\Users\Hemlock\Dropbox (Nowack Lab)\TeamData\Montana\squid_testing\'
         
-        self.rate = 90 # Hz # measurement rate of the daq
+        self.rate = rate # Hz # measurement rate of the daq
         self.preamp.gain = 500 
-        self.preamp.filter = (0, 100) # Hz  
+        self.preamp.filter = (0, rate) # Hz  
         
         self.Rbias = 2e3 # Ohm # cold bias resistors on the SQUID testing PCB
         self.Rbias_mod = 2e3 # Ohm # cold bias resistors on the SQUID testing PCB
         self.I_mod = 0 # A # constant mod current
         
         self.Irampspan = 200e-6 # A # Will sweep from -Irampspan/2 to +Irampspan/2
-		self.Irampstep = 0.5e-6 # A # Step size
+        self.Irampstep = 0.5e-6 # A # Step size
 
-		self.numpts = int(self.Irampspan/self.Irampstep)
+        self.numpts = int(self.Irampspan/self.Irampstep)
 		
         self.I = np.linspace(-self.Irampspan/2, self.Irampspan/2, self.numpts) # Squid current
         self.Vbias = self.I*self.Rbias # SQUID bias voltage
