@@ -2,6 +2,7 @@ import numpy
 from numpy.linalg import lstsq
 import touchdown, navigation
 import time
+import matplotlib.pyplot as plt
         
 class Planefit():
     def __init__(self, instruments, span, center, numpts, cap_input):
@@ -51,6 +52,7 @@ class Planefit():
        
         self.nav.goto_seq(start_pos[0], start_pos[1], start_pos[2]) # return to center of plane
         self.plane(0, 0, True) # calculates plane. Calculates origin voltage too, but we won't use it.
+        self.save()
         
     def plane(self, x, y, recal=False):
         X = self.X.flatten()
@@ -64,7 +66,6 @@ class Planefit():
         
     def plot(self):
         from mpl_toolkits.mplot3d import Axes3D
-        import matplotlib.pyplot as plt
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
 
@@ -77,6 +78,25 @@ class Planefit():
         Zfit = self.plane(X,Y)
         ax.plot_surface(X,Y,Zfit,alpha=0.2, color = [0,1,0])
         plt.xlabel('x')
+        
+    def save(self):
+        data_folder = 'C:\\Users\\Hemlock\\Dropbox (Nowack lab)\\TeamData\\Montana\\Planes\\'
+        filename = time.strftime('%Y%m%d_%H%M%S') + '_plane'
+        filename = data_folder + filename
+        
+        with open(filename+'.csv', 'w') as f:
+            for s in ['span', 'center', 'numpts']:
+                f.write('%s = %f, %f \n' %(s, float(getattr(self, s)[0]),float(getattr(self, s)[1])))
+            for s in ['a','b','c']:
+                f.write('%s = %f\n' %(s, float(getattr(self, s))))
+            f.write('X (V)\tY (V)\tZ (V)\n')
+            for i in range(self.X.shape[0]): 
+                for j in range(self.X.shape[1]):
+                    if self.Z[i][j] != None:
+                        f.write('%f' %self.X[i][j] + '\t' + '%f' %self.Y[i][j] + '\t' + '%f' %self.Z[i][j] + '\n')
+        
+        self.plot()
+        plt.savefig(filename+'.pdf', bbox_inches='tight')
         
 if __name__ == '__main__':
     """ just testing fitting algorithm """
@@ -98,7 +118,6 @@ if __name__ == '__main__':
     
     planefit = Planefit(X, Y, Z)
     
-    import matplotlib.pyplot as plt
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 

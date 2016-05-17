@@ -37,6 +37,7 @@ class Scanplane():
         
         self.V = numpy.array([[float('nan')]*self.X.shape[0]]*self.X.shape[1])
         
+        self.swap = swap
         if swap: # Will rotate scan 90 degrees? Not really tested. I think it works.
             self.X = numpy.swapaxes(self.X, 0, 1)
             self.Y = numpy.swapaxes(self.Y, 0, 1)
@@ -61,7 +62,8 @@ class Scanplane():
             self.plot()  
             
         self.nav.goto_seq(self.start_pos[0], self.start_pos[1], self.start_pos[2]) #Go back whence you came!
-
+        self.save()
+        
     def plot(self):
         Vm = ma.masked_where(numpy.isnan(self.V),self.V) #hides data not yet collected
     
@@ -74,6 +76,28 @@ class Scanplane():
         
         display.display(plt.gcf())
         display.clear_output(wait=True)
+        
+    def save(self):
+        data_folder = 'C:\\Users\\Hemlock\\Dropbox (Nowack lab)\\TeamData\\Montana\\Scans\\'
+        filename = time.strftime('%Y%m%d_%H%M%S') + '_scan'
+        filename = data_folder + filename
+        
+        with open(filename+'.csv', 'w') as f:
+            for s in ['span', 'center', 'numpts']:
+                f.write('%s = %f, %f \n' %(s, float(getattr(self, s)[0]),float(getattr(self, s)[1])))
+            for s in ['a','b','c']:
+                f.write('plane.%s = %f\n' %(s, float(getattr(self.plane, s))))
+            f.write('scanheight = %f\n' %self.scanheight)
+            f.write('swap = %i\n' %self.swap)
+
+            f.write('X (V)\tY (V)\tV (V)\n')
+            for i in range(self.X.shape[0]): 
+                for j in range(self.X.shape[1]):
+                    if self.V[i][j] != None:
+                        f.write('%f' %self.X[i][j] + '\t' + '%f' %self.Y[i][j] + '\t' + '%f' %self.V[i][j] + '\n')
+        
+        self.plot()
+        plt.savefig(filename+'.pdf', bbox_inches='tight')
         
 if __name__ == '__main__':
     'hey'

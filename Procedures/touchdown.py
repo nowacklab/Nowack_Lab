@@ -31,7 +31,10 @@ class Touchdown():
         self.C = [] # Capacitance
         self.C0 = None # Cap offset
         self.extra = 0 # Extra points to add to fit after TD detected
-
+        self.V_td = -1000.0
+        
+        self.planescan=False
+        
         self.fig = plt.figure()
         self.ax = plt.gca()
         display.clear_output()
@@ -43,6 +46,7 @@ class Touchdown():
             raise Exception('Balance the capacitance bridge!')
        
     def do(self, planescan=False):
+        self.planescan=planescan
         V_td = None
         attosteps = self.attosteps # This is how many steps the attocubes will move if no touchdown detected.
         if planescan:
@@ -122,7 +126,10 @@ class Touchdown():
         
         V_td = self.get_touchdown_voltage(i, plot=True) # we didn't plot the intersecting lines before, so let's do that now.
         self.lockin.amplitude = 0  # turn off the lockin          
-                    
+                                 
+        self.V_td = V_td   
+        self.save() 
+
         return V_td
 
         
@@ -221,3 +228,21 @@ class Touchdown():
 
         display.display(self.fig)
         display.clear_output(wait=True)
+        
+    def save(self):
+        data_folder = 'C:\\Users\\Hemlock\\Dropbox (Nowack lab)\\TeamData\\Montana\\Touchdowns\\'
+        filename = time.strftime('%Y%m%d_%H%M%S') + '_td'
+        if self.planescan:
+            filename = filename + '_planescan'
+        filename = data_folder + filename
+        with open(filename+'.csv', 'w') as f:
+            f.write('V_td = %f\n' %self.V_td)
+            f.write('V_to_C conversion in fF/V = %f\n' %self.V_to_C)
+            f.write('V (V)\tC (fF)\n')
+            for i in range(len(self.V)):
+                if self.C[i] != None:
+                    f.write('%f' %self.V[i] + '\t' + '%f' %self.C[i] + '\n')
+        
+        plt.savefig(filename+'.pdf', bbox_inches='tight')
+        
+        
