@@ -36,7 +36,7 @@ class NIDAQ():
         self.inputs_to_monitor = ['ai23']# at least monitor one input
         
         if zero:
-            self.zero()
+            self.zero() # DOES NOT WORK
         
     @property
     def freq(self):
@@ -46,6 +46,10 @@ class NIDAQ():
     def freq(self, value):
         self._freq = value      
 
+    def add_input(self, inp):
+        if inp not in self.inputs_to_monitor:
+            self.inputs_to_monitor.append(inp)
+        
     def get(self):
         for chan in self._daq.get_AO_channels() + self._daq.get_AI_channels():
             print('%s: ' %chan, getattr(self, chan),'\n')
@@ -119,7 +123,7 @@ class NIDAQ():
     def sweep(self, chan_out, Vstart, Vend, freq=100, numsteps=1000, accel=False):   
         if numpy.isscalar(chan_out): #Make these dicts and lists
             Vstart = {chan_out: Vstart}
-            Vend = {Vend: Vend}
+            Vend = {chan_out: Vend}
             chan_out = [chan_out]
             
         V = {}       
@@ -133,6 +137,7 @@ class NIDAQ():
         return V, response, time
         
     def zero(self):
+        """ DOES NOT WORK """
         for chan in self._daq.get_AO_channels():
             self.sweep(chan, 'ai0', {chan: getattr(self, chan)}, {chan: 0})
                         

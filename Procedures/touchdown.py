@@ -83,21 +83,24 @@ class Touchdown():
                 if self.touchdown:
                     if self.extra < self.numextra: # take three extra points for fit
                         self.extra = self.extra + 1 
+                        if i == numsteps - 1:
+                            self.touchdown = False # special case; there was a bug where if last extra point was last point taken, touchdown would be detected as true
+                            
                     else:    
                         V_td = self.get_touchdown_voltage(i, plot=False)   
                         if not planescan: # Don't want to move attocubes during planescan
                             # For central touchdown of plane, we want to get the touchdown voltage near the center of the piezo's positive voltage range.
-                            if V_td > 0.6*self.piezos.Vmax['z']:
+                            if V_td > 0.65*self.piezos.Vmax['z']:
                                 self.touchdown = False
-                                attosteps = self.attosteps/4 #make sure we don't crash! Don't keep on updating attosteps, otherwise it will go to zero eventually, and that means continuous!!!
-                            elif V_td < 0.4*self.piezos.Vmax['z']:
+                                attosteps = self.attosteps/8 #make sure we don't crash! Don't keep on updating attosteps, otherwise it will go to zero eventually, and that means continuous!!!
+                            elif V_td < 0.35*self.piezos.Vmax['z']:
                                 self.touchdown = False
-                                attosteps = -self.attosteps/4 #move the other direction to bring V_td closer to midway #make sure we don't crash! Don't keep on updating attosteps, otherwise it will go to zero eventually, and that means continuous!!!
+                                attosteps = -self.attosteps/8 #move the other direction to bring V_td closer to midway #make sure we don't crash! Don't keep on updating attosteps, otherwise it will go to zero eventually, and that means continuous!!!
                         elif V_td < 0: # This is obviously a false touchdown; for planescan only
                             self.touchdown=False 
                         elif self.extra == self.numextra: # last extra step
                             rsquared = self.line_corr_coef(self.V[i-self.numextra:i+1], self.C[i-self.numextra:i+1]) #check fit of last few points
-                            if rsquared < 0.95:
+                            if rsquared < 0.90:
                                 self.touchdown=False # false touchdown
                         break
             
@@ -125,7 +128,7 @@ class Touchdown():
             # print('Piezos zeroed, attocubes grounded, lockin off')
         
         V_td = self.get_touchdown_voltage(i, plot=True) # we didn't plot the intersecting lines before, so let's do that now.
-        self.lockin.amplitude = 0  # turn off the lockin          
+        # self.lockin.amplitude = 0  # turn off the lockin          
                                  
         self.V_td = V_td   
         self.save() 
@@ -166,7 +169,7 @@ class Touchdown():
         """ Set up z piezo parameters """
         # As of 5/3/2016, only z_piezo_step is used, and the daq sends points one at a time as fast as possible. But this seems fast enough. Might as well just hard-code a time constant.
         self.z_piezo_max_rate = 30 #V/s
-        self.z_piezo_step = 1 # For full 120 V to -120 V sweep, this is 480 points
+        self.z_piezo_step = 2 # 1V at RT, 2V at low T works? # For full 120 V to -120 V sweep, 1 V step is 480 points
         self.z_piezo_freq = self.z_piezo_max_rate/self.z_piezo_max_rate
  
     def line(self, x, y):
@@ -187,7 +190,7 @@ class Touchdown():
         j = i-minfit # lower index of touchdown line
         k = j-minfit  # upper index of approach line, a little buffer added to avoid fitting actual touchdown points
         m_td, b_td = self.line(self.V[j:i+1], self.C[j:i+1])
-        m_app, b_app = self.line(self.V[int(0.85*k):k+1], self.C[int(0.85*k):k+1]) # fit the last quarter of points
+        m_app, b_app = self.line(self.V[int(0.5*k):k+1], self.C[int(0.5*k):k+1]) # fit the last half of points
         V_td = (b_td - b_app)/(m_app - m_td) # intersection of two lines. Remember high school algebra?
         
         if plot:
@@ -197,7 +200,7 @@ class Touchdown():
             plt.clf()
             plt.plot(self.V[j-2:i+1], m_td*np.array(self.V[j-2:i+1])+b_td, blue, lw=2) # 2 is arbitrary, just wanted some more points drawn
             plt.plot(self.V,self.C,'.k') 
-            plt.plot(self.V[int(0.85*k):i+1], m_app*np.array(self.V[int(0.85*k):i+1])+b_app, orange, lw=2)
+            plt.plot(self.V[int(0.5*k):i+1], m_app*np.array(self.V[int(0.5*k):i+1])+b_app, orange, lw=2)
             
             plt.title('Touchdown at %.2f V' %V_td, fontsize=20)
             plt.xlabel('Piezo voltage (V)', fontsize=20)
@@ -217,7 +220,7 @@ class Touchdown():
         plt.xlabel('Piezo voltage (V)')
         plt.ylabel(r'$C - C_{balance}$ (fF)')
         plt.xlim(-self.piezos.Vmax['z'], self.piezos.Vmax['z'])
-        plt.ylim(-2,10)
+        plt.ylim(-1,5)
                 
         if i+1 >= self.numfit: # start fitting after min number of points
             Vfit = self.V[i+1-self.numfit:i+1] # take slice of last self.numfit points
@@ -238,6 +241,9 @@ class Touchdown():
         with open(filename+'.csv', 'w') as f:
             f.write('V_td = %f\n' %self.V_td)
             f.write('V_to_C conversion in fF/V = %f\n' %self.V_to_C)
+            f.write('Lockin parameters\n')
+            f.write(self.lockin.get_all())
+            f.write('\n')
             f.write('V (V)\tC (fF)\n')
             for i in range(len(self.V)):
                 if self.C[i] != None:

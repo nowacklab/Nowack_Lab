@@ -1,0 +1,22 @@
+Once have conversion factors, have touchdown "hone in" on center of piezo range better. Right now attocubes will miss.
+	-If change direction multiple times, reduce attocube number of steps
+Build in all conversion factors
+Read temperature of Montana
+Read high voltage amplifier gain
+Array class that deals with pci, pfl.
+	-Auto tune function would be cool
+Data file name in plots, timestamps in notebook?
+SAVE EVERYTHING
+
+Touchdown with floating table
+CHECK PIEZO RANGES BEFORE DOING SCAN
+
+Update plane c value with touchdown
+Fine over one direction, coarse over other
+Look at sweep rate as a function of number of points
+
+Check plane when update any of a, b, c. Make sure piezos still in range!
+Try capacitance in X, get calibration, see if dip occurs
+Use center point of plane for fitting, and maybe use this also to update/set C value?
+
+Reusing touchdown function, local variable i referenced before assignment?

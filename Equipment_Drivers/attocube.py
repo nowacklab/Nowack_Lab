@@ -139,7 +139,8 @@ class Attocube():
             if numsteps[i] > self._step_lim:
                 raise Exception('too many steps! Max %i' %self._step_lim)
             elif numsteps[i] == 0:
-                msg = self.send('step%s %i c' %(updown, i+1))
+                continue
+                # msg = self.send('step%s %i c' %(updown, i+1)) NO!!!!! THIS IS BAD!!! WE DON'T WANT TO MOVE CONTINUOUSLY
             else:
                 msg = self.send('step%s %i %i' %(updown, i+1, numsteps[i]))
                 if wait:

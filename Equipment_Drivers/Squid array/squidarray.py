@@ -8,6 +8,9 @@ import visa
 import time
 import atexit
 
+class Array(PFL102):
+    
+
 class PCI100:
     """Connects to the PCI-100 controller for the SQUID array"""
 

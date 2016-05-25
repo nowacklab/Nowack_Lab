@@ -47,6 +47,8 @@ class Planefit():
         for i in range(self.X.shape[0]): 
             for j in range(self.X.shape[1]):
                 self.nav.goto_seq(self.X[i,j], self.Y[i,j], -self.piezos.Vmax['z']) #Retract Z, then move to (X,Y)
+                print('X index: %i; Y index: %i' %(i, j))
+                
                 self.td = touchdown.Touchdown(self.instruments, self.cap_input) # new touchdown at this point
                 self.Z[i,j] = self.td.do(planescan=True) # Do the touchdown. Planescan True prevents attocubes from moving and only does one touchdown
        
