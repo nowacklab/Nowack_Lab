@@ -51,6 +51,9 @@ class Scanplane():
             self.X = numpy.swapaxes(self.X, 0, 1)
             self.Y = numpy.swapaxes(self.Y, 0, 1)
             self.Z = numpy.swapaxes(self.Z, 0, 1)
+			
+		self.filename = time.strftime('%Y%m%d_%H%M%S') + '_scan'
+
 
         
     def do(self):
@@ -94,23 +97,35 @@ class Scanplane():
         plt.clf()
    
         ax1 = plt.subplot(121, aspect=1)
-        plt.title('SQUID signal', fontsize=20)
+		self.plot_SQUID()
+        
+        ax2 = plt.subplot(222,aspect=1)
+		self.plot_cap()
+        
+        ax3 = plt.subplot(224)
+		self.plot_last_sweep()
+        
+        display.display(plt.gcf())
+        display.clear_output(wait=True)
+		
+	def plot_SQUID(self):
+		plt.title('%s\nSQUID signal' %self.filename, fontsize=20)
         plt.pcolor(self.X, self.Y, Vm, cmap='RdBu', vmin=-abs(Vm).max(), vmax= abs(Vm).max())
         plt.xlabel(r'$X (V_{piezo})$', fontsize=20)
         plt.ylabel(r'$Y (V_{piezo})$', fontsize=20)
         cb = plt.colorbar()
         cb.set_label(label = 'Voltage from %s' %self.sig_in, fontsize=20)
-        
-        ax2 = plt.subplot(222,aspect=1)
-        plt.title('capacitance', fontsize=20)
+		
+	def plot_cap(self):
+		plt.title('%s\ncapacitance' %self.filename, fontsize=20)
         plt.pcolor(self.X, self.Y, Cm, cmap='RdBu')
         plt.xlabel(r'$X (V_{piezo})$', fontsize=20)
         plt.ylabel(r'$Y (V_{piezo})$', fontsize=20)
         cb = plt.colorbar()
         cb.set_label(label = 'Voltage from %s' %self.cap_in, fontsize=20)
-        
-        ax3 = plt.subplot(224)
-        plt.title('last full line scan', fontsize=20)
+		
+	def plot_last_sweep(self):
+		plt.title('last full line scan', fontsize=20)
         plt.plot(self.last_full_sweep, '.-')
         plt.xlabel('Y (a.u.)', fontsize=20)
         plt.ylabel('V', fontsize=20)
@@ -118,14 +133,10 @@ class Scanplane():
         y0,y1 = ax3.get_ylim()
         ax3.set_aspect((x1-x0)/(y1-y0)/3)
         
-        display.display(plt.gcf())
-        display.clear_output(wait=True)
-        
     def save(self):
         data_folder = 'C:\\Users\\Hemlock\\Dropbox (Nowack lab)\\TeamData\\Montana\\Scans\\'
-        filename = time.strftime('%Y%m%d_%H%M%S') + '_scan'
-        filename = data_folder + filename
-        
+        filename = data_folder + self.filename
+      
         with open(filename+'.csv', 'w') as f:
             for s in ['span', 'center', 'numpts']:
                 f.write('%s = %f, %f \n' %(s, float(getattr(self, s)[0]),float(getattr(self, s)[1])))
@@ -140,8 +151,13 @@ class Scanplane():
                     if self.V[i][j] != None:
                         f.write('%f' %self.X[i][j] + '\t' + '%f' %self.Y[i][j] + '\t' + '%f' %self.V[i][j] + '\n')
         
-        self.plot()
-        plt.savefig(filename+'.pdf', bbox_inches='tight')
+		plt.figure()
+        self.plot_SQUID()
+		plt.savefig(filename+'.pdf', bbox_inches='tight')
+
+		plt.figure()
+		self.plot_cap()
+        plt.savefig(filename+'_cap.pdf', bbox_inches='tight')
         
 if __name__ == '__main__':
     'hey'

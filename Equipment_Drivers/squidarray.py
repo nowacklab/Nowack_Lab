@@ -8,9 +8,6 @@ import visa
 import time
 import atexit
 
-class Array(PFL102):
-    
-
 class PCI100:
     """Connects to the PCI-100 controller for the SQUID array"""
 
@@ -44,8 +41,15 @@ class PFL102:
     TestInputs = {'S_bias': 0x0010, 'A_bias': 0x0020, 'S_flux': 0x0040, 'A_flux': 0x0080}
     ParamRegisters = {'S_bias': 0b0010, 'A_bias': 0b0011, 'S_flux': 0b0000, 'A_flux': 0b0001, 'offset': 0b0100}
     TestSignalOptions = {'Off': 0, 'On': 1, 'Auto': 2}
-                                     
+	S_bias_lim = 2000 
+	A_bias_lim = 100         
+	S_flux_lim = 100 
+	A_flux_lim = 200    
+	offset_lim = 9.8     
+	amplifierGain = 5040.0 	
+			  
     def __init__(self, channel, interface):
+		""" Will initialize PFL 102 and zero everything """
         assert channel>= 1 and channel <=8 # choose 1
         
         self.label = 'PFL102'
@@ -62,13 +66,6 @@ class PFL102:
         self._A_flux = 0 
         self._offset = 0 
         
-        self.S_bias_lim = 2000 
-        self.A_bias_lim = 100         
-        self.S_flux_lim = 100 
-        self.A_flux_lim = 200    
-        self.offset_lim = 9.8
-
-        self.amplifierGain = 5040.0 
         self._integratorCapacitor = '1.5nF' 
         self._feedbackResistor = '100kOhm'
         self._sensitivity = 'High'
@@ -76,7 +73,7 @@ class PFL102:
         self._testInput = 'A_flux'
         self.resetIntegrator = False
         
-        self.tune() # make sure nothing is trying to lock
+        self.unlock() # make sure nothing is trying to lock
         self.updateAll() # to make sure all parameters are zero to begin
         
     ######### PROPERTY DEFINITIONS ###################
@@ -303,7 +300,7 @@ class PFL102:
         
         self.interface.send(command)
             
-    def tune(self):
+    def unlock(self):
         """ Unlock both SQUID and array"""
         self._squidLocked = False
         self._arrayLocked = False
@@ -370,10 +367,13 @@ class PFL102:
         self.send(data, 'FR') # FR = frequency control register
 
         
-        
-                
-            
-            
+class SquidArray(PFL102):
+	def __init__(self):
+        super().__init__(1, PCI100())
+    
+	def tune_and_lock(self):
+		""" Walks you through tuning and locking array/squid """
+		pass
 
 if __name__ == '__main__':
     """ Example/test code"""

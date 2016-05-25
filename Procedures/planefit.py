@@ -18,7 +18,6 @@ class Planefit():
     
         self.cap_input = cap_input
         
-        self.td = touchdown.Touchdown(self.instruments, self.cap_input)
         self.nav = navigation.Goto(self.piezos)
                 
         self.x = numpy.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
@@ -30,12 +29,16 @@ class Planefit():
         self.a = None
         self.b = None
         self.c = None
+		
+		self.filename = time.strftime('%Y%m%d_%H%M%S') + '_plane'
+
         
     def do(self):
         ## Initial touchdown
         start_pos = [self.center[0], self.center[1], 0] # center of plane
         self.nav.goto_seq(start_pos[0], start_pos[1], start_pos[2]) # go to center of plane
-        self.td.do(planescan=False) # Will do initial touchdown at center of plane to (1) find the plane (2) make touchdown voltage near center of piezo's positive voltage range
+        td = touchdown.Touchdown(self.instruments, self.cap_input)
+		td.do() # Will do initial touchdown at center of plane to (1) find the plane (2) make touchdown voltage near center of piezo's positive voltage range
         
         check_td = input('Does the initial touchdown look good? Enter \'quit\' to abort.')
         if check_td == 'quit':
@@ -49,8 +52,8 @@ class Planefit():
                 self.nav.goto_seq(self.X[i,j], self.Y[i,j], -self.piezos.Vmax['z']) #Retract Z, then move to (X,Y)
                 print('X index: %i; Y index: %i' %(i, j))
                 
-                self.td = touchdown.Touchdown(self.instruments, self.cap_input) # new touchdown at this point
-                self.Z[i,j] = self.td.do(planescan=True) # Do the touchdown. Planescan True prevents attocubes from moving and only does one touchdown
+                td = touchdown.Touchdown(self.instruments, self.cap_input, planescan=True) # new touchdown at this point
+                self.Z[i,j] = td.do() # Do the touchdown. Planescan True prevents attocubes from moving and only does one touchdown
        
         self.nav.goto_seq(start_pos[0], start_pos[1], start_pos[2]) # return to center of plane
         self.plane(0, 0, True) # calculates plane. Calculates origin voltage too, but we won't use it.
@@ -80,11 +83,11 @@ class Planefit():
         Zfit = self.plane(X,Y)
         ax.plot_surface(X,Y,Zfit,alpha=0.2, color = [0,1,0])
         plt.xlabel('x')
+		plt.title(self.filename,fontsize=15)
         
     def save(self):
         data_folder = 'C:\\Users\\Hemlock\\Dropbox (Nowack lab)\\TeamData\\Montana\\Planes\\'
-        filename = time.strftime('%Y%m%d_%H%M%S') + '_plane'
-        filename = data_folder + filename
+        filename = data_folder + self.filename
         
         with open(filename+'.csv', 'w') as f:
             for s in ['span', 'center', 'numpts']:
@@ -99,6 +102,17 @@ class Planefit():
         
         self.plot()
         plt.savefig(filename+'.pdf', bbox_inches='tight')
+		
+	def update_c(self):
+		old_c = self.c
+		td = touchdown.Touchdown(self.instruments, self.cap_input)
+		self.c = td.do()
+		for x in [-self.piezos.Vmax['x'], self.piezos.Vmax['x']]:
+			for y in [-self.piezos.Vmax['y'], self.piezos.Vmax['y']]:
+				z_maxormin = self.plane(x,y)
+				if z_maxormin > self.piezos.Vmax['z'] or z_maxormin < 0:
+					self.c = old_c
+					raise Exception('Plane now extends outside range of piezos! Move the attocubes and try again.')
         
 if __name__ == '__main__':
     """ just testing fitting algorithm """

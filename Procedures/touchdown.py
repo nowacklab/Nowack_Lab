@@ -7,7 +7,7 @@ import numpy as np
 from msvcrt import getch
 
 class Touchdown():
-    def __init__(self, instruments, cap_input, low_temp = False):    
+    def __init__(self, instruments, cap_input, low_temp = False, planescan=False):    
         self.touchdown = False
         self.V_to_C = 2530e3 # 2530 pF/V * (1e3 fF/pF), calibrated 20160423 by BTS, see ipython notebook
         self.attosteps = 200 #number of attocube steps between sweeps
@@ -22,7 +22,8 @@ class Touchdown():
         self.lockin.ch1_daq_input = cap_input
                 
         self.low_temp = low_temp
-        
+        self.planescan = planescan
+		
         self.configure_attocube()
         self.configure_piezo() # Need this to set up time constant of lockin properly
         self.configure_lockin()
@@ -32,12 +33,14 @@ class Touchdown():
         self.C0 = None # Cap offset
         self.extra = 0 # Extra points to add to fit after TD detected
         self.V_td = -1000.0
-        
-        self.planescan=False
-        
+                
         self.fig = plt.figure()
         self.ax = plt.gca()
         display.clear_output()
+		
+		self.filename = time.strftime('%Y%m%d_%H%M%S') + '_td'
+        if self.planescan:
+            self.filename = self.filename + '_planescan'
         
     def check_balance(self):
         V_unbalanced = 10e-6 # We can balance better than 10 uV
@@ -45,11 +48,12 @@ class Touchdown():
         if self.lockin.R > V_unbalanced:
             raise Exception('Balance the capacitance bridge!')
        
-    def do(self, planescan=False):
-        self.planescan=planescan
+    def do(self):
+		self.touchdown = False
+		
         V_td = None
         attosteps = self.attosteps # This is how many steps the attocubes will move if no touchdown detected.
-        if planescan:
+        if self.planescan:
             attosteps = None # don't move the attocubes if doing a planescan - remember, 0 is continuous!
         
         ## voltage sweep is from -Vmax to Vmax, step size determined in configure_piezo. 4 V looks good.
@@ -88,7 +92,7 @@ class Touchdown():
                             
                     else:    
                         V_td = self.get_touchdown_voltage(i, plot=False)   
-                        if not planescan: # Don't want to move attocubes during planescan
+                        if not self.planescan: # Don't want to move attocubes during planescan
                             # For central touchdown of plane, we want to get the touchdown voltage near the center of the piezo's positive voltage range.
                             if V_td > 0.65*self.piezos.Vmax['z']:
                                 self.touchdown = False
@@ -202,7 +206,7 @@ class Touchdown():
             plt.plot(self.V,self.C,'.k') 
             plt.plot(self.V[int(0.5*k):i+1], m_app*np.array(self.V[int(0.5*k):i+1])+b_app, orange, lw=2)
             
-            plt.title('Touchdown at %.2f V' %V_td, fontsize=20)
+            plt.title('%s\nTouchdown at %.2f V' %(self.filename, V_td), fontsize=20)
             plt.xlabel('Piezo voltage (V)', fontsize=20)
             plt.ylabel(r'$C - C_{\sf balance}$ (fF)', fontsize=20)
             plt.xlim(-self.piezos.Vmax['z'], self.piezos.Vmax['z'])
@@ -225,19 +229,18 @@ class Touchdown():
         if i+1 >= self.numfit: # start fitting after min number of points
             Vfit = self.V[i+1-self.numfit:i+1] # take slice of last self.numfit points
             Cfit = self.C[i+1-self.numfit:i+1]
-            slope, intercept = self.line(Vfit, Cfit)
-            plt.plot(Vfit, slope*np.array(Vfit)+intercept,'-r', lw=2)
-            plt.draw()
+            #slope, intercept = self.line(Vfit, Cfit)
+            # plt.plot(Vfit, slope*np.array(Vfit)+intercept,'-r', lw=2)
+            plt.plot(Vfit, Cfit, 'r.') # just overlays red markers for last numfit points, recycled old code
+			plt.draw()
 
         display.display(self.fig)
         display.clear_output(wait=True)
         
     def save(self):
         data_folder = 'C:\\Users\\Hemlock\\Dropbox (Nowack lab)\\TeamData\\Montana\\Touchdowns\\'
-        filename = time.strftime('%Y%m%d_%H%M%S') + '_td'
-        if self.planescan:
-            filename = filename + '_planescan'
-        filename = data_folder + filename
+
+        filename = data_folder + self.filename
         with open(filename+'.csv', 'w') as f:
             f.write('V_td = %f\n' %self.V_td)
             f.write('V_to_C conversion in fF/V = %f\n' %self.V_to_C)
