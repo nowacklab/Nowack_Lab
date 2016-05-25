@@ -23,7 +23,7 @@ class Touchdown():
                 
         self.low_temp = low_temp
         self.planescan = planescan
-		
+        
         self.configure_attocube()
         self.configure_piezo() # Need this to set up time constant of lockin properly
         self.configure_lockin()
@@ -37,8 +37,8 @@ class Touchdown():
         self.fig = plt.figure()
         self.ax = plt.gca()
         display.clear_output()
-		
-		self.filename = time.strftime('%Y%m%d_%H%M%S') + '_td'
+        
+        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_td'
         if self.planescan:
             self.filename = self.filename + '_planescan'
         
@@ -48,9 +48,7 @@ class Touchdown():
         if self.lockin.R > V_unbalanced:
             raise Exception('Balance the capacitance bridge!')
        
-    def do(self):
-		self.touchdown = False
-		
+    def do(self):        
         V_td = None
         attosteps = self.attosteps # This is how many steps the attocubes will move if no touchdown detected.
         if self.planescan:
@@ -232,7 +230,7 @@ class Touchdown():
             #slope, intercept = self.line(Vfit, Cfit)
             # plt.plot(Vfit, slope*np.array(Vfit)+intercept,'-r', lw=2)
             plt.plot(Vfit, Cfit, 'r.') # just overlays red markers for last numfit points, recycled old code
-			plt.draw()
+            plt.draw()
 
         display.display(self.fig)
         display.clear_output(wait=True)

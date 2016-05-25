@@ -32,8 +32,9 @@ class Scanplane():
         self.scanheight = scanheight
         
         self.nav = navigation.Goto(self.piezos)
-		self.start_pos = (self.piezos.V['x'],self.piezos.V['y'],self.piezos.V['z']) # current position before scan
-		# self.start_pos = (self.center[0], self.center[1], 0) # center of scan
+        self.start_pos = (0,0,0)
+        # self.start_pos = (self.piezos.V['x'],self.piezos.V['y'],self.piezos.V['z']) # current position before scan
+        # self.start_pos = (self.center[0], self.center[1], 0) # center of scan
                 
         self.x = numpy.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
         self.y = numpy.linspace(center[1]-span[1]/2, center[1]+span[1]/2, numpts[1])
@@ -51,8 +52,8 @@ class Scanplane():
             self.X = numpy.swapaxes(self.X, 0, 1)
             self.Y = numpy.swapaxes(self.Y, 0, 1)
             self.Z = numpy.swapaxes(self.Z, 0, 1)
-			
-		self.filename = time.strftime('%Y%m%d_%H%M%S') + '_scan'
+            
+        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_scan'
 
 
         
@@ -90,48 +91,49 @@ class Scanplane():
         print('Scan took %f minutes' %((tend-tstart)/60))
         return
         
-    def plot(self):
-        Vm = ma.masked_where(numpy.isnan(self.V),self.V) #hides data not yet collected
-        Cm = ma.masked_where(numpy.isnan(self.C),self.C) #hides data not yet collected
-    
+    def plot(self):    
         plt.clf()
    
         ax1 = plt.subplot(121, aspect=1)
-		self.plot_SQUID()
+        self.plot_SQUID()
         
         ax2 = plt.subplot(222,aspect=1)
-		self.plot_cap()
+        self.plot_cap()
         
         ax3 = plt.subplot(224)
-		self.plot_last_sweep()
+        self.plot_last_sweep()
+        x0,x1 = ax3.get_xlim()
+        y0,y1 = ax3.get_ylim()
+        ax3.set_aspect((x1-x0)/(y1-y0)/3)
         
         display.display(plt.gcf())
         display.clear_output(wait=True)
-		
-	def plot_SQUID(self):
-		plt.title('%s\nSQUID signal' %self.filename, fontsize=20)
+        
+    def plot_SQUID(self):
+        Vm = ma.masked_where(numpy.isnan(self.V),self.V) #hides data not yet collected
+
+        plt.title('%s\nSQUID signal' %self.filename, fontsize=20)
         plt.pcolor(self.X, self.Y, Vm, cmap='RdBu', vmin=-abs(Vm).max(), vmax= abs(Vm).max())
         plt.xlabel(r'$X (V_{piezo})$', fontsize=20)
         plt.ylabel(r'$Y (V_{piezo})$', fontsize=20)
         cb = plt.colorbar()
         cb.set_label(label = 'Voltage from %s' %self.sig_in, fontsize=20)
-		
-	def plot_cap(self):
-		plt.title('%s\ncapacitance' %self.filename, fontsize=20)
+        
+    def plot_cap(self):
+        Cm = ma.masked_where(numpy.isnan(self.C),self.C) #hides data not yet collected
+
+        plt.title('%s\ncapacitance' %self.filename, fontsize=20)
         plt.pcolor(self.X, self.Y, Cm, cmap='RdBu')
         plt.xlabel(r'$X (V_{piezo})$', fontsize=20)
         plt.ylabel(r'$Y (V_{piezo})$', fontsize=20)
         cb = plt.colorbar()
         cb.set_label(label = 'Voltage from %s' %self.cap_in, fontsize=20)
-		
-	def plot_last_sweep(self):
-		plt.title('last full line scan', fontsize=20)
+        
+    def plot_last_sweep(self):
+        plt.title('last full line scan', fontsize=20)
         plt.plot(self.last_full_sweep, '.-')
         plt.xlabel('Y (a.u.)', fontsize=20)
         plt.ylabel('V', fontsize=20)
-        x0,x1 = ax3.get_xlim()
-        y0,y1 = ax3.get_ylim()
-        ax3.set_aspect((x1-x0)/(y1-y0)/3)
         
     def save(self):
         data_folder = 'C:\\Users\\Hemlock\\Dropbox (Nowack lab)\\TeamData\\Montana\\Scans\\'
@@ -151,12 +153,12 @@ class Scanplane():
                     if self.V[i][j] != None:
                         f.write('%f' %self.X[i][j] + '\t' + '%f' %self.Y[i][j] + '\t' + '%f' %self.V[i][j] + '\n')
         
-		plt.figure()
+        plt.figure()
         self.plot_SQUID()
-		plt.savefig(filename+'.pdf', bbox_inches='tight')
+        plt.savefig(filename+'.pdf', bbox_inches='tight')
 
-		plt.figure()
-		self.plot_cap()
+        plt.figure()
+        self.plot_cap()
         plt.savefig(filename+'_cap.pdf', bbox_inches='tight')
         
 if __name__ == '__main__':

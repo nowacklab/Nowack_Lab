@@ -29,8 +29,8 @@ class Planefit():
         self.a = None
         self.b = None
         self.c = None
-		
-		self.filename = time.strftime('%Y%m%d_%H%M%S') + '_plane'
+        
+        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_plane'
 
         
     def do(self):
@@ -38,7 +38,7 @@ class Planefit():
         start_pos = [self.center[0], self.center[1], 0] # center of plane
         self.nav.goto_seq(start_pos[0], start_pos[1], start_pos[2]) # go to center of plane
         td = touchdown.Touchdown(self.instruments, self.cap_input)
-		td.do() # Will do initial touchdown at center of plane to (1) find the plane (2) make touchdown voltage near center of piezo's positive voltage range
+        td.do() # Will do initial touchdown at center of plane to (1) find the plane (2) make touchdown voltage near center of piezo's positive voltage range
         
         check_td = input('Does the initial touchdown look good? Enter \'quit\' to abort.')
         if check_td == 'quit':
@@ -83,7 +83,7 @@ class Planefit():
         Zfit = self.plane(X,Y)
         ax.plot_surface(X,Y,Zfit,alpha=0.2, color = [0,1,0])
         plt.xlabel('x')
-		plt.title(self.filename,fontsize=15)
+        plt.title(self.filename,fontsize=15)
         
     def save(self):
         data_folder = 'C:\\Users\\Hemlock\\Dropbox (Nowack lab)\\TeamData\\Montana\\Planes\\'
@@ -102,17 +102,17 @@ class Planefit():
         
         self.plot()
         plt.savefig(filename+'.pdf', bbox_inches='tight')
-		
-	def update_c(self):
-		old_c = self.c
-		td = touchdown.Touchdown(self.instruments, self.cap_input)
-		self.c = td.do()
-		for x in [-self.piezos.Vmax['x'], self.piezos.Vmax['x']]:
-			for y in [-self.piezos.Vmax['y'], self.piezos.Vmax['y']]:
-				z_maxormin = self.plane(x,y)
-				if z_maxormin > self.piezos.Vmax['z'] or z_maxormin < 0:
-					self.c = old_c
-					raise Exception('Plane now extends outside range of piezos! Move the attocubes and try again.')
+        
+    def update_c(self):
+        old_c = self.c
+        td = touchdown.Touchdown(self.instruments, self.cap_input)
+        self.c = td.do()
+        for x in [-self.piezos.Vmax['x'], self.piezos.Vmax['x']]:
+            for y in [-self.piezos.Vmax['y'], self.piezos.Vmax['y']]:
+                z_maxormin = self.plane(x,y)
+                if z_maxormin > self.piezos.Vmax['z'] or z_maxormin < 0:
+                    self.c = old_c
+                    raise Exception('Plane now extends outside range of piezos! Move the attocubes and try again.')
         
 if __name__ == '__main__':
     """ just testing fitting algorithm """
