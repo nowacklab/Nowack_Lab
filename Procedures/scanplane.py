@@ -26,11 +26,11 @@ class Scanplane():
         self.scanheight = scanheight
         
         self.nav = navigation.Goto(self.piezos)
+		self.start_pos = (self.piezos.V['x'],self.piezos.V['y'],self.piezos.V['z']) # current position before scan
+		# self.start_pos = (self.center[0], self.center[1], 0) # center of scan
                 
         self.x = numpy.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
         self.y = numpy.linspace(center[1]-span[1]/2, center[1]+span[1]/2, numpts[1])
-        
-        self.start_pos = [self.center[0], self.center[1], 0]
 
         self.X, self.Y = numpy.meshgrid(self.x, self.y)
         self.Z = self.plane.plane(self.X, self.Y) - self.scanheight
@@ -61,7 +61,7 @@ class Scanplane():
             
             self.plot()  
             
-        self.nav.goto_seq(self.start_pos[0], self.start_pos[1], self.start_pos[2]) #Go back whence you came!
+        self.nav.goto_seq(*self.start_pos) #Go back whence you came! *arg expands the tuple
         self.save()
         
     def plot(self):
