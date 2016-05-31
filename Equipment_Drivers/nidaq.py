@@ -10,7 +10,7 @@ class NIDAQ():
     For remote operation of the NI DAQ-6363. Slightly simplified version of Guen's squidpy driver, does not import/inherit anything from squidpy. Uses package Instrumental from Mabuchi lab at Stanford
     '''
     
-    def __init__(self, zero=True, freq=100, dev_name='Dev1'):
+    def __init__(self, zero=False, freq=100, dev_name='Dev1'):
         self._daq  = ni.NIDAQ(dev_name)
         self._freq = {}
             
@@ -36,8 +36,8 @@ class NIDAQ():
         self.inputs_to_monitor = ['ai23']# at least monitor one input
         
         if zero:
-            self.zero() # DOES NOT WORK
-        
+            self.zero()
+            
     @property
     def freq(self):
         return self._freq
@@ -63,10 +63,11 @@ class NIDAQ():
             getattr(self._daq,chan).write('%sV' %data)
     
     def monitor(self, chan_in, duration, freq=100): # similar to send_receive definition; haven't yet built in multiple channels
+        self.add_input(chan_in)
         received = getattr(self._daq, chan_in).read(duration = '%fs' %duration, fsamp='%fHz' %freq)
-        data_in = received[bytes(chan_in, 'utf-8')].magnitude
-        t = received['t'].magnitude
-        return list(data_in), list(t)
+
+        return [list(received[b''].magnitude),list(received['t'].magnitude),received] # this is a hack, b'' should really be an ai# channel, but I think Instrumental is handling the name wrong.
+     
     
     def send_receive(self, chan_out, orig_data, freq=100):
         """
@@ -125,7 +126,7 @@ class NIDAQ():
             Vstart = {chan_out: Vstart}
             Vend = {chan_out: Vend}
             chan_out = [chan_out]
-            
+                        
         V = {}       
         for k in Vstart.keys():        
             V[k] = list(numpy.linspace(Vstart[k], Vend[k], numsteps))
@@ -137,9 +138,9 @@ class NIDAQ():
         return V, response, time
         
     def zero(self):
-        """ DOES NOT WORK """
         for chan in self._daq.get_AO_channels():
-            self.sweep(chan, 'ai0', {chan: getattr(self, chan)}, {chan: 0})
+            self.sweep(chan, getattr(self, chan), 0, freq=100000)
+        print('Zeroed outputs')
                         
     def get_internal_chan(self, chan):
         """
