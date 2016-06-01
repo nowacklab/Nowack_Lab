@@ -8,9 +8,6 @@ SAVE EVERYTHING
 
 Touchdown with floating table
 
-Fine over one direction, coarse over other
-Look at sweep rate as a function of number of points
-Change scan direction
 
 Try capacitance in X, get calibration, see if dip occurs
 Use center point of plane for fitting, and maybe use this also to update/set C value?
@@ -21,9 +18,11 @@ walkthrough function tune and lock squid/array
 Array class that deals with pci, pfl.
 	-Auto tune function would be cool
 
-##### Done, need to test: ######
-Reusing touchdown function, local variable i referenced before assignment?
-Update plane c value with touchdown
-Check plane when update c. Make sure piezos still in range!
-Data file name in plots, timestamps in notebook?
-save scan and capacitance individually
+Scanning procedure:
+	add squid relock
+	add temperature checking before and after scan
+	Figure out rates
+	Fine over one direction, coarse over other
+	Look at sweep rate as a function of number of points
+	Change scan direction
+
