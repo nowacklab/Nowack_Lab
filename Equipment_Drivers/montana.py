@@ -97,7 +97,7 @@ class Montana():
         table.append(['chamber pressure', self.pressure])
         for key, value in sorted(self._pid.items()):
             table.append(['Temp PID '+key,value])
-        print(tabulate(table))
+        return tabulate(table)
         
     def standby(self):
         resp = self.ask('SSB')

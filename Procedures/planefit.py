@@ -94,6 +94,7 @@ class Planefit():
                 f.write('%s = %f, %f \n' %(s, float(getattr(self, s)[0]),float(getattr(self, s)[1])))
             for s in ['a','b','c']:
                 f.write('%s = %f\n' %(s, float(getattr(self, s))))
+            f.write('Montana info: \n'+self.montana.log()+'\n')
             f.write('X (V)\tY (V)\tZ (V)\n')
             for i in range(self.X.shape[0]): 
                 for j in range(self.X.shape[1]):

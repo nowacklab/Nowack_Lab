@@ -10,9 +10,8 @@ from numpy import ma
 class Scanplane():
     def __init__(self, instruments, span, center, numpts, plane, scanheight, sig_in, cap_in, swap=False):
         self.piezos = instruments['piezos']
-        self.atto = instruments['atto']
-        self.lockin = instruments['lockin']
         self.daq = instruments['daq']
+        self.montana = instruments['montana']
         
         self.sig_in = sig_in
         self.daq.add_input(sig_in)
@@ -146,6 +145,7 @@ class Scanplane():
                 f.write('plane.%s = %f\n' %(s, float(getattr(self.plane, s))))
             f.write('scanheight = %f\n' %self.scanheight)
             f.write('swap = %i\n' %self.swap)
+            f.write('Montana info: \n'+self.montana.log()+'\n')
 
             f.write('X (V)\tY (V)\tV (V)\n')
             for i in range(self.X.shape[0]): 

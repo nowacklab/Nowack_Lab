@@ -46,6 +46,16 @@ class NIDAQ():
     def freq(self, value):
         self._freq = value      
 
+    def accel_function(self, start,end, numpts):
+        """ Does an x**2-like ramp. Code looks weird but test it if you want! ^_^ """
+        if start == end:
+            return [start]*numpts*2 # just return array of the same value 
+        part1arg = numpy.linspace(start, (end-start)/2+start, numpts)
+        part2arg = numpy.linspace((end-start)/2+start, end, numpts)
+        part1 = start+ (part1arg-start)**2/((end-start)/2)**2*(end-start)/2
+        part2 = end-(part2arg-end)**2/((end-start)/2)**2*(end-start)/2
+        return list(part1)+list(part2[1:])
+        
     def add_input(self, inp):
         if inp not in self.inputs_to_monitor:
             self.inputs_to_monitor.append(inp)
@@ -132,8 +142,19 @@ class NIDAQ():
             V[k] = list(numpy.linspace(Vstart[k], Vend[k], numsteps))
             if max(abs(Vstart[k]), abs(Vend[k])) > 10:
                 raise Exception('NIDAQ out of range!')
+            if accel:
+                numaccel = 250
+                V[k][:0] = self.accel_function(0, V[k][0], numaccel) # accelerate from 0 to first value of sweep
+                V[k] = V[k] + self.accel_function(V[k][-1], 0, numaccel) # accelerate from last value of sweep to 0
             
         response, time = self.send_receive(chan_out, V, freq=freq)
+        
+        # Trim off acceleration
+        if accel:
+            for k in V.keys():
+                V[k] = V[k][2*numaccel-1:-2*numaccel+1] # slice off first 2*numaccel+1 and last 2*numaccel+1 points
+            response = response[2*numaccel-1:-2*numaccel+1]
+            time = time[2*numaccel-1:-2*numaccel+1]
          
         return V, response, time
         
