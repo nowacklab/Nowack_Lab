@@ -124,7 +124,7 @@ class Touchdown():
             ## Move the attocubes; either we're too far away for a touchdown or TD voltage not centered    
             if not self.touchdown: 
                 self.piezos.V = {'z': -self.piezos.Vmax['z']} # before moving attocubes, make sure we're far away from the sample!
-                self.atto.up([attosteps, None, None]) 
+                self.atto.up({'z': attosteps}) 
                 time.sleep(2) # was getting weird capacitance values immediately after moving; wait a bit
         
         # Didn't work
@@ -153,12 +153,7 @@ class Touchdown():
             
     def configure_attocube(self):
         """ Set up z attocube """
-        self.atto.mode = ['stp', 'gnd', 'gnd']
-        self.atto.frequency = [200, None, None]
-        if self.low_temp:
-            self.atto.voltage = [55, None, None]
-        else:
-            self.atto.voltage = [40, None, None] #RT values    
+        self.atto.freq = {'z': 200}
     
     def configure_lockin(self):
         """ Set up lockin amplifier for capacitance detection """

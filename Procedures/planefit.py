@@ -8,9 +8,6 @@ class Planefit():
     def __init__(self, instruments, span, center, numpts, cap_input):
         self.instruments = instruments
         self.piezos = instruments['piezos']
-        self.atto = instruments['atto']
-        self.lockin = instruments['lockin']
-        self.daq = instruments['daq']
         
         self.span = span
         self.center = center
