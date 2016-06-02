@@ -7,7 +7,7 @@ import numpy as np
 from msvcrt import getch
 
 class Touchdown():
-    def __init__(self, instruments, cap_input, low_temp = False, planescan=False):    
+    def __init__(self, instruments, cap_input, planescan=False):    
         self.touchdown = False
         self.V_to_C = 2530e3 # 2530 pF/V * (1e3 fF/pF), calibrated 20160423 by BTS, see ipython notebook
         self.attosteps = 200 #number of attocube steps between sweeps
@@ -18,10 +18,15 @@ class Touchdown():
         self.atto = instruments['atto']
         self.lockin = instruments['lockin']
         self.daq = instruments['daq']
+        self.montana = instruments['montana']
                 
         self.lockin.ch1_daq_input = cap_input
-                
-        self.low_temp = low_temp
+        
+        if self.montana.temperature['platform'] < 10:
+            self.low_temp = True
+        else:
+            self.low_temp = False
+        
         self.planescan = planescan
         
         self.configure_attocube()
@@ -245,6 +250,7 @@ class Touchdown():
             f.write('Lockin parameters\n')
             f.write(self.lockin.get_all())
             f.write('\n')
+            f.write('Montana info: \n'+self.montana.log()+'\n')
             f.write('V (V)\tC (fF)\n')
             for i in range(len(self.V)):
                 if self.C[i] != None:

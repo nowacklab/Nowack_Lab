@@ -13,7 +13,7 @@ class Attocube():
     '''
     Stages = {'z': 1, 'y': 2, 'x':3}
     
-    def __init__(self, low_temp=False, host='192.168.69.3', port=7230):
+    def __init__(self, montana, host='192.168.69.3', port=7230):
         self._tn = telnetlib.Telnet(host, port, 5) # timeout 5 seconds
         self._tn.read_until(b"Authorization code: ") #skips to pw entry
         self._tn.write(b'123456'+ b'\n') #default password
@@ -31,8 +31,8 @@ class Attocube():
         
         self._freq_lim = 1000 # self-imposed, 10000 is true max
         self._step_lim = 5000 #self-imposed, no true max
-        if low_temp:
-            self._voltage_lim = 55.000 #RT limit
+        if montana.temperature['platform'] < 10:
+            self._voltage_lim = 55.000 #LT limit
         else:
             self._voltage_lim = 40.000 #RT limit
 
