@@ -18,34 +18,10 @@ class Montana():
             raise Exception('Need to toggle \"Enable External Control\" button in Montana software!')
         atexit.register(self.delete)
         
-        self._pid = {}
-        self._pid = self.pid
         self._temperature = {}
         self._temperature = self.temperature
         self._temperature_stability = {}
         self._temperature_stability = self.temperature_stability
-        
-    @property
-    def pid(self):
-        self._pid['P'] = float(self.ask('GPIDK'))
-        self._pid['I'] = float(self.ask('GPIDF'))
-        self._pid['D'] = float(self.ask('GPIDT'))
-        
-        return self._pid
-        
-    @pid.setter
-    def pid(self, value):
-        for key in value.keys():
-            if key == 'P':
-                cmd = 'SPIDK'
-            elif key == 'I':
-                cmd = 'SPIDF'
-            elif key == 'D':
-                cmd = 'SPIDT'
-            else: 
-                raise Exception('Wrong PID key!!')
-            resp = self.ask(cmd+str(value[key]))
-            print(resp)
        
     @property
     def pressure(self):
@@ -68,7 +44,6 @@ class Montana():
         self._temperature['setpoint'] = value
         response = self.ask('STSP'+str(value))
         print(response)
-        self.cooldown()
         
     @property
     def temperature_stability(self):
@@ -91,12 +66,10 @@ class Montana():
     def log(self):
         table = []
         for key, value in sorted(self._temperature.items()):
-            table.append([key,value])
+            table.append([key+' temp',value])
         for key, value in sorted(self._temperature_stability.items()):
             table.append([key+' stability',value])
         table.append(['chamber pressure', self.pressure])
-        for key, value in sorted(self._pid.items()):
-            table.append(['Temp PID '+key,value])
         print(tabulate(table))
         
     def standby(self):
@@ -106,7 +79,6 @@ class Montana():
     def warmup(self):
         resp = self.ask('SWU')
         print(resp)
-        
         
 if __name__ == '__main__':
     mont = Montana()
