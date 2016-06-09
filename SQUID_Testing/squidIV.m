@@ -9,14 +9,15 @@ addpath('C:\Users\Hemlock\Documents\GitHub\Nowack_Lab\Utilities');
 %% Edit before running
 
 % If testing without a squid, for wiring, etc
-no_squid = false;
+no_squid = true;
 
 % Choose parameter file
-paramfile = 'std_params.csv';
+paramfile = 'janky_resistance.csv';
 % paramfile = 'StarCryo_IV.csv';
 
 parampath = strcat('C:\Users\Hemlock\Documents\GitHub\Nowack_Lab\SQUID_Testing\Parameters\',paramfile);
 [p, ptable] = param_parse(parampath); % use ptable to see parameters in table form
+
 
 % Git dump? Uncomment if you want a cluttered git.
 % git_dump();

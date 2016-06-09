@@ -80,6 +80,7 @@ class Touchdown():
                 Cap = Vcap*self.V_to_C # convert to true capacitance (fF)
                 
                 if self.C0 == None: 
+                    time.sleep(1) # wait for stabilization, was getting weird first values
                     self.C0 = Cap # Sets the offset datum   
                 self.C[i] = Cap - self.C0 # remove offset
                 

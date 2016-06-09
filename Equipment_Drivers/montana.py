@@ -70,7 +70,7 @@ class Montana():
         for key, value in sorted(self._temperature_stability.items()):
             table.append([key+' stability',value])
         table.append(['chamber pressure', self.pressure])
-        print(tabulate(table))
+        return tabulate(table)
         
     def standby(self):
         resp = self.ask('SSB')

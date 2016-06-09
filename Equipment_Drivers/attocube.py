@@ -135,11 +135,21 @@ class Attocube():
     
     def up(self, numsteps):
         for axis, num in numsteps.items():
-            self.step(axis, num, 'u')
+            if num > 0:
+                upordown = 'u'
+            else:
+                num = -num
+                upordown = 'd'
+            self.step(axis, num, upordown)
     
     def down(self, numsteps):
         for axis, num in numsteps.items():
-            self.step(axis, num, 'd')
+            if num > 0:
+                upordown = 'd'
+            else:
+                num = -num
+                upordown = 'u'
+            self.step(axis, num, upordown)
             
     def stop(self):
         for i in range(3):
