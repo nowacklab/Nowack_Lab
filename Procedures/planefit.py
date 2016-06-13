@@ -1,6 +1,6 @@
 import numpy
 from numpy.linalg import lstsq
-import touchdown, navigation
+from . import touchdown, navigation
 import time
 import matplotlib.pyplot as plt
         

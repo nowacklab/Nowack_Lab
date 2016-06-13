@@ -1,4 +1,3 @@
-import nanonis
 import numpy
 import time
 import atexit

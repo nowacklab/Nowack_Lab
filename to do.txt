@@ -8,6 +8,8 @@ SAVE EVERYTHING
 
 Touchdown with floating table
 
+Figure out matplotlib notebook
+
 
 Try capacitance in X, get calibration, see if dip occurs
 Use center point of plane for fitting, and maybe use this also to update/set C value?

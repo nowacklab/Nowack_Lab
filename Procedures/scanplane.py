@@ -1,6 +1,6 @@
 import numpy
 from numpy.linalg import lstsq
-import navigation
+from . import navigation
 import time
 from scipy.interpolate import interp1d as interp
 import matplotlib.pyplot as plt

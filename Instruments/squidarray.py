@@ -14,7 +14,7 @@ class PCI100:
     def __init__(self, visaResource='COM3'):
         self.setVisaResource(visaResource) # should be something like 'COM3', what port is it plugged into?
         atexit.register(self.close)        
-	
+    
     def setVisaResource(self, visaResource):
         self.instrument = None
         self._visaResource = visaResource
@@ -41,15 +41,15 @@ class PFL102:
     TestInputs = {'S_bias': 0x0010, 'A_bias': 0x0020, 'S_flux': 0x0040, 'A_flux': 0x0080}
     ParamRegisters = {'S_bias': 0b0010, 'A_bias': 0b0011, 'S_flux': 0b0000, 'A_flux': 0b0001, 'offset': 0b0100}
     TestSignalOptions = {'Off': 0, 'On': 1, 'Auto': 2}
-	S_bias_lim = 2000 
-	A_bias_lim = 100         
-	S_flux_lim = 100 
-	A_flux_lim = 200    
-	offset_lim = 9.8     
-	amplifierGain = 5040.0 	
-			  
+    S_bias_lim = 2000 
+    A_bias_lim = 100         
+    S_flux_lim = 100 
+    A_flux_lim = 200    
+    offset_lim = 9.8     
+    amplifierGain = 5040.0  
+              
     def __init__(self, channel, interface):
-		""" Will initialize PFL 102 and zero everything """
+        """ Will initialize PFL 102 and zero everything """
         assert channel>= 1 and channel <=8 # choose 1
         
         self.label = 'PFL102'
@@ -368,12 +368,12 @@ class PFL102:
 
         
 class SquidArray(PFL102):
-	def __init__(self):
+    def __init__(self):
         super().__init__(1, PCI100())
     
-	def tune_and_lock(self):
-		""" Walks you through tuning and locking array/squid """
-		pass
+    def tune_and_lock(self):
+        """ Walks you through tuning and locking array/squid """
+        pass
 
 if __name__ == '__main__':
     """ Example/test code"""

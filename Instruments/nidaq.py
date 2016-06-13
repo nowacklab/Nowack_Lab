@@ -1,3 +1,7 @@
+import sys, os
+
+sys.path.append(os.path.expanduser("~")+r'\Documents\GitHub\Instrumental')
+
 from instrumental.drivers.daq import ni
 from instrumental import u
 import numpy
@@ -136,7 +140,11 @@ class NIDAQ():
             Vstart = {chan_out: Vstart}
             Vend = {chan_out: Vend}
             chan_out = [chan_out]
-                        
+
+        # for cha in chan_out:
+            # if cha not in self.inputs_to_monitor:
+                # self.inputs_to_monitor.append(cha)
+        
         V = {}       
         for k in Vstart.keys():        
             V[k] = list(numpy.linspace(Vstart[k], Vend[k], numsteps))
