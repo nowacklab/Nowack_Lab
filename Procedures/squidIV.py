@@ -47,8 +47,7 @@ class SquidIV():
         self.Vbias = self.I*self.Rbias # SQUID bias voltage
                        
     def do(self):
-        self.fig = plt.figure()
-        self.ax = plt.gca()
+        self.fig, self.ax = plt.subplots()
         self.param_prompt() # Check parameters
         
         self.do_IV()
@@ -113,12 +112,12 @@ class SquidIV():
         ax.set_xlabel(r'$I_{\rm{bias}} = V_{\rm{bias}}/R_{\rm{bias}}$ ($\mu \rm A$)', fontsize=20)
         ax.set_ylabel(r'$V_{\rm{squid}}$ (V)', fontsize=20)
         ax.ticklabel_format(style='sci', axis='y', scilimits=(-3,3))
-                
+                        
     def save(self):
         data_folder = 'C:\\Users\\Hemlock\\Dropbox (Nowack lab)\\TeamData\\Montana\\squid_testing\\IV\\'
 
         filename = data_folder + self.filename
-        with open(filename+'.csv', 'w') as f:
+        with open(filename+'.txt', 'w') as f:
             f.write(self.notes+'\n')
             f.write('Montana info: \n'+self.montana.log()+'\n')
             for param in ['rate', 'Rbias', 'Rbias_mod', 'Imod', 'Irampspan', 'Irampstep']:

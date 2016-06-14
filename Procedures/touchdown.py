@@ -240,7 +240,7 @@ class Touchdown():
         data_folder = 'C:\\Users\\Hemlock\\Dropbox (Nowack lab)\\TeamData\\Montana\\Touchdowns\\'
 
         filename = data_folder + self.filename
-        with open(filename+'.csv', 'w') as f:
+        with open(filename+'.txt', 'w') as f:
             f.write('V_td = %f\n' %self.V_td)
             f.write('V_to_C conversion in fF/V = %f\n' %self.V_to_C)
             f.write('Lockin parameters\n')

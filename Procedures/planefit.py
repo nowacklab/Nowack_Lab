@@ -86,7 +86,7 @@ class Planefit():
         data_folder = 'C:\\Users\\Hemlock\\Dropbox (Nowack lab)\\TeamData\\Montana\\Planes\\'
         filename = data_folder + self.filename
         
-        with open(filename+'.csv', 'w') as f:
+        with open(filename+'.txt', 'w') as f:
             for s in ['span', 'center', 'numpts']:
                 f.write('%s = %f, %f \n' %(s, float(getattr(self, s)[0]),float(getattr(self, s)[1])))
             for s in ['a','b','c']:
