@@ -6,7 +6,7 @@ from tabulate import tabulate
 
 class Montana():
     def __init__(self, ip='192.168.69.101', port=7773):
-        sys.path.append(r'C:\Users\Hemlock\Documents\GitHub\Nowack_Lab\Utilities')
+        sys.path.append(r'C:\Users\Hemlock\Documents\GitHub\Nowack_Lab\Instruments')
         clr.AddReference('CryostationComm')
         from CryostationComm import CryoComm
         

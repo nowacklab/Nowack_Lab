@@ -20,7 +20,7 @@ class Touchdown():
         self.daq = instruments['daq']
         self.montana = instruments['montana']
                 
-        self.lockin.ch1_daq_input = cap_input
+        self.lockin.ch1_daq_input = 'ai%s' %cap_input
         
         if self.montana.temperature['platform'] < 10:
             self.low_temp = True

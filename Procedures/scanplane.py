@@ -13,10 +13,10 @@ class Scanplane():
         self.daq = instruments['daq']
         self.montana = instruments['montana']
         
-        self.sig_in = sig_in
+        self.sig_in = 'ai%s' %sig_in
         self.daq.add_input(sig_in)
         
-        self.cap_in = cap_in
+        self.cap_in = 'ai%s' %cap_in
         self.daq.add_input(cap_in)
         
         self.span = span

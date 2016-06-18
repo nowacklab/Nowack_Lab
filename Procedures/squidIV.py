@@ -11,16 +11,16 @@ import time
 
 class SquidIV():
     def __init__(self, instruments, squidout, squidin, modout=None, rate=90):   
-        """ Example: SquidIV({'daq': daq, 'preamp': preamp}, 'ao0','ai0','ao1', 90) """
+        """ Example: SquidIV({'daq': daq, 'preamp': preamp}, 0, 0, 1, 90) """
     
         self.daq = instruments['daq']
         self.preamp = instruments['preamp']
         self.montana = instruments['montana']
         
-        self.squidout = squidout
-        self.squidin = squidin
+        self.squidout = 'ao%s' %squidout
+        self.squidin = 'ai%s' %squidin
         self.daq.add_input(self.squidin) # make sure to monitor this channel with the daq
-        self.modout = modout
+        self.modout = 'ai%s' %modout
         
         self.filename = time.strftime('%Y%m%d_%H%M%S') + '_IV'
         self.notes = ''
@@ -28,6 +28,8 @@ class SquidIV():
         self.rate = rate # Hz # measurement rate of the daq
         self.preamp.gain = 500 
         self.preamp.filter = (0, rate) # Hz  
+        self.preamp.dc_coupling()
+        self.preamp.diff_input()
         
         self.Rbias = 2e3 # Ohm # 1k cold bias resistors on the SQUID testing PCB
         self.Rbias_mod = 2e3 # Ohm # 1k cold bias resistors on the SQUID testing PCB
@@ -41,27 +43,32 @@ class SquidIV():
         
         display.clear_output()
         
+
+        
     def calc_ramp(self):
         self.numpts = int(self.Irampspan/self.Irampstep)        
         self.I = np.linspace(-self.Irampspan/2, self.Irampspan/2, self.numpts) # Squid current
         self.Vbias = self.I*self.Rbias # SQUID bias voltage
                        
     def do(self):
-        self.fig, self.ax = plt.subplots()
         self.param_prompt() # Check parameters
         
         self.do_IV()
+        self.daq.zero() # zero everything
         
+        self.fig, self.ax = plt.subplots()
         self.plot()
-        display.display(self.fig)
+        self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
 
-        inp = input('Press enter to save data, type anything else to quit. ')
+        inp = input('Press enter to save data, type redo to redo, type anything else to quit. ')
         if inp == '':
             self.save()
+        elif inp == 'redo':
+            display.clear_output()
+            self.do()
                
         # if self.modout != None:
             # setattr(self.daq, self.modout, 0) # Zero mod current
-        self.daq.zero() # zero everything
                    
     def do_IV(self):
         """ Wrote this for mod2D so it doesn't plot """
@@ -100,18 +107,19 @@ class SquidIV():
 
                 
         self.notes = input('Notes for this IV: ')
+        if self.notes == 'quit':
+            raise Exception('Quit by user')
          
     def plot(self, ax=None):
         if ax == None:
             ax = self.ax
-            
-        plt.clf()
         
         ax.plot(self.I*1e6, self.V, 'k-')
         ax.set_title(self.filename+'\n'+self.notes) # NEED DESCRIPTIVE TITLE
         ax.set_xlabel(r'$I_{\rm{bias}} = V_{\rm{bias}}/R_{\rm{bias}}$ ($\mu \rm A$)', fontsize=20)
         ax.set_ylabel(r'$V_{\rm{squid}}$ (V)', fontsize=20)
         ax.ticklabel_format(style='sci', axis='y', scilimits=(-3,3))
+        return ax
                         
     def save(self):
         data_folder = 'C:\\Users\\Hemlock\\Dropbox (Nowack lab)\\TeamData\\Montana\\squid_testing\\IV\\'
@@ -128,4 +136,4 @@ class SquidIV():
             for i in range(len(self.V)):
                 f.write('%f' %self.I[i] + '\t' + '%f' %self.V[i] + '\n')
 
-        plt.savefig(filename+'.pdf', bbox_inches='tight')
+        plt.savefig(filename+'.pdf')

@@ -14,13 +14,10 @@ class Mod2D():
         self.notes = ''
 
         self.IV = squidIV.SquidIV(instruments, squidout, squidin, modout, rate=rate)
-
-        self.IV.preamp.gain = 500 
-        self.IV.preamp.filter = (0, rate) # Hz  
         
         self.IV.Rbias = 2e3 # Ohm # 1k cold bias resistors on the SQUID testing PCB
         self.IV.Rbias_mod = 2e3 # Ohm # 1k cold bias resistors on the SQUID testing PCB
-        self.IV.Irampspan = 80e-6 # A # Will sweep from -Irampspan/2 to +Irampspan/2
+        self.IV.Irampspan = 120e-6 # A # Will sweep from -Irampspan/2 to +Irampspan/2
         self.IV.Irampstep = 0.5e-6 # A # Step size
 
         self.Imodspan = 200e-6
@@ -29,28 +26,35 @@ class Mod2D():
         self.IV.calc_ramp()
         self.calc_ramp()
        
-        self.setup_plot()
         display.clear_output()
+        
         
     def calc_ramp(self):
         self.numpts = int(self.Imodspan/self.Imodstep)        
         self.Imod = np.linspace(-self.Imodspan/2, self.Imodspan/2, self.numpts) # Squid current
         self.V = np.array([[float('nan')]*self.IV.numpts]*self.numpts) # num points in IV by num points in mod sweep
         
-    def do(self):
+    def do(self): 
+        self.calc_ramp() #easy way to clear self.V
+        self.IV.V = self.IV.V*0
+        
         self.param_prompt() # Check parameters
+        self.setup_plot()
 
         for i in range(len(self.Imod)):
             self.IV.Imod = self.Imod[i]
             self.IV.do_IV()
+            self.axIV.clear()
             self.IV.plot(self.axIV)
             self.V[:][i] = self.IV.V
             self.plot()
+            self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
+        self.IV.daq.zero() # zero everything
+
             
         inp = input('Press enter to save data, type anything else to quit. ')
         if inp == '':
             self.save()
-        self.daq.zero() # zero everything
         
     def param_prompt(self):
         """ Check and confirm values of parameters """
@@ -84,15 +88,20 @@ class Mod2D():
                 print('Invalid command\n')
 
         self.notes = input('Notes for this mod2D: ')
+        if self.notes == 'quit':
+            raise Exception('Quit by user')
         self.IV.notes = self.notes # or else it will complain when plotting :(
          
     def plot(self):
 
         Vm = np.ma.masked_where(np.isnan(self.V),self.V) #hides data not yet collected
-        self.im = self.ax2D.pcolor(self.IV.I*1e6, self.Imod*1e6, Vm, cmap='RdBu')
+        self.im.set_array(Vm) #updates plot data
         
-        display.display(self.fig)
-        display.clear_output(wait=True)
+        self.cb.set_clim(Vm.min(), Vm.max())
+        self.cb.draw_all()
+        
+        #display.display(self.fig)
+        #display.clear_output(wait=True)
 
         
     def save(self):
@@ -116,15 +125,17 @@ class Mod2D():
                         f.write('%f' %self.IV.I[j] + '\t' + '%f' %self.Imod[i] + '\t' + '%f' %self.V[i][j] + '\n')
         
         plt.figure(self.fig.number)
-        plt.savefig(filename+'.pdf', bbox_inches='tight')
+        plt.savefig(filename+'.pdf')
         
     def setup_plot(self):
-        self.fig, (self.axIV, self.ax2D) = plt.subplots(1,2,figsize=(10,5))
+        self.fig, (self.axIV, self.ax2D) = plt.subplots(2,1,figsize=(7,7),gridspec_kw = {'height_ratios':[1, 3]})
         
-        self.ax2D.set_aspect(0.5)
-        self.plot()
-        self.ax2D.set_title(self.filename+'\n'+self.notes) # NEED DESCRIPTIVE TITLE
+        # Set up 2D plot
+        Vm = np.ma.masked_where(np.isnan(self.V),self.V) #hides data not yet collected
+        self.im = self.ax2D.imshow(Vm,cmap='RdBu', interpolation='none',aspect='auto', extent = [min(self.IV.I*1e6), max(self.IV.I*1e6), min(self.Imod*1e6), max(self.Imod*1e6)])
+        self.ax2D.set_title(self.filename+'\n'+self.notes) 
         self.ax2D.set_xlabel(r'$I_{\rm{bias}} = V_{\rm{bias}}/R_{\rm{bias}}$ ($\mu \rm A$)', fontsize=20)
         self.ax2D.set_ylabel(r'$I_{\rm{mod}} = V_{\rm{mod}}/R_{\rm{mod}}$ ($\mu \rm A$)', fontsize=20)
-        cb = self.fig.colorbar(self.im, ax = self.ax2D)
-        cb.set_label(label = r'$V_{\rm{squid}}$ (V)', fontsize=20)
+        self.cb = self.fig.colorbar(self.im, ax = self.ax2D)
+        self.cb.set_label(label = r'$V_{\rm{squid}}$ $(\rm V)$', fontsize=20)
+        self.cb.formatter.set_powerlimits((-2, 2))

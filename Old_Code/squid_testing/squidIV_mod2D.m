@@ -4,7 +4,7 @@ clear all % MATLAB is complaining but this function will only be run like a scri
 close all
 
 %% Add paths
-addpath('C:\Users\Hemlock\Documents\GitHub\Nowack_Lab\Equipment_Drivers');
+addpath('C:\Users\Hemlock\Documents\GitHub\Nowack_Lab\Instruments');
 addpath('C:\Users\Hemlock\Documents\GitHub\Nowack_Lab\Utilities');
 
 %% Edit before running

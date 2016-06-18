@@ -109,7 +109,7 @@ class SR5113():
         index = (set(pass_indices) & set(roll_indices)).pop() #finds which index is the same
         self.write('FLT%i' %index)
         
-    def input(self, AminusB):
+    def diff_input(self, AminusB=True):
         self.write('IN%i' %(AminusB)) # 0 = A, 1 = A-B
     
     def recover(self):

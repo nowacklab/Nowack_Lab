@@ -11,3 +11,6 @@ import pkgutil
     # module = loader.find_module(module_name).load_module(module_name)
     # exec('%s = module' % module_name)
     # print(module_name)
+
+from matplotlib import rcParams
+rcParams.update({'figure.autolayout': True}) # will avoid axis labels getting cut off
