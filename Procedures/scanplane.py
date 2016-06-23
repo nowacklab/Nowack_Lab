@@ -108,17 +108,42 @@ class Scanplane():
         display.display(plt.gcf())
         display.clear_output(wait=True)
         
-    def plot_SQUID(self):
+    def setup_plots(self):
+        """ TO DO """
+        self.fig = plt.figure()
+        
+        self.ax_squid = fig.add_subplot(121, aspect=1)
+        self.setup_plot_squid()
+        
+        self.ax_cap = fig.add_subplot(222, aspect=1)
+        self.setup_plot_cap()
+        
+        self.ax_line = fig.add_subplot(224)
+        self.setup_plot_line()
+                
+    def setup_plot_squid(self):
+        """ TO TEST """
         Vm = ma.masked_where(numpy.isnan(self.V),self.V) #hides data not yet collected
 
         plt.title('%s\nSQUID signal' %self.filename, fontsize=20)
-        plt.pcolor(self.X, self.Y, Vm, cmap='RdBu', vmin=-abs(Vm).max(), vmax= abs(Vm).max())
+        self.im_squid = self.ax_squid.imshow(Vm, cmap='RdBu', interpolation='none',aspect='auto', extent=[min(self.X), max(self.X), min(self.Y), max(self.Y)]
+        
         plt.xlabel(r'$X (V_{piezo})$', fontsize=20)
         plt.ylabel(r'$Y (V_{piezo})$', fontsize=20)
-        cb = plt.colorbar()
-        cb.set_label(label = 'Voltage from %s' %self.sig_in, fontsize=20)
+        self.cb_squid = plt.colorbar(self.im_squid, ax=self.ax_squid)
+        self.cb_squid.set_label(label = 'Voltage from %s' %self.sig_in, fontsize=20)
+        self.cb_squid.formatter.set_powerlimits((-2,2))
         
-    def plot_cap(self):
+    def plot_squid(self):
+        """ TO TEST """
+        Vm = ma.masked_where(numpy.isnan(self.V),self.V) #hides data not yet collected
+        self.im_squid.set_array(Vm)
+        
+        self.cb_squid.set_clim(-abs(Vm).max(), abs(Vm).max())
+        self.cb_squid.draw_all()
+                
+    def setup_plot_cap(self):
+        """ TO DO """
         Cm = ma.masked_where(numpy.isnan(self.C),self.C) #hides data not yet collected
 
         plt.title('%s\ncapacitance' %self.filename, fontsize=20)
@@ -128,7 +153,26 @@ class Scanplane():
         cb = plt.colorbar()
         cb.set_label(label = 'Voltage from %s' %self.cap_in, fontsize=20)
         
-    def plot_last_sweep(self):
+    def plot_cap(self):
+        """ TO DO """
+        Cm = ma.masked_where(numpy.isnan(self.C),self.C) #hides data not yet collected
+
+        plt.title('%s\ncapacitance' %self.filename, fontsize=20)
+        plt.pcolor(self.X, self.Y, Cm, cmap='RdBu')
+        plt.xlabel(r'$X (V_{piezo})$', fontsize=20)
+        plt.ylabel(r'$Y (V_{piezo})$', fontsize=20)
+        cb = plt.colorbar()
+        cb.set_label(label = 'Voltage from %s' %self.cap_in, fontsize=20)
+        
+    def setup_plot_line(self):
+        """ TO DO """
+        plt.title('last full line scan', fontsize=20)
+        plt.plot(self.last_full_sweep, '.-')
+        plt.xlabel('Y (a.u.)', fontsize=20)
+        plt.ylabel('V', fontsize=20)
+        
+    def plot_line(self):
+        """ TO DO """
         plt.title('last full line scan', fontsize=20)
         plt.plot(self.last_full_sweep, '.-')
         plt.xlabel('Y (a.u.)', fontsize=20)
