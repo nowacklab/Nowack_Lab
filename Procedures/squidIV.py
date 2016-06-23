@@ -20,13 +20,14 @@ class SquidIV():
         self.squidout = 'ao%s' %squidout
         self.squidin = 'ai%s' %squidin
         self.daq.add_input(self.squidin) # make sure to monitor this channel with the daq
-        self.modout = 'ai%s' %modout
+        self.modout = 'ao%s' %modout
         
         self.filename = time.strftime('%Y%m%d_%H%M%S') + '_IV'
         self.notes = ''
 
         self.rate = rate # Hz # measurement rate of the daq
         self.preamp.gain = 500 
+        self.preamp.filter_mode('low',6)
         self.preamp.filter = (0, rate) # Hz  
         self.preamp.dc_coupling()
         self.preamp.diff_input()
@@ -88,13 +89,13 @@ class SquidIV():
             for paramamp in ['gain','filter']:
                 print('preamp', paramamp, ':', getattr(self.preamp, paramamp))
 
-            if self.rate > self.preamp.filter[1]:
+            if self.rate >= self.preamp.filter[1]:
                 print("You're filtering out your signal... fix the preamp cutoff\n")
             if self.Irampspan > 200e-6:
                 print("You want the SQUID biased above 100 uA?... don't kill the SQUID!\n")
             
             try:
-                inp = input('Are these parameters correct? Enter a command to change parameters, or press enter to continue (e.g. preamp.gain = 100): ')
+                inp = input('Are these parameters correct?\n Enter a command to change parameters, or press enter to continue (e.g. preamp.gain = 100): \n')
                 if inp == '':
                     correct = True
                 else:

@@ -10,6 +10,8 @@ Touchdown with floating table
 
 Figure out matplotlib notebook
 
+In preamp driver (and others), only set values if they change
+
 
 Try capacitance in X, get calibration, see if dip occurs
 Use center point of plane for fitting, and maybe use this also to update/set C value?

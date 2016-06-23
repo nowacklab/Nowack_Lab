@@ -67,25 +67,26 @@ class SR5113():
         
     @gain.setter
     def gain(self, value):
-        if value > 100000:
-            raise Exception('Max 100000 gain!')
-        elif value in [1,2,3,4]: #special case, see manual
-            fg = value-5 #-4 for gain of 1, etc.
-            cg = 0
-        elif value not in ALL_GAINS:
-            raise Exception('INVALID GAIN')
-        else:
-            for f in FINE_GAIN:
-                for c in COARSE_GAIN:
+        if value != self.gain:
+            if value > 100000:
+                raise Exception('Max 100000 gain!')
+            elif value in [1,2,3,4]: #special case, see manual
+                fg = value-5 #-4 for gain of 1, etc.
+                cg = 0
+            elif value not in ALL_GAINS:
+                raise Exception('INVALID GAIN')
+            else:
+                for f in FINE_GAIN:
+                    for c in COARSE_GAIN:
+                        if int(f*c) == value:
+                            break
                     if int(f*c) == value:
                         break
-                if int(f*c) == value:
-                    break
-            fg = FINE_GAIN.index(f)
-            cg = COARSE_GAIN.index(c)
-        self.write('CG%i' %cg)
-        self.write('FG%i' %fg)
-        self._gain = value
+                fg = FINE_GAIN.index(f)
+                cg = COARSE_GAIN.index(c)
+            self.write('CG%i' %cg)
+            self.write('FG%i' %fg)
+            self._gain = value
         
     def id(self):
         msg = self.write('ID', True)
