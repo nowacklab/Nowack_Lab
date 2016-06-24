@@ -126,7 +126,7 @@ class Scanplane():
         Vm = ma.masked_where(numpy.isnan(self.V),self.V) #hides data not yet collected
 
         plt.title('%s\nSQUID signal' %self.filename, fontsize=20)
-        self.im_squid = self.ax_squid.imshow(Vm, cmap='RdBu', interpolation='none',aspect='auto', extent=[min(self.X), max(self.X), min(self.Y), max(self.Y)]
+        self.im_squid = self.ax_squid.imshow(Vm, cmap='RdBu', interpolation='none',aspect='auto', extent=[min(self.X), max(self.X), min(self.Y), max(self.Y)])
         
         plt.xlabel(r'$X (V_{piezo})$', fontsize=20)
         plt.ylabel(r'$Y (V_{piezo})$', fontsize=20)
