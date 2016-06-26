@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 from numpy.linalg import lstsq
 from . import navigation
 import time
@@ -35,14 +35,14 @@ class Scanplane():
         # self.start_pos = (self.piezos.V['x'],self.piezos.V['y'],self.piezos.V['z']) # current position before scan
         # self.start_pos = (self.center[0], self.center[1], 0) # center of scan
                 
-        self.x = numpy.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
-        self.y = numpy.linspace(center[1]-span[1]/2, center[1]+span[1]/2, numpts[1])
+        self.x = np.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
+        self.y = np.linspace(center[1]-span[1]/2, center[1]+span[1]/2, numpts[1])
 
-        self.X, self.Y = numpy.meshgrid(self.x, self.y)
+        self.X, self.Y = np.meshgrid(self.x, self.y)
         self.Z = self.plane.plane(self.X, self.Y) - self.scanheight
         
-        self.V = numpy.array([[float('nan')]*self.X.shape[0]]*self.X.shape[1])
-        self.C = numpy.array([[float('nan')]*self.X.shape[0]]*self.X.shape[1])
+        self.V = np.array([[float('nan')]*self.X.shape[0]]*self.X.shape[1])
+        self.C = np.array([[float('nan')]*self.X.shape[0]]*self.X.shape[1])
 
         self.fig = plt.figure(figsize=(14,10))
 
@@ -57,6 +57,8 @@ class Scanplane():
 
         
     def do(self):
+    	self.setup_plots()
+    
         tstart = time.time()
         self.temp_start = montana.temperature['platform']
     
@@ -75,7 +77,10 @@ class Scanplane():
             interp_func = interp(out['y'], V[self.sig_in])
             self.V[i][:] = interp_func(self.Y[i][:]) # changes from actual output data to give desired number of points
             
+            self.last_full_out = out['y']
             self.last_full_sweep = V[self.sig_in]
+            
+            self.last_interp_out = self.Y[i][:]
             self.last_interp_sweep = self.V[i][:]
             
             # Do the same for capacitance
@@ -110,21 +115,21 @@ class Scanplane():
         display.clear_output(wait=True)
         
     def setup_plots(self):
-        """ TO DO """
+        """ TO TEST """
         self.fig = plt.figure()
         
-        self.ax_squid = fig.add_subplot(121, aspect=1)
+        self.ax_squid = self.fig.add_subplot(121, aspect=1)
         self.setup_plot_squid()
         
-        self.ax_cap = fig.add_subplot(222, aspect=1)
+        self.ax_cap = self.fig.add_subplot(222, aspect=1)
         self.setup_plot_cap()
         
-        self.ax_line = fig.add_subplot(224)
+        self.ax_line = self.fig.add_subplot(224)
         self.setup_plot_line()
                 
     def setup_plot_squid(self):
         """ TO TEST """
-        Vm = ma.masked_where(numpy.isnan(self.V),self.V) #hides data not yet collected
+        Vm = ma.masked_where(np.isnan(self.V),self.V) #hides data not yet collected
 
         plt.title('%s\nSQUID signal' %self.filename, fontsize=20)
         self.im_squid = self.ax_squid.imshow(Vm, cmap='RdBu', interpolation='none',aspect='auto', extent=[min(self.X), max(self.X), min(self.Y), max(self.Y)])
@@ -137,48 +142,45 @@ class Scanplane():
         
     def plot_squid(self):
         """ TO TEST """
-        Vm = ma.masked_where(numpy.isnan(self.V),self.V) #hides data not yet collected
+        Vm = ma.masked_where(np.isnan(self.V),self.V) #hides data not yet collected
         self.im_squid.set_array(Vm)
         
         self.cb_squid.set_clim(-abs(Vm).max(), abs(Vm).max())
         self.cb_squid.draw_all()
                 
     def setup_plot_cap(self):
-        """ TO DO """
-        Cm = ma.masked_where(numpy.isnan(self.C),self.C) #hides data not yet collected
+        """ TO TEST """
+        Cm = ma.masked_where(np.isnan(self.C),self.C) #hides data not yet collected
 
         plt.title('%s\ncapacitance' %self.filename, fontsize=20)
-        plt.pcolor(self.X, self.Y, Cm, cmap='RdBu')
+        self.im_cap = self.ax_cap.imshow(Cm, cmap='afmhot', interpolation='none', aspect='auto', extent=[min(self.X), max(self.X), min(self.Y), max(self.Y)])
+        
         plt.xlabel(r'$X (V_{piezo})$', fontsize=20)
         plt.ylabel(r'$Y (V_{piezo})$', fontsize=20)
-        cb = plt.colorbar()
-        cb.set_label(label = 'Voltage from %s' %self.cap_in, fontsize=20)
+        
+        self.cb_cap = plt.colorbar(self.im_cap, ax=self.ax_cap)
+        self.cb_cap.set_label(label = 'Voltage from %s' %self.cap_in, fontsize=20)
+        self.cb_cap.formatter.set_powerlimits((-2,2))
         
     def plot_cap(self):
-        """ TO DO """
-        Cm = ma.masked_where(numpy.isnan(self.C),self.C) #hides data not yet collected
-
-        plt.title('%s\ncapacitance' %self.filename, fontsize=20)
-        plt.pcolor(self.X, self.Y, Cm, cmap='RdBu')
-        plt.xlabel(r'$X (V_{piezo})$', fontsize=20)
-        plt.ylabel(r'$Y (V_{piezo})$', fontsize=20)
-        cb = plt.colorbar()
-        cb.set_label(label = 'Voltage from %s' %self.cap_in, fontsize=20)
+        """ TO TEST """
+        Cm = ma.masked_where(np.isnan(self.C),self.C) #hides data not yet collected
+		self.im_cap.set_array(Cm)
         
     def setup_plot_line(self):
-        """ TO DO """
+        """ TO TEST """
+        
         plt.title('last full line scan', fontsize=20)
-        plt.plot(self.last_full_sweep, '.-')
+        self.line_full, = plt.plot(self.last_full_out, self.last_full_sweep, '-.k') # commas only take first element of array? ANyway, it works.
+        self.line_interp, = plt.plot(self.last_interp_out, self.last_interp_sweep, '.r', markersize=12) 
         plt.xlabel('Y (a.u.)', fontsize=20)
         plt.ylabel('V', fontsize=20)
         
     def plot_line(self):
-        """ TO DO """
-        plt.title('last full line scan', fontsize=20)
-        plt.plot(self.last_full_sweep, '.-k')
-        plt.plot(self.last_interp_sweep, '.r', markersize=12)
-        plt.xlabel('Y (a.u.)', fontsize=20)
-        plt.ylabel('V', fontsize=20)
+        """ TO TEST """
+        self.line_full.set_ydata(self.last_full_sweep)
+        self.line_interp.set_ydata(self.last_interp_sweep)
+        plt.draw()
         
     def save(self):
         data_folder = 'C:\\Users\\Hemlock\\Dropbox (Nowack lab)\\TeamData\\Montana\\Scans\\'
