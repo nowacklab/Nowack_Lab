@@ -2,15 +2,18 @@ Once have conversion factors, have touchdown "hone in" on center of piezo range 
 	-If change direction multiple times, reduce attocube number of steps
 Build in all conversion factors
 Read temperature of Montana
-Read high voltage amplifier gain
 
 SAVE EVERYTHING
 
 Touchdown with floating table
 
+<<<<<<< Updated upstream
 Figure out matplotlib notebook
 
 In preamp driver (and others), only set values if they change
+=======
+test daq sweep accel - kind of pointless right now, need to fix.
+>>>>>>> Stashed changes
 
 
 Try capacitance in X, get calibration, see if dip occurs
@@ -24,9 +27,12 @@ Array class that deals with pci, pfl.
 
 Scanning procedure:
 	add squid relock
-	add temperature checking before and after scan
 	Figure out rates
-	Fine over one direction, coarse over other
 	Look at sweep rate as a function of number of points
-	Change scan direction
+	Fine over one direction, coarse over other
+
+	Change scan direction (arbitrary scan angle???)
+		Need to try swap as-is and go from there. 
+		Would be good to get x/y straight when swapped vs not
+		Also would be good to “un-rotate” a scan to see which direction need to move with attocubes
 

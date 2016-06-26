@@ -48,9 +48,9 @@ class Scanplane():
 
         self.swap = swap 
         if swap: # Will rotate scan 90 degrees? Not really tested. Got bugs if false. Keep it true for now.
-            self.X = numpy.swapaxes(self.X, 0, 1)
-            self.Y = numpy.swapaxes(self.Y, 0, 1)
-            self.Z = numpy.swapaxes(self.Z, 0, 1)
+            self.X = self.X.transpose()
+            self.Y = self.Y.transpose()
+            self.Z = self.Z.transpose()
             
         self.filename = time.strftime('%Y%m%d_%H%M%S') + '_scan'
 
@@ -58,17 +58,17 @@ class Scanplane():
         
     def do(self):
         tstart = time.time()
+        self.temp_start = montana.temperature['platform']
     
         for i in range(self.X.shape[0]): # make sure all points are not out of range of piezos
             self.nav.check_range(self.X[i][0], self.Y[i][0], self.Z[i][0])
     
         ## Loop over X values
         for i in range(self.X.shape[0]):
-            end = self.X.shape[1]-1
             self.nav.goto(self.X[i][0], self.Y[i][0], self.Z[i][0]) # goes to beginning of scan
             
             Vstart = {'x': self.X[i][0], 'y': self.Y[i][0], 'z': self.Z[i][0]} 
-            Vend = {'x': self.X[i][end], 'y': self.Y[i][end], 'z': self.Z[i][end]}
+            Vend = {'x': self.X[i][-1], 'y': self.Y[i][-1], 'z': self.Z[i][-1]}
             
             out, V, t = self.piezos.sweep(Vstart, Vend) # sweep over Y
             
@@ -76,6 +76,7 @@ class Scanplane():
             self.V[i][:] = interp_func(self.Y[i][:]) # changes from actual output data to give desired number of points
             
             self.last_full_sweep = V[self.sig_in]
+            self.last_interp_sweep = self.V[i][:]
             
             # Do the same for capacitance
             interp_func = interp(out['y'], V[self.cap_in])
@@ -174,7 +175,8 @@ class Scanplane():
     def plot_line(self):
         """ TO DO """
         plt.title('last full line scan', fontsize=20)
-        plt.plot(self.last_full_sweep, '.-')
+        plt.plot(self.last_full_sweep, '.-k')
+        plt.plot(self.last_interp_sweep, '.r', markersize=12)
         plt.xlabel('Y (a.u.)', fontsize=20)
         plt.ylabel('V', fontsize=20)
         
@@ -190,6 +192,7 @@ class Scanplane():
             f.write('scanheight = %f\n' %self.scanheight)
             f.write('swap = %i\n' %self.swap)
             f.write('Montana info: \n'+self.montana.log()+'\n')
+            f.write('starting temperature: %f' %self.temp_start)
 
             f.write('X (V)\tY (V)\tV (V)\n')
             for i in range(self.X.shape[0]): 
