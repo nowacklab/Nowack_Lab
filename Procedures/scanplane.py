@@ -57,7 +57,7 @@ class Scanplane():
 
         
     def do(self):
-    	self.setup_plots()
+        self.setup_plots()
     
         tstart = time.time()
         self.temp_start = montana.temperature['platform']
@@ -165,7 +165,7 @@ class Scanplane():
     def plot_cap(self):
         """ TO TEST """
         Cm = ma.masked_where(np.isnan(self.C),self.C) #hides data not yet collected
-		self.im_cap.set_array(Cm)
+        self.im_cap.set_array(Cm)
         
     def setup_plot_line(self):
         """ TO TEST """

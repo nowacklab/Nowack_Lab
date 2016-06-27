@@ -77,6 +77,8 @@ class NIDAQ():
             getattr(self._daq,chan).write('%sV' %data)
     
     def monitor(self, chan_in, duration, freq=100): # similar to send_receive definition; haven't yet built in multiple channels
+        """ Monitor an input channel for a duration of time (s). 
+            e.g. V = daq.monitor('ai4', 10); V[0] is the voltage            """
         self.add_input(chan_in)
         received = getattr(self._daq, chan_in).read(duration = '%fs' %duration, fsamp='%fHz' %freq)
 
@@ -135,7 +137,8 @@ class NIDAQ():
         
         return data_in, list(time[0:len(time)-1]) #list limits undo extra point added for daq weirdness
         
-    def sweep(self, chan_out, Vstart, Vend, freq=100, numsteps=1000, accel=False):   
+    def sweep(self, chan_out, Vstart, Vend, freq=100, numsteps=1000, accel=False):  
+        """ e.g. V, response, time = daq.sweep('ao1', -1, 1) """
         if numpy.isscalar(chan_out): #Make these dicts and lists
             Vstart = {chan_out: Vstart}
             Vend = {chan_out: Vend}
