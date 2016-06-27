@@ -201,7 +201,7 @@ class Scanplane():
                 for j in range(self.X.shape[1]):
                     if self.V[i][j] != None:
                         f.write('%f' %self.X[i][j] + '\t' + '%f' %self.Y[i][j] + '\t' + '%f' %self.V[i][j] + '\n')
-        
+        ##### MAY NOT WORK PROPERLY ANYMORE!!!
         plt.figure()
         self.plot_SQUID()
         plt.savefig(filename+'.pdf', bbox_inches='tight')
