@@ -10,6 +10,9 @@ class DaqSpectrum():
         self.daq = instruments['daq']
         self.pa = instruments['preamp']
         
+        for arg in ['input_chan', 'measure_time','measure_freq','averages']:
+            setattr(self, arg, eval(arg))
+        
         self.path = 'C:\\Users\\Hemlock\\Dropbox (Nowack lab)\\TeamData\\Montana\\spectra\\'
         self.time = strftime('%Y-%m-%d_%H%M%S')
         
@@ -18,15 +21,15 @@ class DaqSpectrum():
     def do(self):
         self.notes = input('Notes for this spectrum: ')
     
-        Nfft = int((measure_freq*measure_time / 2) + 1)
+        Nfft = int((self.measure_freq*self.measure_time / 2) + 1)
         psdAve = np.zeros(Nfft)
         
-        for i in range(averages):
-            V, t, a = self.daq.monitor(input_chan, measure_time, measure_freq)
-            self.f, psd = signal.periodogram(V, measure_freq, 'blackmanharris')
+        for i in range(self.averages):
+            self.V, self.t, a = self.daq.monitor('ai%i' %self.input_chan, self.measure_time, self.measure_freq)
+            self.f, psd = signal.periodogram(self.V, self.measure_freq, 'blackmanharris')
             psdAve = psdAve + psd 
         
-        psdAve = psdAve / averages # normalize by the number of averages
+        psdAve = psdAve / self.averages # normalize by the number of averages
         self.psdAve = np.sqrt(psdAve) # spectrum in V/sqrt(Hz)
         
         self.setup_plots()
@@ -35,7 +38,8 @@ class DaqSpectrum():
             
         self.save()
         
-        return t, V, self.f, self.psdAve, time
+    def load(self, filename):
+        self.f, self.psdAve = np.loadtxt(filename, delimiter = ',')
         
     def plot_loglog(self):
         self.ax_loglog.loglog(self.f, self.psdAve)
@@ -46,11 +50,12 @@ class DaqSpectrum():
     def save(self):
         traceName = self.path + self.time + '_trace.csv'
         fftName = self.path + self.time + '_fft.csv'
+
         np.savetxt(fftName, (self.f, self.psdAve), delimiter=',')
-        np.savetxt(traceName, (t, V), delimiter=',')
+        np.savetxt(traceName, (self.t, self.V), delimiter=',')
         
-        self.fig_loglog.savefig(self.path+self.time+'_loglog.pdf',bbox_inches='tight')
-        self.fig_semilog.savefig(self.path+self.time+'_semilog.pdf',bbox_inches='tight')
+        self.fig_loglog.savefig(self.path+self.time+'_loglog.pdf')
+        self.fig_semilog.savefig(self.path+self.time+'_semilog.pdf')
       
     def setup_plots(self):
         self.fig_loglog = plt.figure(figsize=(6,6))
@@ -65,7 +70,7 @@ class DaqSpectrum():
             #apply a timestamp to the plot
             ax.annotate(self.time, xy=(0.02,.98), xycoords='axes fraction', fontsize=10,
             ha='left', va = 'top', family='monospace')
-            ax.title(self.notes)
+            ax.set_title(self.notes)
         
     def setup_preamp(self):
         self.pa.gain = 1

@@ -4,6 +4,7 @@ from .planefit import *
 from .scanplane import *
 from .squidIV import *
 from .touchdown import *
+from .daqspectrum import *
 
 #__all__ = ['touchdown']
 # import pkgutil
