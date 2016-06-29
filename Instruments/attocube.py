@@ -4,7 +4,12 @@ import time
 import telnetlib
 import re
 
-class Attocube():
+class Attocube(ANC350): ### ANC350 is closed loop controller, we use this one now.
+    pass 
+    
+class ANC350(ANC300):
+
+class ANC300(): #open loop controller, we don't use this anymore
     '''
     For remote operation of the Attocubes. Order of axes is X, Y, Z (controllers 1,2,3 are in that order). 
     

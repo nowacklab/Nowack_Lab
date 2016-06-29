@@ -1,3 +1,9 @@
+﻿Allow for instruments = None to make an object with the same plotting, data saving/loading capabilities but without having to use the same instruments in two places
+
+Save data while measurement in progress - test with mod2D?
+When reading files that are open for writing, copy the file and load temp copy
+
+
 Once have conversion factors, have touchdown "hone in" on center of piezo range better. Right now attocubes will miss.
 	-If change direction multiple times, reduce attocube number of steps
 Build in all conversion factors
