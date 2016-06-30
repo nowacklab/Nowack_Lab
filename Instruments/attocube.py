@@ -112,7 +112,7 @@ class ANC300(): #open loop controller, we don't use this anymore
         for key, value in self.V.items():
             if value > self._V_lim:
                 self.V = {key: self._V_lim}
-                print("Axis %s voltage was too high, set to" %(key, self._V_lim))
+                print("Axis %s voltage was too high, set to %f" %(key, self._V_lim))
         
     def ground(self):
         self.mode = {'x':'gnd', 'y':'gnd', 'z':'gnd'}
