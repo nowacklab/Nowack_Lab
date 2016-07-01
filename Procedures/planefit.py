@@ -92,11 +92,11 @@ class Planefit():
             for s in ['a','b','c']:
                 f.write('%s = %f\n' %(s, float(getattr(self, s))))
             f.write('Montana info: \n'+self.montana.log()+'\n')
-            f.write('X (V)\tY (V)\tZ (V)\n')
+            f.write('X (V),Y (V),Z (V)\n')
             for i in range(self.X.shape[0]): 
                 for j in range(self.X.shape[1]):
                     if self.Z[i][j] != None:
-                        f.write('%f' %self.X[i][j] + '\t' + '%f' %self.Y[i][j] + '\t' + '%f' %self.Z[i][j] + '\n')
+                        f.write('%f' %self.X[i][j] + ',' + '%f' %self.Y[i][j] + ',' + '%f' %self.Z[i][j] + '\n')
         
         self.plot()
         plt.savefig(filename+'.pdf', bbox_inches='tight')

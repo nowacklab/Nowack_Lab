@@ -250,7 +250,7 @@ class Touchdown():
             f.write('V (V)\tC (fF)\n')
             for i in range(len(self.V)):
                 if self.C[i] != None:
-                    f.write('%f' %self.V[i] + '\t' + '%f' %self.C[i] + '\n')
+                    f.write('%f' %self.V[i] + ',' + '%f' %self.C[i] + '\n')
         
         plt.savefig(filename+'.pdf', bbox_inches='tight')
         

@@ -133,8 +133,8 @@ class SquidIV():
                 f.write(param + ': ' + str(getattr(self, param)) + '\n')
             for paramamp in ['gain','filter']:
                 f.write('preamp ' + paramamp + ': ' + str(getattr(self.preamp, paramamp)) + '\n') 
-            f.write('I (A)\tV (V)\n')
+            f.write('I (A),V (V)\n')
             for i in range(len(self.V)):
-                f.write('%f' %self.I[i] + '\t' + '%f' %self.V[i] + '\n')
+                f.write('%f' %self.I[i] + ',' + '%f' %self.V[i] + '\n')
 
         plt.savefig(filename+'.pdf')

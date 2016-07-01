@@ -196,11 +196,11 @@ class Scanplane():
             f.write('Montana info: \n'+self.montana.log()+'\n')
             f.write('starting temperature: %f' %self.temp_start)
 
-            f.write('X (V)\tY (V)\tV (V)\n')
+            f.write('X (V),Y (V),V (V)\n')
             for i in range(self.X.shape[0]): 
                 for j in range(self.X.shape[1]):
                     if self.V[i][j] != None:
-                        f.write('%f' %self.X[i][j] + '\t' + '%f' %self.Y[i][j] + '\t' + '%f' %self.V[i][j] + '\n')
+                        f.write('%f' %self.X[i][j] + ',' + '%f' %self.Y[i][j] + ',' + '%f' %self.V[i][j] + '\n')
         ##### MAY NOT WORK PROPERLY ANYMORE!!!
         plt.figure()
         self.plot_SQUID()

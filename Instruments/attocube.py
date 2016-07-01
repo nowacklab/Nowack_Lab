@@ -8,6 +8,7 @@ class Attocube(ANC350): ### ANC350 is closed loop controller, we use this one no
     pass 
     
 class ANC350(ANC300):
+    def __init__(self, montana, host='192.168.69.4', port = 7230)
 
 class ANC300(): #open loop controller, we don't use this anymore
     '''
