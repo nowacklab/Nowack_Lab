@@ -1,0 +1,47 @@
+# {
+#     "_Saver__class": "Sweep",
+#     "_Saver__myid": 139646274024840,
+#     "_Saver__myoldid": 139646274024840,
+#     "attox": {
+#         "EXISTING OBJECT": 139646273781208
+#     },
+#     "attoy": {
+#         "EXISTING OBJECT": 139646273780088
+#     },
+#     "attoz": {
+#         "EXISTING OBJECT": 139646274024728
+#     },
+#     "daq": {
+#         "NEW OBJECT": {
+#             "_Saver__class": "DAQ",
+#             "_Saver__myid": 139646274024784,
+#             "_Saver__myoldid": 139646274024784,
+#             "a": 1,
+#             "attox": {
+#                 "NEW OBJECT": {
+#                     "_Saver__class": "Atto",
+#                     "_Saver__myid": 139646273781208,
+#                     "_Saver__myoldid": 139646273781208,
+#                     "c": "x"
+#                 }
+#             },
+#             "attoy": {
+#                 "NEW OBJECT": {
+#                     "_Saver__class": "Atto",
+#                     "_Saver__myid": 139646273780088,
+#                     "_Saver__myoldid": 139646273780088,
+#                     "c": "y"
+#                 }
+#             },
+#             "attoz": {
+#                 "NEW OBJECT": {
+#                     "_Saver__class": "Atto",
+#                     "_Saver__myid": 139646274024728,
+#                     "_Saver__myoldid": 139646274024728,
+#                     "c": "z"
+#                 }
+#             },
+#             "b": 2
+#         }
+#     }
+# }
