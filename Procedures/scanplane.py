@@ -183,7 +183,8 @@ class Scanplane():
         plt.draw()
         
     def save(self):
-        data_folder = 'C:\\Users\\Hemlock\\Dropbox (Nowack lab)\\TeamData\\Montana\\Scans\\'
+        home = os.path.expanduser("~")
+        data_folder = home + 'Dropbox (Nowack lab)\\TeamData\\Montana\\Scans\\'
         filename = data_folder + self.filename
       
         with open(filename+'.txt', 'w') as f:

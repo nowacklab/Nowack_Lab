@@ -105,7 +105,8 @@ class Mod2D():
 
         
     def save(self):
-        data_folder = 'C:\\Users\\Hemlock\\Dropbox (Nowack lab)\\TeamData\\Montana\\squid_testing\\mod2D\\'
+        home = os.path.expanduser("~")  
+        data_folder = home+'Dropbox (Nowack lab)\\TeamData\\Montana\\squid_testing\\mod2D\\'
 
         filename = data_folder + self.filename
         with open(filename+'.txt', 'w') as f:

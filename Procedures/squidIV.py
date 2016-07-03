@@ -123,7 +123,8 @@ class SquidIV():
         return ax
                         
     def save(self):
-        data_folder = 'C:\\Users\\Hemlock\\Dropbox (Nowack lab)\\TeamData\\Montana\\squid_testing\\IV\\'
+        home = os.path.expanduser("~")
+        data_folder = home + 'Dropbox (Nowack lab)\\TeamData\\Montana\\squid_testing\\IV\\'
 
         filename = data_folder + self.filename
         with open(filename+'.txt', 'w') as f:

@@ -236,7 +236,8 @@ class Touchdown():
         display.clear_output(wait=True)
         
     def save(self):
-        data_folder = 'C:\\Users\\Hemlock\\Dropbox (Nowack lab)\\TeamData\\Montana\\Touchdowns\\'
+        home = os.path.expanduser("~")
+        data_folder = home + 'Dropbox (Nowack lab)\\TeamData\\Montana\\Touchdowns\\'
 
         filename = data_folder + self.filename
         with open(filename+'.txt', 'w') as f:
