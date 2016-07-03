@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import datetime
 from time import strftime
+import os
 
 class DaqSpectrum():
     def __init__(self, instruments, input_chan, measure_time=0.5, measure_freq=256000, averages=30):
@@ -13,7 +14,8 @@ class DaqSpectrum():
         for arg in ['input_chan', 'measure_time','measure_freq','averages']:
             setattr(self, arg, eval(arg))
         
-        self.path = 'C:\\Users\\Hemlock\\Dropbox (Nowack lab)\\TeamData\\Montana\\spectra\\'
+        home = os.path.expanduser("~")
+        self.path = home+'Dropbox (Nowack lab)\\TeamData\\Montana\\spectra\\'
         self.time = strftime('%Y-%m-%d_%H%M%S')
         
         self.setup_preamp()

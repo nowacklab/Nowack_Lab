@@ -83,7 +83,8 @@ class Planefit():
         plt.title(self.filename,fontsize=15)
         
     def save(self):
-        data_folder = 'C:\\Users\\Hemlock\\Dropbox (Nowack lab)\\TeamData\\Montana\\Planes\\'
+        home = os.path.expanduser("~")
+        data_folder = home + 'Dropbox (Nowack lab)\\TeamData\\Montana\\Planes\\'
         filename = data_folder + self.filename
         
         with open(filename+'.txt', 'w') as f:
