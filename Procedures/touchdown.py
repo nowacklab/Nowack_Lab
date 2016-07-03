@@ -4,7 +4,6 @@ from scipy.optimize import curve_fit
 import time
 import matplotlib.pyplot as plt
 import numpy as np
-from msvcrt import getch
 
 class Touchdown():
     def __init__(self, instruments, cap_input, planescan=False):    

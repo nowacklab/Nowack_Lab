@@ -1,5 +1,5 @@
 """
-Classes for controlling StarCryo electronics for the SQUID array: PCI100 (PC interface) and PFL102 (programmable feedback loop)
+Classes for controlling StarCryo electronics for the SQUID array: PCI100 (PC pci) and PFL102 (programmable feedback loop)
 
 Possible to-do: make parameter values quantized to 12 bits to more accurately reflect actual parameter values
 """
@@ -9,15 +9,14 @@ import time
 import atexit
 
 class PCI100:
-    """Connects to the PCI-100 controller for the SQUID array"""
-
     def __init__(self, visaResource='COM3'):
-        self.setVisaResource(visaResource) # should be something like 'COM3', what port is it plugged into?
-        atexit.register(self.close)        
-    
-    def setVisaResource(self, visaResource):
-        self.instrument = None
         self._visaResource = visaResource
+        atexit.register(self.close)
+        
+    def connect():
+        '''
+        Connect to the PCI100 for the StarCryo SQUID array
+        '''    
         try:
             rm = visa.ResourceManager()
             self.instrument = rm.open_resource(str(visaResource))
@@ -26,13 +25,20 @@ class PCI100:
             print("Cannot connect to STAR Cryoelectronics SQUID interface:", e)
             
     def send(self, command):
-        # print('command sent to PCI: ', command)
+        '''
+        Sends a command to the PCI from the computer, will relay information to the PFL
+        '''
+        self.connect()
         try:
             self.instrument.write(command)
         except visa.VisaIOError as e:
             print("Cannot transmit data to STAR Cryo SQUID interface:", e)
+        self.close()
             
     def close(self):
+        '''
+        Close PCI connection
+        '''
         self.instrument.close()
 
 class PFL102:   
@@ -48,13 +54,13 @@ class PFL102:
     offset_lim = 9.8     
     amplifierGain = 5040.0  
               
-    def __init__(self, channel, interface):
+    def __init__(self, channel, pci):
         """ Will initialize PFL 102 and zero everything """
         assert channel>= 1 and channel <=8 # choose 1
         
         self.label = 'PFL102'
         self.channel = channel
-        self.interface = interface
+        self.pci = pci
         self.pflRegister = None
         
         self._arrayLocked = False
@@ -280,7 +286,9 @@ class PFL102:
         self.updateDigitalControl()
       
     def send(self, data, registername):
-        """ Prepare data to send to PCI """
+        '''
+        Prepare data to send to PCI
+        '''
         if registername == 'DR':
             register = 0b01010000 # digital control register # register == "opcode"
         elif registername == 'FR':
@@ -298,7 +306,7 @@ class PFL102:
         
         command = '%02X%02X%04X;' % (self.channel, register, data) # make command into hex ASCII string
         
-        self.interface.send(command)
+        self.pci.send(command)
             
     def unlock(self):
         """ Unlock both SQUID and array"""
@@ -378,8 +386,9 @@ class SquidArray(PFL102):
 if __name__ == '__main__':
     """ Example/test code"""
    
+   ##  CODE BELOW IS OLD AS OF 7/2/16  
     pci = PCI100('COM1')
-    pfl = PFL102(1, pci) #channel, interface, sccAddress
+    pfl = PFL102(1, pci) #channel, pci, sccAddress
     # pfl.A_bias = 00e-6
     # pfl.offset = -2.5e-3
     

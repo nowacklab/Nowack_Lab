@@ -1,22 +1,22 @@
 from ctypes import cdll
 import atexit
-import clr
-import sys
+import sys, clr, os
 from tabulate import tabulate
+
 
 class Montana():
     def __init__(self, ip='192.168.69.101', port=7773):
-        sys.path.append(r'C:\Users\Hemlock\Documents\GitHub\Nowack_Lab\Instruments')
+        directory_of_this_module = os.path.dirname(os.path.realpath(__file__))
+        sys.path.append(directory_of_this_module) # so CryostationComm is discoverable
+        
         clr.AddReference('CryostationComm')
         from CryostationComm import CryoComm
         
         self.cryo = CryoComm()
         self.cryo.IP_Address = ip
         self.cryo.Port = port
-        self.cryo.Connect()
-        if not self.cryo.CheckConnection():
-            raise Exception('Need to toggle \"Enable External Control\" button in Montana software!')
-        atexit.register(self.delete)
+
+        atexit.register(self.exit)
         
         self._temperature = {}
         self._temperature = self.temperature
@@ -53,14 +53,33 @@ class Montana():
         return self._temperature_stability
         
     def ask(self, command):
+        '''
+        Sends a command to Montana
+        '''
+        self.connect()
         _, response = self.cryo.SendCommandAndGetResponse(command,command) # Not sure why need two arguments
+        self.exit()
+        
         return response
         
     def cooldown(self):
         resp = self.ask('SCD')
         print(resp)
         
-    def delete(self):
+    def connect(self):
+        '''
+        Opens connection to Montana
+        '''
+        self.cryo.Connect()
+        if not self.cryo.CheckConnection():
+            inp = input('Need to toggle \"Enable External Control\" button in Montana software! Enter \'quit\' to halt execution and fix.')
+            if inp == 'quit':
+                raise Exception('Quit by user')
+                        
+    def exit(self):
+        '''
+        Closes connection to Montana
+        '''
         self.cryo.Exit
                
     def log(self):
