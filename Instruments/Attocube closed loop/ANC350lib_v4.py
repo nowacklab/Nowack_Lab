@@ -18,8 +18,7 @@
 # for anc350v4, did not need nhconnect.dll
 
 
-import ctypes
-import time
+import ctypes, os, time
 #
 # List of error types
 #
@@ -62,8 +61,12 @@ def checkError(code,func,args):
         raise Exception("Error: unknown in"+str(func.__name__)+"with parameters:"+str(args))
     return code
 
-#import dll
-anc350v4 = ctypes.windll.anc350v4
+#import dll - have to change directorys so it finds libusb0.dll
+directory_of_this_module_and_dlls = os.path.dirname(os.path.realpath(__file__))
+current_directory = os.getcwd()
+os.chdir(directory_of_this_module_and_dlls)
+anc350v4 = ctypes.windll.LoadLibrary(directory_of_this_module_and_dlls+'\\anc350v4.dll')
+os.chdir(current_directory)
 
 #aliases for the strangely-named functions from the dll
 discover = getattr(anc350v4,"ANC_discover")
