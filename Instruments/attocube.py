@@ -4,11 +4,6 @@ import time
 import telnetlib
 import re
 
-class Attocube(ANC350): ### ANC350 is closed loop controller, we use this one now.
-    pass 
-    
-class ANC350(ANC300):
-
 class ANC300(): #open loop controller, we don't use this anymore
     '''
     For remote operation of the Attocubes. Order of axes is X, Y, Z (controllers 1,2,3 are in that order). 
@@ -19,11 +14,9 @@ class ANC300(): #open loop controller, we don't use this anymore
     _modes = ['gnd','cap','stp']
     
     def __init__(self, montana, host='192.168.69.3', port=7230):
-        self._tn = telnetlib.Telnet(host, port, 5) # timeout 5 seconds
-        self._tn.read_until(b"Authorization code: ") #skips to pw entry
-        self._tn.write(b'123456'+ b'\n') #default password
-        self._tn.read_until(b'> ')        # skip to input
-
+        self.host = host
+        self.port = port
+            
         self._freq = {}
         self._mode = {}
         self._V = {}
@@ -107,7 +100,24 @@ class ANC300(): #open loop controller, we don't use this anymore
             msg = self.send('getc %i' %(i+1))
             self._cap[self._stages[i]] = float(self._getValue(msg))    
         return self._cap
-
+    
+    def close(self):
+        '''
+        Closes telnet connection
+        '''
+        self._tn.close()
+    
+        
+    def connect(self):
+        '''
+        Connects to ANC300 Attocube Controller via LAN. If for some reason communication does not work, first check for IP 192.168.69.3 in cmd using arp -a, then troubleshoot using cygwin terminal: telnet 192.168.69.3 7230 
+        '''
+        self._tn = telnetlib.Telnet(host, port, 5) # timeout 5 seconds
+        self._tn.read_until(b"Authorization code: ") #skips to pw entry
+        self._tn.write(b'123456'+ b'\n') #default password
+		self._tn.read_until(b'> ')        # skip to input
+    
+    
     def check_voltage(self):
         for key, value in self.V.items():
             if value > self._V_lim:
@@ -160,12 +170,14 @@ class ANC300(): #open loop controller, we don't use this anymore
         for i in range(3):
             msg = self.send('stop %i' %(i+1))
         
-    def send(self, cmd):      
+    def send(self, cmd):  
+        self.connect()    
         cmd = cmd + '\n'
         try:
             self._tn.write(bytes(cmd, 'ascii'))
         except:
-            print("Could not connect!")
+            print("Could not connect to ANC300 Attocube Controller!")
+        self.close()
         return self._tn.read_until(b'\n> ') # looks for input line \n fixed bug with help
         
     def _getDigits(self,msg):
@@ -179,6 +191,14 @@ class ANC300(): #open loop controller, we don't use this anymore
     def _getValue(self, msg):
         """ Looks after equals sign in returned message to get value of parameter """
         return msg.split()[msg.split().index(b'=')+1].decode('utf-8') #looks after the equal sign
+
+     
+class ANC350(ANC300):
+    def __init__(self, montana, host='192.168.69.4', port = 7230):
+        pass
+
+class Attocube(ANC300): ### ANC300 is open loop controller, we use this one at the moment.
+    pass 
 
 
 if __name__ == '__main__':

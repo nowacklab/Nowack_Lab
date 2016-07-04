@@ -4,7 +4,6 @@ from scipy.optimize import curve_fit
 import time
 import matplotlib.pyplot as plt
 import numpy as np
-from msvcrt import getch
 
 class Touchdown():
     def __init__(self, instruments, cap_input, planescan=False):    
@@ -237,7 +236,8 @@ class Touchdown():
         display.clear_output(wait=True)
         
     def save(self):
-        data_folder = 'C:\\Users\\Hemlock\\Dropbox (Nowack lab)\\TeamData\\Montana\\Touchdowns\\'
+        home = os.path.expanduser("~")
+        data_folder = home + 'Dropbox (Nowack lab)\\TeamData\\Montana\\Touchdowns\\'
 
         filename = data_folder + self.filename
         with open(filename+'.txt', 'w') as f:
@@ -250,7 +250,7 @@ class Touchdown():
             f.write('V (V)\tC (fF)\n')
             for i in range(len(self.V)):
                 if self.C[i] != None:
-                    f.write('%f' %self.V[i] + '\t' + '%f' %self.C[i] + '\n')
+                    f.write('%f' %self.V[i] + ',' + '%f' %self.C[i] + '\n')
         
         plt.savefig(filename+'.pdf', bbox_inches='tight')
         

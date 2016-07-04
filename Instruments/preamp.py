@@ -8,16 +8,12 @@ FILTER = [0, 0.03, 0.1, 0.3, 1, 3, 10, 30, 100, 300, 1000, 3000, 10000, 30000, 1
 
 class SR5113():
     def __init__(self, port='COM1'):
-        if type(port) is int:
-            port = 'COM%i' %i
-        try:
-            self.rm = visa.ResourceManager()
-            self.inst = self.rm.open_resource(port)
-            self.inst.read() # for some reason this always times out the first times
-        except: # will just open the instrument again
-            self.rm = visa.ResourceManager()
-            self.inst = self.rm.open_resource(port)
-            
+        '''
+        Driver for the Signal Recovery 5113 preamplifier.
+        e.g. preamp = SR5113('COM1')
+        '''
+        self.port = port
+        
         for cg in COARSE_GAIN:
             for fg in FINE_GAIN:
                 ALL_GAINS.append(int(cg*fg))
@@ -88,6 +84,24 @@ class SR5113():
             self.write('FG%i' %fg)
             self._gain = value
         
+    def close(self):
+        '''
+        Closes connection to preamp
+        '''
+        self.inst.close()
+        
+    def connect(self):
+        '''
+        Connects to preamp via serial port
+        '''
+        try:
+            self.rm = visa.ResourceManager()
+            self.inst = self.rm.open_resource(self.port)
+            self.inst.read() # for some reason this always times out the first time
+        except: # always runs, will just open the instrument a second time
+            self.rm = visa.ResourceManager()
+            self.inst = self.rm.open_resource(self.port)
+        
     def id(self):
         msg = self.write('ID', True)
         print(msg)
@@ -120,7 +134,12 @@ class SR5113():
         self.write('TC%i' %(tensec)) # 0 = 1s, 1 = 10s
     
     def write(self, cmd, read=False):
-        """ Will write commands to SR5113 preamp via serial port. If expect a value back, then set read=True. Figured this out by trial and error. First read command reads back the command sent, last read command will be empty (*\n). Middle command will contain response. """
+        '''        
+        Will write commands to SR5113 preamp via serial port. If expect a value back, then set read=True. Figured this out by trial and error. First read command reads back the command sent, last read command will be empty (*\n). Middle command will contain response.
+        e.g. preamp.write('ID', True)
+        '''
+        self.connect()
+        
         self.inst.write(cmd+'\r')
         self.inst.read()
         if read:
@@ -128,6 +147,8 @@ class SR5113():
         self.inst.read()
         if read:
             return response.rstrip() #rstrip gets rid of \n
+        
+        self.close()
         
 if __name__ == '__main__':
     preamp = SR5113()

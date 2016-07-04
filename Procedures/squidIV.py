@@ -123,7 +123,8 @@ class SquidIV():
         return ax
                         
     def save(self):
-        data_folder = 'C:\\Users\\Hemlock\\Dropbox (Nowack lab)\\TeamData\\Montana\\squid_testing\\IV\\'
+        home = os.path.expanduser("~")
+        data_folder = home + 'Dropbox (Nowack lab)\\TeamData\\Montana\\squid_testing\\IV\\'
 
         filename = data_folder + self.filename
         with open(filename+'.txt', 'w') as f:
@@ -133,8 +134,8 @@ class SquidIV():
                 f.write(param + ': ' + str(getattr(self, param)) + '\n')
             for paramamp in ['gain','filter']:
                 f.write('preamp ' + paramamp + ': ' + str(getattr(self.preamp, paramamp)) + '\n') 
-            f.write('I (A)\tV (V)\n')
+            f.write('I (A),V (V)\n')
             for i in range(len(self.V)):
-                f.write('%f' %self.I[i] + '\t' + '%f' %self.V[i] + '\n')
+                f.write('%f' %self.I[i] + ',' + '%f' %self.V[i] + '\n')
 
         plt.savefig(filename+'.pdf')

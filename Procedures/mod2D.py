@@ -105,7 +105,8 @@ class Mod2D():
 
         
     def save(self):
-        data_folder = 'C:\\Users\\Hemlock\\Dropbox (Nowack lab)\\TeamData\\Montana\\squid_testing\\mod2D\\'
+        home = os.path.expanduser("~")  
+        data_folder = home+'Dropbox (Nowack lab)\\TeamData\\Montana\\squid_testing\\mod2D\\'
 
         filename = data_folder + self.filename
         with open(filename+'.txt', 'w') as f:
@@ -118,11 +119,11 @@ class Mod2D():
             for paramamp in ['gain','filter']:
                 f.write('IV preamp ' + paramamp + ': ' + str(getattr(self.IV.preamp, paramamp)) + '\n') 
            
-            f.write('Isquid (V)\tImod (V)\tVsquid (V)\n')
+            f.write('Isquid (V),Imod (V),Vsquid (V)\n')
             for i in range(self.numpts): 
                 for j in range(self.IV.numpts):
                     if self.V[i][j] != None:
-                        f.write('%f' %self.IV.I[j] + '\t' + '%f' %self.Imod[i] + '\t' + '%f' %self.V[i][j] + '\n')
+                        f.write('%f' %self.IV.I[j] + ',' + '%f' %self.Imod[i] + ',' + '%f' %self.V[i][j] + '\n')
         
         plt.figure(self.fig.number)
         plt.savefig(filename+'.pdf')

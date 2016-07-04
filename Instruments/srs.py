@@ -10,8 +10,6 @@ class SR830():
     def __init__(self, gpib_address=''):
         self.gpib_address = gpib_address
         
-        self.init_visa()
-
         atexit.register(self.exit)
         
         self.ch1_daq_input = None
@@ -50,7 +48,7 @@ class SR830():
     @property
     def sensitivity(self):
         '''Get the lockin sensitivity'''
-        return self.sensitivity_options[int(self._visa_handle.ask('SENS?'))]
+        return self.sensitivity_options[int(self.ask('SENS?'))]
 
     @sensitivity.setter
     def sensitivity(self, value):
@@ -60,12 +58,12 @@ class SR830():
         index = abs(numpy.array([v - value  if (v - value)>=0 else -100000 for v in self.sensitivity_options])).argmin() #finds sensitivity just above input
         good_value = self.sensitivity_options[index]
         
-        self._visa_handle.write('SENS%d' %self.sensitivity_options.index(good_value))
+        self.write('SENS%d' %self.sensitivity_options.index(good_value))
 
     @property
     def amplitude(self):
         '''Get the output amplitude'''
-        return self._visa_handle.ask('SLVL?')
+        return self.ask('SLVL?')
     
     @amplitude.setter
     def amplitude(self, value):
@@ -74,38 +72,38 @@ class SR830():
             value = 0.004
         if value > 5:
             value = 5
-        self._visa_handle.write('SLVL %s' %value)
+        self.write('SLVL %s' %value)
     
     @property
     def frequency(self):
-        return self._visa_handle.ask('FREQ?')
+        return self.ask('FREQ?')
 
     @frequency.setter
     def frequency(self, value):
-        self._visa_handle.write('FREQ %s' %value)
+        self.write('FREQ %s' %value)
 
     @property
     def X(self):
-        return float(self._visa_handle.ask('OUTP?1'))
+        return float(self.ask('OUTP?1'))
 
     @property
     def Y(self):
-        return float(self._visa_handle.ask('OUTP?2'))
+        return float(self.ask('OUTP?2'))
 
     @property
     def R(self):
-        return float(self._visa_handle.ask('OUTP?3'))
+        return float(self.ask('OUTP?3'))
 
     @property
     def theta(self):
-        return float(self._visa_handle.ask('OUTP?4'))
+        return float(self.ask('OUTP?4'))
 
     @property
     def time_constant(self):
         options = {self.time_constant_options[key]: key for key in self.time_constant_options.keys()}
 
-        #return options[int(self._visa_handle.ask('OFLT?'))]
-        return self.time_constant_values[int(self._visa_handle.ask('OFLT?'))]
+        #return options[int(self.ask('OFLT?'))]
+        return self.time_constant_values[int(self.ask('OFLT?'))]
         
     @time_constant.setter
     def time_constant(self, value):
@@ -120,23 +118,28 @@ class SR830():
             index = abs(numpy.array([value - v  if (value-v)>=0 else -100000 for v in self.time_constant_values])).argmin() #finds time constant just below input
             good_value = self.time_constant_values[index]
 
-        self._visa_handle.write('OFLT %s' %index)
+        self.write('OFLT %s' %index)
     
     @property
     def reserve(self):
-        i = int(self._visa_handle.ask('RMOD?'))
+        i = int(self.ask('RMOD?'))
         return self.reserve_options[i]
      
     @reserve.setter
     def reserve(self, value):
         i = self.reserve_options.index(value)
-        self._visa_handle.write('RMOD%i' %i)
+        self.write('RMOD%i' %i)
+        
+    def ask(self):
+        self.init_visa()
+        self.write(cmd)
+        self.close()
     
     def auto_gain(self):
-        self._visa_handle.write('AGAN')
+        self.write('AGAN')
 
     def auto_phase(self):
-        self._visa_handle.write('APHS')
+        self.write('APHS')
         
     def init_visa(self):
         self._visa_handle = visa.ResourceManager().open_resource(self.gpib_address)
@@ -147,7 +150,7 @@ class SR830():
         table = []
         for name in ['sensitivity', 'amplitude', 'frequency', 'time_constant']:
             table.append([name, getattr(self, name)])
-        snapped = self._visa_handle.ask('SNAP?1,2,3,4')
+        snapped = self.ask('SNAP?1,2,3,4')
         snapped = snapped.split(',')
         table.append(['X', snapped[0]])
         table.append(['Y', snapped[1]])
@@ -167,11 +170,11 @@ class SR830():
             raise Exception('Channel only 1 or 2!')
         
         if param in ('X', 'Y'):
-            self._visa_handle.write('DDEF%i,0,0' %chan)
-            self._visa_handle.write('FPOP%i,0' %chan)
+            self.write('DDEF%i,0,0' %chan)
+            self.write('FPOP%i,0' %chan)
         else:
-            self._visa_handle.write('DDEF%i,1,0' %chan)
-            self._visa_handle.write('FPOP%i,0' %chan)
+            self.write('DDEF%i,1,0' %chan)
+            self.write('FPOP%i,0' %chan)
             
     def convert_output(self, value):
         if not numpy.isscalar(value):
@@ -179,8 +182,13 @@ class SR830():
             return list(value/10*self.sensitivity) # will give actual output in volts, since output is scaled to 10 V == sensitivity
         return value/10*self.sensitivity
             
-    def exit(self):
+    def close(self):
         self._visa_handle.close()
+        
+    def write(self, cmd):
+        self.init_visa()
+        self._visa_handle.write(cmd)
+        self.close()
         
 if __name__ == '__main__':
     lockin = SR830('GPIB::09::INSTR')

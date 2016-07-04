@@ -1,0 +1,66 @@
+README 
+2016 07 01 
+david low
+
+
+
+QUICK START: (unix only)
+
+python3.4 savertest.py
+diff savertester_dict5.testfile savertester_dict6.testfile
+
+
+
+This shows that I can convert my example instruments to a dictionary 
+(which I can display as a 'human readable' string), delete the objects,
+recreate the objects, and get out the same dictionary.
+
+If you look closely in savertest.py, you'll see that I can reference a 
+variable inside one of the objects, so these objects do actually exist 
+and you can talk to them.
+
+If this won't run for you, let me know.  I piped an example run to a file 
+so you can see that it does work on my computer so it is possible on 
+python in general. File name is "samplerun_david.txt".
+
+
+
+TODO / NOTES
+
+- test with more complicated import structures.  I cheated here and just
+  imported everything into flat space for the load (lines 33-35).  I 
+  suspect things will break with our more complex import structure
+
+- the linkingload needs to be re-written.  It is awful.  I've included some
+  psuedocode in the saver class to help explain it.
+
+- linkingload requires a default constructor with NO (0) required 
+  parameters.  I suppose we *could* make an if statement in there to 
+  handle all the constructors with parameters and put acceptable defaults,
+  but I think it would be better to make the default constructor have 0 
+  required parameters.
+
+
+
+GENERAL ARCHITECTURE OF TEST
+
+To simulate the different files / classes, I have three files, each with 
+one class each: 
+
+    file name:      class name:
+    attoclass.py    Atto   
+    daqclass.py     DAQ
+    sweepclass.py   Sweep
+
+    saver.py        Saver
+
+Atto is free standing and has a paramter 'c' that says which direction 
+it goes in ('x','y','z').  DAQ contains 3 attos.  Sweep contains the Attos
+and DAQ.  Saver is the superclass for Atto, DAQ, and Sweep.
+
+Feel free to make the linking structure more complicated to see if the 
+saver and loader still work.  
+
+The Saver class contains all the functions necessary to save / load.  
+
+The savertester.py script is what I used to test the Saver functions.
