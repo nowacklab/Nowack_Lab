@@ -115,7 +115,7 @@ class ANC300(): #open loop controller, we don't use this anymore
         self._tn = telnetlib.Telnet(host, port, 5) # timeout 5 seconds
         self._tn.read_until(b"Authorization code: ") #skips to pw entry
         self._tn.write(b'123456'+ b'\n') #default password
-		self._tn.read_until(b'> ')        # skip to input
+        self._tn.read_until(b'> ')        # skip to input
     
     
     def check_voltage(self):
