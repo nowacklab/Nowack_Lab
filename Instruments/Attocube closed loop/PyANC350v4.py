@@ -1,15 +1,14 @@
 #
-#  PyANC350 is a control scheme suitable for the Python coding style
+#  PyANC350v4 is a control scheme suitable for the Python coding style
 #    for the attocube ANC350 closed-loop positioner system.
 #
-#  It implements ANC350lib, which in turn depends on anc350v2.dll
-#    which is provided by attocube in the ANC350_DLL folders
-#    on the driver disc.
-#    This in turn requires nhconnect.dll and libusb0.dll. Place all
-#    of these in the same folder as this module (and that of ANC350lib).
+#  It implements ANC350v4lib, which in turn depends on anc350v4.dll and libusb0.dll, which are provided by attocube in the
+#     ANC350_Library folder on the driver disc. Place all
+#     of these in the same folder as this module (and that of ANC350lib).
+#     This should also work with anc350v3.dll, although this has not been thoroughly checked.
 #
-#  Unlike ANC350lib which is effectively a re-imagining of the
-#    C++ header, PyANC350 is intended to behave as one might expect
+#  Unlike ANC350v4lib which is effectively a re-imagining of the
+#    C++ header, PyANC350v4 is intended to behave as one might expect
 #    Python to. This means: returning values; behaving as an object.
 #
 #  At present this only addresses the first ANC350 connected to the
@@ -18,20 +17,20 @@
 #  Usage:
 #  1. instantiate Positioner() class to begin, eg. pos = Positioner().
 #  2. methods from the ANC350v2 documentation are implemented such that
-#      function PositionerGetPosition(handle, axis, &pos)
-#      becomes position = pos.getPosition(axis),
-#      PositionerCapMeasure(handle,axis,&cap) becomes
-#      cap = pos.capMeasure(axis), and so on. Return code handling is
+#      function ANC_getPosition(device, axisNo, &position)
+#      becomes position = pos.getPosition(axisNo), for example. Return code handling is
 #      within ANC350lib.
-#  3. bitmask() and debitmask() functions have been added for
-#      convenience when using certain functions
-#      (e.g. getStatus,moveAbsoluteSync)
-#  4. for tidiness remember to Positioner.close() when finished!
+#  3. for tidiness remember to Positioner.close() when finished!
 #
 #                PyANC350 is written by Rob Heath
 #                      rob@robheath.me.uk
 #                         24-Feb-2015
 #                       robheath.me.uk
+#
+#                 PyANC350v4 by Brian Schaefer
+#                      bts72@cornell.edu
+#                         5-Jul-2016
+#              http://nowack.lassp.cornell.edu/
 
 import ANC350lib_v4 as ANC
 import ctypes, math
@@ -114,8 +113,8 @@ class Positioner:
 
         Parameters
             axisNo	Axis number (0 ... 2)
-            lower	Lower position for range trigger
-            upper	Upper position for range trigger
+            lower	Lower position for range trigger (nm)
+            upper	Upper position for range trigger (nm)
         Returns
             None
         '''

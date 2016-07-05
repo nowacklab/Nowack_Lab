@@ -2,27 +2,27 @@
 #  ANC350lib is a Python implementation of the C++ header provided
 #     with the attocube ANC350 closed-loop positioner system.
 #
-#  It depends on anc350v4.dll which is provided by attocube in the
-#     ANC350_DLL folders on the driver disc.
-#     This in turn requires nhconnect.dll and libusb0.dll. Place all
+#  It depends on anc350v4.dll and libusb0.dll, which are provided by attocube in the
+#     ANC350_Library folder on the driver disc. Place all
 #     of these in the same folder as this module (and that of ANC350lib).
+#     This should also work with anc350v3.dll, although this has not been thoroughly checked.
 #
 #                ANC350lib is written by Rob Heath
 #                      rob@robheath.me.uk
 #                         24-Feb-2015
 #                       robheath.me.uk
 #
-#    v1.1: corrected POINTER used in intEnable (!!)
-#
-
-# for anc350v4, did not need nhconnect.dll
+#                 ANC350v4lib by Brian Schaefer
+#                      bts72@cornell.edu
+#                         5-Jul-2016
+#              http://nowack.lassp.cornell.edu/
 
 
 import ctypes, os, time
+
 #
 # List of error types
 #
-
 ANC_Ok = 0 #                    No error
 ANC_Error = -1 #                Unknown / other error
 ANC_Timeout = 1 #               Timeout during data retrieval
@@ -61,11 +61,11 @@ def checkError(code,func,args):
         raise Exception("Error: unknown in"+str(func.__name__)+"with parameters:"+str(args))
     return code
 
-#import dll - have to change directorys so it finds libusb0.dll
+# import dll - have to change directories so it finds libusb0.dll
 directory_of_this_module_and_dlls = os.path.dirname(os.path.realpath(__file__))
 current_directory = os.getcwd()
 os.chdir(directory_of_this_module_and_dlls)
-anc350v4 = ctypes.windll.LoadLibrary(directory_of_this_module_and_dlls+'\\anc350v4.dll')
+anc350v4 = ctypes.windll.LoadLibrary(directory_of_this_module_and_dlls+'\\anc350v3.dll')
 os.chdir(current_directory)
 
 #aliases for the strangely-named functions from the dll
