@@ -15,10 +15,11 @@ class DaqSpectrum():
             setattr(self, arg, eval(arg))
         
         home = os.path.expanduser("~")
-        self.path = home+'Dropbox (Nowack lab)\\TeamData\\Montana\\spectra\\'
+        self.path = home+'\\Dropbox (Nowack lab)\\TeamData\\Montana\\spectra\\'
         self.time = strftime('%Y-%m-%d_%H%M%S')
         
         self.setup_preamp()
+        self.notes = ''
         
     def do(self):
         self.notes = input('Notes for this spectrum: ')
@@ -42,6 +43,7 @@ class DaqSpectrum():
         
     def load(self, filename):
         self.f, self.psdAve = np.loadtxt(filename, delimiter = ',')
+        self.time = filename[filename.rfind('\\')+1:filename.rfind('_')] #Finds the group of characters between the last backslash and the last underscore. Crappy, but should work.
         
     def plot_loglog(self):
         self.ax_loglog.loglog(self.f, self.psdAve)

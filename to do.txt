@@ -1,40 +1,83 @@
+﻿Fix preamp timeout error
+Notes at the end of the measurement
+
 Allow for instruments = None to make an object with the same plotting, data saving/loading capabilities but without having to use the same instruments in two places
 
+
 Save data while measurement in progress - test with mod2D?
+
 When reading files that are open for writing, copy the file and load temp copy
 
+
 Find location of Nowack_Lab module and figure out paths from there
+
 directory_of_this_module = os.path.dirname(os.path.realpath(__file__))
 
 
+
+
 Once have conversion factors, have touchdown "hone in" on center of piezo range better. Right now attocubes will miss.
+
 	-If change direction multiple times, reduce attocube number of steps
+
 Build in all conversion factors
+
 Read temperature of Montana
+
 
 SAVE EVERYTHING
 
+
 Touchdown with floating table
+
+<<<<<<< HEAD
+
+
+
+Figure out matplotlib notebook
+
+
+In preamp driver (and others), only set values if they change
 
 test daq sweep accel - kind of pointless right now, need to fix.
 
+
+
+=======
+test daq sweep accel - kind of pointless right now, need to fix.
+>>>>>>> origin/master
+
 Try capacitance in X, get calibration, see if dip occurs
+
 Use center point of plane for fitting, and maybe use this also to update/set C value?
 
+
 reset squid before each scan
+
 initialize squidarray object without zeroing PFL - impossible? No way of reading values
+
 walkthrough function tune and lock squid/array
+
 Array class that deals with pci, pfl.
-	-Auto tune function would be cool
+	
+-Auto tune function would be cool
+
 
 Scanning procedure:
-	add squid relock
-	Figure out rates
-	Look at sweep rate as a function of number of points
-	Fine over one direction, coarse over other
+	
+add squid relock
+	
+Figure out rates
+	
+Look at sweep rate as a function of number of points
+	
+Fine over one direction, coarse over other
 
 	Change scan direction (arbitrary scan angle???)
-		Need to try swap as-is and go from there. 
-		Would be good to get x/y straight when swapped vs not
-		Also would be good to “un-rotate” a scan to see which direction need to move with attocubes
+		
+Need to try swap as-is and go from there. 
+		
+Would be good to get x/y straight when swapped vs not
+		
+Also would be good to “un-rotate” a scan to see which direction need to move with attocubes
 

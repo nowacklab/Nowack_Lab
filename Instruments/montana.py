@@ -2,7 +2,7 @@ from ctypes import cdll
 import atexit
 import sys, clr, os
 from tabulate import tabulate
-
+import time
 
 class Montana():
     def __init__(self, ip='192.168.69.101', port=7773):
@@ -30,12 +30,13 @@ class Montana():
         
     @property
     def temperature(self):
-        self._temperature['platform'] = float(self.ask('GPT'))
-        self._temperature['stage 1'] = float(self.ask('GS1T'))
-        self._temperature['stage 2'] = float(self.ask('GS2T'))
-        self._temperature['sample'] = float(self.ask('GST'))
-        self._temperature['user'] = float(self.ask('GUT'))
-        self._temperature['setpoint'] = float(self.ask('GTSP'))
+        temps = self.ask('GPT', 'GS1T', 'GS2T', 'GST', 'GUT', 'GTSP')
+        self._temperature['platform'] = temps['GPT']
+        self._temperature['stage 1'] = temps['GS1T']
+        self._temperature['stage 2'] = temps['GS2T']
+        self._temperature['sample'] = temps['GST']
+        self._temperature['user'] = temps['GUT']
+        self._temperature['setpoint'] = temps['GTSP']
         
         return self._temperature
 
@@ -47,23 +48,33 @@ class Montana():
         
     @property
     def temperature_stability(self):
-        self._temperature_stability['platform'] = self.ask('GPS')
-        self._temperature_stability['sample'] = self.ask('GSS')
-        self._temperature_stability['user'] = self.ask('GUS')
+        stabs = self.ask('GPS', 'GSS', 'GUS')
+        self._temperature_stability['platform'] = stabs['GPS']
+        self._temperature_stability['sample'] = stabs['GSS']
+        self._temperature_stability['user'] = stabs['GUS']
         return self._temperature_stability
         
-    def ask(self, command):
+    def ask(self, *args, to_float = True):
         '''
-        Sends a command to Montana
+        Sends many commands to Montana. If one command, returns one value. Else returns a dictionary with keys = commands, values = responses
         '''
         self.connect()
-        _, response = self.cryo.SendCommandAndGetResponse(command,command) # Not sure why need two arguments
+        responses = {}
+        for command in args:
+            _, responses[command] = self.cryo.SendCommandAndGetResponse(command,command) # Not sure why need two arguments
         self.exit()
+                
+        if to_float:
+            for key, value in responses.items():
+                responses[key] = float(value)   
         
-        return response
+        if len(responses) == 1:
+            return next(iter(responses.values())) # will return only value
+        
+        return responses
         
     def cooldown(self):
-        resp = self.ask('SCD')
+        resp = self.ask('SCD', to_float = False)
         print(resp)
         
     def connect(self):
@@ -80,7 +91,8 @@ class Montana():
         '''
         Closes connection to Montana
         '''
-        self.cryo.Exit
+        self.cryo.Exit()
+        time.sleep(0.01) # slight delay to prevent issues with trying to connect again in quick succession
                
     def log(self):
         table = []
@@ -92,11 +104,11 @@ class Montana():
         return tabulate(table)
         
     def standby(self):
-        resp = self.ask('SSB')
+        resp = self.ask('SSB', to_float = False)
         print(resp)
         
     def warmup(self):
-        resp = self.ask('SWU')
+        resp = self.ask('SWU', to_float = False)
         print(resp)
         
 if __name__ == '__main__':

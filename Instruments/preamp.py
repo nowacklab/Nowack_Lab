@@ -13,6 +13,8 @@ class SR5113():
         e.g. preamp = SR5113('COM1')
         '''
         self.port = port
+        self._first_connect = True
+
         
         for cg in COARSE_GAIN:
             for fg in FINE_GAIN:
@@ -20,7 +22,7 @@ class SR5113():
                 
         self._gain = self.gain
         self._filter = self.filter
-        
+                
     @property
     def filter(self):
         low = self.write('FF0', True)
@@ -94,13 +96,17 @@ class SR5113():
         '''
         Connects to preamp via serial port
         '''
-        try:
-            self.rm = visa.ResourceManager()
-            self.inst = self.rm.open_resource(self.port)
-            self.inst.read() # for some reason this always times out the first time
-        except: # always runs, will just open the instrument a second time
-            self.rm = visa.ResourceManager()
-            self.inst = self.rm.open_resource(self.port)
+        if self._first_connect:
+            try:
+                self.rm = visa.ResourceManager()
+                self.inst = self.rm.open_resource(self.port)
+                self.inst.read() # for some reason this always times out the first time you try to connect
+            except:
+                self._first_connect = False # It gets here from the timeout, will never try to do the timeout read again
+
+        # Open the instrument for real
+        self.rm = visa.ResourceManager()
+        self.inst = self.rm.open_resource(self.port)
         
     def id(self):
         msg = self.write('ID', True)
