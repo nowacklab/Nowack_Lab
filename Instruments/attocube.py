@@ -3,6 +3,7 @@ import atexit
 import time
 import telnetlib
 import re
+from attocube-ANC350-Python-library import PyANC350v4
 
 class ANC300(): #open loop controller, we don't use this anymore
     '''
@@ -193,9 +194,9 @@ class ANC300(): #open loop controller, we don't use this anymore
         return msg.split()[msg.split().index(b'=')+1].decode('utf-8') #looks after the equal sign
 
      
-class ANC350(ANC300):
-    def __init__(self, montana, host='192.168.69.4', port = 7230):
-        pass
+class ANC350():
+    def __init__(self, montana):
+        self.anc = PyANC350v4.Positioner()
 
 class Attocube(ANC300): ### ANC300 is open loop controller, we use this one at the moment.
     pass 

@@ -16,14 +16,7 @@ SAVE EVERYTHING
 
 Touchdown with floating table
 
-<<<<<<< Updated upstream
-Figure out matplotlib notebook
-
-In preamp driver (and others), only set values if they change
-=======
 test daq sweep accel - kind of pointless right now, need to fix.
->>>>>>> Stashed changes
-
 
 Try capacitance in X, get calibration, see if dip occurs
 Use center point of plane for fitting, and maybe use this also to update/set C value?
