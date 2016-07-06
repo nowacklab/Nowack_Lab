@@ -3,7 +3,7 @@ import atexit
 import time
 import telnetlib
 import re
-from attocube-ANC350-Python-library import PyANC350v4
+from PyANC350 import PyANC350v4
 
 class ANC300(): #open loop controller, we don't use this anymore
     '''
@@ -197,6 +197,8 @@ class ANC300(): #open loop controller, we don't use this anymore
 class ANC350():
     def __init__(self, montana):
         self.anc = PyANC350v4.Positioner()
+        
+    
 
 class Attocube(ANC300): ### ANC300 is open loop controller, we use this one at the moment.
     pass 

@@ -2,7 +2,7 @@
 # from .Procedures import *
 # from .Instruments import *
 # #from . import *
-__all__ = ['Procedures', 'Instruments']
+__all__ = ['Procedures', 'Instruments', 'Utilities']
 
 # import pkgutil
 # # for loader, module_name, is_pkg in  pkgutil.walk_packages(__path__):

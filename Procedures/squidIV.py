@@ -8,14 +8,23 @@ from IPython import display
 import matplotlib.pyplot as plt
 import numpy as np
 import time
+from Nowack_Lab.Utilities.dummy import Dummy
 
 class SquidIV():
-    def __init__(self, instruments, squidout, squidin, modout=None, rate=90):   
-        """ Example: SquidIV({'daq': daq, 'preamp': preamp}, 0, 0, 1, 90) """
+    def __init__(self, instruments=None, squidout=None, squidin=None, modout=None, rate=90):
+        '''
+        Example: SquidIV({'daq': daq, 'preamp': preamp}, 0, 0, None, 90)
+        To make an empty object, then just call SquidIV(). You can do this if you want to plot previously collected data.        
+        '''
     
-        self.daq = instruments['daq']
-        self.preamp = instruments['preamp']
-        self.montana = instruments['montana']
+        if instruments: # Only set up instruments if running for real
+            self.daq = instruments['daq']
+            self.preamp = instruments['preamp']
+            self.montana = instruments['montana']
+        else:
+            self.daq = Dummy()
+            self.preamp = Dummy()
+            self.montana = Dummy()
         
         self.squidout = 'ao%s' %squidout
         self.squidin = 'ai%s' %squidin

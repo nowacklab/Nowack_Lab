@@ -7,8 +7,11 @@ import time
 from . import squidIV
 
 class Mod2D():
-    def __init__(self, instruments, squidout, squidin, modout, rate=900):   
-        """ Example: Mod2D({'daq': daq, 'preamp': preamp}, 'ao0','ai0','ao1', rate=900) """
+    def __init__(self, instruments=None, squidout=None, squidin=None, modout=None, rate=900):   
+        '''
+        Example: Mod2D({'daq': daq, 'preamp': preamp}, 'ao0','ai0','ao1', rate=900).
+        To make an empty object, then just call Mod2D(). You can do this if you want to plot previously collected data.
+        '''
     
         self.filename = time.strftime('%Y%m%d_%H%M%S') + '_mod2D'
         self.notes = ''
