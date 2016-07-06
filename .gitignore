@@ -7,3 +7,5 @@ Utilities/test.csv
 Utilities/.test.txt
 *.pyc
 Procedures/__pycache__/planefit.cpython-35.pyc
+*.pyc
+Procedures/__pycache__/navigation.cpython-35.pyc

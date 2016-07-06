@@ -3,7 +3,7 @@
 from IPython import display
 import matplotlib.pyplot as plt
 import numpy as np
-import time
+import time, os
 from . import squidIV
 
 class Mod2D():
@@ -106,7 +106,7 @@ class Mod2D():
         
     def save(self):
         home = os.path.expanduser("~")  
-        data_folder = home+'Dropbox (Nowack lab)\\TeamData\\Montana\\squid_testing\\mod2D\\'
+        data_folder = home+'\\Dropbox (Nowack lab)\\TeamData\\Montana\\squid_testing\\mod2D\\'
 
         filename = data_folder + self.filename
         with open(filename+'.txt', 'w') as f:

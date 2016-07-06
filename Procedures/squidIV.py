@@ -7,7 +7,7 @@
 from IPython import display
 import matplotlib.pyplot as plt
 import numpy as np
-import time
+import time, os
 
 class SquidIV():
     def __init__(self, instruments, squidout, squidin, modout=None, rate=90):   
@@ -124,7 +124,7 @@ class SquidIV():
                         
     def save(self):
         home = os.path.expanduser("~")
-        data_folder = home + 'Dropbox (Nowack lab)\\TeamData\\Montana\\squid_testing\\IV\\'
+        data_folder = home + '\\Dropbox (Nowack lab)\\TeamData\\Montana\\squid_testing\\IV\\'
 
         filename = data_folder + self.filename
         with open(filename+'.txt', 'w') as f:
