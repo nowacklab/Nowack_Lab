@@ -30,6 +30,7 @@ SAVE EVERYTHING
 
 Touchdown with floating table
 
+<<<<<<< HEAD
 
 
 
@@ -42,6 +43,9 @@ test daq sweep accel - kind of pointless right now, need to fix.
 
 
 
+=======
+test daq sweep accel - kind of pointless right now, need to fix.
+>>>>>>> origin/master
 
 Try capacitance in X, get calibration, see if dip occurs
 
