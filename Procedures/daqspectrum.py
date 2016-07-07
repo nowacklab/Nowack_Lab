@@ -111,9 +111,6 @@ calibration should be in units of Phi_o/V
         plt.savefig(figPathPdf)
         return figPathPng
 
-    def hello():
-        print('hello')
-
     def setup_preamp(self):
         self.pa.gain = 1
         self.pa.filter = (0, 100e3)
