@@ -14,8 +14,8 @@ class NIDAQ():
     For remote operation of the NI DAQ-6363. Slightly simplified version of Guen's squidpy driver, does not import/inherit anything from squidpy. Uses package Instrumental from Mabuchi lab at Stanford
     '''
     
-    def __init__(self, zero=False, freq=100, dev_name='Dev1'):
-        self._daq  = ni.NIDAQ(dev_name)
+    def __init__(self, zero=False, freq=100, dev_name='Dev1', input_range=10, output_range=10):
+        self._daq  = ni.NIDAQ(dev_name, input_range, output_range)
         self._freq = {}
             
         for chan in self._daq.get_AI_channels():
