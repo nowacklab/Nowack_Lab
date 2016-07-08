@@ -66,7 +66,7 @@ class SquidIV():
         self.do_IV()
         self.daq.zero() # zero everything
         
-        self.fig, self.ax = plt.subplots()
+        self.setup_plot()
         self.plot()
         self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
 
@@ -122,6 +122,8 @@ class SquidIV():
          
     def plot(self, ax=None):
         if ax == None:
+            if not hasattr(self, 'ax'):
+                self.setup_plot()
             ax = self.ax
         
         ax.plot(self.I*1e6, self.V, 'k-')
@@ -148,3 +150,6 @@ class SquidIV():
                 f.write('%f' %self.I[i] + ',' + '%f' %self.V[i] + '\n')
 
         plt.savefig(filename+'.pdf')
+        
+    def setup_plot(self):
+        self.fig, self.ax = plt.subplots()

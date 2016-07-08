@@ -1,4 +1,6 @@
-﻿Fix preamp timeout error
+﻿Allow for voltage ranges on individual daq channels
+
+Fix preamp timeout error
 Notes at the end of the measurement
 
 Allow for instruments = None to make an object with the same plotting, data saving/loading capabilities but without having to use the same instruments in two places
