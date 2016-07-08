@@ -77,12 +77,28 @@ class NIDAQ():
             getattr(self._daq,chan).write('%sV' %data)
     
     def monitor(self, chan_in, duration, freq=100): # similar to send_receive definition; haven't yet built in multiple channels
-        """ Monitor an input channel for a duration of time (s). 
-            e.g. V = daq.monitor('ai4', 10); V[0] is the voltage            """
-        self.add_input(chan_in)
-        received = getattr(self._daq, chan_in).read(duration = '%fs' %duration, fsamp='%fHz' %freq)
+        if numpy.isscalar(chan_in):
+            chan_in = [chan_in]
 
-        return [list(received[b''].magnitude),list(received['t'].magnitude),received] # this is a hack, b'' should really be an ai# channel, but I think Instrumental is handling the name wrong.
+        for ch in chan_in:
+            self.add_input(ch)
+        
+        numsteps = duration*freq
+        V, response, time = self.sweep('ao0', self.ao0, self.ao0, freq=freq, numsteps=numsteps)
+        
+        return response, time
+        
+        # """ Monitor an input channel for a duration of time (s). 
+            # e.g. V = daq.monitor('ai4', 10); V[0] is the voltage            """
+        # if numpy.isscalar(chan_in):
+            # chan_in = [chan_in]
+
+        # for ch in chan_in:
+            # self.add_input(ch)
+            
+        # received = getattr(self._daq, chan_in[0]).read(duration = '%fs' %duration, fsamp='%fHz' %freq)
+        # print(received)
+        # return [list(received[b''].magnitude),list(received['t'].magnitude),received] # this is a hack, b'' should really be an ai# channel, but I think Instrumental is handling the name wrong.
      
     
     def send_receive(self, chan_out, orig_data, freq=100):

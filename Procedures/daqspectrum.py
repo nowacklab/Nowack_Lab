@@ -2,7 +2,7 @@ from scipy import signal
 import matplotlib.pyplot as plt
 import numpy as np
 import datetime
-from time import strftime
+import time
 import os
 import re
 
@@ -20,11 +20,12 @@ class DaqSpectrum():
             setattr(self, arg, eval(arg))
         
         home = os.path.expanduser("~")
-        self.path = home+'Dropbox (Nowack lab)\\TeamData\\Montana\\spectra\\'
-        self.time = strftime('%Y-%m-%d_%H%M%S')
-        
+        self.path = home+'\\Dropbox (Nowack lab)\\TeamData\\Montana\\spectra\\'
+        self.time = time.strftime('%Y-%m-%d_%H%M%S')
+        time.sleep(1) # avoids subsequent filenames from being the same; i.e. if you make a few spectrum objects
                
     def do(self):
+    
         self.setup_preamp()
         self.notes = input('Notes for this spectrum: ')
     
@@ -32,13 +33,14 @@ class DaqSpectrum():
         psdAve = np.zeros(Nfft)
         
         for i in range(self.averages):
-            self.V, self.t, a = self.daq.monitor('ai%i' %self.input_chan, self.measure_time, self.measure_freq)
+            self.V, self.t = self.daq.monitor('ai%i' %self.input_chan, self.measure_time, self.measure_freq)
+            self.V = self.V['ai%i' %self.input_chan] #extract data from the required channel
             self.f, psd = signal.periodogram(self.V, self.measure_freq, 'blackmanharris')
             psdAve = psdAve + psd 
         
         psdAve = psdAve / self.averages # normalize by the number of averages
         self.psdAve = np.sqrt(psdAve) # spectrum in V/sqrt(Hz)
-        
+                
         self.setup_plots()
         self.plot_loglog()
         self.plot_semilog()
