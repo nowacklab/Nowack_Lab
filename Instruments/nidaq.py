@@ -6,7 +6,10 @@ sys.path.append(os.path.join(home,'Documents','GitHub','Instrumental'))
 from instrumental.drivers.daq import ni
 from instrumental import u
 import numpy
-import PyDAQmx as mx
+try:
+    import PyDAQmx as mx
+except:
+    print('PyDAQmx not imported!')
 import time
 from copy import copy
 
@@ -191,59 +194,59 @@ class NIDAQ():
             self.sweep(chan, getattr(self, chan), 0, freq=100000)
         print('Zeroed outputs')
                         
-    def get_internal_chan(self, chan):
-        """
-        Modifies example of PyDAQmx from https://pythonhosted.org/PyDAQmx/usage.html#task-object .
-        """
-        analog_input = mx.Task()
-        read = mx.int32()
-        data = numpy.zeros((1,), dtype=numpy.float64)
-
-        # DAQmx Configure Code
-        analog_input.CreateAIVoltageChan("Dev1/_%s_vs_aognd" %chan,"",mx.DAQmx_Val_Cfg_Default,-10.0,10.0,mx.DAQmx_Val_Volts,None)
-        analog_input.CfgSampClkTiming("",10000.0,mx.DAQmx_Val_Rising,mx.DAQmx_Val_FiniteSamps,2)
-
-        # DAQmx Start Code
-        analog_input.StartTask()
-
-        # DAQmx Read Code
-        analog_input.ReadAnalogF64(1000,10.0,mx.DAQmx_Val_GroupByChannel,data,1000,mx.byref(read),None)
-       
-        x = data[0]
-        return 0 if abs(x) < 1/150 else x # Stupid way to get around crashing at end of execution. If value returned is too small yet still nonzero, program will crash upon completion. Manually found threshold. It's exactly 1/150. No clue why.
-        
-    def get_internal_chan_old(self, chan):      
-        """
-        Modifies example of PyDAQmx from https://pythonhosted.org/PyDAQmx/usage.html#task-object . There was a simpler version that I didn't notice before, now that one is implemented above.
-        """
-        print('start get chan %s' %chan)
-        # Declaration of variable passed by reference
-        taskHandle = mx.TaskHandle()
-        read = mx.int32()
-        data = numpy.zeros((1,), dtype=numpy.float64)
-
-        try:
-            # DAQmx Configure Code
-            mx.DAQmxCreateTask("",mx.byref(taskHandle))
-            mx.DAQmxCreateAIVoltageChan(taskHandle,"Dev1/_%s_vs_aognd" %chan,"",mx.DAQmx_Val_Cfg_Default,-10.0,10.0,mx.DAQmx_Val_Volts,None)
-            mx.DAQmxCfgSampClkTiming(taskHandle,"",10000.0,mx.DAQmx_Val_Rising,mx.DAQmx_Val_FiniteSamps,2)
-
-            # DAQmx Start Code
-            mx.DAQmxStartTask(taskHandle)
-
-            # DAQmx Read Code
-            mx.DAQmxReadAnalogF64(taskHandle,1000,10.0,mx.DAQmx_Val_GroupByChannel,data,1000,mx.byref(read),None)
-
-        except mx.DAQError as err:
-            print ("DAQmx Error: %s"%err)
-        finally:
-            if taskHandle:
-                # DAQmx Stop Code
-                mx.DAQmxStopTask(taskHandle)
-                mx.DAQmxClearTask(taskHandle)
-        print('end get chan %s' %chan)
-
-        return float(data[0])
+#     def get_internal_chan(self, chan):
+#         """
+#         Modifies example of PyDAQmx from https://pythonhosted.org/PyDAQmx/usage.html#task-object .
+#         """
+#         analog_input = mx.Task()
+#         read = mx.int32()
+#         data = numpy.zeros((1,), dtype=numpy.float64)
+# 
+#         # DAQmx Configure Code
+#         analog_input.CreateAIVoltageChan("Dev1/_%s_vs_aognd" %chan,"",mx.DAQmx_Val_Cfg_Default,-10.0,10.0,mx.DAQmx_Val_Volts,None)
+#         analog_input.CfgSampClkTiming("",10000.0,mx.DAQmx_Val_Rising,mx.DAQmx_Val_FiniteSamps,2)
+# 
+#         # DAQmx Start Code
+#         analog_input.StartTask()
+# 
+#         # DAQmx Read Code
+#         analog_input.ReadAnalogF64(1000,10.0,mx.DAQmx_Val_GroupByChannel,data,1000,mx.byref(read),None)
+#        
+#         x = data[0]
+#         return 0 if abs(x) < 1/150 else x # Stupid way to get around crashing at end of execution. If value returned is too small yet still nonzero, program will crash upon completion. Manually found threshold. It's exactly 1/150. No clue why.
+#         
+#     def get_internal_chan_old(self, chan):      
+#         """
+#         Modifies example of PyDAQmx from https://pythonhosted.org/PyDAQmx/usage.html#task-object . There was a simpler version that I didn't notice before, now that one is implemented above.
+#         """
+#         print('start get chan %s' %chan)
+#         # Declaration of variable passed by reference
+#         taskHandle = mx.TaskHandle()
+#         read = mx.int32()
+#         data = numpy.zeros((1,), dtype=numpy.float64)
+# 
+#         try:
+#             # DAQmx Configure Code
+#             mx.DAQmxCreateTask("",mx.byref(taskHandle))
+#             mx.DAQmxCreateAIVoltageChan(taskHandle,"Dev1/_%s_vs_aognd" %chan,"",mx.DAQmx_Val_Cfg_Default,-10.0,10.0,mx.DAQmx_Val_Volts,None)
+#             mx.DAQmxCfgSampClkTiming(taskHandle,"",10000.0,mx.DAQmx_Val_Rising,mx.DAQmx_Val_FiniteSamps,2)
+# 
+#             # DAQmx Start Code
+#             mx.DAQmxStartTask(taskHandle)
+# 
+#             # DAQmx Read Code
+#             mx.DAQmxReadAnalogF64(taskHandle,1000,10.0,mx.DAQmx_Val_GroupByChannel,data,1000,mx.byref(read),None)
+# 
+#         except mx.DAQError as err:
+#             print ("DAQmx Error: %s"%err)
+#         finally:
+#             if taskHandle:
+#                 # DAQmx Stop Code
+#                 mx.DAQmxStopTask(taskHandle)
+#                 mx.DAQmxClearTask(taskHandle)
+#         print('end get chan %s' %chan)
+# 
+#         return float(data[0])
         
         
         

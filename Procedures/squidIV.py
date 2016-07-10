@@ -8,7 +8,8 @@ from IPython import display
 import matplotlib.pyplot as plt
 import numpy as np
 import time, os
-from Nowack_Lab.Utilities.dummy import Dummy
+from ..Utilities import dummy
+from ..Instruments import nidaq, preamp, montana
 
 class SquidIV():
     def __init__(self, instruments=None, squidout=None, squidin=None, modout=None, rate=90):
@@ -22,9 +23,9 @@ class SquidIV():
             self.preamp = instruments['preamp']
             self.montana = instruments['montana']
         else:
-            self.daq = Dummy()
-            self.preamp = Dummy()
-            self.montana = Dummy()
+            self.daq = dummy.Dummy(nidaq.NIDAQ)
+            self.preamp = dummy.Dummy(preamp.SR5113)
+            self.montana = dummy.Dummy(montana.Montana)
         
         self.squidout = 'ao%s' %squidout
         self.squidin = 'ai%s' %squidin

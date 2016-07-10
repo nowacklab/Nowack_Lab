@@ -6,12 +6,19 @@ from scipy.interpolate import interp1d as interp
 import matplotlib.pyplot as plt
 from IPython import display
 from numpy import ma 
+from ..Utilities import dummy
+from ..Instruments import piezos, daq, montana
         
 class Scanplane():
-    def __init__(self, instruments, span, center, numpts, plane, scanheight, sig_in, cap_in, swap=False):
-        self.piezos = instruments['piezos']
-        self.daq = instruments['daq']
-        self.montana = instruments['montana']
+    def __init__(self, instruments=None, span=[100,100], center=[0,0], numpts=[50,50], plane=dummy.Dummy(planefit.Planefit), scanheight=5, sig_in=0, cap_in=1, swap=False):
+        if instruments:
+            self.piezos = instruments['piezos']
+            self.daq = instruments['daq']
+            self.montana = instruments['montana']
+        else:
+            self.piezos = dummy.Dummy(piezos.Piezos)
+            self.daq = dummy.Dummy(nidaq.NIDAQ)
+            self.montana = dummy.Dummy(montana.Montana)
         
         self.sig_in = 'ai%s' %sig_in
         self.daq.add_input(sig_in)
@@ -184,7 +191,7 @@ class Scanplane():
         
     def save(self):
         home = os.path.expanduser("~")
-		data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Scans')
+        data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Scans')
 
         filename = data_folder + self.filename
       

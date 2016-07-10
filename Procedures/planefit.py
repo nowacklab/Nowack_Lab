@@ -3,11 +3,17 @@ from numpy.linalg import lstsq
 from . import touchdown, navigation
 import time
 import matplotlib.pyplot as plt
+from ..Utilities import dummy
+from ..Instruments import piezos
         
 class Planefit():
-    def __init__(self, instruments, span, center, numpts, cap_input):
+    def __init__(self, instruments=None, span=[100,100], center=[0,0], numpts=[50,50], cap_input=0):
         self.instruments = instruments
-        self.piezos = instruments['piezos']
+        if instruments:
+            self.piezos = instruments['piezos']
+        else:
+            self.piezos = dummy.Dummy(piezos.Piezos)
+
         
         self.span = span
         self.center = center

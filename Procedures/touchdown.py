@@ -4,21 +4,30 @@ from scipy.optimize import curve_fit
 import time
 import matplotlib.pyplot as plt
 import numpy as np
+from ..Utilities import dummy
+from ..Instruments import nidaq, preamp, montana
 
 class Touchdown():
-    def __init__(self, instruments, cap_input, planescan=False):    
+    def __init__(self, instruments=None, cap_input=None, planescan=False):    
         self.touchdown = False
         self.V_to_C = 2530e3 # 2530 pF/V * (1e3 fF/pF), calibrated 20160423 by BTS, see ipython notebook
         self.attosteps = 200 #number of attocube steps between sweeps
         self.numfit = 10       # number of points to fit line to while collecting data  
         self.numextra = 3
-                
-        self.piezos = instruments['piezos']
-        self.atto = instruments['atto']
-        self.lockin = instruments['lockin']
-        self.daq = instruments['daq']
-        self.montana = instruments['montana']
-                
+         
+        if instruments:        
+            self.piezos = instruments['piezos']
+            self.atto = instruments['atto']
+            self.lockin = instruments['lockin']
+            self.daq = instruments['daq']
+            self.montana = instruments['montana']
+        else:
+            self.piezos = dummy.Dummy(piezos.Piezos)
+            self.atto = dummy.Dummy(attocube.Attocube)
+            self.lockin = dummy.Dummy(lockin.SR830)
+            self.daq = dummy.Dummy(nidaq.NIDAQ)
+            self.montana = dummy.Dummy(montana.Montana)
+       
         self.lockin.ch1_daq_input = 'ai%s' %cap_input
         
         if self.montana.temperature['platform'] < 10:

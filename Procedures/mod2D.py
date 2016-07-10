@@ -6,6 +6,7 @@ import numpy as np
 import time, os
 from . import squidIV
 
+
 class Mod2D():
     def __init__(self, instruments=None, squidout=None, squidin=None, modout=None, rate=900):   
         '''

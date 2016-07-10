@@ -5,16 +5,20 @@ import datetime
 import time
 import os
 import re
+from ..Utilities import dummy
+from ..Instruments import nidaq, preamp
 
 class DaqSpectrum():
     def __init__(self, instruments=None, input_chan=None, measure_time=0.5, measure_freq=256000, averages=30):
         self.instruments = instruments
-        if instruments == None:
-            self.daq = None
-            self.pa = None
-        else:
+        if instruments:
             self.daq = instruments['daq']
             self.pa = instruments['preamp']
+        else:
+            self.daq = dummy.Dummy(nidaq.NIDAQ)
+            self.pa = dummy.Dummy(preamp.SR5113)
+
+
         
         for arg in ['input_chan', 'measure_time','measure_freq','averages']:
             setattr(self, arg, eval(arg))
@@ -22,6 +26,7 @@ class DaqSpectrum():
         home = os.path.expanduser("~")
         self.path = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'spectra')
 
+        self.notes = ''
         self.time = time.strftime('%Y-%m-%d_%H%M%S')
         time.sleep(1) # avoids subsequent filenames from being the same; i.e. if you make a few spectrum objects
                
