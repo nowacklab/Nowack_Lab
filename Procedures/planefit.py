@@ -84,7 +84,8 @@ class Planefit():
         
     def save(self):
         home = os.path.expanduser("~")
-        data_folder = home + 'Dropbox (Nowack lab)\\TeamData\\Montana\\Planes\\'
+        data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Planes')
+
         filename = data_folder + self.filename
         
         with open(filename+'.txt', 'w') as f:

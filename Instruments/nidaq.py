@@ -1,6 +1,7 @@
 import sys, os
 
-sys.path.append(os.path.expanduser("~")+r'\Documents\GitHub\Instrumental')
+home = os.path.expanduser("~")
+sys.path.append(os.path.join(home,'Documents','GitHub','Instrumental'))
 
 from instrumental.drivers.daq import ni
 from instrumental import u

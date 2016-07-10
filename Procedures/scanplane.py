@@ -184,7 +184,8 @@ class Scanplane():
         
     def save(self):
         home = os.path.expanduser("~")
-        data_folder = home + 'Dropbox (Nowack lab)\\TeamData\\Montana\\Scans\\'
+		data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Scans')
+
         filename = data_folder + self.filename
       
         with open(filename+'.txt', 'w') as f:

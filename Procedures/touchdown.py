@@ -237,7 +237,7 @@ class Touchdown():
         
     def save(self):
         home = os.path.expanduser("~")
-        data_folder = home + 'Dropbox (Nowack lab)\\TeamData\\Montana\\Touchdowns\\'
+        data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Touchdowns')
 
         filename = data_folder + self.filename
         with open(filename+'.txt', 'w') as f:

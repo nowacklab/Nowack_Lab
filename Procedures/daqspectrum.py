@@ -20,7 +20,8 @@ class DaqSpectrum():
             setattr(self, arg, eval(arg))
         
         home = os.path.expanduser("~")
-        self.path = home+'\\Dropbox (Nowack lab)\\TeamData\\Montana\\spectra\\'
+        self.path = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'spectra')
+
         self.time = time.strftime('%Y-%m-%d_%H%M%S')
         time.sleep(1) # avoids subsequent filenames from being the same; i.e. if you make a few spectrum objects
                
