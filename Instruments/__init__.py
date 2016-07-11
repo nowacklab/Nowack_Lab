@@ -5,6 +5,6 @@
 # from .piezos import *
 # from .preamp import *
 # from .squidarray import *
-# from .srs import *
+# from .lockin import *
 
-__all__ = ["nidaq", "montana", "nanonis", "nidaq", "piezos", "preamp", "squidarray", "srs"]
+__all__ = ["attocube", "montana", "nanonis", "nidaq", "piezos", "preamp", "squidarray", "lockin"]

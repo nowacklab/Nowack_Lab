@@ -13,7 +13,7 @@ class Scanplane():
     def __init__(self, instruments=None, span=[100,100], center=[0,0], numpts=[50,50], plane=dummy.Dummy(planefit.Planefit), scanheight=5, sig_in=0, cap_in=1, swap=False):
         if instruments:
             self.piezos = instruments['piezos']
-            self.daq = instruments['daq']
+            self.daq = instruments['nidaq']
             self.montana = instruments['montana']
         else:
             self.piezos = dummy.Dummy(piezos.Piezos)

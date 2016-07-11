@@ -19,7 +19,7 @@ class SquidIV():
         '''
     
         if instruments: # Only set up instruments if running for real
-            self.daq = instruments['daq']
+            self.daq = instruments['nidaq']
             self.preamp = instruments['preamp']
             self.montana = instruments['montana']
         else:
@@ -53,7 +53,6 @@ class SquidIV():
         self.V = [] # Measured voltage
         
         display.clear_output()
-        
 
         
     def calc_ramp(self):
@@ -71,15 +70,12 @@ class SquidIV():
         self.plot()
         self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
 
-        inp = input('Press enter to save data, type redo to redo, type anything else to quit. ')
-        if inp == '':
-            self.save()
-        elif inp == 'redo':
+        self.notes = input('Notes for this IV (r to redo, q to quit): ')
+        if inp == 'r':
             display.clear_output()
             self.do()
-               
-        # if self.modout != None:
-            # setattr(self.daq, self.modout, 0) # Zero mod current
+        elif inp != 'q':
+            self.save()
                    
     def do_IV(self):
         """ Wrote this for mod2D so it doesn't plot """
@@ -115,11 +111,6 @@ class SquidIV():
             except:
                 display.clear_output()
                 print('Invalid command\n')
-
-                
-        self.notes = input('Notes for this IV: ')
-        if self.notes == 'quit':
-            raise Exception('Quit by user')
          
     def plot(self, ax=None):
         if ax == None:

@@ -12,7 +12,7 @@ class DaqSpectrum():
     def __init__(self, instruments=None, input_chan=None, measure_time=0.5, measure_freq=256000, averages=30):
         self.instruments = instruments
         if instruments:
-            self.daq = instruments['daq']
+            self.daq = instruments['nidaq']
             self.pa = instruments['preamp']
         else:
             self.daq = dummy.Dummy(nidaq.NIDAQ)
@@ -33,7 +33,6 @@ class DaqSpectrum():
     def do(self):
     
         self.setup_preamp()
-        self.notes = input('Notes for this spectrum: ')
     
         Nfft = int((self.measure_freq*self.measure_time / 2) + 1)
         psdAve = np.zeros(Nfft)
@@ -46,6 +45,8 @@ class DaqSpectrum():
         
         psdAve = psdAve / self.averages # normalize by the number of averages
         self.psdAve = np.sqrt(psdAve) # spectrum in V/sqrt(Hz)
+        
+        self.notes = input('Notes for this spectrum: ')
                 
         self.setup_plots()
         self.plot_loglog()

@@ -17,9 +17,9 @@ class Touchdown():
          
         if instruments:        
             self.piezos = instruments['piezos']
-            self.atto = instruments['atto']
+            self.atto = instruments['attocube']
             self.lockin = instruments['lockin']
-            self.daq = instruments['daq']
+            self.daq = instruments['nidaq']
             self.montana = instruments['montana']
         else:
             self.piezos = dummy.Dummy(piezos.Piezos)

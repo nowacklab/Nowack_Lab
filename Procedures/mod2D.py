@@ -54,10 +54,9 @@ class Mod2D():
             self.plot()
             self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
         self.IV.daq.zero() # zero everything
-
-            
-        inp = input('Press enter to save data, type anything else to quit. ')
-        if inp == '':
+        
+        self.notes = input('Notes for this mod2D (q to quit without saving): ')
+        if inp != 'q':
             self.save()
         
     def param_prompt(self):
@@ -90,11 +89,6 @@ class Mod2D():
             except:
                 display.clear_output()
                 print('Invalid command\n')
-
-        self.notes = input('Notes for this mod2D: ')
-        if self.notes == 'quit':
-            raise Exception('Quit by user')
-        self.IV.notes = self.notes # or else it will complain when plotting :(
          
     def plot(self):
 
