@@ -1,7 +1,6 @@
-﻿Allow for voltage ranges on individual daq channels
+Allow for voltage ranges on individual daq channels
 
 Fix preamp timeout error
-Notes at the end of the measurement
 
 Allow for instruments = None to make an object with the same plotting, data saving/loading capabilities but without having to use the same instruments in two places
 
@@ -55,6 +54,9 @@ Use center point of plane for fitting, and maybe use this also to update/set C v
 
 
 reset squid before each scan
+ - auto reset? use subprocess? 
+	open = subprocess.Popen([‘python’, ‘somefile.py’]) #starts background process
+	popen.kill() # when done
 
 initialize squidarray object without zeroing PFL - impossible? No way of reading values
 
