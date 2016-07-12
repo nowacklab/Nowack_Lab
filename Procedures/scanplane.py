@@ -193,9 +193,9 @@ class Scanplane():
         home = os.path.expanduser("~")
         data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Scans')
 
-        filename = data_folder + self.filename
+        filename = os.path.join(data_folder, self.filename)
       
-        with open(filename+'.txt', 'w') as f:
+        with open(filename+'.csv', 'w') as f:
             for s in ['span', 'center', 'numpts']:
                 f.write('%s = %f, %f \n' %(s, float(getattr(self, s)[0]),float(getattr(self, s)[1])))
             for s in ['a','b','c']:

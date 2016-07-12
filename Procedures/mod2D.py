@@ -106,8 +106,8 @@ class Mod2D():
         home = os.path.expanduser("~")  
         data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'squid_testing', 'mod2D')
 
-        filename = data_folder + self.filename
-        with open(filename+'.txt', 'w') as f:
+        filename = os.path.join(data_folder, self.filename)
+        with open(filename+'.csv', 'w') as f:
             f.write(self.notes+'\n')
             f.write('Montana info: \n'+self.IV.montana.log()+'\n')
             for param in ['rate', 'Rbias', 'Rbias_mod', 'Irampspan', 'Irampstep']:

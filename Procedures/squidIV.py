@@ -129,8 +129,8 @@ class SquidIV():
         home = os.path.expanduser("~")        
         data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'squid_testing', 'IV')
 
-        filename = data_folder + self.filename
-        with open(filename+'.txt', 'w') as f:
+        filename = os.path.join(data_folder, self.filename)
+        with open(filename+'.csv', 'w') as f:
             f.write(self.notes+'\n')
             f.write('Montana info: \n'+self.montana.log()+'\n')
             for param in ['rate', 'Rbias', 'Rbias_mod', 'Imod', 'Irampspan', 'Irampstep']:
