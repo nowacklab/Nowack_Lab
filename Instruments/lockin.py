@@ -9,9 +9,6 @@ class SR830():
     '''
     def __init__(self, gpib_address=''):
         self.gpib_address = gpib_address
-        
-        atexit.register(self.exit)
-        
         self.ch1_daq_input = None
         self.ch2_daq_input = None
         
@@ -45,6 +42,7 @@ class SR830():
         50e-3, 100e-3, 200e-3, 500e-3, 1]
         self.reserve_options = ['High Reserve', 'Normal', 'Low Noise']
     
+    
     @property
     def sensitivity(self):
         '''Get the lockin sensitivity'''
@@ -63,7 +61,7 @@ class SR830():
     @property
     def amplitude(self):
         '''Get the output amplitude'''
-        return self.ask('SLVL?')
+        return float(self.ask('SLVL?'))
     
     @amplitude.setter
     def amplitude(self, value):
@@ -76,7 +74,7 @@ class SR830():
     
     @property
     def frequency(self):
-        return self.ask('FREQ?')
+        return float(self.ask('FREQ?'))
 
     @frequency.setter
     def frequency(self, value):
@@ -130,16 +128,23 @@ class SR830():
         i = self.reserve_options.index(value)
         self.write('RMOD%i' %i)
         
-    def ask(self):
+    def ask(self, cmd):
         self.init_visa()
-        self.write(cmd)
+        out = self._visa_handle.ask(cmd)
         self.close()
+        return out
+    
+    def ac_coupling(self):
+        self.write('ICPL0')
     
     def auto_gain(self):
         self.write('AGAN')
 
     def auto_phase(self):
         self.write('APHS')
+        
+    def dc_coupling(self):
+        self.write('ICPL1')
         
     def init_visa(self):
         self._visa_handle = visa.ResourceManager().open_resource(self.gpib_address)

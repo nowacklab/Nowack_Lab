@@ -64,14 +64,18 @@ class Montana():
             _, responses[command] = self.cryo.SendCommandAndGetResponse(command,command) # Not sure why need two arguments
         self.exit()
                 
-        if to_float:
-            for key, value in responses.items():
-                responses[key] = float(value)   
-        
-        if len(responses) == 1:
-            return next(iter(responses.values())) # will return only value
-        
-        return responses
+        try:
+            if to_float:
+                for key, value in responses.items():
+                    responses[key] = float(value)   
+            
+            if len(responses) == 1:
+                return next(iter(responses.values())) # will return only value            
+            return responses
+        except:
+            print('Problem connecting to Montana! Will try again.')
+            time.sleep(1)
+            return self.ask(*args, to_float = to_float)
         
     def cooldown(self):
         resp = self.ask('SCD', to_float = False)
@@ -81,12 +85,14 @@ class Montana():
         '''
         Opens connection to Montana
         '''
+        inp = 'asdfasd'
         self.cryo.Connect()
         if not self.cryo.CheckConnection():
-            inp = input('Need to toggle \"Enable External Control\" button in Montana software! Enter \'quit\' to halt execution and fix.')
-            if inp == 'quit':
-                raise Exception('Quit by user')
-                        
+            inp = input('Need to toggle \"Enable External Control\" button in Montana software! Fix this and press enter to try connection again.')
+        if inp == '':
+            print('Trying to reconnect to Montana...')
+            self.connect
+        
     def exit(self):
         '''
         Closes connection to Montana

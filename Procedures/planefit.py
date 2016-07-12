@@ -1,19 +1,20 @@
 import numpy
 from numpy.linalg import lstsq
 from . import touchdown, navigation
-import time
+import time, os 
 import matplotlib.pyplot as plt
 from ..Utilities import dummy
 from ..Instruments import piezos
         
 class Planefit():
-    def __init__(self, instruments=None, span=[100,100], center=[0,0], numpts=[50,50], cap_input=0):
+    def __init__(self, instruments=None, span=[100,100], center=[0,0], numpts=[4,4], cap_input=0):
         self.instruments = instruments
         if instruments:
             self.piezos = instruments['piezos']
+            self.montana = instruments['montana']
         else:
             self.piezos = dummy.Dummy(piezos.Piezos)
-
+            self.montana = dummy.Dummy(montana.Montana)
         
         self.span = span
         self.center = center
@@ -50,12 +51,14 @@ class Planefit():
         self.piezos.check_lim({'x': self.X, 'y': self.Y}) # make sure we won't scan outside X, Y piezo ranges!
         
         ## Loop over points sampled from plane.
+        counter = 0
         for i in range(self.X.shape[0]): 
             for j in range(self.X.shape[1]):
+                counter = counter + 1
                 self.nav.goto_seq(self.X[i,j], self.Y[i,j], -self.piezos.Vmax['z']) #Retract Z, then move to (X,Y)
                 print('X index: %i; Y index: %i' %(i, j))
-                
                 td = touchdown.Touchdown(self.instruments, self.cap_input, planescan=True) # new touchdown at this point
+                td.title = '(%i, %i). TD# %i' %(i,j, counter)
                 self.Z[i,j] = td.do() # Do the touchdown. Planescan True prevents attocubes from moving and only does one touchdown
        
         self.nav.goto_seq(start_pos[0], start_pos[1], start_pos[2]) # return to center of plane

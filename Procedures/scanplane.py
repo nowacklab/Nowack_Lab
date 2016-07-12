@@ -1,13 +1,13 @@
 import numpy as np
 from numpy.linalg import lstsq
-from . import navigation
+from . import navigation, planefit
 import time
 from scipy.interpolate import interp1d as interp
 import matplotlib.pyplot as plt
 from IPython import display
 from numpy import ma 
 from ..Utilities import dummy
-from ..Instruments import piezos, daq, montana
+from ..Instruments import piezos, nidaq, montana
         
 class Scanplane():
     def __init__(self, instruments=None, span=[100,100], center=[0,0], numpts=[50,50], plane=dummy.Dummy(planefit.Planefit), scanheight=5, sig_in=0, cap_in=1, swap=False):
