@@ -43,6 +43,9 @@ class Touchdown():
         
         self.V = [] # Piezo voltage
         self.C = [] # Capacitance
+        self.Vfit = [] #voltages that show up in red in plot
+        self.Cfit = [] #voltages that show up in red in plot
+        
         self.C0 = None # Cap offset
         self.extra = 0 # Extra points to add to fit after TD detected
         self.V_td = -1000.0
@@ -205,44 +208,37 @@ class Touchdown():
         V_td = (b_td - b_app)/(m_app - m_td) # intersection of two lines. Remember high school algebra?
         
         if plot:
-            orange = '#F18C22'
-            blue = '#47C3D3'
+            self.line_td.set_xdata(self.V[j-2:i+1]) # 2 is arbitrary, just wanted some more points drawn
+            self.line_td.set_ydata(m_td*np.array(self.V[j-2:i+1])+b_td) # 2 is arbitrary, just wanted some more points drawn
+
+            self.line_app.set_xdata(self.V[int(0.5*k):i+1])
+            self.line_app.set_ydata(m_app*np.array(self.V[int(0.5*k):i+1])+b_app)
             
-            plt.clf()
-            plt.plot(self.V[j-2:i+1], m_td*np.array(self.V[j-2:i+1])+b_td, blue, lw=2) # 2 is arbitrary, just wanted some more points drawn
-            plt.plot(self.V,self.C,'.k') 
-            plt.plot(self.V[int(0.5*k):i+1], m_app*np.array(self.V[int(0.5*k):i+1])+b_app, orange, lw=2)
+            self.ax.set_title('%s\nTouchdown at %.2f V' %(self.filename, V_td), fontsize=20)
+
+            self.fig.canvas.draw()
             
-            plt.title('%s\nTouchdown at %.2f V' %(self.filename, V_td), fontsize=20)
-            plt.xlabel('Piezo voltage (V)', fontsize=20)
-            plt.ylabel(r'$C - C_{\sf balance}$ (fF)', fontsize=20)
-            plt.xlim(-self.piezos.Vmax['z'], self.piezos.Vmax['z'])
-            
-            display.display(plt.gcf())
-            display.clear_output(wait=True)
         return V_td
  
     def plot_cap(self, i):
-        plt.clf()
-
-        plt.plot(self.V, self.C, 'k.')
+        try:
+            self.fig # see if this exists in the namespace
+        except:
+            self.setup_plot()
+    
+        self.line.set_ydata(self.C) #updates plot with new capacitance values
         if self.touchdown:
             plt.title('Touchdown detected!')
-        plt.xlabel('Piezo voltage (V)')
-        plt.ylabel(r'$C - C_{balance}$ (fF)')
-        plt.xlim(-self.piezos.Vmax['z'], self.piezos.Vmax['z'])
-        plt.ylim(-1,5)
                 
         if i+1 >= self.numfit: # start fitting after min number of points
-            Vfit = self.V[i+1-self.numfit:i+1] # take slice of last self.numfit points
-            Cfit = self.C[i+1-self.numfit:i+1]
+            self.Vfit = self.V[i+1-self.numfit:i+1] # take slice of last self.numfit points
+            self.Cfit = self.C[i+1-self.numfit:i+1]
             #slope, intercept = self.line(Vfit, Cfit)
             # plt.plot(Vfit, slope*np.array(Vfit)+intercept,'-r', lw=2)
-            plt.plot(Vfit, Cfit, 'r.') # just overlays red markers for last numfit points, recycled old code
-            plt.draw()
-
-        display.display(self.fig)
-        display.clear_output(wait=True)
+            plt.line_red.set_xdata(self.Vfit)
+            plt.line_red.set_ydata(self.Cfit)
+#             plt.plot(Vfit, Cfit, 'r.') # just overlays red markers for last numfit points, recycled old code
+            self.fig.canvas.draw()
         
     def save(self):
         home = os.path.expanduser("~")
@@ -263,4 +259,24 @@ class Touchdown():
         
         plt.savefig(filename+'.pdf', bbox_inches='tight')
         
+    def setup_plot(self):
+        self.fig, self.ax = plt.subplots()
+        line = plt.plot(self.V, self.C, 'k.')
+        self.line = line[0]
+        plt.xlabel('Piezo voltage (V)')
+        plt.ylabel(r'$C - C_{balance}$ (fF)')
+        plt.xlim(-self.piezos.Vmax['z'], self.piezos.Vmax['z'])
+        plt.ylim(-1,20)
         
+        ## Overlay the red dots
+        line_red = plt.plot(self.Vfit, self.Cfit, 'r.')
+        self.line_red = line_red[0]
+        
+        ## Two lines for fitting
+        orange = '#F18C22'
+        blue = '#47C3D3'
+            
+        line_td = plt.plot(self.Vfit, self.Cfit, blue, lw=2) # just using these for now to initialize the line
+        line_app = plt.plot(self.Vfit, self.Cfit, orange, lw=2) # just using these for now to initialize the line
+        self.line_td = line_td
+        self.line_app = line_app
