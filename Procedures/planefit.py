@@ -49,7 +49,7 @@ class Planefit():
         if check_td == 'quit':
             raise Exception('Terminated by user')
         
-        self.piezos.check_lim(self.X, self.Y) # make sure we won't scan outside X, Y piezo ranges!
+        self.piezos.check_lim({'x':self.X, 'y':self.Y}) # make sure we won't scan outside X, Y piezo ranges!
         
         ## Loop over points sampled from plane.
         for i in range(self.X.shape[0]): 

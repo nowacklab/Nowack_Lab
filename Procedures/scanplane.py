@@ -67,7 +67,7 @@ class Scanplane():
     
         ## make sure all points are not out of range of piezos before starting anything
         for i in range(self.X.shape[0]):
-            self.piezos.check_lim(self.X[i][:], self.Y[i][:], self.Z[i][:])
+            self.piezos.check_lim({'x':self.X[i][:], 'y':self.Y[i][:], 'z':self.Z[i][:]})
 
         ## Loop over X values
         for i in range(self.X.shape[0]):
