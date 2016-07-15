@@ -131,7 +131,7 @@ class Mod2D():
         
         # Set up 2D plot
         Vm = np.ma.masked_where(np.isnan(self.V),self.V) #hides data not yet collected
-        self.im = self.ax2D.imshow(Vm,cmap='RdBu', interpolation='none',aspect='auto', extent = [min(self.IV.I*1e6), max(self.IV.I*1e6), min(self.Imod*1e6), max(self.Imod*1e6)])
+        self.im = self.ax2D.imshow(Vm,cmap='RdBu', interpolation='none',aspect='auto',origin='lower', extent = [min(self.IV.I*1e6), max(self.IV.I*1e6), min(self.Imod*1e6), max(self.Imod*1e6)])
         self.ax2D.set_title(self.filename+'\n'+self.notes) 
         self.ax2D.set_xlabel(r'$I_{\rm{bias}} = V_{\rm{bias}}/R_{\rm{bias}}$ ($\mu \rm A$)', fontsize=20)
         self.ax2D.set_ylabel(r'$I_{\rm{mod}} = V_{\rm{mod}}/R_{\rm{mod}}$ ($\mu \rm A$)', fontsize=20)

@@ -6,7 +6,7 @@ from .squidIV import *
 from .touchdown import *
 from .daqspectrum import *
 
-__all__ = ['mod2D','navigation','planefit','scanplane','squidIV','touchdown','daqspectrum']
+__all__ = ['mod2D','navigation','planefit','scanplane','squidIV','touchdown','daqspectrum', 'heightsweep']
 # import pkgutil
 
 # for loader, module_name, is_pkg in  pkgutil.walk_packages(__path__):

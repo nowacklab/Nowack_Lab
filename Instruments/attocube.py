@@ -291,7 +291,7 @@ class ANC350():
             raise Exception('What doesn\'t come up must come down!')
         
         self.anc.setAxisOutput(self._stages.index(axis), 1, 0)
-        time.sleep(0.2) # wait for output to turn on
+        time.sleep(0.5) # wait for output to turn on
         if numsteps == None:
             pass
         elif numsteps > self._step_lim:

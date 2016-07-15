@@ -10,7 +10,7 @@ class Piezos():
     '''    
     # amp = nanonis.HVA4('COM2')
     
-    def __init__(self, daq, gain, chan_out, Vmax=[120]*3, bipolar = [True]*3):
+    def __init__(self, daq, gain, chan_out, Vmax=[200]*3, bipolar = [True]*3):
         """ Pass args ars array [xvalue, yvalue, zvalue] """
         self.daq = daq
         self.gain = {}
@@ -65,7 +65,7 @@ class Piezos():
             if A[k].max() > self.Vmax[k] or A[k].min() < -self.Vmax[k]:
                 raise Exception('Voltage out of range for piezo %s!' %k)
            
-    def sweep(self, Vstart, Vend, Vstep = {k: .01 for k in KEYS}, freq = 1500):
+    def sweep(self, Vstart, Vend, Vstep = {k: .01 for k in KEYS}, freq = 1487):
         Vs = {}
         
         for k in KEYS:
@@ -88,7 +88,7 @@ class Piezos():
             Vend[self.chan_out[k]] = Vend.pop(k)
 
         V, response, time = self.daq.sweep([self.chan_out[k] for k in KEYS], Vstart, Vend, freq=freq, numsteps=numsteps)
-
+        
         # Go back to piezo keys
         for k in KEYS:   
             V[k] = V.pop(self.chan_out[k])

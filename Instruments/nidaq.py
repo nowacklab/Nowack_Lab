@@ -118,7 +118,7 @@ class NIDAQ():
 
         if len(chan_out) != len(data):
             raise Exception('Must have data for each output channel!')
-
+            
         taskargs = tuple([getattr(self._daq, ch) for ch in chan_out + self.inputs_to_monitor])
         task = ni.Task(*taskargs) # * will take tuple as args
         write_data = {}

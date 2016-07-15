@@ -4,7 +4,7 @@ from . import touchdown, navigation
 import time, os 
 import matplotlib.pyplot as plt
 from ..Utilities import dummy
-from ..Instruments import piezos
+from ..Instruments import piezos, montana
         
 class Planefit():
     def __init__(self, instruments=None, span=[100,100], center=[0,0], numpts=[4,4], cap_input=0):
@@ -52,8 +52,8 @@ class Planefit():
         
         ## Loop over points sampled from plane.
         counter = 0
-        for i in range(self.X.shape[0]): 
-            for j in range(self.X.shape[1]):
+        for j in range(self.X.shape[0]): #flipped 7/13 1:52pm
+            for i in range(self.X.shape[1]): #flipped 7/13 1:52pm
                 counter = counter + 1
                 self.nav.goto_seq(self.X[i,j], self.Y[i,j], -self.piezos.Vmax['z']) #Retract Z, then move to (X,Y)
                 print('X index: %i; Y index: %i' %(i, j))
@@ -94,8 +94,7 @@ class Planefit():
     def save(self):
         home = os.path.expanduser("~")
         data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Planes')
-
-        filename = data_folder + self.filename
+        filename = os.path.join(data_folder, self.filename)
         
         with open(filename+'.txt', 'w') as f:
             for s in ['span', 'center', 'numpts']:

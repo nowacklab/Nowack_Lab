@@ -41,10 +41,10 @@ class Touchdown():
         self.configure_piezo() # Need this to set up time constant of lockin properly
         self.configure_lockin()
         
-        self.V = [] # Piezo voltage
-        self.C = [] # Capacitance
-        self.C0 = None # Cap offset
-        self.extra = 0 # Extra points to add to fit after TD detected
+        ## voltage sweep is from -Vmax to Vmax, step size determined in configure_piezo. 4 V looks good.
+        self.numsteps = int(2*self.piezos.Vmax['z']/self.z_piezo_step)
+        self.V = np.linspace(-self.piezos.Vmax['z'], self.piezos.Vmax['z'], self.numsteps)
+        self.C = [None]*self.numsteps # Capacitance (fF)
         self.V_td = -1000.0
                 
         self.fig = plt.figure()
@@ -58,33 +58,32 @@ class Touchdown():
             self.filename = self.filename + '_planescan'
         
     def check_balance(self):
-        V_unbalanced = 10e-6 # We can balance better than 10 uV
+        V_unbalanced = 2e-6 # We can balance better than 2 uV
 
         Vcap = getattr(self.daq, self.lockin.ch1_daq_input) # Read the voltage from the daq
         Vcap = self.lockin.convert_output(Vcap) # convert to a lockin voltage
         
         if Vcap > V_unbalanced:
-            raise Exception('Balance the capacitance bridge!')
+            inp = input('Check balance of capacitance bridge! Press enter to continue, q to quit')
+            if inp == 'q':
+                raise Exception('quit by user')
        
     def do(self):        
         V_td = None
         attosteps = self.attosteps # This is how many steps the attocubes will move if no touchdown detected.
         if self.planescan:
-            attosteps = None # don't move the attocubes if doing a planescan - remember, 0 is continuous!
-        
-        ## voltage sweep is from -Vmax to Vmax, step size determined in configure_piezo. 4 V looks good.
-        numsteps = int(2*self.piezos.Vmax['z']/self.z_piezo_step)
-        self.V = np.linspace(-self.piezos.Vmax['z'], self.piezos.Vmax['z'], numsteps)
-        
-        self.check_balance() # Make sure capacitance bridge is well-balanced
-         
+            attosteps = None # don't move the attocubes if doing a planescan
+                 
         while not self.touchdown: # loop will move up attocubes every time
 
-            self.C = [None]*numsteps # Capacitance (fF)
+            self.check_balance() # Make sure capacitance bridge is well-balanced
+        
+            # Reset capacitance values
+            self.C = [None]*self.numsteps # Capacitance (fF)
             self.C0 = None # Cap offset... will take on value of the first point
             self.extra = 0 # Counter to keep track of extra points after touchdown (for fitting the line)
             
-            for i in range(numsteps): # Loop over each piezo voltage
+            for i in range(self.numsteps): # Loop over each piezo voltage
                 time_start = time.time()
                 
                 self.piezos.V = {'z': self.V[i]} # Set the current voltage
@@ -106,7 +105,7 @@ class Touchdown():
                 if self.touchdown:
                     if self.extra < self.numextra: # take three extra points for fit
                         self.extra = self.extra + 1 
-                        if i == numsteps - 1:
+                        if i == self.numsteps - 1:
                             self.touchdown = False # special case; there was a bug where if last extra point was last point taken, touchdown would be detected as true
                             
                     else:    
@@ -224,7 +223,8 @@ class Touchdown():
             plt.plot(self.V[int(0.5*k):i+1], m_app*np.array(self.V[int(0.5*k):i+1])+b_app, orange, lw=2)
             
             self.title = '%s\nTouchdown at %.2f V' %(self.filename, V_td)
-            self.ax.set_title(self.title, fontsize=20)
+            plt.title(self.title, fontsize=20)
+            # self.ax.set_title(self.title, fontsize=20)
             plt.xlabel('Piezo voltage (V)', fontsize=20)
             plt.ylabel(r'$C - C_{\sf balance}$ (fF)', fontsize=20)
             plt.xlim(-self.piezos.Vmax['z'], self.piezos.Vmax['z'])
@@ -239,19 +239,23 @@ class Touchdown():
         plt.plot(self.V, self.C, 'k.')
         if self.touchdown:
             self.title = 'Touchdown detected!'
-        self.ax.set_title(self.title, fontsize=20)
+        else:
+            if self.title == 'Touchdown detected!':
+                self.title = '' #removes title in case of false touchdown
+        plt.title(self.title, fontsize=20)
+        # self.ax.set_title(self.title, fontsize=20)
         plt.xlabel('Piezo voltage (V)')
         plt.ylabel(r'$C - C_{balance}$ (fF)')
         plt.xlim(-self.piezos.Vmax['z'], self.piezos.Vmax['z'])
-        plt.ylim(-3,20)
+        plt.ylim(-2,10)
                 
-        if i+1 >= self.numfit: # start fitting after min number of points
-            Vfit = self.V[i+1-self.numfit:i+1] # take slice of last self.numfit points
-            Cfit = self.C[i+1-self.numfit:i+1]
-            #slope, intercept = self.line(Vfit, Cfit)
-            # plt.plot(Vfit, slope*np.array(Vfit)+intercept,'-r', lw=2)
-            plt.plot(Vfit, Cfit, 'r.') # just overlays red markers for last numfit points, recycled old code
-            plt.draw()
+        # if i+1 >= self.numfit: # start fitting after min number of points
+            # Vfit = self.V[i+1-self.numfit:i+1] # take slice of last self.numfit points
+            # Cfit = self.C[i+1-self.numfit:i+1]
+            # #slope, intercept = self.line(Vfit, Cfit)
+            # # plt.plot(Vfit, slope*np.array(Vfit)+intercept,'-r', lw=2)
+            # plt.plot(Vfit, Cfit, 'r.') # just overlays red markers for last numfit points, recycled old code
+            # plt.draw()
 
         display.display(self.fig)
         display.clear_output(wait=True)
