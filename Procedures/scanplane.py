@@ -1,6 +1,5 @@
 import numpy as np
 from numpy.linalg import lstsq
-from . import navigation
 import time
 from scipy.interpolate import interp1d as interp
 import matplotlib.pyplot as plt
@@ -36,12 +35,7 @@ class Scanplane():
             if inp == 'quit':
                 raise Exception('Terminated by user')
         self.scanheight = scanheight
-        
-        self.nav = navigation.Goto(self.piezos)
-        self.start_pos = (0,0,0)
-        # self.start_pos = (self.piezos.V['x'],self.piezos.V['y'],self.piezos.V['z']) # current position before scan
-        # self.start_pos = (self.center[0], self.center[1], 0) # center of scan
-                
+             
         self.x = np.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
         self.y = np.linspace(center[1]-span[1]/2, center[1]+span[1]/2, numpts[1])
 
@@ -67,38 +61,45 @@ class Scanplane():
     def do(self):
         self.setup_plots()
     
+        ## Start time and temperature
         tstart = time.time()
         self.temp_start = montana.temperature['platform']
     
-        for i in range(self.X.shape[0]): # make sure all points are not out of range of piezos
-            self.nav.check_range(self.X[i][0], self.Y[i][0], self.Z[i][0])
-    
+        ## make sure all points are not out of range of piezos before starting anything
+        for i in range(self.X.shape[0]):
+            self.piezos.check_lim(self.X[i][:], self.Y[i][:], self.Z[i][:])
+
         ## Loop over X values
         for i in range(self.X.shape[0]):
-            self.nav.goto(self.X[i][0], self.Y[i][0], self.Z[i][0]) # goes to beginning of scan
             
+            ## Explicitly go to first point of scan
+            self.piezos.V = {'x': self.X[i][0], 'y': self.Y[i][0], 'z': self.Z[i][0]}
+            
+            ## Do the sweep
             Vstart = {'x': self.X[i][0], 'y': self.Y[i][0], 'z': self.Z[i][0]} 
             Vend = {'x': self.X[i][-1], 'y': self.Y[i][-1], 'z': self.Z[i][-1]}
-            
             out, V, t = self.piezos.sweep(Vstart, Vend) # sweep over Y
-            
-            interp_func = interp(out['y'], V[self.sig_in])
-            self.V[i][:] = interp_func(self.Y[i][:]) # changes from actual output data to give desired number of points
-            
+
+            ## Save the last sweep
             self.last_full_out = out['y']
             self.last_full_sweep = V[self.sig_in]
             self.save_line(i, Vstart)
+                   
+            ## Interpolate to the number of lines     
+            interp_func = interp(out['y'], V[self.sig_in])
+            self.V[i][:] = interp_func(self.Y[i][:]) # changes from actual output data to give desired number of points
             
             self.last_interp_out = self.Y[i][:]
             self.last_interp_sweep = self.V[i][:]
             
-            # Do the same for capacitance
+            ## Interpolate capacitance for plot
             interp_func = interp(out['y'], V[self.cap_in])
             self.C[i][:] = interp_func(self.Y[i][:])
-                        
+                   
+            ## Update plot     
             self.plot()  
             
-        self.nav.goto_seq(*self.start_pos) #Go back whence you came! *arg expands the tuple
+        self.piezos.V = 0
         self.save()
         
         tend = time.time()

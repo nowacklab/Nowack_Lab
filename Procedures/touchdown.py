@@ -8,12 +8,18 @@ from ..Utilities import dummy
 from ..Instruments import nidaq, preamp, montana
 
 class Touchdown():
-    def __init__(self, instruments=None, cap_input=None, planescan=False):    
+    def __init__(self, instruments=None, cap_input=None, planescan=False, Vz_max = None):    
         self.touchdown = False
         self.V_to_C = 2530e3 # 2530 pF/V * (1e3 fF/pF), calibrated 20160423 by BTS, see ipython notebook
         self.attosteps = 200 #number of attocube steps between sweeps
         self.numfit = 10       # number of points to fit line to while collecting data  
         self.numextra = 3
+         
+                 
+        if Vz_max == None:
+            self.Vz_max = self.piezos.Vmax['z']
+        else:
+            self.Vz_max = Vz_max
          
         if instruments:        
             self.piezos = instruments['piezos']
@@ -71,8 +77,8 @@ class Touchdown():
             attosteps = None # don't move the attocubes if doing a planescan - remember, 0 is continuous!
         
         ## voltage sweep is from -Vmax to Vmax, step size determined in configure_piezo. 4 V looks good.
-        numsteps = int(2*self.piezos.Vmax['z']/self.z_piezo_step)
-        self.V = np.linspace(-self.piezos.Vmax['z'], self.piezos.Vmax['z'], numsteps)
+        numsteps = int(2*self.Vz_max/self.z_piezo_step)
+        self.V = np.linspace(-self.Vz_max, self.Vz_max, numsteps)
         
         self.check_balance() # Make sure capacitance bridge is well-balanced
          
@@ -109,10 +115,10 @@ class Touchdown():
                         V_td = self.get_touchdown_voltage(i, plot=False)   
                         if not self.planescan: # Don't want to move attocubes during planescan
                             # For central touchdown of plane, we want to get the touchdown voltage near the center of the piezo's positive voltage range.
-                            if V_td > 0.65*self.piezos.Vmax['z']:
+                            if V_td > 0.65*self.Vz_max:
                                 self.touchdown = False
                                 attosteps = self.attosteps/8 #make sure we don't crash! Don't keep on updating attosteps, otherwise it will go to zero eventually, and that means continuous!!!
-                            elif V_td < 0.35*self.piezos.Vmax['z']:
+                            elif V_td < 0.35*self.Vz_max:
                                 self.touchdown = False
                                 attosteps = -self.attosteps/8 #move the other direction to bring V_td closer to midway #make sure we don't crash! Don't keep on updating attosteps, otherwise it will go to zero eventually, and that means continuous!!!
                         elif V_td < 0: # This is obviously a false touchdown; for planescan only
@@ -135,7 +141,7 @@ class Touchdown():
                 
             ## Move the attocubes; either we're too far away for a touchdown or TD voltage not centered    
             if not self.touchdown: 
-                self.piezos.V = {'z': -self.piezos.Vmax['z']} # before moving attocubes, make sure we're far away from the sample!
+                self.piezos.V = {'z': -self.Vz_max} # before moving attocubes, make sure we're far away from the sample!
                 self.atto.up({'z': attosteps}) 
                 time.sleep(2) # was getting weird capacitance values immediately after moving; wait a bit
         
@@ -265,7 +271,7 @@ class Touchdown():
         self.line = line[0]
         plt.xlabel('Piezo voltage (V)')
         plt.ylabel(r'$C - C_{balance}$ (fF)')
-        plt.xlim(-self.piezos.Vmax['z'], self.piezos.Vmax['z'])
+        plt.xlim(-self.Vz_max, self.Vz_max)
         plt.ylim(-1,20)
         
         ## Overlay the red dots

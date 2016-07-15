@@ -1,8 +1,6 @@
-import numpy
+import numpy as np
 import time
 import atexit
-
-KEYS = ['x','y','z']
 
 class Piezos():
     '''
@@ -10,127 +8,156 @@ class Piezos():
     '''    
     # amp = nanonis.HVA4('COM2')
     
-    def __init__(self, daq, gain, chan_out, Vmax=[120]*3, bipolar = [True]*3):
-        """ Pass args ars array [xvalue, yvalue, zvalue] """
+    def __init__(self, daq, gain, chan_out, Vmax=[200]*3, bipolar = [True]*3, zero=True):
+        '''
+        e.g. pz = piezos.Piezos(daq=daq, 
+                                gain={'x': 15,'y':15, 'z':15},
+                                chan_out = {'x':0,'y':1,'z':2},
+                                Vmax = {'x':200, 'y':200, 'z':200}, 
+                                bipolar = {'x':True, 'y':True, 'z':True}
+                                )
+            daq: the nidaq.NIDAQ() object
+            gain: gain setting on HVA4
+            chan_out: output channel of daq (just the number, ao#)
+            Vmax: maximum delta voltage across piezo (includes bipolar multiplier)
+            bipolar: whether the piezo is driven with +/- V (True) or +V/gnd (False)
+        '''
         self.daq = daq
-        self.gain = {}
-        self.chan_out = {} 
-        self.Vmax = {}
+        self.gain = gain
+        self.chan_out = chan_out 
+        self.Vmax = Vmax
         self.bipolar = {}
+        for key, value in bipolar.items():
+            self.bipolar[key] = value + 1 # Bipolar multiplier; False = 1, True = 2
+        
         self._V = {}
-
-        for i in range(len(KEYS)):
-            self.gain[KEYS[i]] = gain[i]
-            self.chan_out[KEYS[i]] = chan_out[i]
-            self.Vmax[KEYS[i]] = Vmax[i]
-            self.bipolar[KEYS[i]] = int(bipolar[i])+1 # = 1 if bipolar is False, =2 if bipolar is true
-        self._V = self.apply_gain({KEYS[i]: getattr(self.daq, chan_out[i]) for i in range(len(KEYS))})
-        self.V = {'x': 0, 'y': 0, 'z': 0}
+        if zero:
+            self.V = {'x': 0, 'y': 0, 'z': 0}
         
     @property
     def V(self):
+        '''
+        Voltage property. Set and read any number of piezo voltages.
+            pz.V
+            pz.V = {'z':150, 'y':100}
+            pz.V = 0 will zero all piezos
+        '''
+        for key in self.chan_out.keys():
+            self._V[key] = getattr(self.daq, 'ai%s' %chan_out[key])*self.gain[key]*self.bipolar[key] # convert daq volts to piezo volts
         return self._V
     
     @V.setter
     def V(self, value):
-        """ Have to set whole dictionary """
-        for k in KEYS:
-            if k not in value.keys(): # make sure all voltages written
-                value[k] = self._V[k]
-            if value[k] > self.Vmax[k]*self.bipolar[k]:
-                raise Exception('Voltage too high, max is %f' %self.Vmax[k])
-        self.sweep(self._V, value)
-        self._V = value
+        if np.isscalar(value):
+            value = {k:value for k in ['x','y','z']}
+        
+        self.check_lim(value)
+        
+        ## Sweep to the desired voltage
+        self.sweep(self.V, value)
+        
+        ## Store the desired voltage
+        for key in value.keys():
+            self._V[key] = value[key]
+            
     
     def apply_gain(self, value):
+        '''
+        Converts DAQ volts to piezo volts by multiplying a voltage (dictionary) by the gain and bipolar factor for each axis.
+        '''
         gains = {}
         for k in value.keys():
-            if numpy.isscalar(value[k]):
+            if np.isscalar(value[k]):
                 gains[k] =  value[k]*self.gain[k]*self.bipolar[k]
             else:
-                gains[k] = list(numpy.array(value[k])*self.gain[k]*self.bipolar[k])
+                gains[k] = list(np.array(value[k])*self.gain[k]*self.bipolar[k])
         return gains
+        
         
     def remove_gain(self, value):
+        '''
+        Converts piezo volts to DAQ volts by dividing a voltage (dictionary) by the gain and bipolar factor for each axis.
+        '''
         gains = {}
         for k in value.keys():
-            if numpy.isscalar(value[k]):
+            if np.isscalar(value[k]):
                 gains[k] =  value[k]/self.gain[k]/self.bipolar[k]
             else:
-                gains[k] = list(numpy.array(value[k])/self.gain[k]/self.bipolar[k])
+                gains[k] = list(np.array(value[k])/self.gain[k]/self.bipolar[k])
         return gains
 
-    def check_lim(self, A):
-        for k in A.keys():
-            if A[k].max() > self.Vmax[k] or A[k].min() < -self.Vmax[k]:
-                raise Exception('Voltage out of range for piezo %s!' %k)
+
+    def check_lim(self, V):
+        '''
+        checks dictionary {'x': Vx, 'y': Vy, 'z': Vz} of voltage lists Vj = [...] to see if they are out of range for the piezos
+        '''
+        for k in V.keys():
+            if np.isscalar(V[k]):
+                V[k] = [V[k]]
+            if type(V[k]) is not np.ndarray:
+                V[k] = np.array(V[k])
+            if V[k].max() > self.Vmax[k] or V[k].min() < -self.Vmax[k]:
+                raise Exception('Voltage out of range for %s piezo! Max is %s' %(k, self.Vmax[k]))
+
+#         for V in ('Vx', 'Vy', 'Vz'):
+            
+        # 
+#             if np.isscalar(eval(V)):
+#                 exec('%s = [%s]' %(V, V)) # Makes Vj a list if it is not
+#             if type(eval(V)) is not np.ndarray:
+#                 exec('%s = np.array(%s)' %(V, V)) # makes it into a numpy array so min and max work correctly
+#         
+#         if Vx is not None:
+#             if Vx.max() > self.Vmax['x'] or Vx.min() < -self.Vmax['x']:
+#                 raise Exception('Voltage out of range for x piezo! Max is %s' %self.Vmax['x'])
+#         if Vy is not None:
+#             if Vy.max() > self.Vmax['y'] or Vy.min() < -self.Vmax['y']:
+#                 raise Exception('Voltage out of range for y piezo!')
+#         if Vz is not None:
+#             if Vz.max() > self.Vmax['z'] or Vz.min() < -self.Vmax['z']:
+#                 raise Exception('Voltage out of range for z piezo!')
+
            
-    def sweep(self, Vstart, Vend, Vstep = {k: .01 for k in KEYS}, freq = 1500):
-        Vs = {}
+    def sweep(self, Vstart, Vend, Vstepmax = 0.01, freq = 1500):
+        '''
+        Sweeps piezos from a starting voltage (dictionary) to an ending voltage (dictionary), with maximum allowed step size and frequency. Maximum allowed step size will be the step size for the piezo that has to sweep over the largest voltage range.
+        '''
+        ## Check voltage limits
+        self.check_lim(Vstart)
+        self.check_lim(Vend)
         
-        for k in KEYS:
-            if k not in Vstart.keys(): # makes sure that all keys are listed, but will do a pointless nowhere-sweep
-                Vstart[k] = self._V[k]
-            if k not in Vend.keys(): # makes sure that all keys are listed, but will do a pointless nowhere-sweep
-                Vend[k] = self._V[k]
-            if k not in Vstep.keys(): # makes sure that all keys are listed, but will do a pointless nowhere-sweep
-                Vstep[k] = 0.01
-            if Vstart[k] != self._V[k]:
-                self.V = Vstart
-                # self.sweep(self._V, Vstart)
-        numsteps = max([int(abs(Vstart[k]-Vend[k])/Vstep[k])+1 if Vstep[k]!= 0 else 0 for k in KEYS])
+        ## Sweep to Vstart first if we aren't already there. self.V calls this function, but recursion should only go one level deep.
+        if Vstart != self.V:
+            self.V = Vstart
         
-        #Convert keys to the channel names that the daq expects and remove gain
+        ## Calculate number of steps. This is max(|(Whole voltage range)/(step size)| + 1). All piezos use the same numsteps.
+        numsteps = max([int(abs(Vstart[k]-Vend[k])/Vstepmax)+1 for k in Vstart.keys()])
+        
+        ## Convert keys to the channel names that the daq expects and remove gain
         Vstart = self.remove_gain(Vstart)
         Vend = self.remove_gain(Vend)
-        for k in KEYS:   
-            Vstart[self.chan_out[k]] = Vstart.pop(k)
+        
+        for k in Vstart.keys():   
+            Vstart[self.chan_out[k]] = Vstart.pop(k) # changes key to daq output channel name
             Vend[self.chan_out[k]] = Vend.pop(k)
 
         V, response, time = self.daq.sweep([self.chan_out[k] for k in KEYS], Vstart, Vend, freq=freq, numsteps=numsteps)
 
-        # Go back to piezo keys
-        for k in KEYS:   
-            V[k] = V.pop(self.chan_out[k])
-            
+        ## Go back to piezo keys
+        for k in ['x','y','z']:
+            try:   
+                V[k] = V.pop(self.chan_out[k])
+            except: # in case one or more keys is not used
+                pass
+        
+        ## reapply gain    
         V = self.apply_gain(V)
-        for k in KEYS:
-            self._V[k] = V[k][len(V[k])-1] # end of sweep, for keeping track of voltage 
+        
+        ## Keep track of current voltage
+        for k in V.keys():
+            self._V[k] = V[k][-1] # end of sweep, for keeping track of voltage 
         
         return V, response, time
-
-""" Commented out code below not yet tested """
-        
-    # def split_sweep(self, Vstart, Vend, Vstep, freq, iter, num_iter):
-        # Vrange = Vend-Vstart
-        # if Vstart < Vend: # sweep up
-            # V, response, time = self.sweep(Vstart + iter/num_iter*Vrange, Vstart + (iter+1)/num_iter*Vrange, Vstep, freq)
-        # elif Vstart > Vend: # sweep up
-            # V, response, time = self.sweep(Vend - iter/num_iter*Vrange, Vstart - (iter+1)/num_iter*Vrange, Vstep, freq)
-        # return V, response, time 
-    
-    # def full_sweep(self, Vstep, freq):
-        # Vup, responseup, timeup = (self.sweep(0, self.Vmax, Vstep=Vstep, freq=freq)) # up sweep
-
-        # Vdown, responsedown, timedown = (self.sweep(self.Vmax, 0, Vstep=Vstep, freq=freq)) #down sweep
-        
-        # return Vup + Vdown, responseup + responsedown #, timeup + [t + timeup[len(timeup)-1] for t in timedown]
-        
-        # Vtot = []
-        # responsetot = []
-        
-        # for i in range(5):
-            # Vup, responseup, timeup = (self.sweep(i/5*self.Vmax, (i+1)/5*self.Vmax, Vstep=Vstep, max_rate=max_rate)) # up sweep
-            # time.sleep(2)
-            # Vtot = Vtot + Vup
-            # responsetot = responsetot + responseup
-        # for i in range(5):
-            # Vdown, responsedown, timedown = (self.sweep((5-i)/5*self.Vmax, (5-i-1)/5*self.Vmax, Vstep=Vstep, max_rate=max_rate))
-            # time.sleep(2)
-            # Vtot = Vtot + Vdown
-            # responsetot = responsetot + responsedown
-            
-        # return Vtot, responsetot
     
 if __name__ == '__main__':
     """ Testing the code.  """
@@ -158,7 +185,7 @@ if __name__ == '__main__':
             
         # max_rate = 40 #V/s
         
-        # V = list(numpy.linspace(Vstart, Vend, numsteps))
+        # V = list(np.linspace(Vstart, Vend, numsteps))
         # if self.remove_gain(abs(max(V))) > 10:
             # raise Exception('NIDAQ out of range!')
             

@@ -1,27 +1,29 @@
 import numpy
 from numpy.linalg import lstsq
-from . import touchdown, navigation
+from . import touchdown
 import time
 import matplotlib.pyplot as plt
 from ..Utilities import dummy
 from ..Instruments import piezos
         
 class Planefit():
-    def __init__(self, instruments=None, span=[100,100], center=[0,0], numpts=[50,50], cap_input=0):
+    def __init__(self, instruments=None, span=[100,100], center=[0,0], numpts=[50,50], Vz_max = None, cap_input=0):
         self.instruments = instruments
         if instruments:
             self.piezos = instruments['piezos']
         else:
             self.piezos = dummy.Dummy(piezos.Piezos)
-
         
         self.span = span
         self.center = center
         self.numpts = numpts
+        
+        if Vz_max == None:
+            self.Vz_max = self.piezos.Vmax['z']
+        else:
+            self.Vz_max = Vz_max
     
         self.cap_input = cap_input
-        
-        self.nav = navigation.Goto(self.piezos)
                 
         self.x = numpy.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
         self.y = numpy.linspace(center[1]-span[1]/2, center[1]+span[1]/2, numpts[1])
@@ -38,28 +40,29 @@ class Planefit():
         
     def do(self):
         ## Initial touchdown
-        start_pos = [self.center[0], self.center[1], 0] # center of plane
-        self.nav.goto_seq(start_pos[0], start_pos[1], start_pos[2]) # go to center of plane
-        td = touchdown.Touchdown(self.instruments, self.cap_input)
+        self.piezos.V = {'x': start_pos[0], 'y':start_pos[1], 'z':-self.Vz_max}        
+
+        td = touchdown.Touchdown(self.instruments, self.cap_input, Vz_max = self.Vz_max)
         td.do() # Will do initial touchdown at center of plane to (1) find the plane (2) make touchdown voltage near center of piezo's positive voltage range
         
         check_td = input('Does the initial touchdown look good? Enter \'quit\' to abort.')
         if check_td == 'quit':
             raise Exception('Terminated by user')
         
-        self.piezos.check_lim({'x': self.X, 'y': self.Y}) # make sure we won't scan outside X, Y piezo ranges!
+        self.piezos.check_lim(self.X, self.Y) # make sure we won't scan outside X, Y piezo ranges!
         
         ## Loop over points sampled from plane.
         for i in range(self.X.shape[0]): 
             for j in range(self.X.shape[1]):
-                self.nav.goto_seq(self.X[i,j], self.Y[i,j], -self.piezos.Vmax['z']) #Retract Z, then move to (X,Y)
+                ## Go to location of next touchdown
+                self.piezos.V = {'x':self.X[i,j], 'y':self.Y[i,j], 'z': -self.Vz_max)
                 print('X index: %i; Y index: %i' %(i, j))
                 
-                td = touchdown.Touchdown(self.instruments, self.cap_input, planescan=True) # new touchdown at this point
+                td = touchdown.Touchdown(self.instruments, self.cap_input, Vz_max = self.Vz_max, planescan=True) # new touchdown at this point
                 self.Z[i,j] = td.do() # Do the touchdown. Planescan True prevents attocubes from moving and only does one touchdown
        
-        self.nav.goto_seq(start_pos[0], start_pos[1], start_pos[2]) # return to center of plane
-        self.plane(0, 0, True) # calculates plane. Calculates origin voltage too, but we won't use it.
+        self.piezos.V = 0
+        self.plane(0, 0, True) # calculates plane
         self.save()
         
     def plane(self, x, y, recal=False):
@@ -111,7 +114,7 @@ class Planefit():
         
     def update_c(self):
         old_c = self.c
-        td = touchdown.Touchdown(self.instruments, self.cap_input)
+        td = touchdown.Touchdown(self.instruments, self.cap_input, Vz_max = self.Vz_max)
         self.c = td.do()
         for x in [-self.piezos.Vmax['x'], self.piezos.Vmax['x']]:
             for y in [-self.piezos.Vmax['y'], self.piezos.Vmax['y']]:
