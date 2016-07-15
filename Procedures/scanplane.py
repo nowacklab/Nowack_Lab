@@ -60,8 +60,9 @@ class Scanplane():
             self.Z = self.Z.transpose()
             
         self.filename = time.strftime('%Y%m%d_%H%M%S') + '_scan'
-
-
+        
+        home = os.path.expanduser("~")
+        self.path = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Scans')
         
     def do(self):
         self.setup_plots()
@@ -86,6 +87,7 @@ class Scanplane():
             
             self.last_full_out = out['y']
             self.last_full_sweep = V[self.sig_in]
+            self.save_line(i, Vstart)
             
             self.last_interp_out = self.Y[i][:]
             self.last_interp_sweep = self.V[i][:]
@@ -189,12 +191,9 @@ class Scanplane():
         self.line_interp.set_ydata(self.last_interp_sweep)
         plt.draw()
         
-    def save(self):
-        home = os.path.expanduser("~")
-        data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Scans')
+    def save(self):     
+        filename = os.path.join(self.path, self.filename)
 
-        filename = os.path.join(data_folder, self.filename)
-      
         with open(filename+'.csv', 'w') as f:
             for s in ['span', 'center', 'numpts']:
                 f.write('%s = %f, %f \n' %(s, float(getattr(self, s)[0]),float(getattr(self, s)[1])))
@@ -219,5 +218,19 @@ class Scanplane():
         self.plot_cap()
         plt.savefig(filename+'_cap.pdf', bbox_inches='tight')
         
+    def save_line(self, i, Vstart):
+        filename = os.path.join(self.path, self.filename)
+
+        with open(filename+'_lines.csv', 'a') as f:
+            f.write('Line %i, starting at: ' %i)
+            for v in Vstart():
+                f.write(v)
+            f.write('\n Vpiezo: ')
+            for x in self.last_full_sweep:
+                f.write(x)
+            f.write('\n Vsquid: ')
+            for x in self.last_full_out:
+                f.write(x)
+            
 if __name__ == '__main__':
     'hey'
