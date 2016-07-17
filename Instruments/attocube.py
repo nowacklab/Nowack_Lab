@@ -195,12 +195,150 @@ class ANC300(): #open loop controller, we don't use this anymore
 
      
 class ANC350():
+    '''
+    For remote operation of the Attocubes with the ANC350. Adapted directly from ANC300. Order of axes is X, Y, Z (controllers 1,2,3 are in that order). 
+    '''
+    _stages = ['x','y','z']
+    _modes = ['gnd','cap','stp']
+    
     def __init__(self, montana):
         self.anc = PyANC350v4.Positioner()
         
-    
+        self._freq = {}
+        self._V = {}
+        self._cap = {}
+        
+        self.freq
+        self.V
+        
+        self._freq_lim = 1000 # self-imposed, 10000 is true max
+        self._step_lim = 5000 #self-imposed, no true max
+        if montana.temperature['platform'] < 10:
+            self._V_lim = 60.000 #LT limit
+        else:
+            self._V_lim = 45.000 #RT limit
+       
+        self.check_voltage()
 
-class Attocube(ANC300): ### ANC300 is open loop controller, we use this one at the moment.
+        atexit.register(self.stop)  # will stop all motion if program quits     
+        
+    @property
+    def freq(self):
+        for i in range(3):
+            freq = self.anc.getFrequency(i)
+            self._freq[self._stages[i]] = freq     
+        return self._freq
+        
+    @freq.setter
+    def freq(self, f):
+        for key, value in f.items():
+            if value > self._freq_lim:
+                raise Exception('frequency out of range, max %i Hz' %self._freq_lim)
+            elif value < 1:
+                value = 1
+            self.anc.setFrequency(self._stages.index(key), value)
+            self._freq[key] = value
+            
+    # @property
+    # def mode(self):
+        # """ Mode, choose from: gnd, cap, stp """
+        # for i in range(3):
+            # msg = self.send('getm %i' %(i+1)) # i+1 -> controllers labeled 1,2,3, not 0,1,2
+            # self._mode[self._stages[i]] = self._getValue(msg)
+        # return self._mode
+        
+    # @mode.setter
+    # def mode(self, m):
+        # for key, value in m.items():
+            # if value not in self._modes:
+                # raise Exception('Bad mode for stage %i' %(i+1))
+            # else:
+                # msg = self.send('setm %i %s' %(self._stages.index(key)+1, value))
+                # self._mode[key] = value
+
+    @property
+    def V(self):
+        for i in range(3):
+            v = self.anc.getAmplitude(i)
+            self._V[self._stages[i]] = v     
+        return self._V
+        
+    @V.setter
+    def V(self, v):
+        for key, value in v.items():
+            if value > self._V_lim:
+                raise Exception('voltage out of range, max %f V' %self._V_lim)
+            elif value < 0:
+                raise Exception('voltage out of range, min 0 V')
+            self.anc.setAmplitude(self._stages.index(key), value)
+            self._V[key] = value
+    
+    def check_voltage(self):
+        for key, value in self.V.items():
+            if value > self._V_lim:
+                self.V = {key: self._V_lim}
+                print("Axis %s voltage was too high, set to %f" %(key, self._V_lim))
+        
+    def ground(self):
+        for i in range(3):
+            self.anc.startContinuousMove(i, 0, backward)
+            self.anc.setAxisOutput(i, 0, 0)
+        
+    def step(self, axis, numsteps, updown):
+        self.check_voltage()
+    
+        if updown not in ['u','d']:
+            raise Exception('What doesn\'t come up must come down!')
+        
+        self.anc.setAxisOutput(self._stages.index(axis), 1, 0)
+        time.sleep(0.5) # wait for output to turn on
+        if numsteps == None:
+            pass
+        elif numsteps > self._step_lim:
+            raise Exception('too many steps! Max %i' %self._step_lim)
+        elif numsteps == 0:
+            raise Exception('That won\'t get you anywhere!')
+            # msg = self.send('step%s %i c' %(updown, i+1)) NO!!!!! THIS IS BAD!!! WE DON'T WANT TO MOVE CONTINUOUSLY
+        else:
+            if updown == 'u':
+                backward = 0
+            else:
+                backward = 1
+            self.anc.startContinuousMove(self._stages.index(axis), 1, backward)
+            time.sleep(numsteps/self.freq[axis])
+            self.anc.startContinuousMove(self._stages.index(axis), 0, backward)
+        self.anc.setAxisOutput(self._stages.index(axis), 0, 0)
+    
+    def move(self, numsteps):
+        self.up(numsteps)
+    
+    def up(self, numsteps):
+        for axis, num in numsteps.items():
+            if num == None:
+                pass
+            elif num > 0:
+                upordown = 'u'
+            else:
+                num = -num
+                upordown = 'd'
+            self.step(axis, num, upordown)
+    
+    def down(self, numsteps):
+        for axis, num in numsteps.items():
+            if num == None:
+                pass
+            elif num > 0:
+                upordown = 'd'
+            else:
+                num = -num
+                upordown = 'u'
+            self.step(axis, num, upordown)
+            
+    def stop(self):
+        self.ground()
+
+
+class Attocube(ANC350): ### ANC350 is closed loop controller, we use this one at the moment.
     pass 
 
 
