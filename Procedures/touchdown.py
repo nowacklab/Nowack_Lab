@@ -47,7 +47,7 @@ class Touchdown():
         self.configure_piezo() # Need this to set up time constant of lockin properly
         self.configure_lockin()
 
-        ## voltage sweep is from -Vmax to Vmax, step size determined in configure_piezo. 4 V looks good.
+        ## voltage sweep is from -Vz_max to Vz_max, step size determined in configure_piezo. 4 V looks good.
         self.numsteps = int(2*self.Vz_max/self.z_piezo_step)
         self.V = np.linspace(-self.Vz_max, self.Vz_max, self.numsteps)
         self.C = [None]*self.numsteps # Capacitance (fF)
@@ -280,7 +280,7 @@ class Touchdown():
         orange = '#F18C22'
         blue = '#47C3D3'
 
-        line_td = plt.plot(self.Vfit, self.Cfit, blue, lw=2) # just using these for now to initialize the line
-        line_app = plt.plot(self.Vfit, self.Cfit, orange, lw=2) # just using these for now to initialize the line
+        line_td = plt.plot([], [], blue, lw=2)
+        line_app = plt.plot([], [], orange, lw=2)
         self.line_td = line_td
         self.line_app = line_app
