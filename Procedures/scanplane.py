@@ -164,7 +164,7 @@ class Scanplane():
                                         self.X,
                                         self.Y,
                                         self.V,
-                                        title = 'DC SQUID signal',
+                                        title = '%s\nDC SQUID signal' %self.filename,
                                         xlabel = r'$X (V_{piezo})$',
                                         ylabel = r'$Y (V_{piezo})$',
                                         clabel = 'Voltage from %s' %self.sig_in
@@ -177,7 +177,7 @@ class Scanplane():
                                         self.Y,
                                         self.Vac_x,
                                         cmap='rainbow',
-                                        title = 'AC x SQUID signal',
+                                        title = '%s\nAC x SQUID signal' %self.filename,
                                         xlabel = r'$X (V_{piezo})$',
                                         ylabel = r'$Y (V_{piezo})$',
                                         clabel = 'Voltage from %s' %self.sig_in_ac_x
@@ -190,7 +190,7 @@ class Scanplane():
                                         self.Y,
                                         self.Vac_y,
                                         cmap='rainbow',
-                                        title = 'AC y SQUID signal',
+                                        title = '%s\nAC y SQUID signal' %self.filename,
                                         xlabel = r'$X (V_{piezo})$',
                                         ylabel = r'$Y (V_{piezo})$',
                                         clabel = 'Voltage from %s' %self.sig_in_ac_y
@@ -203,7 +203,7 @@ class Scanplane():
                                     self.Y,
                                     self.C,
                                     cmap='afmhot',
-                                    title = 'Capacitance',
+                                    title = '%s\nCapacitance' %self.filename,
                                     xlabel = r'$X (V_{piezo})$',
                                     ylabel = r'$Y (V_{piezo})$',
                                     clabel = 'Voltage from %s' %self.cap_in
@@ -221,11 +221,6 @@ class Scanplane():
         self.line_interp = self.line_interp[0]
 
         ## Draw everything in the notebook
-        # self.fig.suptitle(self.filename, fontsize=30)
-        self.fig.get_axes()[0].annotate(self.filename, (0.5, 0.95),# Title for the whole figure
-                                    xycoords='figure fraction', ha='left',
-                                    fontsize=24
-                                    )
         self.fig.canvas.draw()
 
 
