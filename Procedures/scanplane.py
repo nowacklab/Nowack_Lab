@@ -161,9 +161,9 @@ class Scanplane():
                                         self.X,
                                         self.Y,
                                         self.V,
-                                        title = 'DC SQUID signal'
-                                        xlabel = r'$X (V_{piezo})$'
-                                        ylabel = r'$Y (V_{piezo})$'
+                                        title = 'DC SQUID signal',
+                                        xlabel = r'$X (V_{piezo})$',
+                                        ylabel = r'$Y (V_{piezo})$',
                                         clabel = 'Voltage from %s' %self.sig_in
                                     )
 
@@ -173,10 +173,10 @@ class Scanplane():
                                         self.X,
                                         self.Y,
                                         self.Vac_x,
-                                        cmap='rainbow'
-                                        title = 'AC x SQUID signal'
-                                        xlabel = r'$X (V_{piezo})$'
-                                        ylabel = r'$Y (V_{piezo})$'
+                                        cmap='rainbow',
+                                        title = 'AC x SQUID signal',
+                                        xlabel = r'$X (V_{piezo})$',
+                                        ylabel = r'$Y (V_{piezo})$',
                                         clabel = 'Voltage from %s' %self.sig_in_ac_x
                                     )
 
@@ -186,10 +186,10 @@ class Scanplane():
                                         self.X,
                                         self.Y,
                                         self.Vac_y,
-                                        cmap='rainbow'
-                                        title = 'AC y SQUID signal'
-                                        xlabel = r'$X (V_{piezo})$'
-                                        ylabel = r'$Y (V_{piezo})$'
+                                        cmap='rainbow',
+                                        title = 'AC y SQUID signal',
+                                        xlabel = r'$X (V_{piezo})$',
+                                        ylabel = r'$Y (V_{piezo})$',
                                         clabel = 'Voltage from %s' %self.sig_in_ac_y
                                     )
 
@@ -199,10 +199,10 @@ class Scanplane():
                                     self.X,
                                     self.Y,
                                     self.C,
-                                    cmap='afmhot'
-                                    title = 'Capacitance'
-                                    xlabel = r'$X (V_{piezo})$'
-                                    ylabel = r'$Y (V_{piezo})$'
+                                    cmap='afmhot',
+                                    title = 'Capacitance',
+                                    xlabel = r'$X (V_{piezo})$',
+                                    ylabel = r'$Y (V_{piezo})$',
                                     clabel = 'Voltage from %s' %self.cap_in
                                 )
 

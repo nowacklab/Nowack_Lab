@@ -134,7 +134,7 @@ class Mod2D():
                                 self.Imod*1e6,
                                 self.V,
                                 xlabel=r'$I_{\rm{bias}} = V_{\rm{bias}}/R_{\rm{bias}}$ ($\mu \rm A$)',
-                                ylabel = r'$I_{\rm{mod}} = V_{\rm{mod}}/R_{\rm{mod}}$ ($\mu \rm A$)'
-                                clabel = r'$V_{\rm{squid}}$ $(\rm V)$'
+                                ylabel = r'$I_{\rm{mod}} = V_{\rm{mod}}/R_{\rm{mod}}$ ($\mu \rm A$)',
+                                clabel = r'$V_{\rm{squid}}$ $(\rm V)$',
                                 fontsize=20
                             )

@@ -61,7 +61,7 @@ class Planefit():
                 counter = counter + 1
 
                 ## Go to location of next touchdown
-                self.piezos.V = {'x':self.X[i,j], 'y':self.Y[i,j], 'z': -self.Vz_max)
+                self.piezos.V = {'x':self.X[i,j], 'y':self.Y[i,j], 'z': -self.Vz_max}
 
                 td = touchdown.Touchdown(self.instruments, self.cap_input, Vz_max = self.Vz_max, planescan=True) # new touchdown at this point
                 td.title = '(%i, %i). TD# %i' %(i,j, counter)
