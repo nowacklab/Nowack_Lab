@@ -23,16 +23,7 @@ Once have conversion factors, have touchdown "hone in" on center of piezo range 
 
 Build in all conversion factors
 
-Read temperature of Montana
-
-
-SAVE EVERYTHING
-
-
 Touchdown with floating table
-
-<<<<<<< HEAD
-
 
 
 Figure out matplotlib notebook
@@ -41,17 +32,6 @@ Figure out matplotlib notebook
 In preamp driver (and others), only set values if they change
 
 test daq sweep accel - kind of pointless right now, need to fix.
-
-
-
-=======
-test daq sweep accel - kind of pointless right now, need to fix.
->>>>>>> origin/master
-
-Try capacitance in X, get calibration, see if dip occurs
-
-Use center point of plane for fitting, and maybe use this also to update/set C value?
-
 
 reset squid before each scan
  - auto reset? use subprocess? 
