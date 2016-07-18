@@ -51,11 +51,11 @@ class Scanplane():
         self.X, self.Y = np.meshgrid(self.x, self.y)
         self.Z = self.plane.plane(self.X, self.Y) - self.scanheight
 
-        self.V = np.array([[float('nan')]*self.X.shape[0]]*self.X.shape[1])
-        self.Vac_x = np.array([[float('nan')]*self.X.shape[0]]*self.X.shape[1])
-        self.Vac_y = np.array([[float('nan')]*self.X.shape[0]]*self.X.shape[1])
+        self.V = np.array([[float('nan')]*self.X.shape[1]]*self.X.shape[0])
+        self.Vac_x = np.array([[float('nan')]*self.X.shape[1]]*self.X.shape[0])
+        self.Vac_y = np.array([[float('nan')]*self.X.shape[1]]*self.X.shape[0])
 
-        self.C = np.array([[float('nan')]*self.X.shape[0]]*self.X.shape[1])
+        self.C = np.array([[float('nan')]*self.X.shape[1]]*self.X.shape[0])
 
         self.last_full_out = []
         self.last_full_sweep = []
