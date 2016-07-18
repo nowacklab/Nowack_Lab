@@ -15,12 +15,6 @@ class Touchdown():
         self.numfit = 10       # number of points to fit line to while collecting data
         self.numextra = 3
 
-
-        if Vz_max == None:
-            self.Vz_max = self.piezos.Vmax['z']
-        else:
-            self.Vz_max = Vz_max
-
         if instruments:
             self.piezos = instruments['piezos']
             self.atto = instruments['attocube']
@@ -43,6 +37,11 @@ class Touchdown():
 
         self.planescan = planescan
 
+        if Vz_max == None:
+            self.Vz_max = self.piezos.Vmax['z']
+        else:
+            self.Vz_max = Vz_max
+
         self.configure_attocube()
         self.configure_piezo() # Need this to set up time constant of lockin properly
         self.configure_lockin()
@@ -52,10 +51,6 @@ class Touchdown():
         self.V = np.linspace(-self.Vz_max, self.Vz_max, self.numsteps)
         self.C = [None]*self.numsteps # Capacitance (fF)
         self.V_td = -1000.0
-
-        self.fig = plt.figure()
-        self.ax = plt.gca()
-        display.clear_output()
 
         self.title = ''
 
@@ -134,11 +129,6 @@ class Touchdown():
             if self.extra != self.numextra: # did not take enough extra steps, TD is at end of range
                 self.touchdown = False
 
-              ## This following code probably only for super extremely tilted samples... may not need to worry about this
-            # if planescan:
-                # if V_td == None:
-                    # raise Exception('Need to adjust attocubes, piezo couldn\'t make it to the plane or touchdown has already happened!') # only check once, or else attocubes are aligned!
-
             self.piezos.V = {'z': 0} # bring the piezo back to zero
 
             ## Move the attocubes; either we're too far away for a touchdown or TD voltage not centered
@@ -148,15 +138,7 @@ class Touchdown():
                     self.atto.up({'z': attosteps})
                     time.sleep(2) # was getting weird capacitance values immediately after moving; wait a bit
 
-        # Didn't work
-        # except KeyboardInterrupt:
-            # self.piezos.V = {'z': 0, 'y': 0, 'x': 0}
-            # self.atto.mode = ['gnd', 'gnd', 'gnd']
-            # self.lockin.amplitude = 0
-            # print('Piezos zeroed, attocubes grounded, lockin off')
-
         V_td = self.get_touchdown_voltage(i, plot=True) # we didn't plot the intersecting lines before, so let's do that now.
-        # self.lockin.amplitude = 0  # turn off the lockin
 
         self.V_td = V_td
         self.save()
@@ -165,7 +147,6 @@ class Touchdown():
 
 
     def check_touchdown(self, i):
-        #last_std = np.std(self.C[i-int(self.numfit):i]) # looks at standard deviation of last self.numfit points up to i
         std = np.std(self.C[1:i]) # standard deviation of all points so far
         deviation = abs(self.C[i] - np.mean(self.C[i+1-int(self.numfit):i+1])) # deviation of the ith point from average of last self.numfit points, including i
 
@@ -197,7 +178,7 @@ class Touchdown():
         self.z_piezo_step = 2 # 1V at RT, 2V at low T works? # For full 120 V to -120 V sweep, 1 V step is 480 points
         self.z_piezo_freq = self.z_piezo_max_rate/self.z_piezo_step
 
-    def line(self, x, y):
+    def line_fit(self, x, y):
         """ Fits a line given x data, y data. Not sure if curve_fit or linregress is better, or if there is no difference. """
         # m, b, r, _, _ = linregress(x,y)
         # return m,b
@@ -214,8 +195,8 @@ class Touchdown():
         minfit = self.numextra # at minimum, fit 3 points from the end
         j = i-minfit # lower index of touchdown line
         k = j-minfit  # upper index of approach line, a little buffer added to avoid fitting actual touchdown points
-        m_td, b_td = self.line(self.V[j:i+1], self.C[j:i+1])
-        m_app, b_app = self.line(self.V[int(0.5*k):k+1], self.C[int(0.5*k):k+1]) # fit the last half of points
+        m_td, b_td = self.line_fit(self.V[j:i+1], self.C[j:i+1])
+        m_app, b_app = self.line_fit(self.V[int(0.5*k):k+1], self.C[int(0.5*k):k+1]) # fit the last half of points
         V_td = (b_td - b_app)/(m_app - m_td) # intersection of two lines. Remember high school algebra?
 
         if plot:
@@ -242,11 +223,11 @@ class Touchdown():
         if self.touchdown:
             self.title = td_title
             self.ax.set_title(self.title, fontsize=20)
-
-            self.fig.canvas.draw()
         else:
             if self.title == td_title:
                 self.title = ''
+        self.fig.canvas.draw()
+
 
     def save(self):
         home = os.path.expanduser("~")
@@ -271,10 +252,12 @@ class Touchdown():
         self.fig, self.ax = plt.subplots()
         line = plt.plot(self.V, self.C, 'k.')
         self.line = line[0]
+
+        self.ax.set_title(self.title, fontsize=20)
         plt.xlabel('Piezo voltage (V)')
         plt.ylabel(r'$C - C_{balance}$ (fF)')
         plt.xlim(-self.Vz_max, self.Vz_max)
-        plt.ylim(-1,20)
+        plt.ylim(-1,10)
 
         ## Two lines for fitting
         orange = '#F18C22'
@@ -282,5 +265,5 @@ class Touchdown():
 
         line_td = plt.plot([], [], blue, lw=2)
         line_app = plt.plot([], [], orange, lw=2)
-        self.line_td = line_td
-        self.line_app = line_app
+        self.line_td = line_td[0] # gives us back an array
+        self.line_app = line_app[0]

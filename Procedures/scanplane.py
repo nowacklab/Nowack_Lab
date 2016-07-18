@@ -15,10 +15,12 @@ class Scanplane():
             self.piezos = instruments['piezos']
             self.daq = instruments['nidaq']
             self.montana = instruments['montana']
+            self.array = instruments['squidarray']
         else:
             self.piezos = dummy.Dummy(piezos.Piezos)
             self.daq = dummy.Dummy(nidaq.NIDAQ)
             self.montana = dummy.Dummy(montana.Montana)
+            self.array = dummy.Dummy(squidarray.SquidArray)
 
         self.sig_in = 'ai%s' %sig_in
         self.daq.add_input(self.sig_in)
@@ -99,6 +101,8 @@ class Scanplane():
                             'y': self.Y[i][0],
                             'z': self.Z[i][0]
                             }
+            self.array.reset()
+            time.sleep(3)
 
             ## Do the sweep
             Vstart = {'x': self.X[i][0], 'y': self.Y[i][0], 'z': self.Z[i][0]}
@@ -152,8 +156,7 @@ class Scanplane():
         '''
         Set up all plots.
         '''
-        self.fig = plt.figure(figsize=(12,12))
-        self.fig.suptitle(self.filename) # Title for the whole figure
+        self.fig = plt.figure(figsize=(11,11))
 
         ## DC magnetometry
         self.ax_squid = self.fig.add_subplot(321)
@@ -214,7 +217,15 @@ class Scanplane():
         self.ax_line.set_xlabel('X (a.u.)', fontsize=8)
         self.ax_line.set_ylabel('V', fontsize=8)
 
+        self.line_full = self.line_full[0] # it is given as an array
+        self.line_interp = self.line_interp[0]
+
         ## Draw everything in the notebook
+        # self.fig.suptitle(self.filename, fontsize=30)
+        self.fig.get_axes()[0].annotate(self.filename, (0.5, 0.95),# Title for the whole figure
+                                    xycoords='figure fraction', ha='left',
+                                    fontsize=24
+                                    )
         self.fig.canvas.draw()
 
 
@@ -271,14 +282,14 @@ class Scanplane():
 
         with open(filename+'_lines.csv', 'a') as f:
             f.write('Line %i, starting at: ' %i)
-            for v in Vstart():
-                f.write(v)
-            f.write('\n Vpiezo: ')
+            for k in Vstart:
+                f.write(str(Vstart[k])+',')
+            f.write('\n Vpiezo:\n ')
             for x in self.last_full_sweep:
-                f.write(x)
-            f.write('\n Vsquid: ')
+                f.write(str(x)+',')
+            f.write('\n Vsquid:\n')
             for x in self.last_full_out:
-                f.write(x)
+                f.write(str(x)+',')
 
 if __name__ == '__main__':
     'hey'

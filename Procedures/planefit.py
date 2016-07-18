@@ -5,9 +5,13 @@ import time, os
 import matplotlib.pyplot as plt
 from ..Utilities import dummy
 from ..Instruments import piezos, montana
+from IPython import display
 
 class Planefit():
-    def __init__(self, instruments=None, span=[200,200], center=[0,0], numpts=[4,4], Vz_max = None, cap_input=0):
+    '''
+    For fitting to the plane of the sample. Will do a series of touchdowns in a grid of size specified by numpts. Vz_max sets the maximum voltage the Z piezo will reach. If None, will use the absolute max safe voltage set in the Piezos class.
+    '''
+    def __init__(self, instruments=None, span=[400,400], center=[0,0], numpts=[4,4], Vz_max = None, cap_input=0):
         self.instruments = instruments
         if instruments:
             self.piezos = instruments['piezos']
@@ -21,7 +25,10 @@ class Planefit():
         self.numpts = numpts
 
         if Vz_max == None:
-            self.Vz_max = self.piezos.Vmax['z']
+            try:
+                self.Vz_max = self.piezos.Vmax['z']
+            except:
+                Vz_max = None # Will reach here if dummy piezos are used, unfortunately.
         else:
             self.Vz_max = Vz_max
 
@@ -41,9 +48,12 @@ class Planefit():
 
 
     def do(self):
-        ## Initial touchdown
-        self.piezos.V = {'x': start_pos[0], 'y':start_pos[1], 'z':-self.Vz_max}
+        self.piezos.check_lim({'x':self.X, 'y':self.Y}) # make sure we won't scan outside X, Y piezo ranges!
 
+        ## Initial touchdown
+        print('Sweeping z piezo down...')
+        self.piezos.V = {'x': self.center[0], 'y':self.center[1], 'z':-self.Vz_max}
+        print('...done.')
         td = touchdown.Touchdown(self.instruments, self.cap_input, Vz_max = self.Vz_max)
         td.do() # Will do initial touchdown at center of plane to (1) find the plane (2) make touchdown voltage near center of piezo's positive voltage range
 
@@ -51,17 +61,17 @@ class Planefit():
         if check_td == 'quit':
             raise Exception('Terminated by user')
 
-        self.piezos.check_lim({'x':self.X, 'y':self.Y}) # make sure we won't scan outside X, Y piezo ranges!
-
         ## Loop over points sampled from plane.
-
         counter = 0
         for i in range(self.X.shape[0]):
             for j in range(self.X.shape[1]):
                 counter = counter + 1
+                display.clear_output(wait=True)
 
                 ## Go to location of next touchdown
+                print('Moving to next location...')
                 self.piezos.V = {'x':self.X[i,j], 'y':self.Y[i,j], 'z': -self.Vz_max}
+                print('...done.')
 
                 td = touchdown.Touchdown(self.instruments, self.cap_input, Vz_max = self.Vz_max, planescan=True) # new touchdown at this point
                 td.title = '(%i, %i). TD# %i' %(i,j, counter)

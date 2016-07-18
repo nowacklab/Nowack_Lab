@@ -1,7 +1,7 @@
 class Dummy():
     '''
     Make a dummy object with Dummy(Class). You can replace any object of class Class with a Dummy object, and then any functions or variables in that class will do absolutely nothing.
-    This is useful, for example, if you want to run a procedure without actually using any instruments. 
+    This is useful, for example, if you want to run a procedure without actually using any instruments.
     Expected uses: debugging or replotting data.
     '''
     def __init__(self, Class):
@@ -26,5 +26,8 @@ class Dummy():
         '''
         Overwrites __getattr__ so that when a method is called, it instead uses the "dumb" function which just returns Nones.
         '''
-        self.num_returns = getattr(self.Class, attr).__code__.co_stacksize
+        try:
+            self.num_returns = getattr(self.Class, attr).__code__.co_stacksize
+        except:
+            return None
         return self.dumb

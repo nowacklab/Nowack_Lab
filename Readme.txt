@@ -1,4 +1,4 @@
-Nowack Lab Code Package
+﻿Nowack Lab Code Package
 Brian Schaefer
 David Low
 Guen Prawiroatmodjo
@@ -18,4 +18,4 @@ or just "from Nowack_Lab.Procedures import *" to import everything in "Procedure
 %%%%%%%%%%
 custom.css
 %%%%%%%%%%
-To add a bottom border, find your custom.css file (…/site-packages/static/notebook/custom/ or thereabouts) and replace it with this one. This will add some padding so you can scroll down a bit more and watch plots as they come in.
+To add a bottom border, find your custom.css file (…/site-packages/notebook/static/custom/ or thereabouts) and replace it with this one. This will add some padding so you can scroll down a bit more and watch plots as they come in.
