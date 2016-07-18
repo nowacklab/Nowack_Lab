@@ -1,7 +1,7 @@
 import numpy
 from numpy.linalg import lstsq
 from . import touchdown, navigation
-import time, os
+import time, os, glob
 import matplotlib.pyplot as plt
 from ..Utilities import dummy
 from ..Instruments import piezos, montana
@@ -82,6 +82,18 @@ class Planefit():
         self.plane(0, 0, True) # calculates plane
         self.save()
 
+    def load_last(self):
+        home = os.path.expanduser("~")
+        data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Planes')
+        newest_plane =  max(glob.iglob(os.path.join(data_folder,'*.[ct][sx][vt]')), key=os.path.getctime) # finds the newest plane saved as a csv or txt
+        with open(newest_plane, 'r') as f:
+            for i, line in enumerate(f): # loop through lines
+                if i in (3,4,5): # these lines contain the plane information
+                    exec('self.'+line) # e.g., self.c = 97.43
+                elif i == 6: # don't care about the rest of the file
+                    break
+
+
     def plane(self, x, y, recal=False):
         X = self.X.flatten()
         Y = self.Y.flatten()
@@ -113,7 +125,7 @@ class Planefit():
         data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Planes')
         filename = os.path.join(data_folder, self.filename)
 
-        with open(filename+'.txt', 'w') as f:
+        with open(filename+'.csv', 'w') as f:
             for s in ['span', 'center', 'numpts']:
                 f.write('%s = %f, %f \n' %(s, float(getattr(self, s)[0]),float(getattr(self, s)[1])))
             for s in ['a','b','c']:

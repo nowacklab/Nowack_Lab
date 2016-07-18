@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from IPython import display
 from numpy import ma
 from ..Utilities import dummy, plotting
-from ..Instruments import piezos, nidaq, montana
+from ..Instruments import piezos, nidaq, montana, squidarray
 
 class Scanplane():
     def __init__(self, instruments=None, span=[100,100], center=[0,0], numpts=[50,50], plane=dummy.Dummy(planefit.Planefit), scanheight=5, sig_in=0, cap_in=1, swap=False, sig_in_ac_x=None, sig_in_ac_y=None):

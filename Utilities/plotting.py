@@ -36,7 +36,6 @@ def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='', 
     ax.set_title(title, fontsize=fontsize)
     ax.set_xlabel(xlabel, fontsize=fontsize)
     ax.set_ylabel(ylabel, fontsize=fontsize)
-    aspect(ax, 1) # equal aspect ratio
 
     ## If lists, convert to arrays
     if type(x) == list:
@@ -53,7 +52,6 @@ def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='', 
                 zm,
                 cmap=cmap,
                 interpolation=interpolation,
-                aspect='auto',
                 origin='lower',
                 extent=[x.min(), x.max(), y.min(), y.max()]
             )
@@ -62,6 +60,8 @@ def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='', 
     cb = plt.colorbar(im, ax=ax)
     cb.formatter.set_powerlimits((-2,2)) # only two decimal places!
     cb.set_label(clabel, fontsize=20)
+
+    aspect(ax, 1) # equal aspect ratio
 
     return im
 
@@ -78,6 +78,9 @@ def update2D(im, z, center_at_zero=False):
 
     ## Set the new image
     im.set_array(zm)
+
+    ## Fix aspect ratio
+    aspect(im.axes, 1) # equal aspect ratio
 
     ## Adjust colorbar limits accordingly
     if not center_at_zero:
