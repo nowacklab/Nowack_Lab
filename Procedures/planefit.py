@@ -28,7 +28,7 @@ class Planefit():
             try:
                 self.Vz_max = self.piezos.Vmax['z']
             except:
-                Vz_max = None # Will reach here if dummy piezos are used, unfortunately.
+                self.Vz_max = None # Will reach here if dummy piezos are used, unfortunately.
         else:
             self.Vz_max = Vz_max
 

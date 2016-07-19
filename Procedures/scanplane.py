@@ -10,7 +10,7 @@ from ..Utilities import dummy, plotting
 from ..Instruments import piezos, nidaq, montana, squidarray
 
 class Scanplane():
-    def __init__(self, instruments=None, span=[100,100], center=[0,0], numpts=[50,50], plane=dummy.Dummy(planefit.Planefit), scanheight=5, sig_in=0, cap_in=1, swap=False, sig_in_ac_x=None, sig_in_ac_y=None):
+    def __init__(self, instruments=None, span=[100,100], center=[0,0], numpts=[50,50], plane=dummy.Dummy(planefit.Planefit), scanheight=5, sig_in=0, cap_in=1, sig_in_ac_x=None, sig_in_ac_y=None):
         if instruments:
             self.piezos = instruments['piezos']
             self.daq = instruments['nidaq']
@@ -20,7 +20,7 @@ class Scanplane():
             self.piezos = dummy.Dummy(piezos.Piezos)
             self.daq = dummy.Dummy(nidaq.NIDAQ)
             self.montana = dummy.Dummy(montana.Montana)
-            self.array = dummy.Dummy(squidarray.SquidArray) 
+            self.array = dummy.Dummy(squidarray.SquidArray)
 
         self.sig_in = 'ai%s' %sig_in
         self.daq.add_input(self.sig_in)
@@ -48,25 +48,24 @@ class Scanplane():
         self.x = np.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
         self.y = np.linspace(center[1]-span[1]/2, center[1]+span[1]/2, numpts[1])
 
-        self.X, self.Y = np.meshgrid(self.x, self.y)
+        self.X, self.Y = np.meshgrid(self.x, self.y, indexing='ij') # indexing ij follows matrix indexing convention
         self.Z = self.plane.plane(self.X, self.Y) - self.scanheight
 
-        self.V = np.array([[float('nan')]*self.X.shape[1]]*self.X.shape[0])
-        self.Vac_x = np.array([[float('nan')]*self.X.shape[1]]*self.X.shape[0])
-        self.Vac_y = np.array([[float('nan')]*self.X.shape[1]]*self.X.shape[0])
-
-        self.C = np.array([[float('nan')]*self.X.shape[1]]*self.X.shape[0])
+        self.V = np.full(self.X.shape, np.nan)
+        self.Vac_x = np.full(self.X.shape, np.nan)
+        self.Vac_y = np.full(self.X.shape, np.nan)
+        self.C = np.full(self.X.shape, np.nan)
 
         self.last_full_out = []
         self.last_full_sweep = []
         self.last_interp_out = []
         self.last_interp_sweep = []
 
-        self.swap = swap
-        if swap: # Will rotate scan 90 degrees? Not really tested. Got bugs if false. Keep it true for now. #20160717: just noticed kwarg default is False. Don't touch this for now...
-            self.X = self.X.transpose()
-            self.Y = self.Y.transpose()
-            self.Z = self.Z.transpose()
+        # self.swap = swap
+        # if swap: # Will rotate scan 90 degrees? Not really tested. Got bugs if false. Keep it true for now. #20160717: just noticed kwarg default is False. Don't touch this for now...
+        #     self.X = self.X.transpose()
+        #     self.Y = self.Y.transpose()
+        #     self.Z = self.Z.transpose()
 
         self.filename = time.strftime('%Y%m%d_%H%M%S') + '_scan'
 
@@ -87,47 +86,47 @@ class Scanplane():
 
         ## make sure all points are not out of range of piezos before starting anything
         for i in range(self.X.shape[0]):
-            self.piezos.check_lim({'x':self.X[i][:],
-                                    'y':self.Y[i][:],
-                                    'z':self.Z[i][:]
+            self.piezos.check_lim({'x':self.X[i,:],
+                                    'y':self.Y[i,:],
+                                    'z':self.Z[i,:]
                                     }
                                 )
 
-        ## Loop over X values
-        for i in range(self.X.shape[0]):
+        ## Loop over Y values
+        for i in range(self.X.shape[1]):
 
             ## Explicitly go to first point of scan
-            self.piezos.V = {'x': self.X[i][0],
-                            'y': self.Y[i][0],
-                            'z': self.Z[i][0]
+            self.piezos.V = {'x': self.X[0,i],
+                            'y': self.Y[0,i],
+                            'z': self.Z[0,i]
                             }
             self.array.reset()
             time.sleep(3)
 
             ## Do the sweep
-            Vstart = {'x': self.X[i][0], 'y': self.Y[i][0], 'z': self.Z[i][0]}
-            Vend = {'x': self.X[i][-1], 'y': self.Y[i][-1], 'z': self.Z[i][-1]}
-            out, V, t = self.piezos.sweep(Vstart, Vend, freq=1500) # sweep over Y
+            Vstart = {'x': self.X[0,i], 'y': self.Y[0,i], 'z': self.Z[0,i]}
+            Vend = {'x': self.X[-1,i], 'y': self.Y[-1,i], 'z': self.Z[-1,i]}
+            out, V, t = self.piezos.sweep(Vstart, Vend) # sweep over X
 
             ## Interpolate to the number of lines
             interp_func = interp(out['x'], V[self.sig_in])
-            self.V[i][:] = interp_func(self.X[i][:]) # changes from actual output data to give desired number of points
+            self.V[:,i] = interp_func(self.X[:,i]) # changes from actual output data to give desired number of points
 
             interp_func = interp(out['x'], V[self.sig_in_ac_x])
-            self.Vac_x[i][:] = interp_func(self.X[i][:])
+            self.Vac_x[:,i] = interp_func(self.X[:,i])
 
             interp_func = interp(out['x'], V[self.sig_in_ac_y])
-            self.Vac_y[i][:] = interp_func(self.X[i][:])
+            self.Vac_y[:,i] = interp_func(self.X[:,i])
 
             interp_func = interp(out['x'], V[self.cap_in])
-            self.C[i][:] = interp_func(self.X[i][:])
+            self.C[:,i] = interp_func(self.X[:,i])
 
             self.last_full_out = out['x']
             self.last_full_sweep = V[self.sig_in]
             self.save_line(i, Vstart)
 
-            self.last_interp_out = self.X[i][:]
-            self.last_interp_sweep = self.V[i][:]
+            self.last_interp_out = self.X[:,i]
+            self.last_interp_sweep = self.V[:,i]
 
             self.plot()
 
@@ -246,7 +245,6 @@ class Scanplane():
             for s in ['a','b','c']:
                 f.write('plane.%s = %f\n' %(s, float(getattr(self.plane, s))))
             f.write('scanheight = %f\n' %self.scanheight)
-            f.write('swap = %i\n' %self.swap)
             f.write('Montana info: \n'+self.montana.log()+'\n')
             f.write('starting temperature: %f' %self.temp_start)
 

@@ -37,8 +37,8 @@ class Mod2D():
     def calc_ramp(self):
         self.numpts = int(self.Imodspan/self.Imodstep)
         self.Imod = np.linspace(-self.Imodspan/2, self.Imodspan/2, self.numpts) # Squid current
-        self.V = np.array([[float('nan')]*self.IV.numpts]*self.numpts) # num points in IV by num points in mod sweep
-
+        self.V = np.full((self.numpts, self.IVnumpts), np.nan)
+        
     def do(self):
         self.calc_ramp() #easy way to clear self.V
         self.IV.V = self.IV.V*0
