@@ -1,15 +1,21 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-def aspect(ax, ratio):
+def aspect(ax, ratio, absolute=True):
     '''
-    Sets an absolute aspect ratio for the given axes using the axis limits.
+    Sets an absolute (or relative) aspect ratio for the given axes using the axis limits.
+    Absolute will make the box aspect ratio equal to the one given, regardless of axis limits.
+    Relative will set the aspect ratio based on the data scales.
     '''
     xvals,yvals = ax.get_xlim(), ax.get_ylim()
 
     xrange = xvals[1]-xvals[0]
     yrange = yvals[1]-yvals[0]
-    ax.set_aspect(ratio*(xrange/yrange), adjustable='box')
+
+    if absolute:
+        ax.set_aspect(ratio*(xrange/yrange), adjustable='box')
+    else:
+        ax.set_aspect(ratio, adjustable='box')
 
 
 def clim(im, l, u):
@@ -61,7 +67,7 @@ def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='', 
     cb.formatter.set_powerlimits((-2,2)) # only two decimal places!
     cb.set_label(clabel, fontsize=20)
 
-    aspect(ax, 1) # equal aspect ratio
+    aspect(ax, 1, absolute=False) # equal aspect ratio based on data scales
 
     return im
 

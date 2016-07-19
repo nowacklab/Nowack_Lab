@@ -48,14 +48,13 @@ class Scanplane():
         self.x = np.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
         self.y = np.linspace(center[1]-span[1]/2, center[1]+span[1]/2, numpts[1])
 
-        self.X, self.Y = np.meshgrid(self.x, self.y)
+        self.X, self.Y = np.meshgrid(self.x, self.y, indexing='ij') # indexing ij follows matrix indexing convention
         self.Z = self.plane.plane(self.X, self.Y) - self.scanheight
 
-        self.V = np.array([[float('nan')]*self.X.shape[1]]*self.X.shape[0])
-        self.Vac_x = np.array([[float('nan')]*self.X.shape[1]]*self.X.shape[0])
-        self.Vac_y = np.array([[float('nan')]*self.X.shape[1]]*self.X.shape[0])
-
-        self.C = np.array([[float('nan')]*self.X.shape[1]]*self.X.shape[0])
+        self.V = np.full(self.X.shape, np.nan)
+        self.Vac_x = np.full(self.X.shape, np.nan)
+        self.Vac_y = np.full(self.X.shape, np.nan)
+        self.C = np.full(self.X.shape, np.nan)
 
         self.last_full_out = []
         self.last_full_sweep = []
