@@ -316,7 +316,7 @@ class PFL102:
         '''
         Save current values of all squid array parameters to a file, so that when we make a new array object, values are initialized correctly.
         '''
-        data = jsonpickle.encode(self, unpicklable=False, max_depth=1)
+        data = jsonpickle.encode(self, unpicklable=False, max_depth=2)
         data_dict = json.loads(data)
 
         with open(self.param_filename, 'w') as f:

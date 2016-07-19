@@ -109,23 +109,23 @@ class Scanplane():
             out, V, t = self.piezos.sweep(Vstart, Vend) # sweep over Y
 
             ## Interpolate to the number of lines
-            interp_func = interp(out['x'], V[self.sig_in])
-            self.V[i][:] = interp_func(self.X[i][:]) # changes from actual output data to give desired number of points
+            interp_func = interp(out['y'], V[self.sig_in])
+            self.V[i][:] = interp_func(self.Y[i][:]) # changes from actual output data to give desired number of points
 
-            interp_func = interp(out['x'], V[self.sig_in_ac_x])
-            self.Vac_x[i][:] = interp_func(self.X[i][:])
+            interp_func = interp(out['y'], V[self.sig_in_ac_x])
+            self.Vac_x[i][:] = interp_func(self.Y[i][:])
 
-            interp_func = interp(out['x'], V[self.sig_in_ac_y])
-            self.Vac_y[i][:] = interp_func(self.X[i][:])
+            interp_func = interp(out['y'], V[self.sig_in_ac_y])
+            self.Vac_y[i][:] = interp_func(self.Y[i][:])
 
-            interp_func = interp(out['x'], V[self.cap_in])
-            self.C[i][:] = interp_func(self.X[i][:])
+            interp_func = interp(out['y'], V[self.cap_in])
+            self.C[i][:] = interp_func(self.Y[i][:])
 
-            self.last_full_out = out['x']
+            self.last_full_out = out['y']
             self.last_full_sweep = V[self.sig_in]
             self.save_line(i, Vstart)
 
-            self.last_interp_out = self.X[i][:]
+            self.last_interp_out = self.Y[i][:]
             self.last_interp_sweep = self.V[i][:]
 
             self.plot()
