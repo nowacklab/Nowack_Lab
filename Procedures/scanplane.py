@@ -20,7 +20,7 @@ class Scanplane():
             self.piezos = dummy.Dummy(piezos.Piezos)
             self.daq = dummy.Dummy(nidaq.NIDAQ)
             self.montana = dummy.Dummy(montana.Montana)
-            self.array = dummy.Dummy(squidarray.SquidArray)
+            self.array = dummy.Dummy(squidarray.SquidArray) 
 
         self.sig_in = 'ai%s' %sig_in
         self.daq.add_input(self.sig_in)
@@ -107,7 +107,7 @@ class Scanplane():
             ## Do the sweep
             Vstart = {'x': self.X[i][0], 'y': self.Y[i][0], 'z': self.Z[i][0]}
             Vend = {'x': self.X[i][-1], 'y': self.Y[i][-1], 'z': self.Z[i][-1]}
-            out, V, t = self.piezos.sweep(Vstart, Vend) # sweep over Y
+            out, V, t = self.piezos.sweep(Vstart, Vend, freq=1500) # sweep over Y
 
             ## Interpolate to the number of lines
             interp_func = interp(out['x'], V[self.sig_in])

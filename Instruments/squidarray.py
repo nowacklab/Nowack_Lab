@@ -38,6 +38,7 @@ class PCI100:
         Close PCI connection
         '''
         self.instrument.close()
+        del(self.instrument) # do this for JSON
 
 class PFL102:
     FeedbackResistors = {'1kOhm': 0x0002, '10kOhm': 0x0004, '100kOhm': 0x0000}
@@ -79,11 +80,11 @@ class PFL102:
             self._testSignal = 'Auto'
             self._testInput = 'A_flux'
 
-            self.unlock() # make sure nothing is trying to lock
+            self.unlock() # make sure nothing is trying to lock and update digital control
 
         else:
             self.load()
-
+        self.updateAll()
         self.updateDigitalControl()
 
     ######### PROPERTY DEFINITIONS ###################
@@ -279,7 +280,9 @@ class PFL102:
         '''
         with open(self.param_filename, 'r') as f:
             data = json.load(f)
-        for key, value in data.items():
+        datastr = json.dumps(data)
+        datadict = jsonpickle.decode(datastr)
+        for key, value in datadict.items():
             if key[0] == '_':
                 setattr(self, key, value)
         # with open(self.param_filename, 'r') as f:
@@ -316,7 +319,7 @@ class PFL102:
         '''
         Save current values of all squid array parameters to a file, so that when we make a new array object, values are initialized correctly.
         '''
-        data = jsonpickle.encode(self, unpicklable=False, max_depth=1)
+        data = jsonpickle.encode(self, unpicklable=False, max_depth=2) # max depth 2 needed or else strings saved as "'string'" and cannot be decoded
         data_dict = json.loads(data)
 
         with open(self.param_filename, 'w') as f:
@@ -432,9 +435,98 @@ class SquidArray(PFL102):
     def __init__(self, load=False):
         super().__init__(1, PCI100(), load=load)
 
-    def tune_and_lock(self):
-        """ Walks you through tuning and locking array/squid """
-        pass
+    def tune(self):
+        '''
+        Walks you through tuning and locking array/squid
+        '''
+        input("Turn test signal on. Ramp, 3.5 Vpp, 100 Hz. Press enter to continue.")
+        self.testSignal = 'Auto'
+        self.testInput = 'A_flux'
+
+        ## Array bias
+        while True:
+            inp = input('ARRAY BIAS\nEnter the desired array bias (uA) and press enter.\nIf the bias point looks fine, press enter.')
+            if inp == '':
+                break
+            self.A_bias = float(inp)
+
+        ## Offset
+        while True:
+            inp = input('OFFSET\nEnter the desired offset (mV) and press enter.\nIf offset looks good, press enter.')
+            if inp =='':
+                break
+            self.offset = float(inp)
+
+        ## Squid bias
+        while True:
+            inp = input('SQUID BIAS\nEnter the desired SQUID bias (uA) and press enter. If SQUID bias looks alright, press enter.')
+            if inp == '':
+                break
+            self.S_bias = float(inp)
+
+        ## Lock the array
+        inp = input('About to lock the array. Okay to proceed? (q to quit)')
+        if inp =='q':
+            raise Exception('Quit by user')
+        self.lock('array')
+
+        ## Confirm array locked
+        while True:
+            inp = input('Array should be locked? Enter to proceed, reset to reset feedback, q to quit.')
+            if inp =='q':
+                raise Exception('Quit by user')
+            elif inp == 'reset':
+                self.reset()
+            else:
+                break
+
+        ## SQUID bias
+        input('Increase amplitude of test signal to max.')
+        self.testInput = 'S_flux'
+        while True:
+            inp = input('SQUID BIAS AGAIN\nEnter the desired squid bias (uA) and press enter.\nIf the bias point looks fine, press enter.')
+            if inp == '':
+                break
+            self.S_bias = float(inp)
+
+        ## Array flux
+        while True:
+            inp = input('ARRAY FLUX\nEnter the desired array flux (uA) and press enter.\n"reset" to reset.\nIf the bias point looks fine, press enter.')
+            if inp == '':
+                break
+            elif inp == 'reset':
+                self.reset()
+            else:
+                self.A_flux = float(inp)
+
+        ## Lock the squid
+        inp = input('About to lock the SQUID. Okay to proceed? (q to quit)')
+        if inp =='q':
+            raise Exception('Quit by user')
+        self.lock('squid')
+
+        ## Confirm array locked
+        while True:
+            inp = input('SQUID should be locked? Enter to proceed, reset to reset feedback, q to quit.')
+            if inp =='q':
+                raise Exception('Quit by user')
+            elif inp == 'reset':
+                self.reset()
+            else:
+                break
+
+        ## Squid flux
+        while True:
+            inp = input('SQUID FLUX\nEnter the desired SQUID flux (uA) and press enter.\n"reset" to reset.\nIf the bias point looks fine, press enter.')
+            if inp == '':
+                break
+            elif inp == 'reset':
+                self.reset()
+            else:
+                self.S_flux = float(inp)
+
+        print('...and we\'re all tuned up!')
+
 
     def zero(self):
         self.unlock()
