@@ -11,7 +11,7 @@ Explanation of Utilities:
 %%%%%%%%%%
 github.pth
 %%%%%%%%%%
-To allow Anaconda to import modules, create a github.pth file with the github directory (e.g. C:\Users\Hemlock\Documents\GitHub) as contents in the Anaconda site-packages directory.
+To allow Anaconda to import modules, create a github.pth file with the github directory (e.g. C:\Users\Hemlock\Documents\GitHub) as contents in the Anaconda site-packages directory (C:\Anaconda3\Lib\site-packages\).
 Then you can import like: from "Nowack_Lab.Procedures import touchdown"
 or just "from Nowack_Lab.Procedures import *" to import everything in "Procedures"
 
