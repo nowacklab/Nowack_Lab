@@ -46,7 +46,8 @@ class SR830():
     @property
     def sensitivity(self):
         '''Get the lockin sensitivity'''
-        return self.sensitivity_options[int(self.ask('SENS?'))]
+        self._sensitivity = self.sensitivity_options[int(self.ask('SENS?'))]
+        return self._sensitivity
 
     @sensitivity.setter
     def sensitivity(self, value):
@@ -61,7 +62,8 @@ class SR830():
     @property
     def amplitude(self):
         '''Get the output amplitude'''
-        return float(self.ask('SLVL?'))
+        self._amplitude = float(self.ask('SLVL?'))
+        return self._amplitude
 
     @amplitude.setter
     def amplitude(self, value):
@@ -74,7 +76,8 @@ class SR830():
 
     @property
     def frequency(self):
-        return float(self.ask('FREQ?'))
+        self._frequency = float(self.ask('FREQ?'))
+        return self._frequency
 
     @frequency.setter
     def frequency(self, value):
@@ -99,9 +102,9 @@ class SR830():
     @property
     def time_constant(self):
         options = {self.time_constant_options[key]: key for key in self.time_constant_options.keys()}
-
+        self._time_constant = self.time_constant_values[int(self.ask('OFLT?'))]
         #return options[int(self.ask('OFLT?'))]
-        return self.time_constant_values[int(self.ask('OFLT?'))]
+        return self._time_constant
 
     @time_constant.setter
     def time_constant(self, value):
@@ -121,7 +124,8 @@ class SR830():
     @property
     def reserve(self):
         i = int(self.ask('RMOD?'))
-        return self.reserve_options[i]
+        self._reserve = self.reserve_options[i]
+        return self._reserve
 
     @reserve.setter
     def reserve(self, value):
