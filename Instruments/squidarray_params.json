@@ -1,19 +1,21 @@
 {
-    "_A_bias": "39",
-    "_A_flux": "108",
-    "_S_bias": "82.2",
-    "_S_flux": "100",
-    "_arrayLocked": "False",
-    "_feedbackResistor": "'10kOhm'",
-    "_integratorCapacitor": "'15nF'",
-    "_offset": "0.2825",
-    "_sensitivity": "'High'",
-    "_squidLocked": "True",
-    "_testInput": "'S_flux'",
-    "_testSignal": "'Auto'",
-    "channel": "1",
-    "label": "'PFL102'",
-    "pci": "<Nowack_Lab.Instruments.squidarray.PCI100 object at 0x000000000D93F9B0>",
-    "pflRegister": "None",
-    "resetIntegrator": "False"
+    "_A_bias": 39,
+    "_A_flux": 108,
+    "_S_bias": 82.2,
+    "_S_flux": 100,
+    "_arrayLocked": false,
+    "_feedbackResistor": "10kOhm",
+    "_integratorCapacitor": "15nF",
+    "_offset": 0.2825,
+    "_sensitivity": "High",
+    "_squidLocked": true,
+    "_testInput": "S_flux",
+    "_testSignal": "Auto",
+    "channel": 1,
+    "label": "PFL102",
+    "pci": {
+        "_visaResource": "'COM3'"
+    },
+    "pflRegister": null,
+    "resetIntegrator": false
 }

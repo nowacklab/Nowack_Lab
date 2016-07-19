@@ -31,8 +31,8 @@ def clim(im, l, u):
 def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='', ylabel='', clabel='', fontsize=12):
     '''
     Plots a 2D heatmap on axes ax using plt.imshow.
-    x and y can either be meshgrids or linear arrays.
-    z must be 2D (obviously).
+    x,y must be a meshgrid with 'ij' indexing. (list functionality to come?)
+    z has to be the same shape.
     Masks Nones and will plot as white.
     Can specify title and axis labels here as well ^.^
     Fontsize kwarg will affect title and all labels
@@ -55,7 +55,7 @@ def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='', 
 
     ## Create the image
     im = ax.imshow(
-                zm,
+                zm.T, # need to transpose the array if use 'ij' indexing in meshgrid!
                 cmap=cmap,
                 interpolation=interpolation,
                 origin='lower',
@@ -83,10 +83,10 @@ def update2D(im, z, center_at_zero=False):
     zm = np.ma.masked_where(np.isnan(z), z)
 
     ## Set the new image
-    im.set_array(zm)
+    im.set_array(zm.T) # need to transpose the array if use 'ij' indexing in meshgrid!
 
     ## Fix aspect ratio
-    aspect(im.axes, 1) # equal aspect ratio
+    aspect(im.axes, 1, absolute=False) # equal aspect ratio
 
     ## Adjust colorbar limits accordingly
     if not center_at_zero:

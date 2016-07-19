@@ -1,1 +1,1 @@
-__all__ = ['mod2D','navigation','planefit','scanplane','squidIV','touchdown','daqspectrum', 'heightsweep']
+__all__ = ['mod2D','navigation','planefit','scanplane', 'scanline','squidIV','touchdown','daqspectrum', 'heightsweep']

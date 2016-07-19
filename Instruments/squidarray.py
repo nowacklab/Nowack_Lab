@@ -38,6 +38,7 @@ class PCI100:
         Close PCI connection
         '''
         self.instrument.close()
+        del(self.instrument)
 
 class PFL102:
     FeedbackResistors = {'1kOhm': 0x0002, '10kOhm': 0x0004, '100kOhm': 0x0000}

@@ -11,7 +11,7 @@ class SR830():
         self.gpib_address = gpib_address
         self.ch1_daq_input = None
         self.ch2_daq_input = None
-        
+
         self.time_constant_options = {
                 "10 us": 0,
                 "30 us": 1,
@@ -41,8 +41,8 @@ class SR830():
         200e-6, 500e-6, 1e-3, 2e-3, 5e-3, 10e-3, 20e-3,
         50e-3, 100e-3, 200e-3, 500e-3, 1]
         self.reserve_options = ['High Reserve', 'Normal', 'Low Noise']
-    
-    
+
+
     @property
     def sensitivity(self):
         '''Get the lockin sensitivity'''
@@ -55,14 +55,14 @@ class SR830():
             value = 1
         index = abs(numpy.array([v - value  if (v - value)>=0 else -100000 for v in self.sensitivity_options])).argmin() #finds sensitivity just above input
         good_value = self.sensitivity_options[index]
-        
+
         self.write('SENS%d' %self.sensitivity_options.index(good_value))
 
     @property
     def amplitude(self):
         '''Get the output amplitude'''
         return float(self.ask('SLVL?'))
-    
+
     @amplitude.setter
     def amplitude(self, value):
         '''Set the amplitude.'''
@@ -71,7 +71,7 @@ class SR830():
         if value > 5:
             value = 5
         self.write('SLVL %s' %value)
-    
+
     @property
     def frequency(self):
         return float(self.ask('FREQ?'))
@@ -102,7 +102,7 @@ class SR830():
 
         #return options[int(self.ask('OFLT?'))]
         return self.time_constant_values[int(self.ask('OFLT?'))]
-        
+
     @time_constant.setter
     def time_constant(self, value):
         if type(value) is str:
@@ -117,40 +117,40 @@ class SR830():
             good_value = self.time_constant_values[index]
 
         self.write('OFLT %s' %index)
-    
+
     @property
     def reserve(self):
         i = int(self.ask('RMOD?'))
         return self.reserve_options[i]
-     
+
     @reserve.setter
     def reserve(self, value):
         i = self.reserve_options.index(value)
         self.write('RMOD%i' %i)
-        
+
     def ask(self, cmd):
         self.init_visa()
         out = self._visa_handle.ask(cmd)
         self.close()
         return out
-    
+
     def ac_coupling(self):
         self.write('ICPL0')
-    
+
     def auto_gain(self):
         self.write('AGAN')
 
     def auto_phase(self):
         self.write('APHS')
-        
+
     def dc_coupling(self):
         self.write('ICPL1')
-        
+
     def init_visa(self):
         self._visa_handle = visa.ResourceManager().open_resource(self.gpib_address)
         self._visa_handle.read_termination = '\n'
         self._visa_handle.write('OUTX 1') #1=GPIB
-    
+
     def get_all(self):
         table = []
         for name in ['sensitivity', 'amplitude', 'frequency', 'time_constant']:
@@ -160,9 +160,9 @@ class SR830():
         table.append(['X', snapped[0]])
         table.append(['Y', snapped[1]])
         table.append(['R', snapped[2]])
-        table.append(['theta', snapped[3]])        
+        table.append(['theta', snapped[3]])
         return tabulate(table, headers = ['Parameter', 'Value'])
-    
+
     def set_out(self, chan, param):
         """ set output on channel [1,2] to parameter [Ch1:['R','X'],Ch2:['Y','theta']]"""
         if chan == 1:
@@ -173,28 +173,29 @@ class SR830():
                 raise Exception('Cannot display %s on Channel 1!!' %param)
         else:
             raise Exception('Channel only 1 or 2!')
-        
+
         if param in ('X', 'Y'):
             self.write('DDEF%i,0,0' %chan)
             self.write('FPOP%i,0' %chan)
         else:
             self.write('DDEF%i,1,0' %chan)
             self.write('FPOP%i,0' %chan)
-            
+
     def convert_output(self, value):
         if not numpy.isscalar(value):
             value = numpy.array(value)
             return list(value/10*self.sensitivity) # will give actual output in volts, since output is scaled to 10 V == sensitivity
         return value/10*self.sensitivity
-            
+
     def close(self):
         self._visa_handle.close()
-        
+        del(self._visa_handle)
+
     def write(self, cmd):
         self.init_visa()
         self._visa_handle.write(cmd)
         self.close()
-        
+
 if __name__ == '__main__':
     lockin = SR830('GPIB::09::INSTR')
     #print(lockin.time_constant)
@@ -203,5 +204,5 @@ if __name__ == '__main__':
     #print(lockin.time_constant)
 
     #lockin.auto_gain()
-    
+
     # lockin.auto_phase() # test this
