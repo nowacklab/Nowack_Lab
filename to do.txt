@@ -1,6 +1,8 @@
-Allow for voltage ranges on individual daq channels
+﻿Allow for voltage ranges on individual daq channels
+Implement namedtuple for piezos?
 
 Fix preamp timeout error
+Fix attocube communication error
 
 Allow for instruments = None to make an object with the same plotting, data saving/loading capabilities but without having to use the same instruments in two places
 
