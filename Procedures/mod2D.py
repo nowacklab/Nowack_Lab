@@ -15,7 +15,7 @@ class Mod2D():
         To make an empty object, then just call Mod2D(). You can do this if you want to plot previously collected data.
         '''
 
-        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_mod2D'
+        self.filename = ''
         self.notes = ''
 
         self.IV = squidIV.SquidIV(instruments, squidout, squidin, modout, rate=rate)
@@ -38,8 +38,10 @@ class Mod2D():
         self.numpts = int(self.Imodspan/self.Imodstep)
         self.Imod = np.linspace(-self.Imodspan/2, self.Imodspan/2, self.numpts) # Squid current
         self.V = np.full((self.numpts, self.IVnumpts), np.nan)
-        
+
     def do(self):
+        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_mod2D'
+
         self.calc_ramp() #easy way to clear self.V
         self.IV.V = self.IV.V*0
 

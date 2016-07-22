@@ -19,41 +19,42 @@ class DaqSpectrum():
             self.pa = dummy.Dummy(preamp.SR5113)
 
 
-        
+
         for arg in ['input_chan', 'measure_time','measure_freq','averages']:
             setattr(self, arg, eval(arg))
-        
+
         home = os.path.expanduser("~")
         self.path = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'spectra')
 
         self.notes = ''
-        self.time = time.strftime('%Y-%m-%d_%H%M%S')
-        time.sleep(1) # avoids subsequent filenames from being the same; i.e. if you make a few spectrum objects
-               
+        self.time = 'TIME NOT SET YET' # If we see this, we need to think about timestamp more
+
     def do(self):
-    
+
+        self.time = time.strftime('%Y-%m-%d_%H%M%S')
+
         self.setup_preamp()
-    
+
         Nfft = int((self.measure_freq*self.measure_time / 2) + 1)
         psdAve = np.zeros(Nfft)
-        
+
         for i in range(self.averages):
             self.V, self.t = self.daq.monitor('ai%i' %self.input_chan, self.measure_time, self.measure_freq)
             self.V = self.V['ai%i' %self.input_chan] #extract data from the required channel
             self.f, psd = signal.periodogram(self.V, self.measure_freq, 'blackmanharris')
-            psdAve = psdAve + psd 
-        
+            psdAve = psdAve + psd
+
         psdAve = psdAve / self.averages # normalize by the number of averages
         self.psdAve = np.sqrt(psdAve) # spectrum in V/sqrt(Hz)
-        
+
         self.notes = input('Notes for this spectrum: ')
-                
+
         self.setup_plots()
         self.plot_loglog()
         self.plot_semilog()
-            
+
         self.save()
-        
+
     def load(self, filename):
         self.f, self.psdAve = np.loadtxt(filename, delimiter = ',')
         #define a regular expression that looks like a date and time
@@ -61,30 +62,31 @@ class DaqSpectrum():
         re.compile(timeStamp)
         reMatch = re.search(timeStamp, filename)
         self.time = reMatch.group()
-        
+
     def plot_loglog(self, calibration=None):
         self.ax_loglog.loglog(self.f, self.psdAve)
-            
-    def plot_semilog(self):           
+
+    def plot_semilog(self):
         self.ax_semilog.semilogy(self.f, self.psdAve)
 
     def save(self):
+
         traceName = self.path + self.time + '_trace.csv'
         fftName = self.path + self.time + '_fft.csv'
 
         np.savetxt(fftName, (self.f, self.psdAve), delimiter=',')
         np.savetxt(traceName, (self.t, self.V), delimiter=',')
-        
+
         self.fig_loglog.savefig(self.path+self.time+'_loglog.pdf')
         self.fig_semilog.savefig(self.path+self.time+'_semilog.pdf')
-      
+
     def setup_plots(self):
         self.fig_loglog = plt.figure(figsize=(6,6))
         self.ax_loglog = self.fig_loglog.add_subplot(111)
-        
+
         self.fig_semilog = plt.figure(figsize=(6,6))
         self.ax_semilog = self.fig_semilog.add_subplot(111)
-        
+
         for ax in (self.ax_loglog, self.ax_semilog):
             ax.set_xlabel('Frequency (Hz)')
             ax.set_ylabel(r'Power Spectral Density ($\mathrm{V/\sqrt{Hz}}$)')

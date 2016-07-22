@@ -40,7 +40,7 @@ class Scanline():
                 raise Exception('Terminated by user')
         self.scanheight = scanheight
 
-        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_line'
+        self.filename = ''
 
         home = os.path.expanduser("~")
         self.path = os.path.join(home,
@@ -52,6 +52,7 @@ class Scanline():
 
     def do(self):
         ## Start time and temperature
+        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_line'
         tstart = time.time()
         self.temp_start = self.montana.temperature['platform']
 

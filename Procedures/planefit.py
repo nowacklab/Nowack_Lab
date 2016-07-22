@@ -44,10 +44,11 @@ class Planefit():
         self.b = None
         self.c = None
 
-        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_plane'
-
+        self.filename=''
 
     def do(self):
+        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_plane'
+        
         self.piezos.check_lim({'x':self.X, 'y':self.Y}) # make sure we won't scan outside X, Y piezo ranges!
 
         ## Initial touchdown

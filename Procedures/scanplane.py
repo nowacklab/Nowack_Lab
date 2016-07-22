@@ -67,7 +67,7 @@ class Scanplane():
         #     self.Y = self.Y.transpose()
         #     self.Z = self.Z.transpose()
 
-        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_scan'
+        self.filename = ''
 
         home = os.path.expanduser("~")
         self.path = os.path.join(home,
@@ -81,6 +81,7 @@ class Scanplane():
         self.setup_plots()
 
         ## Start time and temperature
+        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_scan'
         tstart = time.time()
         self.temp_start = self.montana.temperature['platform']
 
