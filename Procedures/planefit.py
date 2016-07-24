@@ -83,17 +83,6 @@ class Planefit():
         self.plane(0, 0, True) # calculates plane
         self.save()
 
-    def load_last(self):
-        home = os.path.expanduser("~")
-        data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Planes')
-        newest_plane =  max(glob.iglob(os.path.join(data_folder,'*.[ct][sx][vt]')), key=os.path.getctime) # finds the newest plane saved as a csv or txt
-        with open(newest_plane, 'r') as f:
-            for i, line in enumerate(f): # loop through lines
-                if i in (3,4,5): # these lines contain the plane information
-                    exec('self.'+line) # e.g., self.c = 97.43
-                elif i == 6: # don't care about the rest of the file
-                    break
-
 
     def plane(self, x, y, recal=False):
         X = self.X.flatten()
@@ -151,6 +140,22 @@ class Planefit():
                 if z_maxormin > self.piezos.Vmax['z'] or z_maxormin < 0:
                     self.c = old_c
                     raise Exception('Plane now extends outside range of piezos! Move the attocubes and try again.')
+
+
+def load_last():
+    plane = Planefit(None)
+
+    home = os.path.expanduser("~")
+    data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Planes')
+    newest_plane =  max(glob.iglob(os.path.join(data_folder,'*.[ct][sx][vt]')), key=os.path.getctime) # finds the newest plane saved as a csv or txt
+    with open(newest_plane, 'r') as f:
+        for i, line in enumerate(f): # loop through lines
+            if i in (3,4,5): # these lines contain the plane information
+                exec('plane.'+line) # e.g., plane.c = 97.43
+            elif i == 6: # don't care about the rest of the file
+                break
+
+    return plane
 
 if __name__ == '__main__':
     """ just testing fitting algorithm """

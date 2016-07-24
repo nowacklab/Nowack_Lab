@@ -1,8 +1,13 @@
-﻿Allow for voltage ranges on individual daq channels
 Implement namedtuple for piezos?
 
+Fix attocube communication bug - delete object?
+
+function in piezo that moves easily to point on a plane
+save notebooks automatically to pdf
+
+Allow for voltage ranges on individual daq channels
+
 Fix preamp timeout error
-Fix attocube communication error
 
 Allow for instruments = None to make an object with the same plotting, data saving/loading capabilities but without having to use the same instruments in two places
 
@@ -36,7 +41,7 @@ In preamp driver (and others), only set values if they change
 test daq sweep accel - kind of pointless right now, need to fix.
 
 reset squid before each scan
- - auto reset? use subprocess? 
+ - auto reset? use subprocess?
 	open = subprocess.Popen([‘python’, ‘somefile.py’]) #starts background process
 	popen.kill() # when done
 
@@ -45,25 +50,24 @@ initialize squidarray object without zeroing PFL - impossible? No way of reading
 walkthrough function tune and lock squid/array
 
 Array class that deals with pci, pfl.
-	
+
 -Auto tune function would be cool
 
 
 Scanning procedure:
-	
+
 add squid relock
-	
+
 Figure out rates
-	
+
 Look at sweep rate as a function of number of points
-	
+
 Fine over one direction, coarse over other
 
 	Change scan direction (arbitrary scan angle???)
-		
-Need to try swap as-is and go from there. 
-		
-Would be good to get x/y straight when swapped vs not
-		
-Also would be good to “un-rotate” a scan to see which direction need to move with attocubes
 
+Need to try swap as-is and go from there.
+
+Would be good to get x/y straight when swapped vs not
+
+Also would be good to “un-rotate” a scan to see which direction need to move with attocubes

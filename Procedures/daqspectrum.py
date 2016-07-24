@@ -32,7 +32,6 @@ class DaqSpectrum():
     def do(self):
 
         self.time = time.strftime('%Y-%m-%d_%H%M%S')
-
         self.setup_preamp()
 
         Nfft = int((self.measure_freq*self.measure_time / 2) + 1)
@@ -70,15 +69,14 @@ class DaqSpectrum():
         self.ax_semilog.semilogy(self.f, self.psdAve)
 
     def save(self):
-
-        traceName = self.path + self.time + '_trace.csv'
-        fftName = self.path + self.time + '_fft.csv'
+        traceName = os.path.join(self.path, self.time, '_trace.csv')
+        fftName = os.path.join(self.path + self.time + '_fft.csv')
 
         np.savetxt(fftName, (self.f, self.psdAve), delimiter=',')
         np.savetxt(traceName, (self.t, self.V), delimiter=',')
 
-        self.fig_loglog.savefig(self.path+self.time+'_loglog.pdf')
-        self.fig_semilog.savefig(self.path+self.time+'_semilog.pdf')
+        self.fig_loglog.savefig(os.path.join(self.path,self.time,'_loglog.pdf'))
+        self.fig_semilog.savefig(os.path.join(self.path,self.time,'_semilog.pdf'))
 
     def setup_plots(self):
         self.fig_loglog = plt.figure(figsize=(6,6))
