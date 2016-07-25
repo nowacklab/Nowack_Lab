@@ -11,7 +11,7 @@ class Touchdown():
     def __init__(self, instruments=None, cap_input=None, planescan=False, Vz_max = None):
         self.touchdown = False
         self.V_to_C = 2530e3 # 2530 pF/V * (1e3 fF/pF), calibrated 20160423 by BTS, see ipython notebook
-        self.attosteps = 100 #number of attocube steps between sweeps
+        self.attosteps = 200 #number of attocube steps between sweeps
         self.numfit = 10       # number of points to fit line to while collecting data
         self.numextra = 3
 
