@@ -11,4 +11,4 @@ class Goto():
             self.atto = instruments['atto']
         else:
             self.piezos = dummy.Dummy(piezos.Piezos)
-            self.atto = dummy.Dummy(attocube.Attocube)    
+            self.atto = dummy.Dummy(attocube.Attocube)

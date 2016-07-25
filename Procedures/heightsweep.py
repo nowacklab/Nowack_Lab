@@ -23,9 +23,10 @@ class Heightsweep():
         self.acy_in = 'ai%s' %acy_in
         self.dc_in = 'ai%s' %dc_in
 
-        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_heightsweep'
+        self.filename = ''
 
     def do(self):
+        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_heightsweep'
         self.temp_start = self.montana.temperature['platform']
 
         Vstart = {'z': self.plane.plane(self.x, self.y)}
@@ -66,17 +67,17 @@ class Heightsweep():
 
         self.ax_dc = self.fig.add_subplot(311)
         self.ax_dc.set_xlabel(r'$V_z^{samp} - V_z (V)$')
-        self.ax_dc.set_title('DC Magnetometry (V)')
+        self.ax_dc.set_title('%s\nDC Magnetometry (V) at (%f,%f)' %(self.filename, self.x, self.y))
         self.ax_dc.plot(self.z, self.Vdc, '.k', markersize=6, alpha=0.5)
 
         self.ax_ac_x = self.fig.add_subplot(312)
         self.ax_ac_x.set_xlabel(r'$V_z^{samp} - V_z (V)$')
-        self.ax_ac_x.set_title('X component AC Response (V)')
+        self.ax_ac_x.set_title('%s\nX component AC Response (V) at (%f,%f)' %(self.filename, self.x, self.y))
         self.ax_ac_x.plot(self.z, self.Vacx, '.k', markersize=6)
 
         self.ax_ac_y = self.fig.add_subplot(313)
         self.ax_ac_y.set_xlabel(r'$V_z^{samp} - V_z (V)$')
-        self.ax_ac_y.set_title('Y component AC Response (V)')
+        self.ax_ac_y.set_title('%s\nY component AC Response (V) at (%f,%f)' %(self.filename, self.x, self.y))
         self.ax_ac_y.plot(self.z, self.Vacy, '.k', markersize=6)
 
     def save(self):

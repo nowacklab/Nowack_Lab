@@ -32,7 +32,7 @@ class SquidIV():
         self.daq.add_input(self.squidin) # make sure to monitor this channel with the daq
         self.modout = 'ao%s' %modout
 
-        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_IV'
+        self.filename = ''
         self.notes = ''
 
         self.rate = rate # Hz # measurement rate of the daq
@@ -61,6 +61,8 @@ class SquidIV():
         self.Vbias = self.I*self.Rbias # SQUID bias voltage
 
     def do(self):
+        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_IV'
+
         self.param_prompt() # Check parameters
 
         self.do_IV()

@@ -54,9 +54,7 @@ class Touchdown():
 
         self.title = ''
 
-        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_td'
-        if self.planescan:
-            self.filename = self.filename + '_planescan'
+        self.filename = ''
 
     def check_balance(self):
         V_unbalanced = 2e-6 # We can balance better than 2 uV
@@ -70,6 +68,10 @@ class Touchdown():
                 raise Exception('quit by user')
 
     def do(self):
+        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_td'
+        if self.planescan:
+            self.filename = self.filename + '_planescan'
+
         V_td = None
         attosteps = self.attosteps # This is how many steps the attocubes will move if no touchdown detected.
         if self.planescan:
