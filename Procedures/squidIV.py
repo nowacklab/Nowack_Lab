@@ -73,10 +73,11 @@ class SquidIV():
         self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
 
         self.notes = input('Notes for this IV (r to redo, q to quit): ')
-        if inp == 'r':
+        if self.notes == 'r':
+            self.notes = ''
             display.clear_output()
             self.do()
-        elif inp != 'q':
+        elif self.notes != 'q':
             self.save()
 
     def do_IV(self):
@@ -149,7 +150,7 @@ class SquidIV():
         self.fig, self.ax = plt.subplots()
 
 class SquidIV_2Preamps():
-    def __init__(self, instruments=None, squidout=None, squidin=None, modout=None, rate=90):
+    def __init__(self, instruments=None, squidout=None, squidin=None, currentin=None, modout=None, rate=90):
         '''
         Example: SquidIV({'daq': daq, 'preamp': preamp}, 0, 0, None, 90)
         To make an empty object, then just call SquidIV(). You can do this if you want to plot previously collected data.
@@ -169,22 +170,31 @@ class SquidIV_2Preamps():
         self.squidout = 'ao%s' %squidout
         self.squidin = 'ai%s' %squidin
         self.daq.add_input(self.squidin) # make sure to monitor this channel with the daq
+        self.currentin = 'ai%s' %currentin
+        self.daq.add_input(self.currentin) # make sure to monitor this channel with the daq
         self.modout = 'ao%s' %modout
 
         self.filename = time.strftime('%Y%m%d_%H%M%S') + '_IV'
         self.notes = ''
 
         self.rate = rate # Hz # measurement rate of the daq
-        self.preamp.gain = 500
-        self.preamp.filter_mode('low',6)
-        self.preamp.filter = (0, rate) # Hz
-        self.preamp.dc_coupling()
-        self.preamp.diff_input()
 
-        self.Rbias = 2e3 # Ohm # 1k cold bias resistors on the SQUID testing PCB
-        self.Rbias_mod = 2e3 # Ohm # 1k cold bias resistors on the SQUID testing PCB
+        for pa in [self.preamp, self.preamp_I]:
+            pa.gain = 500
+            pa.filter_mode('low',6)
+            pa.filter = (0, rate) # Hz
+            pa.dc_coupling()
+            pa.diff_input()
+        self.preamp_I.gain = 50 # was overloading
+
+        self.Rcold = 2e3+14 # Ohm # 1k cold bias resistors on the SQUID testing PCB & also 14 Ohm resistor in squid testing box
+        self.Rbias = 0
+        self.Rmeas = 0 # Ohm # determined by squid testing box
+        self.Rbias_mod = 1e3 # Ohm # Inside SQUID testing box
+        self.Rcold_mod = 2e3 # Ohm # 1k cold bias resistors on the SQUID testing PCB
         self.Imod = 0 # A # constant mod current
 
+        self.Irampcenter = 0
         self.Irampspan = 200e-6 # A # Will sweep from -Irampspan/2 to +Irampspan/2
         self.Irampstep = 0.5e-6 # A # Step size
 
@@ -196,8 +206,8 @@ class SquidIV_2Preamps():
 
     def calc_ramp(self):
         self.numpts = int(self.Irampspan/self.Irampstep)
-        self.I = np.linspace(-self.Irampspan/2, self.Irampspan/2, self.numpts) # Squid current
-        self.Vbias = self.I*self.Rbias # SQUID bias voltage
+        Ibias = np.linspace(self.Irampcenter-self.Irampspan/2, self.Irampcenter+self.Irampspan/2, self.numpts) # Desired current ramp
+        self.Vbias = Ibias*(self.Rbias+self.Rcold+self.Rmeas) # SQUID bias voltage
 
     def do(self):
         self.param_prompt() # Check parameters
@@ -210,29 +220,33 @@ class SquidIV_2Preamps():
         self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
 
         self.notes = input('Notes for this IV (r to redo, q to quit): ')
-        if inp == 'r':
+        if self.notes == 'r':
+            self.notes = ''
             display.clear_output()
             self.do()
-        elif inp != 'q':
+
+        elif self.notes != 'q':
             self.save()
 
     def do_IV(self):
         """ Wrote this for mod2D so it doesn't plot """
         if self.modout != None:
-            setattr(self.daq, self.modout, self.Imod*self.Rbias_mod) # Set mod current
+            setattr(self.daq, self.modout, self.Imod*(self.Rbias_mod+self.Rcold_mod)) # Set mod current
 
         # Collect data
         Vout, Vin, time = self.daq.sweep(self.squidout, self.Vbias[0], self.Vbias[-1], freq=self.rate, numsteps=self.numpts)
         self.V = np.array(Vin[self.squidin])/self.preamp.gain
+        self.I = np.array(Vin[self.currentin])/self.preamp_I.gain/self.Rmeas
 
     def param_prompt(self):
         """ Check and confirm values of parameters """
         correct = False
         while not correct:
-            for param in ['rate', 'Rbias', 'Rbias_mod', 'Imod', 'Irampspan', 'Irampstep']:
+            for param in ['rate', 'Rbias', 'Rmeas', 'Rbias_mod', 'Imod', 'Irampspan', 'Irampcenter', 'Irampstep']:
                 print(param, ':', getattr(self, param))
             for paramamp in ['gain','filter']:
                 print('preamp', paramamp, ':', getattr(self.preamp, paramamp))
+                print('preamp_I', paramamp, ':', getattr(self.preamp_I, paramamp))
 
             if self.rate >= self.preamp.filter[1]:
                 print("You're filtering out your signal... fix the preamp cutoff\n")
@@ -272,10 +286,11 @@ class SquidIV_2Preamps():
         with open(filename+'.csv', 'w') as f:
             f.write(self.notes+'\n')
             f.write('Montana info: \n'+self.montana.log()+'\n')
-            for param in ['rate', 'Rbias', 'Rbias_mod', 'Imod', 'Irampspan', 'Irampstep']:
+            for param in ['rate', 'Rbias', 'Rcold', 'Rcold_mod','Rmeas', 'Rbias_mod', 'Imod', 'Irampspan', 'Irampstep']:
                 f.write(param + ': ' + str(getattr(self, param)) + '\n')
             for paramamp in ['gain','filter']:
                 f.write('preamp ' + paramamp + ': ' + str(getattr(self.preamp, paramamp)) + '\n')
+                f.write('preamp_I ' + paramamp + ': ' + str(getattr(self.preamp_I, paramamp)) + '\n')
             f.write('I (A),V (V)\n')
             for i in range(len(self.V)):
                 f.write('%f' %self.I[i] + ',' + '%f' %self.V[i] + '\n')
