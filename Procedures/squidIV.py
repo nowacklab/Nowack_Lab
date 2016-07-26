@@ -78,6 +78,7 @@ class SquidIV():
             display.clear_output()
             self.do()
         elif self.notes != 'q':
+            self.ax.set_title(self.filename+'\n'+self.notes)
             self.save()
 
     def do_IV(self):
@@ -226,6 +227,7 @@ class SquidIV_2Preamps():
             self.do()
 
         elif self.notes != 'q':
+            self.ax.set_title(self.filename+'\n'+self.notes)
             self.save()
 
     def do_IV(self):
@@ -273,7 +275,7 @@ class SquidIV_2Preamps():
 
         ax.plot(self.I*1e6, self.V, 'k-')
         ax.set_title(self.filename+'\n'+self.notes) # NEED DESCRIPTIVE TITLE
-        ax.set_xlabel(r'$I_{\rm{bias}} = V_{\rm{bias}}/R_{\rm{bias}}$ ($\mu \rm A$)', fontsize=20)
+        ax.set_xlabel(r'$I_{\rm{bias}} = V_{\rm{meas}}/R_{\rm{meas}}$ ($\mu \rm A$)', fontsize=20)
         ax.set_ylabel(r'$V_{\rm{squid}}$ (V)', fontsize=20)
         ax.ticklabel_format(style='sci', axis='y', scilimits=(-3,3))
         return ax
