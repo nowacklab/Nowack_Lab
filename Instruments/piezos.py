@@ -36,6 +36,15 @@ class Piezos():
         if zero:
             self.zero()
 
+    def __getstate__(self):
+        self.save_dict = {"V": self.V,
+                          "Vmax": self.Vmax,
+                          "bipolar": self.bipolar,
+                          "gain": self.gain,
+                          "daq": self.daq}
+        return self.save_dict
+
+
     @property
     def V(self):
         '''

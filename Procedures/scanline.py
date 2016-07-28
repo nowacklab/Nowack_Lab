@@ -4,8 +4,9 @@ import time, os
 import matplotlib.pyplot as plt
 from ..Utilities import dummy, plotting
 from ..Instruments import piezos, nidaq, montana, squidarray
+from .save import Measurement
 
-class Scanline():
+class Scanline(Measurement):
     def __init__(self, instruments=None, start=(-100,-100), end=(100,100), plane=dummy.Dummy(planefit.Planefit), scanheight=0, sig_in=0, cap_in=1, sig_in_ac_x=None, sig_in_ac_y=None):
         if instruments:
             self.piezos = instruments['piezos']
@@ -49,10 +50,30 @@ class Scanline():
                                 'Montana',
                                 'Scans'
                             )
+        
+    def __getstate__(self):
+        self.save_dict = {"timestamp": self.timestamp,
+                          "piezos": self.piezos,
+                          "daq": self.daq,
+                          "montanta": self.montana,
+                          "squidarray": self.array,
+                          "lockin": self.lockin,
+                          "preamp":self.preamp,
+                          "span": self.span,
+                          "center": self.center,
+                          "numpts": self.numpts,
+                          "Vstart": Vstart,
+                          "Vend": Vend,
+                          "V": self.V,
+                          "Vac_x": self.Vac_x,
+                          "Vac_y": self.Vac_y
+                          }
+        return self.save_dict
 
     def do(self):
         ## Start time and temperature
         self.filename = time.strftime('%Y%m%d_%H%M%S') + '_line'
+        self.timestamp = time.strftime("%Y-%m-%d @ %I:%M%:%S%p")
         tstart = time.time()
         self.temp_start = self.montana.temperature['platform']
 

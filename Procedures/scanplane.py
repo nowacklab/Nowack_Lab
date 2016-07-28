@@ -8,8 +8,9 @@ from IPython import display
 from numpy import ma
 from ..Utilities import dummy, plotting
 from ..Instruments import piezos, nidaq, montana, squidarray
+from .save import Measurement
 
-class Scanplane():
+class Scanplane(Measurement):
     def __init__(self, instruments=None, span=[100,100], center=[0,0], numpts=[50,50], plane=dummy.Dummy(planefit.Planefit), scanheight=5, sig_in=0, cap_in=1, sig_in_ac_x=None, sig_in_ac_y=None):
         if instruments:
             self.piezos = instruments['piezos']
@@ -60,6 +61,7 @@ class Scanplane():
         self.last_full_sweep = []
         self.last_interp_out = []
         self.last_interp_sweep = []
+        self.linecuts = {}
 
         # self.swap = swap
         # if swap: # Will rotate scan 90 degrees? Not really tested. Got bugs if false. Keep it true for now. #20160717: just noticed kwarg default is False. Don't touch this for now...
@@ -77,11 +79,29 @@ class Scanplane():
                                 'Scans'
                             )
 
+    def __getstate__(self):
+        self.save_dict = {"timestamp": self.timestamp,
+                          "piezos": self.piezos,
+                          "daq": self.daq,
+                          "montana": self.montana,
+                          "array": self.array,
+                          "linecuts": self.linecuts,
+                          "V": self.V,
+                          "Vac_x": self.Vac_x,
+                          "Vac_y": self.Vac_y,
+                          "C": self.C,
+                          "plane": self.plane,
+                          "span": self.span,
+                          "center": self.center,
+                          "numpts": self.numpts}
+        return self.save_dict
+    
     def do(self):
         self.setup_plots()
 
         ## Start time and temperature
         self.filename = time.strftime('%Y%m%d_%H%M%S') + '_scan'
+        self.timestamp = time.strftime("%Y-%m-%d @ %I:%M%:%S%p")
         tstart = time.time()
         self.temp_start = self.montana.temperature['platform']
 
@@ -108,6 +128,13 @@ class Scanplane():
             Vstart = {'x': self.X[0,i], 'y': self.Y[0,i], 'z': self.Z[0,i]}
             Vend = {'x': self.X[-1,i], 'y': self.Y[-1,i], 'z': self.Z[-1,i]}
             out, V, t = self.piezos.sweep(Vstart, Vend) # sweep over X
+
+            ## Save linecuts
+            linecuts[str(i)] = {"Vstart": Vstart,
+                                "Vend": Vend,
+                                "Vsquid": {"Vdc": V[self.sig_in], 
+                                           "Vac_x": V[self.sig_in_ac_x],
+                                           "Vac_y": V[self.sig_in_ac_y]}}
 
             ## Interpolate to the number of lines
             interp_func = interp(out['x'], V[self.sig_in])

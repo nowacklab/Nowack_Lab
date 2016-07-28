@@ -10,8 +10,9 @@ import numpy as np
 import time, os
 from ..Utilities import dummy
 from ..Instruments import nidaq, preamp, montana
+from .save import Measurement
 
-class SquidIV():
+class SquidIV(Measurement):
     def __init__(self, instruments=None, squidout=None, squidin=None, modout=None, rate=90):
         '''
         Example: SquidIV({'daq': daq, 'preamp': preamp}, 0, 0, None, 90)
@@ -54,6 +55,21 @@ class SquidIV():
 
         display.clear_output()
 
+    def __getstate__(self):
+        self.save_dict = {"timestamp": self.timestamp,
+                          "Rbias": self.Rbias,
+                          "Rbias_mod": self.Rbias_mod,
+                          "Imod": self.Imod,
+                          "Irampspan": self.Irampspan,
+                          "Irampstep": self.Irampstep,
+                          "V": self.V,
+                          "I": self.I,
+                          "rate": self.rate,
+                          "gain": self.preamp.gain,
+                          "notes": self.notes}
+        return self.save_dict
+
+
 
     def calc_ramp(self):
         self.numpts = int(self.Irampspan/self.Irampstep)
@@ -62,6 +78,8 @@ class SquidIV():
 
     def do(self):
         self.filename = time.strftime('%Y%m%d_%H%M%S') + '_IV'
+        self.timestamp = time.strftime("%Y-%m-%d @ %I:%M%:%S%p")
+
 
         self.param_prompt() # Check parameters
 
@@ -79,6 +97,7 @@ class SquidIV():
         elif inp != 'q':
             self.save()
 
+    
     def do_IV(self):
         """ Wrote this for mod2D so it doesn't plot """
         if self.modout != None:
@@ -148,7 +167,7 @@ class SquidIV():
     def setup_plot(self):
         self.fig, self.ax = plt.subplots()
 
-class SquidIV_2Preamps():
+class SquidIV_2Preamps(Measurement):
     def __init__(self, instruments=None, squidout=None, squidin=None, modout=None, rate=90):
         '''
         Example: SquidIV({'daq': daq, 'preamp': preamp}, 0, 0, None, 90)
@@ -193,6 +212,22 @@ class SquidIV_2Preamps():
 
         display.clear_output()
 
+    def __getstate__(self):
+        self.save_dict = {"timestamp": self.timestamp,
+                          "Rbias": self.Rbias,
+                          "Rbias_mod": self.Rbias_mod,
+                          "Imod": self.Imod,
+                          "Irampspan": self.Irampspan,
+                          "Irampstep": self.Irampstep,
+                          "V": self.V,
+                          "I": self.I,
+                          "rate": self.rate,
+                          "gain": self.preamp.gain,
+                          "filter": self.preamp.filter,
+                          "filter_mode": self.preamp.filter_mode,
+                          "notes": self.notes}
+        return self.save_dict
+
 
     def calc_ramp(self):
         self.numpts = int(self.Irampspan/self.Irampstep)
@@ -201,6 +236,7 @@ class SquidIV_2Preamps():
 
     def do(self):
         self.param_prompt() # Check parameters
+        self.timestamp = time.strftime("%Y-%m-%d @ %I:%M%:%S%p")
 
         self.do_IV()
         self.daq.zero() # zero everything

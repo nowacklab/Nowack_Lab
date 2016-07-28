@@ -6,9 +6,10 @@ import numpy as np
 import time, os
 from . import squidIV
 from ..Utilities import plotting
+from .save import Measurement
 
 
-class Mod2D():
+class Mod2D(Measurement):
     def __init__(self, instruments=None, squidout=None, squidin=None, modout=None, rate=900):
         '''
         Example: Mod2D({'daq': daq, 'preamp': preamp}, 'ao0','ai0','ao1', rate=900).
@@ -33,6 +34,16 @@ class Mod2D():
 
         display.clear_output()
 
+    def __getstate__(self):
+        self.save_dict = {"timestamp": self.timestamp,
+                          "IV": self.IV,
+                          "Imodspan": self.Imodspan,
+                          "Imodstep": self.Imodstep,
+                          "V": self.V,
+                          "notes": self.notes,
+                          "time": self.time,
+                          "Imod": self.Imod}
+        return self.save_dict
 
     def calc_ramp(self):
         self.numpts = int(self.Imodspan/self.Imodstep)
@@ -41,6 +52,8 @@ class Mod2D():
 
     def do(self):
         self.filename = time.strftime('%Y%m%d_%H%M%S') + '_mod2D'
+        self.timestamp = time.strftime("%Y-%m-%d @ %I:%M%:%S%p")
+
 
         self.calc_ramp() #easy way to clear self.V
         self.IV.V = self.IV.V*0

@@ -4,8 +4,9 @@ import matplotlib.pyplot as plt
 from ..Utilities import dummy
 from ..Instruments import piezos, nidaq, montana
 import time, os
+from .save import Measurement
 
-class Heightsweep():
+class Heightsweep(Measurement):
     def __init__(self, instruments = None, x =0, y=0, plane=dummy.Dummy(planefit.Planefit), acx_in = 0, acy_in=1, dc_in = 2):
         if instruments:
             self.piezos = instruments['piezos']
@@ -24,9 +25,23 @@ class Heightsweep():
         self.dc_in = 'ai%s' %dc_in
 
         self.filename = ''
+        
+    def __getstate__(self):
+        self.save_dict = {"timestamp": self.timestasmp,
+                          "peizos": self.piezos,
+                          "daq": self.daq,
+                          "montanta": self.montana,
+                          "x": self.x,
+                          "y": self.y,
+                          "plane": self.plane,
+                          "acx_in": self.acx_in,
+                          "acy_in": self.acy_in,
+                          "dc_in": self.dc_}
+        return self.save_dict
 
     def do(self):
         self.filename = time.strftime('%Y%m%d_%H%M%S') + '_heightsweep'
+        self.timestamp = time.strftime("%Y-%m-%d @ %I:%M:%S%p")
         self.temp_start = self.montana.temperature['platform']
 
         Vstart = {'z': self.plane.plane(self.x, self.y)}

@@ -45,6 +45,10 @@ class NIDAQ():
         
         if zero:
             self.zero()
+
+    def __getstate__(self):
+        self.save_dict = {}
+        return self.save_dict
             
     @property
     def freq(self):

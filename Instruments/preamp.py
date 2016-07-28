@@ -22,6 +22,15 @@ class SR5113():
                 
         self._gain = self.gain
         self._filter = self.filter
+
+    def __getstate__(self):
+        #not sure if this will work
+        #might be better to save "gain" and "filter" in the Measurement, since
+        #they are chosen in the Measurement
+        self.save_dict = {"port": self.port,
+                          "_gain": self.gain,
+                          "_filter": self.filter}
+        return self.save_dict
                 
     @property
     def filter(self):
