@@ -8,7 +8,7 @@ from ..Utilities import dummy
 from ..Instruments import nidaq, preamp, montana
 from .save import Measurement
 
-class Touchdown(Measurementx):
+class Touchdown(Measurement):
     def __init__(self, instruments=None, cap_input=None, planescan=False, Vz_max = None):
         self.touchdown = False
         self.V_to_C = 2530e3 # 2530 pF/V * (1e3 fF/pF), calibrated 20160423 by BTS, see ipython notebook

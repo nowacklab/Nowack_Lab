@@ -11,15 +11,7 @@ class PCI100:
         self._visaResource = visaResource
         atexit.register(self.close)
 
-    def __getstate__(self):
-        self.save_dict = {"_S_bias": self._S_bias,
-                          "_A_bias": self._A_bias,
-                          "_S_flux": self._S_flux,
-                          "_A_flux": self._A_flux,
-                          "_offset": self._offset,
-                          "_intergratorCapacitor": self._intergratorCapacitor,
-                          "_feedbackResistor": self.feedbackResistor}
-        return self.save_dict
+
 
     def connect(self):
         '''
@@ -63,6 +55,17 @@ class PFL102:
     offset_lim = 9.8
     amplifierGain = 5040.0
     param_filename = os.path.join(os.path.dirname(__file__),'squidarray_params.json')
+
+
+    def __getstate__(self):
+        self.save_dict = {"_S_bias": self._S_bias,
+                              "_A_bias": self._A_bias,
+                              "_S_flux": self._S_flux,
+                              "_A_flux": self._A_flux,
+                              "_offset": self._offset,
+                              "_intergratorCapacitor": self._intergratorCapacitor,
+                              "_feedbackResistor": self.feedbackResistor}
+        return self.save_dict
 
     def __init__(self, channel, pci, load=False):
         """ Will initialize PFL 102 and zero everything (or not) """
