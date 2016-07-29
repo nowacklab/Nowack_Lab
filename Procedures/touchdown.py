@@ -6,8 +6,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from ..Utilities import dummy
 from ..Instruments import nidaq, preamp, montana
+from .save import Measurement
 
-class Touchdown():
+class Touchdown(Measurementx):
     def __init__(self, instruments=None, cap_input=None, planescan=False, Vz_max = None):
         self.touchdown = False
         self.V_to_C = 2530e3 # 2530 pF/V * (1e3 fF/pF), calibrated 20160423 by BTS, see ipython notebook
@@ -56,6 +57,17 @@ class Touchdown():
 
         self.filename = ''
 
+    def __getstate__(self):
+        self.save_dict = {"timestamp": self.timestamp,
+                          "lockin": self.lockin,
+                          "atto": self.atto,
+                          "piezos": self.piezos,
+                          "daq": self.daq,
+                          "montana": self.montana,
+                          "V": self.V,
+                          "C": self.C}
+        return self.save_dict
+
     def check_balance(self):
         V_unbalanced = 2e-6 # We can balance better than 2 uV
 
@@ -69,6 +81,7 @@ class Touchdown():
 
     def do(self):
         self.filename = time.strftime('%Y%m%d_%H%M%S') + '_td'
+        self.timestamp = time.strftime("%Y-%m-%d @ %I:%M%:%S%p")
         if self.planescan:
             self.filename = self.filename + '_planescan'
 

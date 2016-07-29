@@ -220,7 +220,13 @@ class ANC350():
        
         self.check_voltage()
 
-        atexit.register(self.stop)  # will stop all motion if program quits     
+        atexit.register(self.stop)  # will stop all motion if program quits
+
+    def __getstate__(self):
+        #We would like to save the resistive readout of the attocubes.
+        #We currently do not get that property form the controller.
+        self.save_dict = {}
+        return self.save_dict
         
     @property
     def freq(self):

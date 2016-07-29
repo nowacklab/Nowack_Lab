@@ -23,6 +23,12 @@ class Montana():
         self._temperature_stability = {}
         self._temperature_stability = self.temperature_stability
 
+    
+    def __getstate__(self):
+        self.save_dict = {"temperature": self.temperature,
+                          "stability": self._temperature_stability}
+        return self.save_dict
+
     @property
     def pressure(self):
         self._pressure = self.ask('GCP')

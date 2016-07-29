@@ -42,7 +42,19 @@ class SR830():
         50e-3, 100e-3, 200e-3, 500e-3, 1]
         self.reserve_options = ['High Reserve', 'Normal', 'Low Noise']
 
-
+    def __getstate__(self):
+        self.save_dict = {"sensitivity": self.sensitivtiy,
+                          "frequency": self.frequency,
+                          "amplitude": self.amplitude,
+                          "X": self.X,
+                          "Y": self.Y,
+                          "R": self.R,
+                          "theta": self.theta,
+                          "time_constant": self.time_constant,
+                          "reserve": self.reserve,
+                          "gpib_address": self.gpib_address}
+        return self.save_dict
+    
     @property
     def sensitivity(self):
         '''Get the lockin sensitivity'''

@@ -7,8 +7,9 @@ import os
 import re
 from ..Utilities import dummy
 from ..Instruments import nidaq, preamp
+from .save import Measurement
 
-class DaqSpectrum():
+class DaqSpectrum(Measurement):
     def __init__(self, instruments=None, input_chan=None, measure_time=0.5, measure_freq=256000, averages=30):
         self.instruments = instruments
         if instruments:
@@ -27,11 +28,29 @@ class DaqSpectrum():
         self.path = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'spectra')
 
         self.notes = ''
-        self.time = 'TIME NOT SET YET' # If we see this, we need to think about timestamp more
+        self.time = 'TIME NOT SET' # If we see this, we need to think about timestamp more
+        
+
+    def __getstate__(self):
+        self.save_dict = {"timestamp":self.timestamp,
+                          "V": self.V,
+                          "t": self.t,
+                          "f": self.f,
+                          "psdAve": self.psdAve,
+                          "averages": self.averages,
+                          "measure_time": self.measure_time,
+                          "measure_freq": self.measure_freq,
+                          "averages": self.averages,
+                          "time": self.time,
+                          "notes": self.notes,
+                          "daq": self.daq,
+                          "pa": self.pa}
+        return self.save_dict
 
     def do(self):
 
         self.time = time.strftime('%Y-%m-%d_%H%M%S')
+        self.timestamp = time.strftime("%Y-%m-%d @ %I:%M:%S%p")
         self.setup_preamp()
 
         Nfft = int((self.measure_freq*self.measure_time / 2) + 1)

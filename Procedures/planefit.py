@@ -6,8 +6,9 @@ import matplotlib.pyplot as plt
 from ..Utilities import dummy
 from ..Instruments import piezos, montana
 from IPython import display
+from .save import Measurement
 
-class Planefit():
+class Planefit(Measurement):
     '''
     For fitting to the plane of the sample. Will do a series of touchdowns in a grid of size specified by numpts. Vz_max sets the maximum voltage the Z piezo will reach. If None, will use the absolute max safe voltage set in the Piezos class.
     '''
@@ -46,8 +47,21 @@ class Planefit():
 
         self.filename=''
 
+    def __getstate__(self):
+        self.save_dict = {"timestamp": timestamp,
+                          "a": self.a,
+                          "b": self.b,
+                          "c": self.c,
+                          "span": self.span,
+                          "center": self.center,
+                          "numpts": self.numpts,
+                          "piezos": self.peizos,
+                          "montnana": self.montana}
+        return self.save_dict
+                          
     def do(self):
         self.filename = time.strftime('%Y%m%d_%H%M%S') + '_plane'
+        self.timestamp = time.strftime("%Y-%m-%d @%I:%M%:%S%p")
         
         self.piezos.check_lim({'x':self.X, 'y':self.Y}) # make sure we won't scan outside X, Y piezo ranges!
 
