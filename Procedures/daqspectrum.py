@@ -88,14 +88,14 @@ class DaqSpectrum(Measurement):
         self.ax_semilog.semilogy(self.f, self.psdAve)
 
     def save(self):
-        traceName = os.path.join(self.path, self.time, '_trace.csv')
-        fftName = os.path.join(self.path + self.time + '_fft.csv')
+        traceName = os.path.join(self.path, self.time)+ '_trace.csv'
+        fftName = os.path.join(self.path + self.time) + '_fft.csv'
 
         np.savetxt(fftName, (self.f, self.psdAve), delimiter=',')
         np.savetxt(traceName, (self.t, self.V), delimiter=',')
 
-        self.fig_loglog.savefig(os.path.join(self.path,self.time,'_loglog.pdf'))
-        self.fig_semilog.savefig(os.path.join(self.path,self.time,'_semilog.pdf'))
+        self.fig_loglog.savefig(os.path.join(self.path,self.time)+'_loglog.pdf')
+        self.fig_semilog.savefig(os.path.join(self.path,self.time)+'_semilog.pdf')
 
     def setup_plots(self):
         self.fig_loglog = plt.figure(figsize=(6,6))
