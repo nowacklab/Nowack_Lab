@@ -1,11 +1,12 @@
-﻿Nowack Lab Code Package
+Nowack Lab Code Package
 Brian Schaefer
 David Low
 Guen Prawiroatmodjo
 Matt Ferguson
 
-%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+Install Utilities by running “runme.py”.
 Explanation of Utilities:
 
 %%%%%%%%%%
@@ -19,3 +20,8 @@ or just "from Nowack_Lab.Procedures import *" to import everything in "Procedure
 custom.css
 %%%%%%%%%%
 To add a bottom border, find your custom.css file (…/site-packages/notebook/static/custom/ or thereabouts) and replace it with this one. This will add some padding so you can scroll down a bit more and watch plots as they come in.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+jupyter_notebook_config.py
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+Configures notebook to save a .html copy along with the .ipynb file. Allows for easy viewing of notebooks.
