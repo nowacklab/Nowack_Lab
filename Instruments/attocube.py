@@ -349,13 +349,20 @@ class ANC350_like300():
 class ANC350():
         '''
         For remote operation of the Attocubes with the ANC350.
+        Control each attocube using the "Positioner" object created.
+        e.g. atto.x.V = 50
+             atto.x.pos = 4000
+             atto.x.move(100)
+             atto.x.step(-100)
         '''
         _stages = ['x','y','z'] # order of axis controllers
         _pos_lims = [20000, 20000, 20000] # um (temporary until LUT calibrated)
 
         def __init__(self, instruments=None):
             '''
-            Pass instruments as a dict with montana = montana.Montana(). This will check the temperature to see if it is safe to go to 60 V. Else, we stay at 45 V.
+            Pass instruments as a dict with montana = montana.Montana().
+            This will check the temperature to see if it is safe to go to 60 V.
+            Else, we stay at 45 V.
             '''
             self.anc = PyANC350v4.Positioner()
 
@@ -396,6 +403,9 @@ class Positioner():
 
     @property
     def C(self):
+        '''
+        Measure capacitance of positioner
+        '''
         print('Measuring capacitance of positioner %s...' %self.label)
         self._C = self.anc.measureCapacitance(self.num)
         print('...done.')
@@ -403,6 +413,9 @@ class Positioner():
 
     @property
     def V(self):
+        '''
+        Measure or set stepping voltage of positioner
+        '''
         self._V  = self.anc.getAmplitude(self.num)
         return self._V
 
@@ -417,6 +430,9 @@ class Positioner():
 
     @property
     def freq(self):
+        '''
+        Measure or set stepping frequency of positioner
+        '''
         self._freq = self.anc.getFrequency(self.num)
         return self._freq
 
@@ -458,6 +474,10 @@ class Positioner():
 
     @property
     def pos_tolerance(self):
+        '''
+        Measure or set position tolerance of positioner. Actually does write a value, but this code doesn't use that feature of the controller.
+        '''
+
         return self._pos_tolerance
 
     @pos_tolerance.setter
@@ -466,11 +486,19 @@ class Positioner():
         self._pos_tolerance = value
 
     def check_voltage(self):
+        '''
+        Makes sure stepping voltage is lower than the limit
+        '''
         if self.V > self.V_lim:
             self.V = self.V_lim
             print("Axis %s voltage was too high, set to %f" %(self.label, self.V_lim))
 
     def move(self, dist):
+        '''
+        Moves positioner a specified distance (um).
+        Distance can be positive or negative.
+        e.g. atto.move(-100)
+        '''
         new_pos = dist + self.pos
         if new_pos > self.pos_lim or new_pos < 0:
             raise Exception('Moving %f m would make positioner %s out of range!' %(dist, self.label))
@@ -478,7 +506,8 @@ class Positioner():
 
     def step(self, numsteps):
         '''
-        Moves a desired number of steps
+        Moves a desired number of steps (can be positive or negative)
+        e.g. atto.z.step(-100)
         '''
         self.check_voltage()
 
