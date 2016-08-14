@@ -58,11 +58,11 @@ class Planefit(Measurement):
                           "piezos": self.peizos,
                           "montnana": self.montana}
         return self.save_dict
-                          
+
     def do(self):
         self.filename = time.strftime('%Y%m%d_%H%M%S') + '_plane'
-        self.timestamp = time.strftime("%Y-%m-%d @%I:%M%:%S%p")
-        
+        self.timestamp = time.strftime("%Y-%m-%d @%I:%M:%S%p")
+
         self.piezos.check_lim({'x':self.X, 'y':self.Y}) # make sure we won't scan outside X, Y piezo ranges!
 
         ## Initial touchdown

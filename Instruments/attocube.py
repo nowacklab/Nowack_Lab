@@ -391,14 +391,14 @@ class Positioner():
         self.num = num
         self.label = label
 
-        self.V
-        self.freq
-        self.C # should run this now to collect capacitances for logging purposes.
-        self.pos
-
         self.V_lim = V_lim # voltage limit; should really set lower than this.
         self.pos_lim = pos_lim # position limit (um); target position should not exceed this value
         self.pos_tolerance = pos_tolerance # tolerance (um) that determines when target position is reached
+
+        self.V = V_lim
+        self.freq
+        self.C # should run this now to collect capacitances for logging purposes.
+        self.pos
 
 
     @property

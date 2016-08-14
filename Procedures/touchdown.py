@@ -54,8 +54,8 @@ class Touchdown(Measurement):
         self.V_td = -1000.0
 
         self.title = ''
-
         self.filename = ''
+        self.timestamp = ''
 
     def __getstate__(self):
         self.save_dict = {"timestamp": self.timestamp,
@@ -68,11 +68,15 @@ class Touchdown(Measurement):
                           "C": self.C}
         return self.save_dict
 
-    def check_balance(self):
-        V_unbalanced = 2e-6 # We can balance better than 2 uV
-
-        Vcap = getattr(self.daq, self.lockin.ch1_daq_input) # Read the voltage from the daq
-        Vcap = self.lockin.convert_output(Vcap) # convert to a lockin voltage
+    def check_balance(self, V_unbalanced=2e-6):
+        '''
+        Checks the balance of the capacitance bridge.
+        Voltage must be less than V_unbalanced.
+        By default, this is heuristically 2 uV.
+        '''
+        # Read daq voltage and conver to real lockin voltage
+        Vcap = getattr(self.daq, self.lockin.ch1_daq_input)
+        Vcap = self.lockin.convert_output(Vcap)
 
         if Vcap > V_unbalanced:
             inp = input('Check balance of capacitance bridge! Press enter to continue, q to quit')
@@ -80,25 +84,33 @@ class Touchdown(Measurement):
                 raise Exception('quit by user')
 
     def do(self):
+        '''
+        Does the touchdown.
+        Timestamp is determined at the beginning of this function.
+        '''
         self.filename = time.strftime('%Y%m%d_%H%M%S') + '_td'
-        self.timestamp = time.strftime("%Y-%m-%d @ %I:%M%:%S%p")
+        self.timestamp = time.strftime("%Y-%m-%d @ %I:%M:%S%p")
         if self.planescan:
             self.filename = self.filename + '_planescan'
 
         V_td = None
-        attosteps = self.attosteps # This is how many steps the attocubes will move if no touchdown detected.
+        attosteps = self.attosteps # Number of steps attocubes move if no td.
         if self.planescan:
             attosteps = None # don't move the attocubes if doing a planescan
 
-        while not self.touchdown: # loop will move up attocubes every time
+        ## Loop that does sweeps of z piezo
+        ## Z attocube is moved up between iterations
+        ## Loop breaks when true touchdown detected.
+        while not self.touchdown:
             self.check_balance() # Make sure capacitance bridge is well-balanced
 
             # Reset capacitance values
             self.C = [None]*self.numsteps # Capacitance (fF)
-            self.C0 = None # Cap offset... will take on value of the first point
+            self.C0 = None # Cap offset: will take on value of the first point
             self.extra = 0 # Counter to keep track of extra points after touchdown (for fitting the line)
 
-            for i in range(self.numsteps): # Loop over each piezo voltage
+            # Inner loop to sweep z-piezo
+            for i in range(self.numsteps):
                 time_start = time.time()
 
                 self.piezos.V = {'z': self.V[i]} # Set the current voltage
@@ -113,15 +125,15 @@ class Touchdown(Measurement):
                     self.C0 = Cap # Sets the offset datum
                 self.C[i] = Cap - self.C0 # remove offset
 
-                if i >= self.numfit: # start fitting the line after min number of points have come in
+                if i >= self.numfit: # after a few points, check for touchdown
                     self.check_touchdown(i)
-                self.plot_cap(i)
+                self.plot_cap(i) # plot the new point
 
                 if self.touchdown:
                     if self.extra < self.numextra: # take three extra points for fit
                         self.extra = self.extra + 1
-                        if i == self.numsteps - 1:
-                            self.touchdown = False # special case; there was a bug where if last extra point was last point taken, touchdown would be detected as true
+                        if i == self.numsteps - 1: # special case; there was a bug where if last extra point was last point taken, touchdown would be detected as true
+                            self.touchdown = False
 
                     else:
                         V_td = self.get_touchdown_voltage(i, plot=False)
@@ -162,6 +174,9 @@ class Touchdown(Measurement):
 
 
     def check_touchdown(self, i):
+        '''
+        
+        '''
         std = np.std(self.C[1:i]) # standard deviation of all points so far
         deviation = abs(self.C[i] - np.mean(self.C[i+1-int(self.numfit):i+1])) # deviation of the ith point from average of last self.numfit points, including i
 

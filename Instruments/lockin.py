@@ -8,7 +8,10 @@ class SR830():
     Instrument driver for SR830, modified from Guen's squidpy driver
     '''
     def __init__(self, gpib_address=''):
-        self.gpib_address = gpib_address
+        if type(gpib_address) == int:
+            self.gpib_address = 'GPIB::%02d::INSTR' %gpib_address
+        else:
+            self.gpib_address = gpib_address
         self.ch1_daq_input = None
         self.ch2_daq_input = None
 
@@ -54,7 +57,7 @@ class SR830():
                           "reserve": self.reserve,
                           "gpib_address": self.gpib_address}
         return self.save_dict
-    
+
     @property
     def sensitivity(self):
         '''Get the lockin sensitivity'''
