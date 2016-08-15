@@ -2,6 +2,7 @@ import numpy as np
 from numpy.linalg import lstsq
 from . import navigation, planefit
 import time, os
+from datetime import datetime
 from scipy.interpolate import interp1d as interp
 import matplotlib.pyplot as plt
 from IPython import display
@@ -80,7 +81,8 @@ class Scanplane(Measurement):
                             )
 
     def __getstate__(self):
-        self.save_dict = {"timestamp": self.timestamp,
+        self.save_dict = {"start_time": self.timestamp.strftime("%Y-%m-%d %I:%M:%S %p"),
+                          "end_time": self.end_time.strftime("%Y-%m-%d %I:%M:%S %p")
                           "piezos": self.piezos,
                           "daq": self.daq,
                           "montana": self.montana,
@@ -100,8 +102,8 @@ class Scanplane(Measurement):
         self.setup_plots()
 
         ## Start time and temperature
-        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_scan'
-        self.timestamp = time.strftime("%Y-%m-%d @ %I:%M%:%S%p")
+        self.timestamp = datetime.now()
+        self.filename = self.timestamp.strftime('%Y%m%d_%H%M%S') + '_scan'
         tstart = time.time()
         self.temp_start = self.montana.temperature['platform']
 
@@ -161,6 +163,7 @@ class Scanplane(Measurement):
         self.piezos.V = 0
         self.save()
 
+        self.end_time = datetime.now()
         tend = time.time()
         print('Scan took %f minutes' %((tend-tstart)/60))
         return

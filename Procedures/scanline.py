@@ -1,6 +1,7 @@
 import numpy as np
 from . import planefit
 import time, os
+from datetime import datetime
 import matplotlib.pyplot as plt
 from ..Utilities import dummy, plotting
 from ..Instruments import piezos, nidaq, montana, squidarray
@@ -50,7 +51,7 @@ class Scanline(Measurement):
                                 'Montana',
                                 'Scans'
                             )
-        
+
     def __getstate__(self):
         self.save_dict = {"timestamp": self.timestamp,
                           "piezos": self.piezos,
@@ -72,8 +73,9 @@ class Scanline(Measurement):
 
     def do(self):
         ## Start time and temperature
+        self.timestamp = datetime.now()
         self.filename = time.strftime('%Y%m%d_%H%M%S') + '_line'
-        self.timestamp = time.strftime("%Y-%m-%d @ %I:%M%:%S%p")
+        self.timestamp = time.strftime("%Y-%m-%d %I:%M:%S %p")
         tstart = time.time()
         self.temp_start = self.montana.temperature['platform']
 

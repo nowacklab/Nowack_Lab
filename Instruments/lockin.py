@@ -8,10 +8,7 @@ class SR830():
     Instrument driver for SR830, modified from Guen's squidpy driver
     '''
     def __init__(self, gpib_address=''):
-        if type(gpib_address) == int:
-            self.gpib_address = 'GPIB::%02d::INSTR' %gpib_address
-        else:
-            self.gpib_address = gpib_address
+        self.gpib_address = gpib_address
         self.ch1_daq_input = None
         self.ch2_daq_input = None
 
@@ -46,15 +43,11 @@ class SR830():
         self.reserve_options = ['High Reserve', 'Normal', 'Low Noise']
 
     def __getstate__(self):
-        self.save_dict = {"sensitivity": self.sensitivtiy,
-                          "frequency": self.frequency,
-                          "amplitude": self.amplitude,
-                          "X": self.X,
-                          "Y": self.Y,
-                          "R": self.R,
-                          "theta": self.theta,
-                          "time_constant": self.time_constant,
-                          "reserve": self.reserve,
+        self.save_dict = {"sensitivity": self._sensitivity,
+                          "frequency": self._frequency,
+                          "amplitude": self._amplitude,
+                          "time_constant": self._time_constant,
+                          #"reserve": self._reserve,
                           "gpib_address": self.gpib_address}
         return self.save_dict
 

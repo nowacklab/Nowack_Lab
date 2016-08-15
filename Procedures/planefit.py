@@ -2,6 +2,7 @@ import numpy
 from numpy.linalg import lstsq
 from . import touchdown, navigation
 import time, os, glob
+from datetime import datetime
 import matplotlib.pyplot as plt
 from ..Utilities import dummy
 from ..Instruments import piezos, montana
@@ -48,7 +49,7 @@ class Planefit(Measurement):
         self.filename=''
 
     def __getstate__(self):
-        self.save_dict = {"timestamp": timestamp,
+        self.save_dict = {"timestamp": self.timestamp.strftime("%Y-%m-%d %I:%M:%S %p"),
                           "a": self.a,
                           "b": self.b,
                           "c": self.c,
@@ -60,8 +61,8 @@ class Planefit(Measurement):
         return self.save_dict
 
     def do(self):
-        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_plane'
-        self.timestamp = time.strftime("%Y-%m-%d @%I:%M:%S%p")
+        self.timestamp = datetime.now()
+        self.filename = self.timestamp.strftime('%Y%m%d_%H%M%S') + '_plane'
 
         self.piezos.check_lim({'x':self.X, 'y':self.Y}) # make sure we won't scan outside X, Y piezo ranges!
 

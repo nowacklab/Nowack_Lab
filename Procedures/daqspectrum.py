@@ -1,8 +1,9 @@
 from scipy import signal
 import matplotlib.pyplot as plt
 import numpy as np
-import datetime
+import datetime #probably dont need to import datetime and time
 import time
+from datetime import datetime
 import os
 import re
 from ..Utilities import dummy
@@ -29,10 +30,10 @@ class DaqSpectrum(Measurement):
 
         self.notes = ''
         self.time = 'TIME NOT SET' # If we see this, we need to think about timestamp more
-        
+
 
     def __getstate__(self):
-        self.save_dict = {"timestamp":self.timestamp,
+        self.save_dict = {"timestamp": measurement_time.strftime("%Y-%m-%d %I:%M:%S %p"),
                           "V": self.V,
                           "t": self.t,
                           "f": self.f,
@@ -48,9 +49,9 @@ class DaqSpectrum(Measurement):
         return self.save_dict
 
     def do(self):
+        #record the time when the measurement starts
+        self.measurement_time = datetime.now()
 
-        self.time = time.strftime('%Y-%m-%d_%H%M%S')
-        self.timestamp = time.strftime("%Y-%m-%d @ %I:%M:%S%p")
         self.setup_preamp()
 
         Nfft = int((self.measure_freq*self.measure_time / 2) + 1)
@@ -88,6 +89,7 @@ class DaqSpectrum(Measurement):
         self.ax_semilog.semilogy(self.f, self.psdAve)
 
     def save(self):
+        self.time = measurement_time.strftime('%Y-%m-%d_%H%M%S')
         traceName = os.path.join(self.path, self.time)+ '_trace.csv'
         fftName = os.path.join(self.path + self.time) + '_fft.csv'
 

@@ -1,6 +1,7 @@
 from IPython import display
 from scipy.stats import linregress
 from scipy.optimize import curve_fit
+from datetime import datetime
 import time, os
 import matplotlib.pyplot as plt
 import numpy as np
@@ -58,7 +59,7 @@ class Touchdown(Measurement):
         self.timestamp = ''
 
     def __getstate__(self):
-        self.save_dict = {"timestamp": self.timestamp,
+        self.save_dict = {"timestamp": self.measurement_start.strftime("%Y-%m-%d %I:%M:%S %p"),
                           "lockin": self.lockin,
                           "atto": self.atto,
                           "piezos": self.piezos,
@@ -88,8 +89,9 @@ class Touchdown(Measurement):
         Does the touchdown.
         Timestamp is determined at the beginning of this function.
         '''
-        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_td'
-        self.timestamp = time.strftime("%Y-%m-%d @ %I:%M:%S%p")
+        #record time when the measurement ends
+        self.measurement_start = datetime.now()
+        self.filename = self.measurement_start.strftime('%Y%m%d_%H%M%S') + '_td'
         if self.planescan:
             self.filename = self.filename + '_planescan'
 

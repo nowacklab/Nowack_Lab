@@ -360,7 +360,7 @@ class ANC350():
         _stages = ['x','y','z'] # order of axis controllers
         _pos_lims = [20000, 20000, 20000] # um (temporary until LUT calibrated)
 
-        def __init__(self, instruments=None):
+        def __init__(self, montana=None):
             '''
             Pass instruments as a dict with montana = montana.Montana().
             This will check the temperature to see if it is safe to go to 60 V.
@@ -369,8 +369,8 @@ class ANC350():
             self.anc = PyANC350v4.Positioner()
 
             V_lim = 45 # room temperature
-            if instruments:
-                if instruments['montana'].temperature['platform'] < 30:
+            if montana:
+                if montana.temperature['platform'] < 30:
                     V_lim = 60 # low temperature requires more voltage to step
 
             for (i,s) in enumerate(self._stages):
