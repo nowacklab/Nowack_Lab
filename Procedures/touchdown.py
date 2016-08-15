@@ -190,7 +190,7 @@ class Touchdown(Measurement):
 
     def configure_attocube(self):
         """ Set up z attocube """
-        self.atto.freq = {'z': 200}
+        self.atto.z.freq = 200
 
     def configure_lockin(self):
         """ Set up lockin amplifier for capacitance detection """

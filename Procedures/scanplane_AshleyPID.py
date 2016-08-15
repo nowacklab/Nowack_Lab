@@ -9,6 +9,8 @@ from numpy import ma
 from ..Utilities import dummy, plotting
 from ..Instruments import piezos, nidaq, montana, squidarray
 from .save import Measurement
+from scipy.interpolate import spline
+from scipy import signal
 
 class Scanplane(Measurement):
     def __init__(self, instruments=None, span=[100,100], center=[0,0], numpts=[50,50], plane=dummy.Dummy(planefit.Planefit), scanheight=5, sig_in=0, cap_in=1, sig_in_ac_x=None, sig_in_ac_y=None):
@@ -16,12 +18,12 @@ class Scanplane(Measurement):
             self.piezos = instruments['piezos']
             self.daq = instruments['nidaq']
             self.montana = instruments['montana']
-            self.array = instruments['squidarray']
+            # self.array = instruments['squidarray']
         else:
             self.piezos = dummy.Dummy(piezos.Piezos)
             self.daq = dummy.Dummy(nidaq.NIDAQ)
             self.montana = dummy.Dummy(montana.Montana)
-            self.array = dummy.Dummy(squidarray.SquidArray)
+            # self.array = dummy.Dummy(squidarray.SquidArray)
 
         self.sig_in = 'ai%s' %sig_in
         self.daq.add_input(self.sig_in)
@@ -101,7 +103,7 @@ class Scanplane(Measurement):
 
         ## Start time and temperature
         self.filename = time.strftime('%Y%m%d_%H%M%S') + '_scan'
-        self.timestamp = time.strftime("%Y-%m-%d @ %I:%M%:%S%p")
+        self.timestamp = time.strftime("%Y-%m-%d @ %I:%M:%S%p")
         tstart = time.time()
         self.temp_start = self.montana.temperature['platform']
 
@@ -121,13 +123,108 @@ class Scanplane(Measurement):
                             'y': self.Y[0,i],
                             'z': self.Z[0,i]
                             }
-            self.array.reset()
+            # self.array.reset()
             time.sleep(3)
 
             ## Do the sweep
+            # Vstart = {'x': self.X[0,i], 'y': self.Y[0,i], 'z': self.Z[0,i]}
+            # Vend = {'x': self.X[-1,i], 'y': self.Y[-1,i], 'z': self.Z[-1,i]}
+            # out, V, t = self.piezos.sweep(Vstart, Vend) # sweep over X
+
+            ## Do the sweep with PID
             Vstart = {'x': self.X[0,i], 'y': self.Y[0,i], 'z': self.Z[0,i]}
             Vend = {'x': self.X[-1,i], 'y': self.Y[-1,i], 'z': self.Z[-1,i]}
-            out, V, t = self.piezos.sweep(Vstart, Vend) # sweep over X
+            out = {}
+            V = {self.sig_in: [], self.sig_in_ac_x: [], self.cap_in: []}
+
+            numsteps=50
+            out['x'] = np.linspace(Vstart['x'], Vend['x'], numsteps)
+            out['y'] = np.linspace(Vstart['y'], Vend['y'], numsteps)
+            out['z'] = np.linspace(Vstart['z'], Vend['z'], numsteps)
+
+            ## PID STUFF
+            P=0.05
+            I=7
+            D=0
+            desired_voltage = 0
+            start_voltage = 0
+            pid = PID(P, I, D)
+            pid.SetPoint = desired_voltage
+            pid.setSampleTime(.000001)
+
+            t0 = time.time()
+
+            feedback_list = []
+            time_list = []
+            setpoint_list = []
+            act_time = []
+            thermo_voltage = []
+            graph_voltage = []
+            self.daq.ao0 = start_voltage
+            pid.output = start_voltage
+            pid.ITerm = desired_voltage
+
+            err_thresh = 0.009
+            pid.last_error = err_thresh*1.1 #cheating so while loop will run
+
+            Vlim = 10
+
+            import winsound
+            winsound.Beep(457,500) # it will beep if it reaches this point
+
+
+            # Initialize feedback so voltage is zero
+            while pid.last_error >= err_thresh or pid.last_error <= -err_thresh:
+                Vin = self.daq.ai0
+                thermo_voltage.append(Vin)
+                pid.update(thermo_voltage[-1])
+                time.sleep(0.02)
+                feedback = pid.output
+
+                if feedback > Vlim:
+                    feedback = Vlim
+                elif feedback < -Vlim:
+                    feedback = -Vlim
+                self.daq.ao0 = feedback
+
+            winsound.Beep(500,500) # it will beep if it reaches this point
+            winsound.Beep(500,500) # it will beep if it reaches this point
+
+
+            for j in range(numsteps):
+                self.piezos.V = {'x':out['x'][j], 'y':out['y'][j], 'z':out['z'][j]} # move to the next step
+
+                pid.last_error = 0
+
+                Vin = self.daq.ai0
+                graph_voltage.append(Vin)
+                pid.update(graph_voltage[-1])
+                time.sleep(0.02)
+                feedback2 = pid.output
+
+                if feedback2 > Vlim:
+                    feedback2 = Vlim
+                elif feedback2 < -Vlim:
+                    feedback2 = -Vlim
+                self.daq.ao0 = feedback2
+
+                time_list.append(i)
+                feedback_list.append(feedback2)
+                act_time.append(pid.current_time)
+
+                V[self.sig_in].append(feedback2) # voltage sent to mod
+                V[self.sig_in_ac_x].append(Vin) # voltage input from array (want to keep at zero)
+                V[self.cap_in].append(getattr(self.daq, self.cap_in))
+
+            winsound.Beep(600,500) # it will beep if it reaches this point
+            winsound.Beep(600,500) # it will beep if it reaches this point
+            winsound.Beep(600,500) # it will beep if it reaches this point
+
+
+
+            ### DONE WITH PID stuff
+
+            V[self.sig_in_ac_y] = V[self.sig_in]
 
             ## Save linecuts
             self.linecuts[str(i)] = {"Vstart": Vstart,
@@ -311,6 +408,77 @@ class Scanplane(Measurement):
             f.write('\n Vsquid:\n')
             for x in self.last_full_out:
                 f.write(str(x)+',')
+
+
+class PID:
+    def __init__(self, P=0.2, I=0.0, D=0.0):
+        self.Kp = P
+        self.Ki = I
+        self.Kd = D
+
+        self.sample_time = 0.0
+        self.t0 = time.time()
+        self.current_time = time.time()-self.t0
+        self.last_time = self.current_time
+
+        self.clear()
+
+    def clear(self):
+        self.SetPoint = 0.0
+
+        self.PTerm = 0.0
+        self.ITerm = 0.0
+        self.DTerm = 0.0
+        self.last_error = 0.0
+#         Windup Guard
+        self.int_error = 0.0
+        self.windup_guard = 10.0
+
+        self.output = 0.0
+
+    def update(self, feedback_value):
+        error = self.SetPoint - feedback_value
+
+        self.current_time = time.time()-self.t0
+        self.delta_time = self.current_time - self.last_time
+
+        self.delta_error = self.last_error - error
+
+
+
+        if (self.delta_time >= self.sample_time):
+            self.PTerm = self.Kp * error
+
+            self.ITerm += error * self.delta_time
+
+            if (self.ITerm < -self.windup_guard):
+                self.ITerm = -self.windup_guard
+            elif (self.ITerm > self.windup_guard):
+                self.ITerm = self.windup_guard
+
+            self.DTerm = 0.0
+
+            if self.delta_time > 0:
+                self.DTerm = self.delta_error / self.delta_time
+                self.last_time = self.current_time
+                self.last_error = error
+
+                self.output = self.PTerm + (self.Ki * self.ITerm) + (self.Kd * self.DTerm)
+
+
+    def setKp(self, proportional_gain):
+        self.Kp = proportional_gain
+    def setKi(self, integral_gain):
+        self.Ki = integral_gain
+    def setKd(self, derivative_gain):
+        self.Kd = derivative_gain
+
+    def setWindup(self, windup):
+        self.windup_guard = windup
+
+    def setSampleTime(self, sample_time):
+        self.sample_time = sample_time
+
 
 if __name__ == '__main__':
     'hey'
