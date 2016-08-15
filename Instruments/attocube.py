@@ -294,7 +294,7 @@ class ANC350():
         self.check_voltage()
 
         if updown not in ['u','d']:
-            raise Exception('What doesn\'t come up must come down!')
+            raise Exception('updown must be \'u\' to move up and \'d\' to move down')
 
         self.anc.setAxisOutput(self._stages.index(axis), 1, 0)
         time.sleep(0.5) # wait for output to turn on
@@ -303,7 +303,7 @@ class ANC350():
         elif numsteps > self._step_lim:
             raise Exception('too many steps! Max %i' %self._step_lim)
         elif numsteps == 0:
-            raise Exception('That won\'t get you anywhere!')
+            raise Exception('numsteps was 0')
             # msg = self.send('step%s %i c' %(updown, i+1)) NO!!!!! THIS IS BAD!!! WE DON'T WANT TO MOVE CONTINUOUSLY
         else:
             if updown == 'u':
@@ -311,7 +311,7 @@ class ANC350():
             else:
                 backward = 1
             self.anc.startContinuousMove(self._stages.index(axis), 1, backward)
-            time.sleep(numsteps/self.freq[axis])
+            time.sleep(abs(numsteps)/self.freq[axis])
             self.anc.startContinuousMove(self._stages.index(axis), 0, backward)
         self.anc.setAxisOutput(self._stages.index(axis), 0, 0)
 
