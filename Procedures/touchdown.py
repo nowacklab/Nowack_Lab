@@ -162,7 +162,7 @@ class Touchdown(Measurement):
             if not self.planescan: # don't want to move attocubes if in a planescan!
                 if not self.touchdown:
                     self.piezos.V = {'z': -self.Vz_max} # before moving attocubes, make sure we're far away from the sample!
-                    self.atto.up({'z': attosteps})
+                    self.atto.z.step(attosteps)
                     time.sleep(2) # was getting weird capacitance values immediately after moving; wait a bit
 
         V_td = self.get_touchdown_voltage(i, plot=True) # we didn't plot the intersecting lines before, so let's do that now.
