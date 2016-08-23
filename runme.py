@@ -1,7 +1,7 @@
 import os, shutil, matplotlib
 
 home = os.path.expanduser('~')
-site_packages = os.path.dirname(os.path.abspath(os.path.join(matplotlib.__file__, '..')))
+site_packages = os.path.dirname(os.path.abspath(os.path.join(matplotlib.__file__, '..'))) #we know matplotlib is in site-packages
 
 ## Add utility to save jupyter notebook to HTML
 package_path = os.path.join(os.getcwd(),'Utilities','jupyter_notebook_config.py')
@@ -21,3 +21,9 @@ package_path = os.path.join(os.getcwd(),'Utilities','custom.css')
 notebook_path = os.path.join(site_packages, 'notebook', 'static', 'custom', 'custom.css')
 
 shutil.copyfile(package_path, notebook_path)
+
+## Set default notebook template for scanning
+package_path = os.path.join(os.getcwd(),'Utilities','nbbase.py')
+nbformat_path = os.path.join(site_packages, 'nbformat', 'v4', 'nbbase.py')
+
+shutil.copyfile(package_path, nbformat_path)

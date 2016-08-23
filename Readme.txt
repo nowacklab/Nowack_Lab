@@ -25,3 +25,8 @@ To add a bottom border, find your custom.css file (…/site-packages/notebook/st
 jupyter_notebook_config.py
 %%%%%%%%%%%%%%%%%%%%%%%%%%
 Configures notebook to save a .html copy along with the .ipynb file. Allows for easy viewing of notebooks.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+nbbase.py
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+Overwrites the default code used to create a new jupyter notebook, and instead creates a new notebook with a template for setting up a scan.
