@@ -22,7 +22,7 @@ class Piezos():
             gain: gain setting on HVA4
             Vmax: maximum delta voltage across piezo (includes bipolar multiplier)
             bipolar: whether the piezo is driven with +/- V (True) or +V/gnd (False)
-            zero: whether to zero the daq or not
+            zero: whether or not to zero the daq
         '''
         self.daq = daq
         self.gain = gain
