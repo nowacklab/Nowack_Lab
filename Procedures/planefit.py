@@ -40,13 +40,13 @@ class Planefit(Measurement):
         self.y = numpy.linspace(center[1]-span[1]/2, center[1]+span[1]/2, numpts[1])
 
         self.X, self.Y = numpy.meshgrid(self.x, self.y)
-        self.Z = numpy.nan*self.X # makes array of zeros same size as grid
+        self.Z = numpy.nan*self.X # makes array of nans same size as grid
 
         self.a = None
         self.b = None
         self.c = None
 
-        self.filename=''
+        self.filename = ''
 
     def __getstate__(self):
         self.save_dict = {"timestamp": self.timestamp.strftime("%Y-%m-%d %I:%M:%S %p"),
@@ -56,7 +56,7 @@ class Planefit(Measurement):
                           "span": self.span,
                           "center": self.center,
                           "numpts": self.numpts,
-                          "piezos": self.peizos,
+                          "piezos": self.piezos,
                           "montnana": self.montana}
         return self.save_dict
 
@@ -157,8 +157,13 @@ class Planefit(Measurement):
                     raise Exception('Plane now extends outside range of piezos! Move the attocubes and try again.')
 
 
-def load_last():
-    plane = Planefit(None)
+def load_last(instruments):
+    '''
+    Creates a new plane object using parameters from last plane taken.
+    Useful if you lose the object while scanning.
+    Pass in instruments.
+    '''
+    plane = Planefit(instruments=instruments)
 
     home = os.path.expanduser("~")
     data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Planes')

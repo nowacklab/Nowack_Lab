@@ -18,6 +18,10 @@ class Scanplane(Measurement):
             self.daq = instruments['nidaq']
             self.montana = instruments['montana']
             self.array = instruments['squidarray']
+            self.preamp = instruments['preamp']
+            self.squid_lockin = instruments['squid_lockin']
+            self.cap_lockin = instruments['cap_lockin']
+            self.atto = instruments['attocube']
         else:
             self.piezos = dummy.Dummy(piezos.Piezos)
             self.daq = dummy.Dummy(nidaq.NIDAQ)
@@ -42,8 +46,8 @@ class Scanplane(Measurement):
 
         self.plane = plane
         if scanheight < 0:
-            inp = input('Scan height is negative, SQUID will ram into sample! Are you sure you want this? If not, enter \'quit.\'')
-            if inp == 'quit':
+            inp = input('Scan height is negative, SQUID will ram into sample! Are you sure you want this? \'q\' to quit.')
+            if inp == 'q':
                 raise Exception('Terminated by user')
         self.scanheight = scanheight
 
@@ -82,7 +86,7 @@ class Scanplane(Measurement):
 
     def __getstate__(self):
         self.save_dict = {"start_time": self.timestamp.strftime("%Y-%m-%d %I:%M:%S %p"),
-                          "end_time": self.end_time.strftime("%Y-%m-%d %I:%M:%S %p")
+                          "end_time": self.end_time.strftime("%Y-%m-%d %I:%M:%S %p"),
                           "piezos": self.piezos,
                           "daq": self.daq,
                           "montana": self.montana,
@@ -95,7 +99,11 @@ class Scanplane(Measurement):
                           "plane": self.plane,
                           "span": self.span,
                           "center": self.center,
-                          "numpts": self.numpts}
+                          "numpts": self.numpts,
+                          "preamp": self.preamp,
+                          "squid_lockin": self.squid_lockin,
+                          "capacitance_lockin": self.capacitance_lockin,
+                          "attocube": self.atto}
         return self.save_dict
 
     def do(self):
@@ -105,7 +113,9 @@ class Scanplane(Measurement):
         self.timestamp = datetime.now()
         self.filename = self.timestamp.strftime('%Y%m%d_%H%M%S') + '_scan'
         tstart = time.time()
-        self.temp_start = self.montana.temperature['platform']
+        #temporarily commented out so we can scan witout internet on montana
+        #computer
+        #self.temp_start = self.montana.temperature['platform']
 
         ## make sure all points are not out of range of piezos before starting anything
         for i in range(self.X.shape[0]):
@@ -134,9 +144,9 @@ class Scanplane(Measurement):
             ## Save linecuts
             self.linecuts[str(i)] = {"Vstart": Vstart,
                                 "Vend": Vend,
-                                "Vsquid": {"Vdc": V[self.sig_in],
-                                           "Vac_x": V[self.sig_in_ac_x],
-                                           "Vac_y": V[self.sig_in_ac_y]}}
+                                "Vsquid": {"Vdc": np.array(V[self.sig_in]).tolist(),
+                                           "Vac_x": np.array(V[self.sig_in_ac_x]).tolist(),
+                                           "Vac_y": np.array(V[self.sig_in_ac_y]).tolist()}}
 
             ## Interpolate to the number of lines
             interp_func = interp(out['x'], V[self.sig_in])
@@ -277,7 +287,7 @@ class Scanplane(Measurement):
                 f.write('plane.%s = %f\n' %(s, float(getattr(self.plane, s))))
             f.write('scanheight = %f\n' %self.scanheight)
             f.write('Montana info: \n'+self.montana.log()+'\n')
-            f.write('starting temperature: %f' %self.temp_start)
+            #f.write('starting temperature: %f' %self.temp_start)
 
             f.write('DC signal\n')
             f.write('X (V),Y (V),V (V)\n')

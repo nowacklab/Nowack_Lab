@@ -13,7 +13,7 @@ class Touchdown(Measurement):
     def __init__(self, instruments=None, cap_input=None, planescan=False, Vz_max = None):
         self.touchdown = False
         self.V_to_C = 2530e3 # 2530 pF/V * (1e3 fF/pF), calibrated 20160423 by BTS, see ipython notebook
-        self.attosteps = 200 #number of attocube steps between sweeps
+        self.attoshift = 50 # amount to move attocubes (in um) between sweeps
         self.numfit = 10       # number of points to fit line to while collecting data
         self.numextra = 3
 
@@ -31,12 +31,6 @@ class Touchdown(Measurement):
             self.montana = dummy.Dummy(montana.Montana)
 
         self.lockin.ch1_daq_input = 'ai%s' %cap_input
-
-        if self.montana.temperature['platform'] < 10:
-            self.low_temp = True
-        else:
-            self.low_temp = False
-
         self.planescan = planescan
 
         if Vz_max == None:
@@ -96,9 +90,9 @@ class Touchdown(Measurement):
             self.filename = self.filename + '_planescan'
 
         V_td = None
-        attosteps = self.attosteps # Number of steps attocubes move if no td.
+        attoshift = self.attoshift # Number of steps attocubes move if no td.
         if self.planescan:
-            attosteps = None # don't move the attocubes if doing a planescan
+            attoshift = None # don't move the attocubes if doing a planescan
 
         ## Loop that does sweeps of z piezo
         ## Z attocube is moved up between iterations
@@ -141,12 +135,16 @@ class Touchdown(Measurement):
                         V_td = self.get_touchdown_voltage(i, plot=False)
                         if not self.planescan: # Don't want to move attocubes during planescan
                             # For central touchdown of plane, we want to get the touchdown voltage near the center of the piezo's positive voltage range.
-                            if V_td > 0.65*self.Vz_max:
+                            if V_td > 0.7*self.Vz_max:
                                 self.touchdown = False
-                                attosteps = self.attosteps/4 #make sure we don't crash! Don't keep on updating attosteps, otherwise it will go to zero eventually, and that means continuous!!!
-                            elif V_td < 0.35*self.Vz_max:
+                                attoshift = self.attoshift/8 #make sure we don't crash! Don't keep on updating attoshift, otherwise it will go to zero eventually, and that means continuous!!!
+                                self.title = 'Found touchdown, centering near 100 Vpiezo'
+                                self.ax.set_title(self.title, fontsize=20)
+                            elif V_td < 0.3*self.Vz_max:
                                 self.touchdown = False
-                                attosteps = -self.attosteps/4 #move the other direction to bring V_td closer to midway #make sure we don't crash! Don't keep on updating attosteps, otherwise it will go to zero eventually, and that means continuous!!!
+                                attoshift = -self.attoshift/8 #move the other direction to bring V_td closer to midway
+                                self.title = 'Found touchdown, centering near 100 Vpiezo'
+                                self.ax.set_title(self.title, fontsize=20)
                         elif V_td < 0: # This is obviously a false touchdown; for planescan only
                             self.touchdown=False
                         elif self.extra == self.numextra: # last extra step
@@ -164,7 +162,7 @@ class Touchdown(Measurement):
             if not self.planescan: # don't want to move attocubes if in a planescan!
                 if not self.touchdown:
                     self.piezos.V = {'z': -self.Vz_max} # before moving attocubes, make sure we're far away from the sample!
-                    self.atto.z.step(attosteps)
+                    self.atto.z.move(attoshift)
                     time.sleep(2) # was getting weird capacitance values immediately after moving; wait a bit
 
         V_td = self.get_touchdown_voltage(i, plot=True) # we didn't plot the intersecting lines before, so let's do that now.

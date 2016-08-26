@@ -10,7 +10,7 @@ class Measurement:
         obj_string = jsp.encode(obj)
         obj_dict = json.loads(obj_string)
         with open(filename, 'w') as f:
-            json.dump(obj_dict, f, sort_keys=False, indent=4)
+            json.dump(obj_dict, f, sort_keys=True, indent=4)
 
     @staticmethod
     def fromjson(json_file):

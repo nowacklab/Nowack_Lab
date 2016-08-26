@@ -1,3 +1,6 @@
+Make load last plane a bit more seamless, need instruments
+Allow for sig_in_ac_x = None
+
 Implement namedtuple for piezos?
 
 Fix attocube communication bug - delete object?
