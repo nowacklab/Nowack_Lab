@@ -12,7 +12,7 @@ from ..Instruments import piezos, nidaq, montana, squidarray
 from .save import Measurement
 
 class Scanplane(Measurement):
-    def __init__(self, instruments=None, span=[100,100], center=[0,0], numpts=[50,50], plane=dummy.Dummy(planefit.Planefit), scanheight=5, sig_in=0, cap_in=1, sig_in_ac_x=None, sig_in_ac_y=None, freq=1500):
+    def __init__(self, instruments=None, span=[100,100], center=[0,0], numpts=[50,50], plane=dummy.Dummy(planefit.Planefit), scanheight=5, sig_in=0, cap_in=1, sig_in_ac_x=None, sig_in_ac_y=None, freq=1500, raster=False):
         if instruments:
             self.piezos = instruments['piezos']
             self.daq = instruments['nidaq']
@@ -29,6 +29,7 @@ class Scanplane(Measurement):
             self.array = dummy.Dummy(squidarray.SquidArray)
 
         self.freq = freq
+        self.raster = raster
 
         self.sig_in = 'ai%s' %sig_in
         self.daq.add_input(self.sig_in)
@@ -130,23 +131,24 @@ class Scanplane(Measurement):
 
         ## Loop over Y values
         for i in range(int(self.X.shape[1])): # loop over every line
-
-            if i%2 == 0: # if even
-                k = 0 # k is used to determine Vstart/Vend. For forward, will sweep from the 0th element to the -(k+1) = -1st = last element
-            else: # if odd
-                k = -1 # k is used to determine Vstart/Vend. For forward, will sweep from the -1st = last element to the -(k+1) = 0th = first element
+            k = 0
+            if self.raster:
+                if i%2 == 0: # if even
+                    k = 0 # k is used to determine Vstart/Vend. For forward, will sweep from the 0th element to the -(k+1) = -1st = last element
+                else: # if odd
+                    k = -1 # k is used to determine Vstart/Vend. For forward, will sweep from the -1st = last element to the -(k+1) = 0th = first element
 
             ## Explicitly go to first point of scan
-            self.piezos.V = {'x': self.X[k,i], #k=0 for forward, k=-1 for backward
+            self.piezos.sweep({'x': self.X[k,i], #k=0 for forward, k=-1 for backward
                             'y': self.Y[k,i],
                             'z': self.Z[k,i]
-                            }
+                            }, freq=1500)
             self.array.reset()
             time.sleep(3)
 
             ## Do the sweep
-            Vstart = {'x': self.X[k,i], 'y': self.Y[k,i], 'z': self.Z[k,i]}
-            Vend = {'x': self.X[-(k+1),i], 'y': self.Y[-(k+1),i], 'z': self.Z[-(k+1),i]}
+            Vstart = {'x': self.X[k,i], 'y': self.Y[k,i], 'z': self.Z[k,i]} # for forward, starts at 0,i; backward: -1, i
+            Vend = {'x': self.X[-(k+1),i], 'y': self.Y[-(k+1),i], 'z': self.Z[-(k+1),i]} # for forward, ends at -1,i; backward: 0, i
             out, V, t = self.piezos.sweep(Vstart, Vend, freq=self.freq) # sweep over X
 
             ## Flip the backwards sweeps
