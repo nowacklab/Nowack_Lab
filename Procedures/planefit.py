@@ -47,6 +47,7 @@ class Planefit(Measurement):
         self.c = None
 
         self.filename = ''
+        self.timestamp = datetime.now()
 
     def __getstate__(self):
         self.save_dict = {"timestamp": self.timestamp.strftime("%Y-%m-%d %I:%M:%S %p"),
@@ -57,7 +58,7 @@ class Planefit(Measurement):
                           "center": self.center,
                           "numpts": self.numpts,
                           "piezos": self.piezos,
-                          "montnana": self.montana}
+                          "montana": self.montana}
         return self.save_dict
 
     def do(self):

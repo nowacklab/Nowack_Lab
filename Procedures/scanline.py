@@ -8,12 +8,16 @@ from ..Instruments import piezos, nidaq, montana, squidarray
 from .save import Measurement
 
 class Scanline(Measurement):
-    def __init__(self, instruments=None, start=(-100,-100), end=(100,100), plane=dummy.Dummy(planefit.Planefit), scanheight=0, sig_in=0, cap_in=1, sig_in_ac_x=None, sig_in_ac_y=None):
+    def __init__(self, instruments=None, start=(-100,-100), end=(100,100), plane=dummy.Dummy(planefit.Planefit), scanheight=0, sig_in=0, cap_in=1, sig_in_ac_x=None, sig_in_ac_y=None, freq=1500, return_to_zero=True):
         if instruments:
             self.piezos = instruments['piezos']
             self.daq = instruments['nidaq']
             self.montana = instruments['montana']
             self.array = instruments['squidarray']
+            self.preamp = instruments['preamp']
+            self.squid_lockin = instruments['squid_lockin']
+            self.cap_lockin = instruments['cap_lockin']
+            self.atto = instruments['attocube']
         else:
             self.piezos = dummy.Dummy(piezos.Piezos)
             self.daq = dummy.Dummy(nidaq.NIDAQ)
@@ -34,6 +38,7 @@ class Scanline(Measurement):
 
         self.start = start
         self.end = end
+        self.return_to_zero = return_to_zero
 
         self.plane = plane
         if scanheight < 0:
@@ -41,6 +46,7 @@ class Scanline(Measurement):
             if inp == 'quit':
                 raise Exception('Terminated by user')
         self.scanheight = scanheight
+        self.freq = freq
 
         self.filename = ''
 
@@ -56,19 +62,19 @@ class Scanline(Measurement):
         self.save_dict = {"timestamp": self.timestamp,
                           "piezos": self.piezos,
                           "daq": self.daq,
-                          "montanta": self.montana,
+                          "montana": self.montana,
                           "squidarray": self.array,
                           "lockin": self.lockin,
                           "preamp":self.preamp,
-                          "span": self.span,
-                          "center": self.center,
-                          "numpts": self.numpts,
-                          "Vstart": Vstart,
-                          "Vend": Vend,
+                          "start": self.start,
+                          "end": self.end,
+                          "freq": self.freq,
                           "V": self.V,
                           "Vac_x": self.Vac_x,
-                          "Vac_y": self.Vac_y
-                          }
+                          "Vac_y": self.Vac_y,
+                          "squid_lockin": self.squid_lockin,
+                          "capacitance_lockin": self.cap_lockin,
+                          "attocubes": self.atto}
         return self.save_dict
 
     def do(self):
@@ -92,10 +98,10 @@ class Scanline(Measurement):
         ## Explicitly go to first point of scan
         self.piezos.V = Vstart
         self.array.reset()
-        time.sleep(3)
+        # time.sleep(3)
 
         ## Do the sweep
-        self.out, V, t = self.piezos.sweep(Vstart, Vend) # sweep over Y
+        self.out, V, t = self.piezos.sweep(Vstart, Vend, freq=self.freq) # sweep over Y
 
         dist_between_points = np.sqrt((self.out['x'][0]-self.out['x'][-1])**2+(self.out['y'][0]-self.out['y'][-1])**2)
         self.Vout = np.linspace(0, dist_between_points, len(self.out['x'])) # plots vs 0 to whatever the maximum distance travelled was
@@ -106,7 +112,8 @@ class Scanline(Measurement):
 
         self.plot()
 
-        self.piezos.V = 0
+        if self.return_to_zero:
+            self.piezos.V = 0
         self.save()
 
         tend = time.time()

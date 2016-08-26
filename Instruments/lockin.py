@@ -43,11 +43,11 @@ class SR830():
         self.reserve_options = ['High Reserve', 'Normal', 'Low Noise']
 
     def __getstate__(self):
-        self.save_dict = {"sensitivity": self._sensitivity,
-                          "frequency": self._frequency,
-                          "amplitude": self._amplitude,
-                          "time_constant": self._time_constant,
-                          #"reserve": self._reserve,
+        self.save_dict = {"sensitivity": self.sensitivity,
+                          "frequency": self.frequency,
+                          "amplitude": self.amplitude,
+                          "time_constant": self.time_constant,
+                          "reserve": self.reserve,
                           "gpib_address": self.gpib_address}
         return self.save_dict
 

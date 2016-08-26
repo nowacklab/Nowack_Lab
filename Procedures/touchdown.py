@@ -20,7 +20,7 @@ class Touchdown(Measurement):
         if instruments:
             self.piezos = instruments['piezos']
             self.atto = instruments['attocube']
-            self.lockin = instruments['lockin']
+            self.lockin = instruments['cap_lockin']
             self.daq = instruments['nidaq']
             self.montana = instruments['montana']
         else:
