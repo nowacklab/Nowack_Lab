@@ -29,10 +29,11 @@ def figure(title=None, xlabel=None, ylabel=None):
     '''
     ## Set up the figure
     import bokeh.plotting as bplt
-    fig = bplt.figure(plot_width = 600,
+    fig = bplt.figure(plot_width = 800,
                 plot_height = 600,
                 tools = 'pan,reset,save,box_zoom,wheel_zoom,resize',
                 title = title,
+                toolbar_location='above'
                 )
 
     ## Add data hover tool
@@ -64,22 +65,65 @@ def figure(title=None, xlabel=None, ylabel=None):
     return fig
 
 
-def line(fig, x, y, line_handle=None, color='black', linestyle='-', markerstyle=None, name=None):
+def legend(fig, labels=None):
     '''
-    Adds a line to a bokeh plot.
+    Adds a legend to a Bokeh plot.
+    fig: figure the legend will be plotted next to
+    labels: list of labels for all lines (in order of plotting them). By default, uses the "name" of each line plotted.
+    loc: location of legend relative to plot
+    '''
+    from bokeh.models.annotations import Legend
+    from bokeh.models.renderers import GlyphRenderer
+
+
+    lines = []
+    for r in fig.renderers:
+        if type(r) == GlyphRenderer:
+            lines.append(r)
+    if labels == None:
+        labels = [l.name for l in lines]
+
+    legends = [(labels[i], [lines[i]]) for i in range(len(labels))]
+    leg = Legend(legends = legends,
+                location = (10, -30),
+                background_fill_color='mediumpurple',
+                background_fill_alpha = 0.2,
+                label_text_font_size = '12pt'
+            )
+
+    fig.add_layout(leg, 'right')
+
+
+def line(fig, x, y, line_handle=None, color='black', linestyle='-', name=None):
+    '''
+    Adds a line to a Bokeh plot.
     Must specify figure and x and y data.
     Note: once figure is shown, will not add any new lines.
     Optional arguments:
     - line_handle: Pass in the handle for a line to update that line rather than create a new one.
     - color: any CSS colorname (http://www.crockford.com/wrrrld/color.html) or Hex RGB
-    - linestyle: Mimicking matplotlib, can specify linestyle.
+    - linestyle: Mimicking matplotlib, can specify linestyle or markerstyle.
         Line types: - (solid), -- (dashed), : (dotted), .- (dotdash), -. (dashdot)
-    - markerstyle: Mimicking matplotlib, can specify markerstyle.
         Marker types: o (circle), s (square), v (inverted_triangle), ^ (triangle), x (x), + (cross), * (asterisk)
     - name: label for this line
     '''
 
-    # TO DO: implement linestyle, markerstyle
+    linestyles = {
+        '-': 'solid',
+        '--': 'dashed',
+        ':': 'dotted',
+        '.-': 'dotdash',
+        '-.': 'dashdot'
+    }
+    markerstyles = {
+        'o': 'circle',
+        's': 'square',
+        'v': 'inverted_triangle',
+        '^': 'triangle',
+        'x': 'x',
+        '+': 'cross',
+        '*': 'asterisk'
+    }
 
 
     if line_handle: # if updating an existing line
@@ -89,10 +133,27 @@ def line(fig, x, y, line_handle=None, color='black', linestyle='-', markerstyle=
     else: # create a new line
         from bokeh.models import ColumnDataSource
         source = ColumnDataSource(data=dict(x=x,y=y, name=[name]*len(x))) # an array of "name"s will have "name" show up on hover tooltip
-        line_handle = fig.line(x, y, color=color, line_width=2, source=source, name=name)
+        if linestyle in linestyles.keys(): # plot a line
+            line_handle = fig.line(x, y,
+                                    color = color,
+                                    line_dash = linestyles[linestyle],
+                                    line_width = 2,
+                                    source = source,
+                                    name = name,
+                                )
 
-    update() # refresh plots in the notebook
+        else: # plot scatter
+            line_handle = fig.scatter(x, y,
+                                    color = color,
+                                    marker = markerstyles[linestyle],
+                                    size = 10,
+                                    source = source,
+                                    name = name
+                                )
+
+    # update() # refresh plots in the notebook, doesn't work when adding new lines unfortunately
     return line_handle
+
 
 def plot_html(fig):
     '''
@@ -121,10 +182,11 @@ def plot_html(fig):
 
 def show(fig):
     '''
-    Show a bokeh plot using the normal show function.
+    Adds a legend, then shows a bokeh plot using the normal show function.
     Uses the current kernel's ID as a dictionary key for NB_HANDLE.
     Should allow module to be used by two notebooks simultaneously.
     '''
+    legend(fig)
     global NB_HANDLE
     NB_HANDLE[get_nb_kernel()] = bokeh.io.show(fig, notebook_handle=True)
 
