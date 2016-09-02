@@ -59,7 +59,7 @@ class Planefit(Measurement):
         return self.save_dict
 
     def do(self):
-        if not cap_input:
+        if not self.cap_input:
             raise Exception('Cap_input not set!')
 
         self.timestamp = datetime.now()

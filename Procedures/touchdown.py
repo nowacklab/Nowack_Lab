@@ -15,6 +15,7 @@ class Touchdown(Measurement):
         self.V_to_C = 2530e3 # 2530 pF/V * (1e3 fF/pF), calibrated 20160423 by BTS, see ipython notebook
         self.numfit = 10       # number of points to fit line to while collecting data
         self.numextra = 3
+        self.attoshift = 40 # move 40 um if no touchdown detected
 
         if instruments:
             self.piezos = instruments['piezos']
@@ -135,7 +136,7 @@ class Touchdown(Measurement):
                                 self.touchdown = False
                                 self.title = 'Found touchdown, centering near 100 Vpiezo'
                                 self.ax.set_title(self.title, fontsize=20)
-                                attoshift = (V_td-100)*.127 # e.g. V_td at 0 V means we're too close, will move z atto 12.7 um down)
+                                self.attoshift = (V_td-100)*.127 # e.g. V_td at 0 V means we're too close, will move z atto 12.7 um down)
                         elif V_td < 0: # During a planescan, this is probably false touchdown
                             self.touchdown=False
                         elif self.extra == self.numextra: # last extra step, bug fix
@@ -153,7 +154,7 @@ class Touchdown(Measurement):
             if not self.planescan: # don't want to move attocubes if in a planescan!
                 if not self.touchdown:
                     self.piezos.V = {'z': -self.Vz_max} # before moving attocubes, make sure we're far away from the sample!
-                    self.atto.z.move(attoshift)
+                    self.atto.z.move(self.attoshift)
                     time.sleep(2) # was getting weird capacitance values immediately after moving; wait a bit
 
         V_td = self.get_touchdown_voltage(i, plot=True) # we didn't plot the intersecting lines before, so let's do that now.
