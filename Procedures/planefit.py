@@ -13,14 +13,10 @@ class Planefit(Measurement):
     '''
     For fitting to the plane of the sample. Will do a series of touchdowns in a grid of size specified by numpts. Vz_max sets the maximum voltage the Z piezo will reach. If None, will use the absolute max safe voltage set in the Piezos class.
     '''
-    def __init__(self, instruments=None, span=[400,400], center=[0,0], numpts=[4,4], Vz_max = None, cap_input=0):
+    def __init__(self, instruments, cap_input=None, span=[400,400], center=[0,0], numpts=[4,4], Vz_max = None):
         self.instruments = instruments
-        if instruments:
-            self.piezos = instruments['piezos']
-            self.montana = instruments['montana']
-        else:
-            self.piezos = dummy.Dummy(piezos.Piezos)
-            self.montana = dummy.Dummy(montana.Montana)
+        self.piezos = instruments['piezos']
+        self.montana = instruments['montana']
 
         self.span = span
         self.center = center
@@ -58,10 +54,14 @@ class Planefit(Measurement):
                           "center": self.center,
                           "numpts": self.numpts,
                           "piezos": self.piezos,
-                          "montana": self.montana}
+                          "montana": self.montana,
+                          "cap_input": self.cap_input}
         return self.save_dict
 
     def do(self):
+        if not cap_input:
+            raise Exception('Cap_input not set!')
+
         self.timestamp = datetime.now()
         self.filename = self.timestamp.strftime('%Y%m%d_%H%M%S') + '_plane'
 
@@ -131,17 +131,7 @@ class Planefit(Measurement):
         data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Planes')
         filename = os.path.join(data_folder, self.filename)
 
-        with open(filename+'.csv', 'w') as f:
-            for s in ['span', 'center', 'numpts']:
-                f.write('%s = %f, %f \n' %(s, float(getattr(self, s)[0]),float(getattr(self, s)[1])))
-            for s in ['a','b','c']:
-                f.write('%s = %f\n' %(s, float(getattr(self, s))))
-            f.write('Montana info: \n'+self.montana.log()+'\n')
-            f.write('X (V),Y (V),Z (V)\n')
-            for i in range(self.X.shape[0]):
-                for j in range(self.X.shape[1]):
-                    if self.Z[i][j] != None:
-                        f.write('%f' %self.X[i][j] + ',' + '%f' %self.Y[i][j] + ',' + '%f' %self.Z[i][j] + '\n')
+        Measurement.tojson(self, filename+'.json')
 
         self.plot()
         plt.savefig(filename+'.pdf', bbox_inches='tight')
@@ -168,13 +158,21 @@ def load_last(instruments):
 
     home = os.path.expanduser("~")
     data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Planes')
-    newest_plane =  max(glob.iglob(os.path.join(data_folder,'*.[ct][sx][vt]')), key=os.path.getctime) # finds the newest plane saved as a csv or txt
-    with open(newest_plane, 'r') as f:
-        for i, line in enumerate(f): # loop through lines
-            if i in (3,4,5): # these lines contain the plane information
-                exec('plane.'+line) # e.g., plane.c = 97.43
-            elif i == 6: # don't care about the rest of the file
-                break
+    newest_plane =  max(glob.iglob(os.path.join(data_folder,'*.json')), key=os.path.getctime) # finds the newest plane saved as json
+
+    import json, jsonpickle as jsp
+
+    with open(newest_plane) as f:
+        obj_dict = json.load(f)
+    obj_string = json.dumps(obj_dict)
+
+    plane.a = obj_dict['py/state']['a']['value']
+    plane.b = obj_dict['py/state']['b']['value']
+    plane.c = obj_dict['py/state']['c']['value']
+    try:
+        plane.cap_input = obj_dict['py/state']['cap_input']['value']
+    except:
+        print('cap_input not loaded! Set this manually!!!')
 
     return plane
 

@@ -13,7 +13,6 @@ class Touchdown(Measurement):
     def __init__(self, instruments=None, cap_input=None, planescan=False, Vz_max = None):
         self.touchdown = False
         self.V_to_C = 2530e3 # 2530 pF/V * (1e3 fF/pF), calibrated 20160423 by BTS, see ipython notebook
-        self.attoshift = 50 # amount to move attocubes (in um) between sweeps
         self.numfit = 10       # number of points to fit line to while collecting data
         self.numextra = 3
 
@@ -90,9 +89,6 @@ class Touchdown(Measurement):
             self.filename = self.filename + '_planescan'
 
         V_td = None
-        attoshift = self.attoshift # Number of steps attocubes move if no td.
-        if self.planescan:
-            attoshift = None # don't move the attocubes if doing a planescan
 
         ## Loop that does sweeps of z piezo
         ## Z attocube is moved up between iterations
@@ -134,24 +130,19 @@ class Touchdown(Measurement):
                     else:
                         V_td = self.get_touchdown_voltage(i, plot=False)
                         if not self.planescan: # Don't want to move attocubes during planescan
-                            # For central touchdown of plane, we want to get the touchdown voltage near the center of the piezo's positive voltage range.
-                            if V_td > 0.7*self.Vz_max:
+                            ## Check if touchdown near center of z piezo +V range
+                            if V_td > 0.7*self.Vz_max or V_td < 0.3*self.Vz_max:
                                 self.touchdown = False
-                                attoshift = self.attoshift/8 #make sure we don't crash! Don't keep on updating attoshift, otherwise it will go to zero eventually, and that means continuous!!!
                                 self.title = 'Found touchdown, centering near 100 Vpiezo'
                                 self.ax.set_title(self.title, fontsize=20)
-                            elif V_td < 0.3*self.Vz_max:
-                                self.touchdown = False
-                                attoshift = -self.attoshift/8 #move the other direction to bring V_td closer to midway
-                                self.title = 'Found touchdown, centering near 100 Vpiezo'
-                                self.ax.set_title(self.title, fontsize=20)
-                        elif V_td < 0: # This is obviously a false touchdown; for planescan only
+                                attoshift = (V_td-100)*.127 # e.g. V_td at 0 V means we're too close, will move z atto 12.7 um down)
+                        elif V_td < 0: # During a planescan, this is probably false touchdown
                             self.touchdown=False
-                        elif self.extra == self.numextra: # last extra step
+                        elif self.extra == self.numextra: # last extra step, bug fix
                             rsquared = self.line_corr_coef(self.V[i-self.numextra:i+1], self.C[i-self.numextra:i+1]) #check fit of last few points
                             if rsquared < 0.90:
                                 self.touchdown=False # false touchdown
-                        break
+                        break # stop approaching
 
             if self.extra != self.numextra: # did not take enough extra steps, TD is at end of range
                 self.touchdown = False
