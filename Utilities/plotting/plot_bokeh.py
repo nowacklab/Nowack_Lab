@@ -1,8 +1,8 @@
 import bokeh.io, numpy as np, os, datetime
 import IPython.display as disp
-from ..utilities import get_nb_kernel
 
-NB_HANDLE = {}
+global NB_HANDLE
+NB_HANDLE = None
 
 def init_notebook():
     '''
@@ -12,7 +12,7 @@ def init_notebook():
     bokeh.io.output_notebook(hide_banner=True)
 
 
-def cmap(cmap_name):
+def mpl_cmap_to_bokeh(cmap_name):
     '''
     Converts a matplotlib colormap to bokeh palette
     '''
@@ -63,6 +63,43 @@ def figure(title=None, xlabel=None, ylabel=None):
 
 
     return fig
+
+
+def image(fig, x, y, z, im_handle=None, cmap='viridis', name=None):
+    '''
+    Adds a 2D image to a Bokeh plot
+    fig: figure to plot on
+    x,y,z: x and y are from np.meshgrid, 2D matrix in Z
+    im_handle: Pass the handle for an existing image to update it.
+    cmap: colormap. Can use either bokeh palette or matplotlib colormap names
+    name: name for the image
+    '''
+    ## If lists, convert to arrays
+    if type(x) == list:
+        x = np.array(x)
+    if type(y) == list:
+        y = np.array(y)
+    xmin = x.min()
+    ymin = y.min()
+    xmax = x.max()
+    ymax = y.max()
+
+    try:
+        palette = mpl_cmap_to_bokeh(cmap) # If a matplotlib colormap
+    except:
+        palette = cmap # If a bokeh palette
+
+    ## Plot it
+    im_handle = fig.image(image=[z], x=0, y =0, dw=(xmax-xmin), dh=(ymax-ymin), palette = palette)
+
+    ## Fix axis limits
+    from bokeh.models.ranges import Range1d
+
+    fig.x_range = Range1d(xmin, xmax)
+    fig.y_range = Range1d(ymin, ymax)
+
+
+    return im_handle
 
 
 def legend(fig, labels=None):
@@ -180,15 +217,17 @@ def plot_html(fig):
 
 
 
-def show(fig):
+def show(fig, show_legend=True):
     '''
     Adds a legend, then shows a bokeh plot using the normal show function.
     Uses the current kernel's ID as a dictionary key for NB_HANDLE.
     Should allow module to be used by two notebooks simultaneously.
     '''
-    legend(fig)
+    if show_legend:
+        legend(fig)
     global NB_HANDLE
-    NB_HANDLE[get_nb_kernel()] = bokeh.io.show(fig, notebook_handle=True)
+    NB_HANDLE = bokeh.io.show(fig, notebook_handle=True)
+    return NB_HANDLE
 
 
 def show_html(figfile, width=700, height=700):
@@ -204,6 +243,6 @@ def update():
     Replots a bokeh figure if it has been changed.
     '''
     try:
-        bokeh.io.push_notebook(handle=NB_HANDLE[get_nb_kernel()])
+        bokeh.io.push_notebook(handle=NB_HANDLE)
     except:
         pass # This code reached if we haven't run show() yet!
