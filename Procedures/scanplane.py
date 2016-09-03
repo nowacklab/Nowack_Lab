@@ -65,10 +65,10 @@ class Scanplane(Measurement):
         self.Vac_y = np.full(self.X.shape, np.nan)
         self.C = np.full(self.X.shape, np.nan)
 
-        self.last_full_out = []
-        self.last_full_sweep = []
-        self.last_interp_out = []
-        self.last_interp_sweep = []
+        self.V_piezo_full = []
+        self.V_squid_full = []
+        self.V_piezo_interp = []
+        self.V_squid_interp = []
         self.linecuts = {}
 
         # self.swap = swap
@@ -110,7 +110,7 @@ class Scanplane(Measurement):
                           "attocubes": self.atto}
         return self.save_dict
 
-    def do(self):
+    def do(self, fast_axis = 'x'):
         self.setup_plots()
 
         ## Start time and temperature
@@ -129,8 +129,15 @@ class Scanplane(Measurement):
                                     }
                                 )
 
-        ## Loop over Y values
-        for i in range(int(self.X.shape[1])): # loop over every line
+        ## Loop over Y values if fast_axis is x, X values if fast_axis is y
+        if fast_axis == 'x':
+            num_lines = int(self.X.shape[1]) # loop over Y
+        elif fast_axis == 'y':
+            num_lines = int(self.X.shape[0]) # loop over X
+        else:
+            raise Exception('Specify x or y as fast axis!')
+
+        for i in range(num_lines): # loop over every line
             k = 0
             if self.raster:
                 if i%2 == 0: # if even
@@ -138,17 +145,20 @@ class Scanplane(Measurement):
                 else: # if odd
                     k = -1 # k is used to determine Vstart/Vend. For forward, will sweep from the -1st = last element to the -(k+1) = 0th = first element
 
+            ## Starting and ending piezo voltages for the line
+            if fast_axis == 'x':
+                Vstart = {'x': self.X[k,i], 'y': self.Y[k,i], 'z': self.Z[k,i]} # for forward, starts at 0,i; backward: -1, i
+                Vend = {'x': self.X[-(k+1),i], 'y': self.Y[-(k+1),i], 'z': self.Z[-(k+1),i]} # for forward, ends at -1,i; backward: 0, i
+            elif fast_axis == 'y':
+                Vstart = {'x': self.X[i,k], 'y': self.Y[i,k], 'z': self.Z[i,k]} # for forward, starts at i,0; backward: i,-1
+                Vend = {'x': self.X[i,-(k+1)], 'y': self.Y[i,-(k+1)], 'z': self.Z[i,-(k+1)]} # for forward, ends at i,-1; backward: i,0
+
             ## Explicitly go to first point of scan
-            self.piezos.sweep({'x': self.X[k,i], #k=0 for forward, k=-1 for backward
-                            'y': self.Y[k,i],
-                            'z': self.Z[k,i]
-                            }, freq=1500)
+            self.piezos.sweep(self.piezos.V, Vstart, freq=1500)
             self.array.reset()
             time.sleep(3)
 
             ## Do the sweep
-            Vstart = {'x': self.X[k,i], 'y': self.Y[k,i], 'z': self.Z[k,i]} # for forward, starts at 0,i; backward: -1, i
-            Vend = {'x': self.X[-(k+1),i], 'y': self.Y[-(k+1),i], 'z': self.Z[-(k+1),i]} # for forward, ends at -1,i; backward: 0, i
             out, V, t = self.piezos.sweep(Vstart, Vend, freq=self.freq) # sweep over X
 
             ## Flip the backwards sweeps
@@ -165,24 +175,43 @@ class Scanplane(Measurement):
                                            "Vac_y": np.array(V[self.sig_in_ac_y]).tolist()}}
 
             ## Interpolate to the number of lines
-            interp_func = interp(out['x'], V[self.sig_in])
-            self.V[:,i] = interp_func(self.X[:,i]) # changes from actual output data to give desired number of points
+            self.V_piezo_full = out[fast_axis] # actual voltages swept in x or y direction
+            if fast_axis == 'x':
+                self.V_piezo_interp = self.X[:,i]
+            elif fast_axis == 'y':
+                self.V_piezo_interp = self.Y[i,:]
 
-            interp_func = interp(out['x'], V[self.sig_in_ac_x])
-            self.Vac_x[:,i] = interp_func(self.X[:,i])
+            # Store this line's signals for Vdc, Vac x/y, and Cap
+            self.V_squid_full = V[self.sig_in]
+            self.Vac_x_full = V[self.sig_in_ac_x]
+            self.Vac_y_full = V[self.sig_in_ac_y]
+            self.C_full = V[self.cap_in]
 
-            interp_func = interp(out['x'], V[self.sig_in_ac_y])
-            self.Vac_y[:,i] = interp_func(self.X[:,i])
+            # interpolation functions
+            interp_V = interp(self.V_piezo_full, self.V_squid_full)
+            interp_Vac_x = interp(self.V_piezo_full, self.Vac_x_full)
+            interp_Vac_y = interp(self.V_piezo_full, self.Vac_y_full)
+            interp_C = interp(self.V_piezo_full, self.C_full)
 
-            interp_func = interp(out['x'], V[self.cap_in])
-            self.C[:,i] = interp_func(self.X[:,i])
+            # interpolated signals
+            self.V_squid_interp = interp_V(self.V_piezo_interp)
+            self.Vac_x_interp = interp_Vac_x(self.V_piezo_interp)
+            self.Vac_y_interp = interp_Vac_y(self.V_piezo_interp)
+            self.C_interp = interp_C(self.V_piezo_interp)
 
-            self.last_full_out = out['x']
-            self.last_full_sweep = V[self.sig_in]
+            # store these in the 2D arrays
+            if fast_axis == 'x':
+                self.V[:,i] = self.V_squid_interp # changes from actual output data to give desired number of points
+                self.Vac_x[:,i] = self.Vac_x_interp
+                self.Vac_y[:,i] = self.Vac_y_interp
+                self.C[:,i] = self.C_interp
+            elif fast_axis == 'y':
+                self.V[i,:] = self.V_squid_interp # changes from actual output data to give desired number of points
+                self.Vac_x[i,:] = self.Vac_x_interp
+                self.Vac_y[i,:] = self.Vac_y_interp
+                self.C[i,:] = self.C_interp
+
             self.save_line(i, Vstart)
-
-            self.last_interp_out = self.X[:,i]
-            self.last_interp_sweep = self.V[:,i]
 
             self.plot()
 
@@ -269,8 +298,8 @@ class Scanplane(Measurement):
         ## "Last full scan" plot
         self.ax_line = self.fig.add_subplot(326)
         self.ax_line.set_title('last full line scan', fontsize=8)
-        self.line_full = self.ax_line.plot(self.last_full_out, self.last_full_sweep, '-.k') # commas only take first element of array? ANyway, it works.
-        self.line_interp = self.ax_line.plot(self.last_interp_out, self.last_interp_sweep, '.r', markersize=12)
+        self.line_full = self.ax_line.plot(self.V_piezo_full, self.V_squid_full, '-.k') # commas only take first element of array? ANyway, it works.
+        self.line_interp = self.ax_line.plot(self.V_piezo_interp, self.V_squid_interp, '.r', markersize=12)
         self.ax_line.set_xlabel('X (a.u.)', fontsize=8)
         self.ax_line.set_ylabel('V', fontsize=8)
 
@@ -282,10 +311,10 @@ class Scanplane(Measurement):
 
 
     def plot_line(self):
-        self.line_full.set_xdata(self.last_full_out)
-        self.line_full.set_ydata(self.last_full_sweep)
-        self.line_interp.set_xdata(self.last_interp_out)
-        self.line_interp.set_ydata(self.last_interp_sweep)
+        self.line_full.set_xdata(self.V_piezo_full)
+        self.line_full.set_ydata(self.V_squid_full)
+        self.line_interp.set_xdata(self.V_piezo_interp)
+        self.line_interp.set_ydata(self.V_squid_interp)
 
         self.ax_line.relim()
         self.ax_line.autoscale_view()
@@ -336,10 +365,10 @@ class Scanplane(Measurement):
             for k in ['x','y','z']:
                 f.write(str(Vstart[k])+',')
             f.write('\n Vpiezo:\n ')
-            for x in self.last_full_sweep:
+            for x in self.V_squid_full:
                 f.write(str(x)+',')
             f.write('\n Vsquid:\n')
-            for x in self.last_full_out:
+            for x in self.V_piezo_full:
                 f.write(str(x)+',')
 
 if __name__ == '__main__':

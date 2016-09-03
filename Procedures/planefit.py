@@ -126,15 +126,16 @@ class Planefit(Measurement):
         plt.xlabel('x')
         plt.title(self.filename,fontsize=15)
 
-    def save(self):
+    def save(self, savefig=True):
         home = os.path.expanduser("~")
         data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Planes')
         filename = os.path.join(data_folder, self.filename)
 
         Measurement.tojson(self, filename+'.json')
 
-        self.plot()
-        plt.savefig(filename+'.pdf', bbox_inches='tight')
+        if savefig:
+            self.plot()
+            plt.savefig(filename+'.pdf', bbox_inches='tight')
 
     def update_c(self):
         old_c = self.c
@@ -146,6 +147,7 @@ class Planefit(Measurement):
                 if z_maxormin > self.piezos.Vmax['z'] or z_maxormin < 0:
                     self.c = old_c
                     raise Exception('Plane now extends outside range of piezos! Move the attocubes and try again.')
+        self.save(savefig=False)
 
 
 def load_last(instruments):
@@ -164,13 +166,12 @@ def load_last(instruments):
 
     with open(newest_plane) as f:
         obj_dict = json.load(f)
-    obj_string = json.dumps(obj_dict)
 
     plane.a = obj_dict['py/state']['a']['value']
     plane.b = obj_dict['py/state']['b']['value']
     plane.c = obj_dict['py/state']['c']['value']
     try:
-        plane.cap_input = obj_dict['py/state']['cap_input']['value']
+        plane.cap_input = obj_dict['py/state']['cap_input']
     except:
         print('cap_input not loaded! Set this manually!!!')
 
