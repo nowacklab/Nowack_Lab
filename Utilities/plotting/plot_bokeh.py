@@ -23,6 +23,31 @@ def mpl_cmap_to_bokeh(cmap_name):
     return palette
 
 
+def colorbar(fig, data, title, cmap):
+    '''
+    Adds a colorbar to a bokeh figure.
+    fig: the figure
+    data: 2D array of data values
+    title: title for colorbar
+    cmap: name of desired bokeh or mpl colormap
+    '''
+    from bokeh.models import LinearColorMapper
+    from bokeh.models.annotations import ColorBar
+
+    color_mapper = LinearColorMapper(low=data.min(), high=data.max(), palette=mpl_cmap_to_bokeh(cmap))
+
+    cb = ColorBar(color_mapper=color_mapper,
+                    location=(0,0),
+                    orientation='vertical',
+                    padding=20,
+                    margin=0,
+                    title=title)
+
+    fig.add_layout(cb, 'right')
+
+    return cb
+
+
 def figure(title=None, xlabel=None, ylabel=None):
     '''
     Sets up a bokeh figure.
@@ -33,8 +58,9 @@ def figure(title=None, xlabel=None, ylabel=None):
                 plot_height = 600,
                 tools = 'pan,reset,save,box_zoom,wheel_zoom,resize',
                 title = title,
-                toolbar_location='above'
-                )
+                toolbar_location='above',
+                toolbar_sticky=False
+            )
 
     ## Add data hover tool
     from bokeh.models import HoverTool
@@ -65,14 +91,17 @@ def figure(title=None, xlabel=None, ylabel=None):
     return fig
 
 
-def image(fig, x, y, z, im_handle=None, cmap='viridis', name=None):
+def image(fig, x, y, z, show_colorbar = True, z_title=None, im_handle=None, cmap='viridis', name=None):
     '''
     Adds a 2D image to a Bokeh plot
     fig: figure to plot on
     x,y,z: x and y are from np.meshgrid, 2D matrix in Z
+    colorbar: whether or not to plot the colorbar
+    z_title: title for colorbar
     im_handle: Pass the handle for an existing image to update it.
     cmap: colormap. Can use either bokeh palette or matplotlib colormap names
     name: name for the image
+
     '''
     ## If lists, convert to arrays
     if type(x) == list:
@@ -90,14 +119,40 @@ def image(fig, x, y, z, im_handle=None, cmap='viridis', name=None):
         palette = cmap # If a bokeh palette
 
     ## Plot it
-    im_handle = fig.image(image=[z], x=0, y =0, dw=(xmax-xmin), dh=(ymax-ymin), palette = palette)
+    im_handle = fig.image(image=[z], x=0, y =0, dw=(xmax-xmin), dh=(ymax-ymin), palette = palette, name=name)
 
-    ## Fix axis limits
+    ## Fix axis limits ## Temporary aspect ratio fix: make a square plot and make x/y equal lengths
     from bokeh.models.ranges import Range1d
 
-    fig.x_range = Range1d(xmin, xmax)
-    fig.y_range = Range1d(ymin, ymax)
+    x_range = xmax-xmin
+    y_range = ymax-ymin
+    bigger_range = max(x_range, y_range)
+    x_bound_l = xmin - (bigger_range-x_range)/2
+    x_bound_u = xmax + (bigger_range-x_range)/2
+    y_bound_l = ymin - (bigger_range-y_range)/2
+    y_bound_u = ymax + (bigger_range-y_range)/2
 
+    fig.x_range = Range1d(x_bound_l, x_bound_u, bounds = (x_bound_l,x_bound_u))
+    fig.y_range = Range1d(y_bound_l, y_bound_u, bounds = (y_bound_l,y_bound_u))
+
+    ## Make plot aspect ratio correct and adjust toolbar location
+
+    # ### DOESN'T WORK: plot_height includes titles, axes, etc.
+    # aspect = abs((ymin-ymax)/(xmin-xmax))
+    #
+    # if aspect > 1: # y range larger
+    #     fig.height = fig.plot_height
+    #     fig.width = int(fig.plot_height / aspect) # reduce the width
+    #     fig.toolbar_location = 'left' # toolbar on long axis
+    # else: # opposite
+    #
+    #     fig.height = int(fig.plot_width * aspect)
+    #     fig.toolbar_location = 'above' # toolbar on long axis
+
+    ## Set up ColorBar
+    if show_colorbar:
+        cb_handle = colorbar(fig, z, z_title, cmap)
+        return im_handle, cb_handle
 
     return im_handle
 
@@ -111,12 +166,14 @@ def legend(fig, labels=None):
     '''
     from bokeh.models.annotations import Legend
     from bokeh.models.renderers import GlyphRenderer
-
+    from bokeh.models.glyphs import Line
 
     lines = []
-    for r in fig.renderers:
+    for r in fig.renderers: # This finds all the lines or scatter plots
         if type(r) == GlyphRenderer:
-            lines.append(r)
+            if r.glyph.__module__ == 'bokeh.models.markers' or r.glyph == 'bokeh.models.glyphs.Line':
+                lines.append(r)
+
     if labels == None:
         labels = [l.name for l in lines]
 
@@ -129,6 +186,8 @@ def legend(fig, labels=None):
             )
 
     fig.add_layout(leg, 'right')
+
+    return leg
 
 
 def line(fig, x, y, line_handle=None, color='black', linestyle='-', name=None):
@@ -223,7 +282,16 @@ def show(fig, show_legend=True):
     Uses the current kernel's ID as a dictionary key for NB_HANDLE.
     Should allow module to be used by two notebooks simultaneously.
     '''
-    if show_legend:
+    from bokeh.models.annotations import ColorBar
+
+    # Check to see if plot has a colorbar
+    has_colorbar = False
+    for r in fig.renderers:
+        if type(r) == ColorBar:
+            has_colorbar = True
+            break
+
+    if show_legend and not has_colorbar:
         legend(fig)
     global NB_HANDLE
     NB_HANDLE = bokeh.io.show(fig, notebook_handle=True)
