@@ -12,18 +12,54 @@ def init_notebook():
     bokeh.io.output_notebook(hide_banner=True)
 
 
-def mpl_cmap_to_bokeh(cmap_name):
+def choose_cmap(cmap_name):
     '''
-    Converts a matplotlib colormap to bokeh palette
+    If cmap_name is a Bokeh palette, it is simply returned.
+    Otherwise, converts a matplotlib colormap to bokeh palette
     '''
-    import matplotlib as mpl
-    import matplotlib.pyplot as plt
-    colormap = plt.cm.get_cmap(cmap_name)
-    palette = [mpl.colors.rgb2hex(m) for m in colormap(np.arange(colormap.N))]
-    return palette
+    try:
+        import matplotlib as mpl
+        import matplotlib.pyplot as plt
+        colormap = plt.cm.get_cmap(cmap_name)
+        palette = [mpl.colors.rgb2hex(m) for m in colormap(np.arange(colormap.N))]
+        return palette
+    except:
+        return cmap_name # if a Bokeh palette already
+
+def clim(fig, l, u):
+    '''
+    Update colorscale limits for a bokeh figure.
+    '''
+
+    from bokeh.models.annotations import ColorBar
+    from bokeh.models import GlyphRenderer
 
 
-def colorbar(fig, data, title, cmap):
+    # Get colorbar renderer
+    for r in fig.renderers:
+        if type(r) == ColorBar:
+            cb = r
+            break
+
+    # Set colorbar limits
+    cb.color_mapper.low = l
+    cb.color_mapper.high = u
+
+    # Get plot image renderer
+    for r in fig.renderers:
+        if type(r) == GlyphRenderer:
+            im = r
+            break
+
+    # Set color limits in image
+    im.glyph.color_mapper.low = l
+    im.glyph.color_mapper.high = u
+
+    # Update everything
+    update()
+
+
+def colorbar(fig, data, cmap, title=None):
     '''
     Adds a colorbar to a bokeh figure.
     fig: the figure
@@ -34,7 +70,7 @@ def colorbar(fig, data, title, cmap):
     from bokeh.models import LinearColorMapper
     from bokeh.models.annotations import ColorBar
 
-    color_mapper = LinearColorMapper(low=data.min(), high=data.max(), palette=mpl_cmap_to_bokeh(cmap))
+    color_mapper = LinearColorMapper(low=data.min(), high=data.max(), palette=choose_cmap(cmap))
 
     cb = ColorBar(color_mapper=color_mapper,
                     location=(0,0),
@@ -45,6 +81,8 @@ def colorbar(fig, data, title, cmap):
 
     fig.add_layout(cb, 'right')
 
+    # Add tool to interact with colorbar
+
     return cb
 
 
@@ -54,8 +92,8 @@ def figure(title=None, xlabel=None, ylabel=None):
     '''
     ## Set up the figure
     import bokeh.plotting as bplt
-    fig = bplt.figure(plot_width = 800,
-                plot_height = 600,
+    fig = bplt.figure(plot_width = 500,
+                plot_height = 500,
                 tools = 'pan,reset,save,box_zoom,wheel_zoom,resize',
                 title = title,
                 toolbar_location='above',
@@ -91,7 +129,7 @@ def figure(title=None, xlabel=None, ylabel=None):
     return fig
 
 
-def image(fig, x, y, z, show_colorbar = True, z_title=None, im_handle=None, cmap='viridis', name=None):
+def image(fig, x, y, z, show_colorbar = True, z_title=None, im_handle=None, cmap='Viridis256', name=None):
     '''
     Adds a 2D image to a Bokeh plot
     fig: figure to plot on
@@ -113,15 +151,10 @@ def image(fig, x, y, z, show_colorbar = True, z_title=None, im_handle=None, cmap
     xmax = x.max()
     ymax = y.max()
 
-    try:
-        palette = mpl_cmap_to_bokeh(cmap) # If a matplotlib colormap
-    except:
-        palette = cmap # If a bokeh palette
-
     ## Plot it
-    im_handle = fig.image(image=[z], x=0, y =0, dw=(xmax-xmin), dh=(ymax-ymin), palette = palette, name=name)
+    im_handle = fig.image(image=[z], x=0, y =0, dw=(xmax-xmin), dh=(ymax-ymin), palette = choose_cmap(cmap), name=name)
 
-    ## Fix axis limits ## Temporary aspect ratio fix: make a square plot and make x/y equal lengths
+    ## Fix axis limits ## Temporary aspect ratio fix: make a squarish plot and make x/y equal lengths
     from bokeh.models.ranges import Range1d
 
     x_range = xmax-xmin
@@ -151,7 +184,7 @@ def image(fig, x, y, z, show_colorbar = True, z_title=None, im_handle=None, cmap
 
     ## Set up ColorBar
     if show_colorbar:
-        cb_handle = colorbar(fig, z, z_title, cmap)
+        cb_handle = colorbar(fig, z, cmap, title=z_title)
         return im_handle, cb_handle
 
     return im_handle
