@@ -27,6 +27,7 @@ def choose_cmap(cmap_name):
     except:
         return cmap_name # if a Bokeh palette already
 
+
 def clim(fig, l=None, u=None):
     '''
     Update colorscale limits for a bokeh figure.
@@ -53,8 +54,9 @@ def clim(fig, l=None, u=None):
     cb = get_colorbar_renderer(fig) # Get colorbar renderer
 
     # Set colorbar limits
-    cb.color_mapper.low = l
-    cb.color_mapper.high = u
+    if cb:
+        cb.color_mapper.low = l
+        cb.color_mapper.high = u
 
     # Update everything
     update()
@@ -81,14 +83,156 @@ def colorbar(fig, cmap, title=None):
                     margin=0,
                     title=title)
 
-    fig.add_layout(cb, 'right')
+    cb.major_label_text_font_size = '12pt'
+    cb.major_label_text_align = 'left'
 
-    # Add tool to interact with colorbar
+    fig.add_layout(cb, 'left') # 'right' make plot squished with widgets
 
     return cb
 
 
-def figure(title=None, xlabel=None, ylabel=None):
+def colorbar_slider(fig):
+    '''
+    Adds interactive sliders and text input boxes for the colorbar.
+    Returns a layout object to be put into a gridplot
+    '''
+    cb = get_colorbar_renderer(fig)
+    data = get_image_data(fig)
+    data = reject_outliers(data)
+    datamin = np.nanmin(data)
+    datamax = np.nanmax(data)
+    im = get_glyph_renderer(fig) # Get image renderer
+
+    from bokeh.models import CustomJS, Slider, TextInput
+    from bokeh.models.widgets import Button
+    from bokeh.layouts import widgetbox
+
+    model = Slider() # trick it into letting datamin and datamax into CustomJS
+    model.tags.append(datamin) # Hide these in here
+    model.tags.append(datamax)
+
+    callback_u = CustomJS(args=dict(cb=cb, im=im, model=model), code="""
+        var cm = cb.color_mapper;
+        var upp = upper_slider.get('value');
+        upper_input.value = upp.toString()
+        lower_slider.end = upp
+        cm.high = upp;
+        im.glyph.color_mapper.high = upp;
+        if (cm.low >= cm.high){
+        cm.low = upp/1.1 // to prevent limits being the same
+        im.glyph.color_mapper.low = low/1.1;
+        }
+        if (upp > model.tags[1]){
+            upper_slider.end = upp
+        }
+        """)
+
+    callback_l = CustomJS(args=dict(cb=cb, im=im, model=model), code="""
+        var cm = cb.color_mapper;
+        var low = lower_slider.get('value');
+        lower_input.value = low.toString()
+        upper_slider.start = low
+        cm.low = low;
+        im.glyph.color_mapper.low = low;
+        if (cm.high <=  cm.low){
+        cm.high = low*1.1 // to prevent limits being the same
+        im.glyph.color_mapper.high = low*1.1;
+        }
+        if (low < model.tags[0]){
+            lower_slider.start = low
+        }""")
+
+    callback_ut = CustomJS(args=dict(cb=cb, im=im, model=model), code="""
+        var cm = cb.color_mapper;
+        var upp = parseFloat(upper_input.get('value'));
+        upper_slider.value = upp
+        cm.high = upp;
+        im.glyph.color_mapper.high = upp;
+        if (cm.low >=  cm.high){
+        cm.low = upp/1.1 // to prevent limits being the same
+        im.glyph.color_mapper.low = upp/1.1;
+        }
+        if (upp > model.tags[1]){
+            upper_slider.end = upp
+        }
+        """)
+
+    callback_lt = CustomJS(args=dict(cb=cb, im=im, model=model), code="""
+        var cm = cb.color_mapper;
+        var low = parseFloat(lower_input.get('value'));
+        lower_slider.value = low
+        cm.low = low;
+        im.glyph.color_mapper.low = low;
+        if (cm.high <=  cm.low){
+        cm.high = low*1.1 // to prevent limits being the same
+        im.glyph.color_mapper.high = low*1.1;
+        }
+        if (low < model.tags[0]){
+            lower_slider.start = low
+        }
+        """)
+
+    callback_reset = CustomJS(args=dict(cb=cb, im=im, model=model), code="""
+        var cm = cb.color_mapper;
+        var low = model.tags[0];
+        var high = model.tags[1];
+        lower_slider.value = low;
+        cm.low = low;
+        upper_slider.value = high;
+        cm.high = high;
+        im.glyph.color_mapper.low = low;
+        im.glyph.color_mapper.high = high;
+        lower_input.value = low.toString();
+        upper_input.value = high.toString();
+        lower_slider.start = low;
+        lower_slider.end = high;
+        upper_slider.start = low;
+        upper_slider.end = high;
+    """)
+
+    reset_button = Button(label='Reset', callback=callback_reset)
+    # def callback_die(attr, old, new):
+    #     from IPython.display import display
+    #     display('yoooo')
+    #     display(old)
+    #     display(new)
+    #     raise Exception()
+    # exception_button = Button(label='KILL ME')
+    # exception_button.on_click(callback_die)
+
+    lower_slider = Slider(start=datamin, end=datamax, value=datamin, step=.1,
+                        title="Lower lim", callback=callback_l)
+    lower_slider.width=100
+
+    upper_slider = Slider(start=datamin, end=datamax, value=datamax, step=.1,
+                         title="Upper lim", callback=callback_u)
+    upper_slider.width=100
+
+    lower_input = TextInput(callback=callback_lt, value = str(datamin), width=50)
+    upper_input = TextInput(callback=callback_ut, value = str(datamax), width=50)
+
+    # add all of these widgets as arguments to the callback functions
+    for callback in ['l', 'u', 'lt', 'ut', 'reset']:
+        for widget in ['lower_slider', 'upper_slider','lower_input','upper_input']:
+            exec('callback_%s.args["%s"] = %s' %(callback, widget, widget))
+
+    # def callback_reset(attr, old, new):
+    #     from IPython import display
+    #     display.display('heyyyyy')
+    #     cb.color_mapper.low = datamin
+    #     cb.color_mapper.high = datamax
+    #     im.glyph.color_mapper.low = datamin
+    #     im.glyph.color_mapper.high = datamax
+    #     lower_slider.start = datamin
+    #     lower_slider.end = datamax
+    #     upper_slider.start = datamin
+    #     upper_slider.end = datamax
+
+    wb = widgetbox([upper_slider, upper_input, lower_slider, lower_input, reset_button, exception_button], width=100, sizing_mode = 'stretch_both')
+    return wb
+
+
+def figure(title=None, xlabel=None, ylabel=None, show_legend=True):
     '''
     Sets up a bokeh figure.
     '''
@@ -116,17 +260,27 @@ def figure(title=None, xlabel=None, ylabel=None):
 
     ## Set up title and axis text
     # title
-    fig.title.text_font_size = '30pt'
+    fig.title.text_font_size = '20pt'
     # X
     fig.xaxis.axis_label = xlabel
-    fig.xaxis.axis_label_text_font_size = '20pt'
-    fig.xaxis.major_label_text_font_size = '12pt'
+    fig.xaxis.axis_label_text_font_size = '14pt'
+    fig.xaxis.major_label_text_font_size = '10pt'
+    fig.xaxis.axis_label_text_font_style = 'bold'
     # Y
     fig.yaxis.axis_label = ylabel
-    fig.yaxis.axis_label_text_font_size = '20pt'
-    fig.yaxis.major_label_text_font_size = '12pt'
+    fig.yaxis.axis_label_text_font_size = '14pt'
+    fig.yaxis.major_label_text_font_size = '10pt'
+    fig.yaxis.axis_label_text_font_style = 'bold'
+
+
+    fig.min_border_bottom = 100 # add some padding for gridplots
+
+    ## Add legend
+    if show_legend:
+        legend(fig)
 
     return fig
+
 
 def get_colorbar_renderer(fig):
     '''
@@ -161,7 +315,7 @@ def get_image_data(fig):
     return im.data_source.data['image'][0]
 
 
-def image(fig, x, y, z, show_colorbar = True, z_title=None, im_handle=None, cmap='Viridis256', name=None):
+def image(fig, x, y, z, show_colorbar = True, z_title=None, im_handle=None, cmap='Viridis256', name=None, slider_handle=None):
     '''
     Adds a 2D image to a Bokeh plot
     fig: figure to plot on
@@ -171,36 +325,42 @@ def image(fig, x, y, z, show_colorbar = True, z_title=None, im_handle=None, cmap
     im_handle: Pass the handle for an existing image to update it.
     cmap: colormap. Can use either bokeh palette or matplotlib colormap names
     name: name for the image
-
+    slider_handle: slider widgets handle, will update this as well
     '''
     cb_handle = None
 
-    ## If lists, convert to arrays
-    if type(x) == list:
-        x = np.array(x)
-    if type(y) == list:
-        y = np.array(y)
-    xmin = x.min()
-    ymin = y.min()
-    xmax = x.max()
-    ymax = y.max()
 
-    ## Plot it
-    im_handle = fig.image(image=[z], x=0, y =0, dw=(xmax-xmin), dh=(ymax-ymin), palette = choose_cmap(cmap), name=name)
+    if im_handle:
+        im_handle.data_source.data['image'][0] = z
+        im_handle.data_source.update()
+    else:
 
-    ## Fix axis limits ## Temporary aspect ratio fix: make a squarish plot and make x/y equal lengths
-    from bokeh.models.ranges import Range1d
+        ## If lists, convert to arrays
+        if type(x) == list:
+            x = np.array(x)
+        if type(y) == list:
+            y = np.array(y)
+        xmin = x.min()
+        ymin = y.min()
+        xmax = x.max()
+        ymax = y.max()
 
-    x_range = xmax-xmin
-    y_range = ymax-ymin
-    bigger_range = max(x_range, y_range)
-    x_bound_l = xmin - (bigger_range-x_range)/2
-    x_bound_u = xmax + (bigger_range-x_range)/2
-    y_bound_l = ymin - (bigger_range-y_range)/2
-    y_bound_u = ymax + (bigger_range-y_range)/2
+        ## Fix axis limits ## Temporary aspect ratio fix: make a squarish plot and make x/y equal lengths
+        from bokeh.models.ranges import Range1d
 
-    fig.x_range = Range1d(x_bound_l, x_bound_u, bounds = (x_bound_l,x_bound_u))
-    fig.y_range = Range1d(y_bound_l, y_bound_u, bounds = (y_bound_l,y_bound_u))
+        x_range = xmax-xmin
+        y_range = ymax-ymin
+        bigger_range = max(x_range, y_range)
+        x_bound_l = xmin - (bigger_range-x_range)/2
+        x_bound_u = xmax + (bigger_range-x_range)/2
+        y_bound_l = ymin - (bigger_range-y_range)/2
+        y_bound_u = ymax + (bigger_range-y_range)/2
+
+        fig.x_range = Range1d(x_bound_l, x_bound_u, bounds = (x_bound_l,x_bound_u))
+        fig.y_range = Range1d(y_bound_l, y_bound_u, bounds = (y_bound_l,y_bound_u))
+
+        ## Plot it
+        im_handle = fig.image(image=[z], x=0, y =0, dw=(xmax-xmin), dh=(ymax-ymin), palette = choose_cmap(cmap), name=name)
 
     ## Make plot aspect ratio correct and adjust toolbar location
 
@@ -217,13 +377,21 @@ def image(fig, x, y, z, show_colorbar = True, z_title=None, im_handle=None, cmap
     #     fig.toolbar_location = 'above' # toolbar on long axis
 
     ## Set up ColorBar
-    if show_colorbar:
-        cb_handle = colorbar(fig, cmap, title=z_title)
+        if show_colorbar:
+            cb_handle = colorbar(fig, cmap, title=z_title)
+
+    if slider_handle:
+        data = get_image_data(fig)
+        data = reject_outliers(data)
+        for child in slider_handle.children[0:-1]: #exclude the button
+            child.callback.args['model'].tags[0] = np.nanmin(data)
+            child.callback.args['model'].tags[1] = np.nanmax(data)
+        slider_handle.children[-1].clicks += 1 # Fake button click for callback
 
     ## Fix colors
     clim(fig) # autoscale colors (filtering outliers)
 
-    return im_handle, cb_handle
+    return im_handle
 
 
 def legend(fig, labels=None):
@@ -320,6 +488,53 @@ def line(fig, x, y, line_handle=None, color='black', linestyle='-', name=None):
     return line_handle
 
 
+def plot_grid(figs, width=700, height=700):
+    '''
+    Sets up a grid of bokeh plots.
+    `figs` is a list of rows of figures or widgets.
+    For example, a 2x2 grid of plots is [[f1, f2],[f3,f4]]
+    Width and height are the dimensions of the whole grid.
+    Doesn't quite work well with widgets or colorbars. Best to plot these separately.
+    '''
+    from bokeh.layouts import gridplot
+    from bokeh.plotting.figure import Figure
+
+    # Scale all plots, keeping aspect ratio constant.
+    numrows = len(figs)
+    for row in figs:
+        numfigs = 0
+        for fig in row: #count the number of figures (excluding widgets)
+            numfigs += 1 if type(fig) is Figure else 0
+        for fig in row:
+            try:
+                max_width = fig.plot_width
+                max_height = fig.plot_height
+                if fig.plot_width > int(width/numfigs):
+                    max_width = int(width/numfigs)
+                if fig.plot_height > int(height/numrows):
+                    max_height = int(height/numrows)
+
+                scale_factor_width = max_width/fig.plot_width
+                scale_factor_height = max_height/fig.plot_height
+                scale_factor = min(scale_factor_width, scale_factor_height)
+
+                fig.plot_width = int(scale_factor*fig.plot_width)
+                fig.plot_height = int(scale_factor*fig.plot_height)
+            except:
+                pass # do nothing with widgets and cross fingers
+
+    ## Center plots - NOT WORKING
+    # for row in figs:
+    #     numfigs = len(row)
+    #     total_width = 0
+    #     for fig in row:
+    #         total_width += fig.plot_width
+    #     row[0].min_border_left = int((width-total_width)/2) # pad left
+    #     row[-1].min_border_right = int((width-total_width)/2) # pad right
+
+    return gridplot(figs, merge_tools=True)
+
+
 def plot_html(fig):
     '''
     Plots a bokeh figure.
@@ -347,21 +562,10 @@ def plot_html(fig):
 
 def show(fig, show_legend=True):
     '''
-    Adds a legend, then shows a bokeh plot using the normal show function.
-    Uses the current kernel's ID as a dictionary key for NB_HANDLE.
-    Should allow module to be used by two notebooks simultaneously.
+    Shows a bokeh plot or gridplot using the normal show function.
+    Uses the the global NB_HANDLE.
     '''
-    from bokeh.models.annotations import ColorBar
 
-    # Check to see if plot has a colorbar
-    has_colorbar = False
-    for r in fig.renderers:
-        if type(r) == ColorBar:
-            has_colorbar = True
-            break
-
-    if show_legend and not has_colorbar:
-        legend(fig)
     global NB_HANDLE
     NB_HANDLE = bokeh.io.show(fig, notebook_handle=True)
     return NB_HANDLE
