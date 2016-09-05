@@ -1,5 +1,6 @@
 import bokeh.io, numpy as np, os, datetime
 import IPython.display as disp
+from ..utilities import reject_outliers
 
 global NB_HANDLE
 NB_HANDLE = None
@@ -26,49 +27,50 @@ def choose_cmap(cmap_name):
     except:
         return cmap_name # if a Bokeh palette already
 
-def clim(fig, l, u):
+def clim(fig, l=None, u=None):
     '''
     Update colorscale limits for a bokeh figure.
+    `l` and `u` are lower and upper bounds.
+    If None, will autoscale the limits.
     '''
+    # Get the plot data
+    data = get_image_data(fig)
+    filtered_data = reject_outliers(data)
 
-    from bokeh.models.annotations import ColorBar
-    from bokeh.models import GlyphRenderer
+    # Set lower and upper automatically if not specified
+    if l == None:
+        l = np.nanmin(filtered_data) # ignore nans
 
+    if u == None:
+        u = np.nanmax(filtered_data) # ignore nans
 
-    # Get colorbar renderer
-    for r in fig.renderers:
-        if type(r) == ColorBar:
-            cb = r
-            break
-
-    # Set colorbar limits
-    cb.color_mapper.low = l
-    cb.color_mapper.high = u
-
-    # Get plot image renderer
-    for r in fig.renderers:
-        if type(r) == GlyphRenderer:
-            im = r
-            break
+    im = get_glyph_renderer(fig) # Get image renderer
 
     # Set color limits in image
     im.glyph.color_mapper.low = l
     im.glyph.color_mapper.high = u
 
+    cb = get_colorbar_renderer(fig) # Get colorbar renderer
+
+    # Set colorbar limits
+    cb.color_mapper.low = l
+    cb.color_mapper.high = u
+
     # Update everything
     update()
 
 
-def colorbar(fig, data, cmap, title=None):
+def colorbar(fig, cmap, title=None):
     '''
     Adds a colorbar to a bokeh figure.
     fig: the figure
-    data: 2D array of data values
     title: title for colorbar
     cmap: name of desired bokeh or mpl colormap
     '''
     from bokeh.models import LinearColorMapper
     from bokeh.models.annotations import ColorBar
+
+    data = get_image_data(fig)
 
     color_mapper = LinearColorMapper(low=data.min(), high=data.max(), palette=choose_cmap(cmap))
 
@@ -124,9 +126,39 @@ def figure(title=None, xlabel=None, ylabel=None):
     fig.yaxis.axis_label_text_font_size = '20pt'
     fig.yaxis.major_label_text_font_size = '12pt'
 
-
-
     return fig
+
+def get_colorbar_renderer(fig):
+    '''
+    Returns the colorbar for a given figure.
+    '''
+    from bokeh.models.annotations import ColorBar
+
+    for r in fig.renderers:
+        if type(r) == ColorBar:
+            cb = r
+            return cb
+
+
+def get_glyph_renderer(fig):
+    '''
+    Gets one glyph renderer for a given figure.
+    Useful for when you have one thing plotted (like an image).
+    Not useful if multipl glyph renderers
+    '''
+    from bokeh.models import GlyphRenderer
+
+    for r in fig.renderers:
+        if type(r) == GlyphRenderer:
+            im = r
+            return im
+
+def get_image_data(fig):
+    '''
+    Returns the data array for a plotted image.
+    '''
+    im = get_glyph_renderer(fig)
+    return im.data_source.data['image'][0]
 
 
 def image(fig, x, y, z, show_colorbar = True, z_title=None, im_handle=None, cmap='Viridis256', name=None):
@@ -141,6 +173,8 @@ def image(fig, x, y, z, show_colorbar = True, z_title=None, im_handle=None, cmap
     name: name for the image
 
     '''
+    cb_handle = None
+
     ## If lists, convert to arrays
     if type(x) == list:
         x = np.array(x)
@@ -184,10 +218,12 @@ def image(fig, x, y, z, show_colorbar = True, z_title=None, im_handle=None, cmap
 
     ## Set up ColorBar
     if show_colorbar:
-        cb_handle = colorbar(fig, z, cmap, title=z_title)
-        return im_handle, cb_handle
+        cb_handle = colorbar(fig, cmap, title=z_title)
 
-    return im_handle
+    ## Fix colors
+    clim(fig) # autoscale colors (filtering outliers)
+
+    return im_handle, cb_handle
 
 
 def legend(fig, labels=None):
@@ -343,7 +379,5 @@ def update():
     '''
     Replots a bokeh figure if it has been changed.
     '''
-    try:
+    if NB_HANDLE:
         bokeh.io.push_notebook(handle=NB_HANDLE)
-    except:
-        pass # This code reached if we haven't run show() yet!
