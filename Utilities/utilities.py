@@ -61,6 +61,16 @@ def get_browser_width():
     IPython.notebook.kernel.execute('width = '+getWidth())"""))
 
 
+def nanmin(data):
+    result = np.nanmin(data)
+    return result if not np.isnan(result) else 0
+
+
+def nanmax(data):
+    result = np.nanmax(data)
+    return result if not np.isnan(result) else 0
+
+
 def reject_outliers(data, radius=[None,None], m=2):
     '''
     Rejects outliers from a 2D numpy array (`data`).
@@ -70,6 +80,7 @@ def reject_outliers(data, radius=[None,None], m=2):
     If `radius` is left as None, will use 1/5 of the total size of the array in each dimension.
     `m` is the number of standard deviations we have to stay close to the mean.
     Higher `m` means less stringent.
+    This takes a long time... might just want to do this occasionally.
     '''
     new_data = np.copy(data)
 
@@ -86,6 +97,15 @@ def reject_outliers(data, radius=[None,None], m=2):
         avg_area = data[xl:xu, yl:yu]
 
         d = data[x,y]
-        if not abs(d - np.mean(avg_area)) < m * np.std(avg_area):
+        if not abs(d - np.nanmean(avg_area)) < m * np.nanstd(avg_area):
             new_data[x,y] = np.nan
+    return new_data
+
+def reject_outliers_quick(data, m=2):
+    '''
+    Quicker way to reject outlier using a masked array
+    '''
+    mean =  np.nanmean(data)
+    std = np.nanstd(data)
+    new_data = np.ma.masked_where(abs(data - mean) > m*std, data)
     return new_data

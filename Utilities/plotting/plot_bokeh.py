@@ -1,6 +1,6 @@
 import bokeh.io, numpy as np, os, datetime
 import IPython.display as disp
-from ..utilities import reject_outliers
+from ..utilities import reject_outliers_quick, nanmin, nanmax
 
 global NB_HANDLE
 NB_HANDLE = None
@@ -12,6 +12,57 @@ def init_notebook():
     '''
     bokeh.io.output_notebook(hide_banner=True)
 
+
+def auto_bounds(fig,x,y, square=False, hard_bounds=False):
+    '''
+    Given x-y data, sets the x and y axis ranges on the figure.
+    If square=True, Makes x and y ranges the same, taking the larger of the two.
+    '''
+    from bokeh.models.ranges import Range1d
+
+    ## If lists, convert to arrays
+    if type(x) == list:
+        x = np.array(x)
+    if type(y) == list:
+        y = np.array(y)
+    xmin = x.min()
+    ymin = y.min()
+    xmax = x.max()
+    ymax = y.max()
+
+    x_range = xmax-xmin
+    y_range = ymax-ymin
+    if square:
+        bigger_range = max(x_range, y_range)
+        x_bound_l = xmin - (bigger_range-x_range)/2
+        x_bound_u = xmax + (bigger_range-x_range)/2
+        y_bound_l = ymin - (bigger_range-y_range)/2
+        y_bound_u = ymax + (bigger_range-y_range)/2
+    else:
+        x_bound_l = xmin
+        x_bound_u = xmax
+        y_bound_l = ymin
+        y_bound_u = ymax
+
+    # fig.x_range.set(start=x_bound_l, end=x_bound_u)
+    # fig.y_range.set(start=y_bound_l, end=y_bound_u)
+
+    if hard_bounds:
+        fig.x_range.set(bounds = (x_bound_l,x_bound_u))
+        fig.y_range.set(bounds = (y_bound_l,y_bound_u))
+
+    fig.x_range.start = -10
+    fig.x_range.end = 10
+    fig.y_range.start = -10 # NEEDS TO DO THIS TO UPDATE PROPERLY... DUMB DUMB DUMB
+    fig.y_range.end = 10
+    import time
+    time.sleep(.05) # Needs to be here. I KNOW, SO DUMB. WAT. JUST WOW.
+
+    fig.x_range.start = x_bound_l
+    fig.x_range.end = x_bound_u
+    fig.y_range.start = y_bound_l
+    fig.y_range.end = y_bound_u
+    update()
 
 def choose_cmap(cmap_name):
     '''
@@ -36,14 +87,15 @@ def clim(fig, l=None, u=None):
     '''
     # Get the plot data
     data = get_image_data(fig)
-    filtered_data = reject_outliers(data)
+    # filtered_data = reject_outliers(data) # takes a long time...
+    filtered_data = reject_outliers_quick(data)
 
     # Set lower and upper automatically if not specified
     if l == None:
-        l = np.nanmin(filtered_data) # ignore nans
+        l = nanmin(filtered_data) # ignore nans
 
     if u == None:
-        u = np.nanmax(filtered_data) # ignore nans
+        u = nanmax(filtered_data) # ignore nans
 
     im = get_glyph_renderer(fig) # Get image renderer
 
@@ -98,9 +150,9 @@ def colorbar_slider(fig):
     '''
     cb = get_colorbar_renderer(fig)
     data = get_image_data(fig)
-    data = reject_outliers(data)
-    datamin = np.nanmin(data)
-    datamax = np.nanmax(data)
+    data = reject_outliers_quick(data)
+    datamin = nanmin(data)
+    datamax = nanmax(data)
     im = get_glyph_renderer(fig) # Get image renderer
 
     from bokeh.models import CustomJS, Slider, TextInput
@@ -176,9 +228,13 @@ def colorbar_slider(fig):
         var cm = cb.color_mapper;
         var low = model.tags[0];
         var high = model.tags[1];
+        low = parseFloat(low.toPrecision(3)) // 3 sig figs
+        high = parseFloat(high.toPrecision(3)) // 3 sig figs
         lower_slider.value = low;
+        lower_slider.set('step', (high-low)/50);
         cm.low = low;
         upper_slider.value = high;
+        upper_slider.set('step', (high-low)/50);
         cm.high = high;
         im.glyph.color_mapper.low = low;
         im.glyph.color_mapper.high = high;
@@ -192,12 +248,15 @@ def colorbar_slider(fig):
         cb_obj.trigger('change)')
     """)
 
+    reset_button = Button(label='Reset', callback = callback_reset_js)
+
     def callback_reset(*args, **kwargs):
         from IPython.display import Javascript, display
+
         # display(callback_reset_js)
         # callback_reset_js.name = None
         # callback_reset_js.name = 'test'
-        display('Plot updated, press reset to rescale!')
+        # display('Plot updated, press reset to rescale!')
         # cb.color_mapper.low = datamin
         # cb.color_mapper.high = datamax
         # im.glyph.color_mapper.low = datamin
@@ -206,9 +265,9 @@ def colorbar_slider(fig):
         # lower_slider.end = datamax
         # upper_slider.start = datamin
         # upper_slider.end = datamax
-        # update()
+        # fig.text(x=0,y=0,text='Plot updated, press reset to rescale!')
+        # reset_button.label='Reset: Data changed! Press me!'
 
-    reset_button = Button(label='Reset', callback = callback_reset_js)
     # reset_button.trigger('clicks',0,1)
     reset_button.on_click(callback_reset)
 
@@ -221,11 +280,11 @@ def colorbar_slider(fig):
     # exception_button = Button(label='KILL ME')
     # exception_button.on_click(callback_die)
 
-    lower_slider = Slider(start=datamin, end=datamax, value=datamin, step=.1,
+    lower_slider = Slider(start=datamin, end=datamax, value=datamin, step=(datamax-datamin)/50, # smallest step is 1e-5
                         title="Lower lim", callback=callback_l)
     lower_slider.width=100
 
-    upper_slider = Slider(start=datamin, end=datamax, value=datamax, step=.1,
+    upper_slider = Slider(start=datamin, end=datamax, value=datamax, step=(datamax-datamin)/50,
                          title="Upper lim", callback=callback_u)
     upper_slider.width=100
 
@@ -234,7 +293,7 @@ def colorbar_slider(fig):
 
     # add all of these widgets as arguments to the callback functions
     for callback in ['l', 'u', 'lt', 'ut', 'reset_js']:
-        for widget in ['lower_slider', 'upper_slider','lower_input','upper_input']:
+        for widget in ['lower_slider', 'upper_slider','lower_input','upper_input', 'reset_button']:
             exec('callback_%s.args["%s"] = %s' %(callback, widget, widget))
 
     wb = widgetbox([upper_slider, upper_input, lower_slider, lower_input, reset_button], width=100, sizing_mode = 'stretch_both')
@@ -355,21 +414,10 @@ def image(fig, x, y, z, show_colorbar = True, z_title=None, im_handle=None, cmap
         ymax = y.max()
 
         ## Fix axis limits ## Temporary aspect ratio fix: make a squarish plot and make x/y equal lengths
-        from bokeh.models.ranges import Range1d
-
-        x_range = xmax-xmin
-        y_range = ymax-ymin
-        bigger_range = max(x_range, y_range)
-        x_bound_l = xmin - (bigger_range-x_range)/2
-        x_bound_u = xmax + (bigger_range-x_range)/2
-        y_bound_l = ymin - (bigger_range-y_range)/2
-        y_bound_u = ymax + (bigger_range-y_range)/2
-
-        fig.x_range = Range1d(x_bound_l, x_bound_u, bounds = (x_bound_l,x_bound_u))
-        fig.y_range = Range1d(y_bound_l, y_bound_u, bounds = (y_bound_l,y_bound_u))
+        auto_bounds(fig, x, y, square=True, hard_bounds=True)
 
         ## Plot it
-        im_handle = fig.image(image=[z], x=0, y =0, dw=(xmax-xmin), dh=(ymax-ymin), palette = choose_cmap(cmap), name=name)
+        im_handle = fig.image(image=[z], x=xmin, y =ymin, dw=(xmax-xmin), dh=(ymax-ymin), palette = choose_cmap(cmap), name=name)
 
     ## Make plot aspect ratio correct and adjust toolbar location
 
@@ -391,10 +439,10 @@ def image(fig, x, y, z, show_colorbar = True, z_title=None, im_handle=None, cmap
 
     if slider_handle:
         data = get_image_data(fig)
-        data = reject_outliers(data)
+        data = reject_outliers_quick(data)
         for child in slider_handle.children[0:-1]: #exclude the button
-            child.callback.args['model'].tags[0] = np.nanmin(data)
-            child.callback.args['model'].tags[1] = np.nanmax(data)
+            child.callback.args['model'].tags[0] = nanmin(data)
+            child.callback.args['model'].tags[1] = nanmax(data)
         # slider_handle.children[-1].callback.trigger('name','old','new')
         slider_handle.children[-1].clicks = 0
         slider_handle.children[-1].clicks = 1 # Fake button click for callback
@@ -470,31 +518,36 @@ def line(fig, x, y, line_handle=None, color='black', linestyle='-', name=None):
         '*': 'asterisk'
     }
 
-
+    new_line = True
     if line_handle: # if updating an existing line
         line_handle.data_source.data['x'] = x
         line_handle.data_source.data['y'] = y
+        new_line = False
 
     else: # create a new line
         from bokeh.models import ColumnDataSource
         source = ColumnDataSource(data=dict(x=x,y=y, name=[name]*len(x))) # an array of "name"s will have "name" show up on hover tooltip
         if linestyle in linestyles.keys(): # plot a line
-            line_handle = fig.line(x, y,
-                                    color = color,
-                                    line_dash = linestyles[linestyle],
-                                    line_width = 2,
-                                    source = source,
-                                    name = name,
-                                )
+            line_handle = fig.line(x, y, source = source)
 
         else: # plot scatter
-            line_handle = fig.scatter(x, y,
-                                    color = color,
-                                    marker = markerstyles[linestyle],
-                                    size = 10,
-                                    source = source,
-                                    name = name
-                                )
+            line_handle = fig.scatter(x, y, marker=markerstyles[linestyle],
+            source = source)
+
+    if linestyle in linestyles.keys():
+        line_handle.glyph.line_dash = linestyles[linestyle]
+        line_handle.glyph.line_width = 2
+    else:
+        if not new_line:
+            print('Unfortunately can\'t change marker type!')
+        line_handle.glyph.size = 10
+    line_handle.glyph.line_color = color
+    line_handle.name = name
+
+    update()
+
+    auto_bounds(fig, x, y)
+
 
     # update() # refresh plots in the notebook, doesn't work when adding new lines unfortunately
     return line_handle
