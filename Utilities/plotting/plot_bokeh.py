@@ -172,7 +172,7 @@ def colorbar_slider(fig):
         }
         """)
 
-    callback_reset = CustomJS(args=dict(cb=cb, im=im, model=model), code="""
+    callback_reset_js = CustomJS(args=dict(cb=cb, im=im, model=model), code="""
         var cm = cb.color_mapper;
         var low = model.tags[0];
         var high = model.tags[1];
@@ -188,9 +188,30 @@ def colorbar_slider(fig):
         lower_slider.end = high;
         upper_slider.start = low;
         upper_slider.end = high;
+        model.trigger('change')
+        cb_obj.trigger('change)')
     """)
 
-    reset_button = Button(label='Reset', callback=callback_reset)
+    def callback_reset(*args, **kwargs):
+        from IPython.display import Javascript, display
+        # display(callback_reset_js)
+        # callback_reset_js.name = None
+        # callback_reset_js.name = 'test'
+        display('Plot updated, press reset to rescale!')
+        # cb.color_mapper.low = datamin
+        # cb.color_mapper.high = datamax
+        # im.glyph.color_mapper.low = datamin
+        # im.glyph.color_mapper.high = datamax
+        # lower_slider.start = datamin
+        # lower_slider.end = datamax
+        # upper_slider.start = datamin
+        # upper_slider.end = datamax
+        # update()
+
+    reset_button = Button(label='Reset', callback = callback_reset_js)
+    # reset_button.trigger('clicks',0,1)
+    reset_button.on_click(callback_reset)
+
     # def callback_die(attr, old, new):
     #     from IPython.display import display
     #     display('yoooo')
@@ -212,23 +233,11 @@ def colorbar_slider(fig):
     upper_input = TextInput(callback=callback_ut, value = str(datamax), width=50)
 
     # add all of these widgets as arguments to the callback functions
-    for callback in ['l', 'u', 'lt', 'ut', 'reset']:
+    for callback in ['l', 'u', 'lt', 'ut', 'reset_js']:
         for widget in ['lower_slider', 'upper_slider','lower_input','upper_input']:
             exec('callback_%s.args["%s"] = %s' %(callback, widget, widget))
 
-    # def callback_reset(attr, old, new):
-    #     from IPython import display
-    #     display.display('heyyyyy')
-    #     cb.color_mapper.low = datamin
-    #     cb.color_mapper.high = datamax
-    #     im.glyph.color_mapper.low = datamin
-    #     im.glyph.color_mapper.high = datamax
-    #     lower_slider.start = datamin
-    #     lower_slider.end = datamax
-    #     upper_slider.start = datamin
-    #     upper_slider.end = datamax
-
-    wb = widgetbox([upper_slider, upper_input, lower_slider, lower_input, reset_button, exception_button], width=100, sizing_mode = 'stretch_both')
+    wb = widgetbox([upper_slider, upper_input, lower_slider, lower_input, reset_button], width=100, sizing_mode = 'stretch_both')
     return wb
 
 
@@ -386,7 +395,10 @@ def image(fig, x, y, z, show_colorbar = True, z_title=None, im_handle=None, cmap
         for child in slider_handle.children[0:-1]: #exclude the button
             child.callback.args['model'].tags[0] = np.nanmin(data)
             child.callback.args['model'].tags[1] = np.nanmax(data)
-        slider_handle.children[-1].clicks += 1 # Fake button click for callback
+        # slider_handle.children[-1].callback.trigger('name','old','new')
+        slider_handle.children[-1].clicks = 0
+        slider_handle.children[-1].clicks = 1 # Fake button click for callback
+        slider_handle.children[-1].callback.args['model'].tags.append('hey')
 
     ## Fix colors
     clim(fig) # autoscale colors (filtering outliers)
