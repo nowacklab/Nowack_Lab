@@ -623,6 +623,19 @@ def plot_html(fig):
 
     fig.name = figfile
 
+def save(fig):
+    ## Set up directory for the plot files
+    plots_dir = os.path.join('.','Bokeh_plots')
+    if not os.path.exists(plots_dir):
+        os.makedirs(plots_dir)
+    filename = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')+'.html'
+    figfile = os.path.join(plots_dir, filename)
+
+    ## Save and show figure
+    from bokeh.resources import CDN
+    from bokeh.embed import file_html
+    with open(figfile, 'w') as f:
+        f.write(file_html(fig, CDN, "my plot"))
 
 
 def show(fig, show_legend=True):
@@ -633,6 +646,7 @@ def show(fig, show_legend=True):
 
     global NB_HANDLE
     NB_HANDLE = bokeh.io.show(fig, notebook_handle=True)
+
     return NB_HANDLE
 
 
