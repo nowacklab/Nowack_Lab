@@ -2,7 +2,6 @@ Change cap_lockin to lockin_cap, and the other one
 
 Allow for sig_in_ac_x = None
 
-Implement namedtuple for piezos?
 
 Fix attocube communication bug - delete object?
 
