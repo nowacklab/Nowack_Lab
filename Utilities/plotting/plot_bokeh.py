@@ -263,8 +263,13 @@ def colorbar_slider(fig):
         # im.glyph.color_mapper.high = datamax
         # lower_slider.start = datamin
         # lower_slider.end = datamax
+        # lower_slider.value = datamin
         # upper_slider.start = datamin
         # upper_slider.end = datamax
+        # lower_slider.value = datamax
+        # lower_input.value = str(datamin)
+        # upper_input.value = str(datamax)
+        # update()
         # fig.text(x=0,y=0,text='Plot updated, press reset to rescale!')
         # reset_button.label='Reset: Data changed! Press me!'
 
@@ -632,10 +637,49 @@ def save(fig):
     figfile = os.path.join(plots_dir, filename)
 
     ## Save and show figure
-    from bokeh.resources import CDN
-    from bokeh.embed import file_html
+    from jinja2 import Template
+
+    from bokeh.embed import components
+    from bokeh.resources import INLINE
+
+    plots = {'fig':fig}
+    script, div = components(plots)
+
+    template = Template('''<!DOCTYPE html>
+    <html lang="en">
+        <head>
+            <meta charset="utf-8">
+            <title>Bokeh Scatter Plots</title>
+            {{ js_resources }}
+            {{ css_resources }}
+            {{ script }}
+            <style>
+                .embed-wrapper {
+                    width: 50%;
+                    height: 400px;
+                    margin: auto;
+                }
+            </style>
+        </head>
+        <body>
+            {% for key in div.keys() %}
+                <div class="embed-wrapper">
+                {{ div[key] }}
+                </div>
+            {% endfor %}
+        </body>
+    </html>
+    ''')
+    js_resources = INLINE.render_js()
+    css_resources = INLINE.render_css()
+
+    bokeh_html = template.render(js_resources=js_resources,
+                       css_resources=css_resources,
+                       script=script,
+                       div=div)
+
     with open(figfile, 'w') as f:
-        f.write(file_html(fig, CDN, "my plot"))
+        f.write(bokeh_html)
 
 
 def show(fig, show_legend=True):
