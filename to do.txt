@@ -1,3 +1,7 @@
+Change cap_lockin to lockin_cap, and the other one
+
+Allow for sig_in_ac_x = None
+
 Implement namedtuple for piezos?
 
 Fix attocube communication bug - delete object?
@@ -21,11 +25,6 @@ Find location of Nowack_Lab module and figure out paths from there
 directory_of_this_module = os.path.dirname(os.path.realpath(__file__))
 
 
-
-
-Once have conversion factors, have touchdown "hone in" on center of piezo range better. Right now attocubes will miss.
-
-	-If change direction multiple times, reduce attocube number of steps
 
 Build in all conversion factors
 
