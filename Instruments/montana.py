@@ -5,6 +5,8 @@ from tabulate import tabulate
 import time
 
 class Montana():
+    _temperature = {}
+    cryo = None
     def __init__(self, ip='192.168.69.101', port=7773):
         directory_of_this_module = os.path.dirname(os.path.realpath(__file__))
         sys.path.append(directory_of_this_module) # so CryostationComm is discoverable
@@ -18,12 +20,11 @@ class Montana():
 
         atexit.register(self.exit)
 
-        self._temperature = {}
         self._temperature = self.temperature
         self._temperature_stability = {}
         self._temperature_stability = self.temperature_stability
 
-    
+
     def __getstate__(self):
         self.save_dict = {"temperature": self.temperature,
                           "stability": self._temperature_stability}
