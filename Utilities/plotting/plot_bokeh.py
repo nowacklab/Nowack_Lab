@@ -629,9 +629,6 @@ def plot_html(fig):
     fig.name = figfile
 
 def save(fig):
-    '''
-    Saves bokeh plots to HTML in ./Bokeh_plots
-    '''
     ## Set up directory for the plot files
     plots_dir = os.path.join('.','Bokeh_plots')
     if not os.path.exists(plots_dir):
@@ -707,9 +704,7 @@ def show_html(figfile, width=700, height=700):
 
 def update():
     '''
-    Replots a bokeh figure if it has been changed using bokeh.io.push_notebook.
-    Note: changes pushed to the notebook will NOT stay there when reopening a saved notebook.
-    Once done updating, make sure you `show` again.
+    Replots a bokeh figure if it has been changed.
     '''
     if NB_HANDLE:
         bokeh.io.push_notebook(handle=NB_HANDLE)
