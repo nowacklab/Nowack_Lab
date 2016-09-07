@@ -2,7 +2,6 @@ import numpy
 from numpy.linalg import lstsq
 from . import touchdown, navigation
 import time, os, glob
-from datetime import datetime
 import matplotlib.pyplot as plt
 from ..Utilities import dummy
 from ..Instruments import piezos, montana
@@ -13,10 +12,14 @@ class Planefit(Measurement):
     '''
     For fitting to the plane of the sample. Will do a series of touchdowns in a grid of size specified by numpts. Vz_max sets the maximum voltage the Z piezo will reach. If None, will use the absolute max safe voltage set in the Piezos class.
     '''
-    def __init__(self, instruments, cap_input=None, span=[400,400], center=[0,0], numpts=[4,4], Vz_max = None):
+    def __init__(self, instruments=None, span=[400,400], center=[0,0], numpts=[4,4], Vz_max = None, cap_input=0):
         self.instruments = instruments
-        self.piezos = instruments['piezos']
-        self.montana = instruments['montana']
+        if instruments:
+            self.piezos = instruments['piezos']
+            self.montana = instruments['montana']
+        else:
+            self.piezos = dummy.Dummy(piezos.Piezos)
+            self.montana = dummy.Dummy(montana.Montana)
 
         self.span = span
         self.center = center
@@ -36,35 +39,30 @@ class Planefit(Measurement):
         self.y = numpy.linspace(center[1]-span[1]/2, center[1]+span[1]/2, numpts[1])
 
         self.X, self.Y = numpy.meshgrid(self.x, self.y)
-        self.Z = numpy.nan*self.X # makes array of nans same size as grid
+        self.Z = numpy.nan*self.X # makes array of zeros same size as grid
 
         self.a = None
         self.b = None
         self.c = None
 
-        self.filename = ''
-        self.timestamp = datetime.now()
+        self.filename=''
 
     def __getstate__(self):
-        self.save_dict = {"timestamp": self.timestamp.strftime("%Y-%m-%d %I:%M:%S %p"),
+        self.save_dict = {"timestamp": timestamp,
                           "a": self.a,
                           "b": self.b,
                           "c": self.c,
                           "span": self.span,
                           "center": self.center,
                           "numpts": self.numpts,
-                          "piezos": self.piezos,
-                          "montana": self.montana,
-                          "cap_input": self.cap_input}
+                          "piezos": self.peizos,
+                          "montnana": self.montana}
         return self.save_dict
-
+                          
     def do(self):
-        if not self.cap_input:
-            raise Exception('Cap_input not set!')
-
-        self.timestamp = datetime.now()
-        self.filename = self.timestamp.strftime('%Y%m%d_%H%M%S') + '_plane'
-
+        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_plane'
+        self.timestamp = time.strftime("%Y-%m-%d @%I:%M%:%S%p")
+        
         self.piezos.check_lim({'x':self.X, 'y':self.Y}) # make sure we won't scan outside X, Y piezo ranges!
 
         ## Initial touchdown
@@ -126,16 +124,25 @@ class Planefit(Measurement):
         plt.xlabel('x')
         plt.title(self.filename,fontsize=15)
 
-    def save(self, savefig=True):
+    def save(self):
         home = os.path.expanduser("~")
         data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Planes')
         filename = os.path.join(data_folder, self.filename)
 
-        Measurement.tojson(self, filename+'.json')
+        with open(filename+'.csv', 'w') as f:
+            for s in ['span', 'center', 'numpts']:
+                f.write('%s = %f, %f \n' %(s, float(getattr(self, s)[0]),float(getattr(self, s)[1])))
+            for s in ['a','b','c']:
+                f.write('%s = %f\n' %(s, float(getattr(self, s))))
+            f.write('Montana info: \n'+self.montana.log()+'\n')
+            f.write('X (V),Y (V),Z (V)\n')
+            for i in range(self.X.shape[0]):
+                for j in range(self.X.shape[1]):
+                    if self.Z[i][j] != None:
+                        f.write('%f' %self.X[i][j] + ',' + '%f' %self.Y[i][j] + ',' + '%f' %self.Z[i][j] + '\n')
 
-        if savefig:
-            self.plot()
-            plt.savefig(filename+'.pdf', bbox_inches='tight')
+        self.plot()
+        plt.savefig(filename+'.pdf', bbox_inches='tight')
 
     def update_c(self):
         old_c = self.c
@@ -147,33 +154,20 @@ class Planefit(Measurement):
                 if z_maxormin > self.piezos.Vmax['z'] or z_maxormin < 0:
                     self.c = old_c
                     raise Exception('Plane now extends outside range of piezos! Move the attocubes and try again.')
-        self.save(savefig=False)
 
 
-def load_last(instruments):
-    '''
-    Creates a new plane object using parameters from last plane taken.
-    Useful if you lose the object while scanning.
-    Pass in instruments.
-    '''
-    plane = Planefit(instruments=instruments)
+def load_last():
+    plane = Planefit(None)
 
     home = os.path.expanduser("~")
     data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Planes')
-    newest_plane =  max(glob.iglob(os.path.join(data_folder,'*.json')), key=os.path.getctime) # finds the newest plane saved as json
-
-    import json, jsonpickle as jsp
-
-    with open(newest_plane) as f:
-        obj_dict = json.load(f)
-
-    plane.a = obj_dict['py/state']['a']['value']
-    plane.b = obj_dict['py/state']['b']['value']
-    plane.c = obj_dict['py/state']['c']['value']
-    try:
-        plane.cap_input = obj_dict['py/state']['cap_input']
-    except:
-        print('cap_input not loaded! Set this manually!!!')
+    newest_plane =  max(glob.iglob(os.path.join(data_folder,'*.[ct][sx][vt]')), key=os.path.getctime) # finds the newest plane saved as a csv or txt
+    with open(newest_plane, 'r') as f:
+        for i, line in enumerate(f): # loop through lines
+            if i in (3,4,5): # these lines contain the plane information
+                exec('plane.'+line) # e.g., plane.c = 97.43
+            elif i == 6: # don't care about the rest of the file
+                break
 
     return plane
 

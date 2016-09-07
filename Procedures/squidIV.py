@@ -8,7 +8,6 @@ from IPython import display
 import matplotlib.pyplot as plt
 import numpy as np
 import time, os
-from datetime import datetime
 from ..Utilities import dummy
 from ..Instruments import nidaq, preamp, montana
 from .save import Measurement
@@ -57,7 +56,7 @@ class SquidIV(Measurement):
         display.clear_output()
 
     def __getstate__(self):
-        self.save_dict = {"timestamp": self.timestamp.strftime("%Y-%m-%d %I:%M:%S %p"),
+        self.save_dict = {"timestamp": self.timestamp,
                           "Rbias": self.Rbias,
                           "Rbias_mod": self.Rbias_mod,
                           "Imod": self.Imod,
@@ -78,8 +77,9 @@ class SquidIV(Measurement):
         self.Vbias = self.I*self.Rbias # SQUID bias voltage
 
     def do(self):
-        self.timestamp = datetime.now()
-        self.filename = self.timestamp.strftime('%Y%m%d_%H%M%S') + '_IV'
+        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_IV'
+        self.timestamp = time.strftime("%Y-%m-%d @ %I:%M%:%S%p")
+
 
         self.param_prompt() # Check parameters
 

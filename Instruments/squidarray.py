@@ -10,7 +10,7 @@ class PCI100:
     def __init__(self, visaResource='COM3'):
         self._visaResource = visaResource
         atexit.register(self.close)
-        self.connect()
+
 
 
     def connect(self):
@@ -21,8 +21,8 @@ class PCI100:
             rm = visa.ResourceManager()
             self.instrument = rm.open_resource(str(self._visaResource))
             self.instrument.baud_rate = 9600
-        except:
-            print("Cannot connect to STAR Cryoelectronics SQUID interface")
+        except visa.VisaIOError as e:
+            print("Cannot connect to STAR Cryoelectronics SQUID interface:", e)
 
     def send(self, command):
         '''
@@ -31,8 +31,8 @@ class PCI100:
         self.connect()
         try:
             self.instrument.write(command)
-        except:
-            print("Cannot transmit data to STAR Cryo SQUID interface")
+        except visa.VisaIOError as e:
+            print("Cannot transmit data to STAR Cryo SQUID interface:", e)
         self.close()
 
     def close(self):
@@ -57,15 +57,15 @@ class PFL102:
     param_filename = os.path.join(os.path.dirname(__file__),'squidarray_params.json')
 
 
-    # def __getstate__(self):
-    #     self.save_dict = {"_S_bias": self._S_bias,
-    #                           "_A_bias": self._A_bias,
-    #                           "_S_flux": self._S_flux,
-    #                           "_A_flux": self._A_flux,
-    #                           "_offset": self._offset,
-    #                           "_integratorCapacitor": self._integratorCapacitor,
-    #                           "_feedbackResistor": self.feedbackResistor}
-    #     return self.save_dict
+    def __getstate__(self):
+        self.save_dict = {"_S_bias": self._S_bias,
+                              "_A_bias": self._A_bias,
+                              "_S_flux": self._S_flux,
+                              "_A_flux": self._A_flux,
+                              "_offset": self._offset,
+                              "_intergratorCapacitor": self._intergratorCapacitor,
+                              "_feedbackResistor": self.feedbackResistor}
+        return self.save_dict
 
     def __init__(self, channel, pci, load=False):
         """ Will initialize PFL 102 and zero everything (or not) """
@@ -254,15 +254,12 @@ class PFL102:
         if value == 'High' or value == 'high' or value == 'hi' or value == 'Hi' or value == 'HI':
             self.feedbackResistor = '100kOhm'
             self.integratorCapacitor = '1.5nF'
-            self._sensitivity = "High"
         elif value == 'Med' or value == 'med' or value == 'Medium' or value == 'medium':
             self.feedbackResistor = '10kOhm'
             self.integratorCapacitor = '15nF'
-            self._sensitivity = "Med"
         elif value == 'Low' or value == 'low' or value == 'Lo' or value == 'lo' or value == 'LO' or value == 'LOW':
             self.feedbackResistor = '1kOhm'
             self.integratorCapacitor = '150nF'
-            self._sensitivity = "Low"
         else:
             print('Sensitivity must be High, Med, or Low')
 

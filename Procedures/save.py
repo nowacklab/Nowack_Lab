@@ -4,7 +4,7 @@ import jsonpickle as jsp
 numpy.register_handlers()
 
 class Measurement:
-
+    
     @staticmethod
     def tojson(obj, filename):
         obj_string = jsp.encode(obj)

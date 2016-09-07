@@ -1,9 +1,8 @@
 from scipy import signal
 import matplotlib.pyplot as plt
 import numpy as np
-import datetime #probably dont need to import datetime and time
+import datetime
 import time
-from datetime import datetime
 import os
 import re
 from ..Utilities import dummy
@@ -30,14 +29,14 @@ class DaqSpectrum(Measurement):
 
         self.notes = ''
         self.time = 'TIME NOT SET' # If we see this, we need to think about timestamp more
-
+        
 
     def __getstate__(self):
-        self.save_dict = {"timestamp": self.measurement_time.strftime("%Y-%m-%d %I:%M:%S %p"),
-                          "V": np.array(self.V).tolist(),
-                          "t": np.array(self.t).tolist(),
-                          "f": np.array(self.f).tolist(),
-                          "psdAve": np.array(self.psdAve).tolist(),
+        self.save_dict = {"timestamp":self.timestamp,
+                          "V": self.V,
+                          "t": self.t,
+                          "f": self.f,
+                          "psdAve": self.psdAve,
                           "averages": self.averages,
                           "measure_time": self.measure_time,
                           "measure_freq": self.measure_freq,
@@ -49,9 +48,9 @@ class DaqSpectrum(Measurement):
         return self.save_dict
 
     def do(self):
-        #record the time when the measurement starts
-        self.measurement_time = datetime.now()
 
+        self.time = time.strftime('%Y-%m-%d_%H%M%S')
+        self.timestamp = time.strftime("%Y-%m-%d @ %I:%M:%S%p")
         self.setup_preamp()
 
         Nfft = int((self.measure_freq*self.measure_time / 2) + 1)
@@ -89,7 +88,6 @@ class DaqSpectrum(Measurement):
         self.ax_semilog.semilogy(self.f, self.psdAve)
 
     def save(self):
-        self.time = self.measurement_time.strftime('%Y-%m-%d_%H%M%S')
         traceName = os.path.join(self.path, self.time)+ '_trace.csv'
         fftName = os.path.join(self.path + self.time) + '_fft.csv'
 
@@ -110,7 +108,7 @@ class DaqSpectrum(Measurement):
             ax.set_xlabel('Frequency (Hz)')
             ax.set_ylabel(r'Power Spectral Density ($\mathrm{V/\sqrt{Hz}}$)')
             #apply a timestamp to the plot
-            ax.annotate(self.measurement_time.strftime("%Y-%m-%d %I:%M:%S %p"), xy=(0.02,.98), xycoords='axes fraction', fontsize=10,
+            ax.annotate(self.time, xy=(0.02,.98), xycoords='axes fraction', fontsize=10,
             ha='left', va = 'top', family='monospace')
             ax.set_title(self.notes)
 

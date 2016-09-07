@@ -4,7 +4,6 @@ from IPython import display
 import matplotlib.pyplot as plt
 import numpy as np
 import time, os
-from datetime import datetime
 from . import squidIV
 from ..Utilities import plotting
 from .save import Measurement
@@ -36,7 +35,7 @@ class Mod2D(Measurement):
         display.clear_output()
 
     def __getstate__(self):
-        self.save_dict = {"timestamp": self.timestamp.strftime("%Y-%m-%d %I:%M:%S %p"),
+        self.save_dict = {"timestamp": self.timestamp,
                           "IV": self.IV,
                           "Imodspan": self.Imodspan,
                           "Imodstep": self.Imodstep,
@@ -52,8 +51,9 @@ class Mod2D(Measurement):
         self.V = np.full((self.numpts, self.IVnumpts), np.nan)
 
     def do(self):
-        self.timestamp = datetime.now()
-        self.filename = self.timestamp.strftime('%Y%m%d_%H%M%S') + '_mod2D'
+        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_mod2D'
+        self.timestamp = time.strftime("%Y-%m-%d @ %I:%M%:%S%p")
+
 
         self.calc_ramp() #easy way to clear self.V
         self.IV.V = self.IV.V*0

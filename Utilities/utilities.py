@@ -109,23 +109,3 @@ def reject_outliers_quick(data, m=2):
     std = np.nanstd(data)
     new_data = np.ma.masked_where(abs(data - mean) > m*std, data)
     return new_data
-
-def hide_code_button():
-    '''
-    Generates an HTML button that toggles on and off the code cells in the notebook.
-    '''
-    from IPython.display import HTML
-
-    HTML('''<script>
-    code_show=true;
-    function code_toggle() {
-     if (code_show){
-     $('div.input').hide();
-     } else {
-     $('div.input').show();
-     }
-     code_show = !code_show
-    }
-    $( document ).ready(code_toggle);
-    </script>
-    <form action="javascript:code_toggle()"><input type="submit" value="Click here to toggle on/off the raw code."></form>''')

@@ -1,7 +1,6 @@
 from IPython import display
 from scipy.stats import linregress
 from scipy.optimize import curve_fit
-from datetime import datetime
 import time, os
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,14 +12,14 @@ class Touchdown(Measurement):
     def __init__(self, instruments=None, cap_input=None, planescan=False, Vz_max = None):
         self.touchdown = False
         self.V_to_C = 2530e3 # 2530 pF/V * (1e3 fF/pF), calibrated 20160423 by BTS, see ipython notebook
+        self.attosteps = 200 #number of attocube steps between sweeps
         self.numfit = 10       # number of points to fit line to while collecting data
         self.numextra = 3
-        self.attoshift = 40 # move 40 um if no touchdown detected
 
         if instruments:
             self.piezos = instruments['piezos']
             self.atto = instruments['attocube']
-            self.lockin = instruments['cap_lockin']
+            self.lockin = instruments['lockin']
             self.daq = instruments['nidaq']
             self.montana = instruments['montana']
         else:
@@ -31,6 +30,12 @@ class Touchdown(Measurement):
             self.montana = dummy.Dummy(montana.Montana)
 
         self.lockin.ch1_daq_input = 'ai%s' %cap_input
+
+        if self.montana.temperature['platform'] < 10:
+            self.low_temp = True
+        else:
+            self.low_temp = False
+
         self.planescan = planescan
 
         if Vz_max == None:
@@ -49,11 +54,11 @@ class Touchdown(Measurement):
         self.V_td = -1000.0
 
         self.title = ''
+
         self.filename = ''
-        self.timestamp = ''
 
     def __getstate__(self):
-        self.save_dict = {"timestamp": self.measurement_start.strftime("%Y-%m-%d %I:%M:%S %p"),
+        self.save_dict = {"timestamp": self.timestamp,
                           "lockin": self.lockin,
                           "atto": self.atto,
                           "piezos": self.piezos,
@@ -63,15 +68,11 @@ class Touchdown(Measurement):
                           "C": self.C}
         return self.save_dict
 
-    def check_balance(self, V_unbalanced=2e-6):
-        '''
-        Checks the balance of the capacitance bridge.
-        Voltage must be less than V_unbalanced.
-        By default, this is heuristically 2 uV.
-        '''
-        # Read daq voltage and conver to real lockin voltage
-        Vcap = getattr(self.daq, self.lockin.ch1_daq_input)
-        Vcap = self.lockin.convert_output(Vcap)
+    def check_balance(self):
+        V_unbalanced = 2e-6 # We can balance better than 2 uV
+
+        Vcap = getattr(self.daq, self.lockin.ch1_daq_input) # Read the voltage from the daq
+        Vcap = self.lockin.convert_output(Vcap) # convert to a lockin voltage
 
         if Vcap > V_unbalanced:
             inp = input('Check balance of capacitance bridge! Press enter to continue, q to quit')
@@ -79,31 +80,25 @@ class Touchdown(Measurement):
                 raise Exception('quit by user')
 
     def do(self):
-        '''
-        Does the touchdown.
-        Timestamp is determined at the beginning of this function.
-        '''
-        #record time when the measurement ends
-        self.measurement_start = datetime.now()
-        self.filename = self.measurement_start.strftime('%Y%m%d_%H%M%S') + '_td'
+        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_td'
+        self.timestamp = time.strftime("%Y-%m-%d @ %I:%M%:%S%p")
         if self.planescan:
             self.filename = self.filename + '_planescan'
 
         V_td = None
+        attosteps = self.attosteps # This is how many steps the attocubes will move if no touchdown detected.
+        if self.planescan:
+            attosteps = None # don't move the attocubes if doing a planescan
 
-        ## Loop that does sweeps of z piezo
-        ## Z attocube is moved up between iterations
-        ## Loop breaks when true touchdown detected.
-        while not self.touchdown:
+        while not self.touchdown: # loop will move up attocubes every time
             self.check_balance() # Make sure capacitance bridge is well-balanced
 
             # Reset capacitance values
             self.C = [None]*self.numsteps # Capacitance (fF)
-            self.C0 = None # Cap offset: will take on value of the first point
+            self.C0 = None # Cap offset... will take on value of the first point
             self.extra = 0 # Counter to keep track of extra points after touchdown (for fitting the line)
 
-            # Inner loop to sweep z-piezo
-            for i in range(self.numsteps):
+            for i in range(self.numsteps): # Loop over each piezo voltage
                 time_start = time.time()
 
                 self.piezos.V = {'z': self.V[i]} # Set the current voltage
@@ -118,32 +113,33 @@ class Touchdown(Measurement):
                     self.C0 = Cap # Sets the offset datum
                 self.C[i] = Cap - self.C0 # remove offset
 
-                if i >= self.numfit: # after a few points, check for touchdown
+                if i >= self.numfit: # start fitting the line after min number of points have come in
                     self.check_touchdown(i)
-                self.plot_cap(i) # plot the new point
+                self.plot_cap(i)
 
                 if self.touchdown:
                     if self.extra < self.numextra: # take three extra points for fit
                         self.extra = self.extra + 1
-                        if i == self.numsteps - 1: # special case; there was a bug where if last extra point was last point taken, touchdown would be detected as true
-                            self.touchdown = False
+                        if i == self.numsteps - 1:
+                            self.touchdown = False # special case; there was a bug where if last extra point was last point taken, touchdown would be detected as true
 
                     else:
                         V_td = self.get_touchdown_voltage(i, plot=False)
                         if not self.planescan: # Don't want to move attocubes during planescan
-                            ## Check if touchdown near center of z piezo +V range
-                            if V_td > 0.7*self.Vz_max or V_td < 0.3*self.Vz_max:
+                            # For central touchdown of plane, we want to get the touchdown voltage near the center of the piezo's positive voltage range.
+                            if V_td > 0.65*self.Vz_max:
                                 self.touchdown = False
-                                self.title = 'Found touchdown, centering near 100 Vpiezo'
-                                self.ax.set_title(self.title, fontsize=20)
-                                self.attoshift = (V_td-100)*.127 # e.g. V_td at 0 V means we're too close, will move z atto 12.7 um down)
-                        elif V_td < 0: # During a planescan, this is probably false touchdown
+                                attosteps = self.attosteps/4 #make sure we don't crash! Don't keep on updating attosteps, otherwise it will go to zero eventually, and that means continuous!!!
+                            elif V_td < 0.35*self.Vz_max:
+                                self.touchdown = False
+                                attosteps = -self.attosteps/4 #move the other direction to bring V_td closer to midway #make sure we don't crash! Don't keep on updating attosteps, otherwise it will go to zero eventually, and that means continuous!!!
+                        elif V_td < 0: # This is obviously a false touchdown; for planescan only
                             self.touchdown=False
-                        elif self.extra == self.numextra: # last extra step, bug fix
+                        elif self.extra == self.numextra: # last extra step
                             rsquared = self.line_corr_coef(self.V[i-self.numextra:i+1], self.C[i-self.numextra:i+1]) #check fit of last few points
                             if rsquared < 0.90:
                                 self.touchdown=False # false touchdown
-                        break # stop approaching
+                        break
 
             if self.extra != self.numextra: # did not take enough extra steps, TD is at end of range
                 self.touchdown = False
@@ -154,7 +150,7 @@ class Touchdown(Measurement):
             if not self.planescan: # don't want to move attocubes if in a planescan!
                 if not self.touchdown:
                     self.piezos.V = {'z': -self.Vz_max} # before moving attocubes, make sure we're far away from the sample!
-                    self.atto.z.move(self.attoshift)
+                    self.atto.up({'z': attosteps})
                     time.sleep(2) # was getting weird capacitance values immediately after moving; wait a bit
 
         V_td = self.get_touchdown_voltage(i, plot=True) # we didn't plot the intersecting lines before, so let's do that now.
@@ -166,14 +162,6 @@ class Touchdown(Measurement):
 
 
     def check_touchdown(self, i):
-        '''
-        Checks for touchdown.
-        Calculates difference between current point and mean of the last numfit points.
-        If this differences is greater than 4*(the standard deviation of all points so far)
-        and if the current capacitance is at least 0.4 fF greater than the last,
-        then a touchdown was detected.
-        Extremely arbitrary, but it works.
-        '''
         std = np.std(self.C[1:i]) # standard deviation of all points so far
         deviation = abs(self.C[i] - np.mean(self.C[i+1-int(self.numfit):i+1])) # deviation of the ith point from average of last self.numfit points, including i
 
@@ -182,7 +170,7 @@ class Touchdown(Measurement):
 
     def configure_attocube(self):
         """ Set up z attocube """
-        self.atto.z.freq = 200
+        self.atto.freq = {'z': 200}
 
     def configure_lockin(self):
         """ Set up lockin amplifier for capacitance detection """
