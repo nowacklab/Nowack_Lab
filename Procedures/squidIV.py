@@ -11,7 +11,7 @@ import time, os
 from datetime import datetime
 from ..Utilities import dummy
 from ..Instruments import nidaq, preamp, montana
-from .save import Measurement
+from ..Utilities.save import Measurement
 
 class SquidIV(Measurement):
     def __init__(self, instruments=None, squidout=None, squidin=None, modout=None, rate=90):
@@ -20,29 +20,29 @@ class SquidIV(Measurement):
         To make an empty object, then just call SquidIV(). You can do this if you want to plot previously collected data.
         '''
 
+        self.squidout = 'ao%s' %squidout
+        self.squidin = 'ai%s' %squidin
+        self.modout = 'ao%s' %modout
+
         if instruments: # Only set up instruments if running for real
             self.daq = instruments['nidaq']
             self.preamp = instruments['preamp']
             self.montana = instruments['montana']
-        else:
-            self.daq = dummy.Dummy(nidaq.NIDAQ)
-            self.preamp = dummy.Dummy(preamp.SR5113)
-            self.montana = dummy.Dummy(montana.Montana)
+            
+            self.daq.add_input(self.squidin) # make sure to monitor this channel with the daq
 
-        self.squidout = 'ao%s' %squidout
-        self.squidin = 'ai%s' %squidin
-        self.daq.add_input(self.squidin) # make sure to monitor this channel with the daq
-        self.modout = 'ao%s' %modout
+            self.preamp.gain = 500
+            self.preamp.filter_mode('low',6)
+            self.preamp.filter = (0, rate) # Hz
+            self.preamp.dc_coupling()
+            self.preamp.diff_input()
+        else:
+            print('Instruments not loaded... can only plot!')
 
         self.filename = ''
         self.notes = ''
 
         self.rate = rate # Hz # measurement rate of the daq
-        self.preamp.gain = 500
-        self.preamp.filter_mode('low',6)
-        self.preamp.filter = (0, rate) # Hz
-        self.preamp.dc_coupling()
-        self.preamp.diff_input()
 
         self.Rbias = 2e3 # Ohm # 1k cold bias resistors on the SQUID testing PCB
         self.Rbias_mod = 2e3 # Ohm # 1k cold bias resistors on the SQUID testing PCB
@@ -52,7 +52,7 @@ class SquidIV(Measurement):
         self.Irampstep = 0.5e-6 # A # Step size
 
         self.calc_ramp()
-        self.V = [] # Measured voltage
+        self.V = np.array([None]*len(self.I)) # Measured voltage
 
         display.clear_output()
 

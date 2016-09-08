@@ -7,12 +7,18 @@ from scipy.interpolate import interp1d as interp
 import matplotlib.pyplot as plt
 from IPython import display
 from numpy import ma
-from ..Utilities import dummy, plotting
+from ..Utilities import plotting
 from ..Instruments import piezos, nidaq, montana, squidarray
-from .save import Measurement
+from ..Utilities.save import Measurement
 
 class Scanplane(Measurement):
-    def __init__(self, instruments=None, span=[100,100], center=[0,0], numpts=[50,50], plane=dummy.Dummy(planefit.Planefit), scanheight=5, sig_in=0, cap_in=1, sig_in_ac_x=None, sig_in_ac_y=None, freq=1500, raster=False):
+    def __init__(self, instruments=None, span=[100,100], center=[0,0], numpts=[50,50], plane=None, scanheight=5, sig_in=0, cap_in=1, sig_in_ac_x=None, sig_in_ac_y=None, freq=1500, raster=False):
+
+        self.sig_in = 'ai%s' %sig_in
+        self.sig_in_ac_x = 'ai%s' %sig_in_ac_x
+        self.sig_in_ac_y = 'ai%s' %sig_in_ac_y
+        self.cap_in = 'ai%s' %cap_in
+
         if instruments:
             self.piezos = instruments['piezos']
             self.daq = instruments['nidaq']
@@ -22,32 +28,31 @@ class Scanplane(Measurement):
             self.squid_lockin = instruments['squid_lockin']
             self.cap_lockin = instruments['cap_lockin']
             self.atto = instruments['attocube']
+
+            self.daq.add_input(self.sig_in)
+            self.daq.add_input(self.sig_in_ac_x)
+            self.daq.add_input(self.sig_in_ac_y)
+            self.daq.add_input(self.cap_in)
         else:
-            self.piezos = dummy.Dummy(piezos.Piezos)
-            self.daq = dummy.Dummy(nidaq.NIDAQ)
-            self.montana = dummy.Dummy(montana.Montana)
-            self.array = dummy.Dummy(squidarray.SquidArray)
+            self.piezos = None
+            self.daq = None
+            self.montana = None
+            self.array = None
+            self.preamp = None
+            self.squid_lockin = None
+            self.cap_lockin = None
+            self.atto = None
+            print('Instruments not loaded... can only plot!')
 
         self.freq = freq
         self.raster = raster
-
-        self.sig_in = 'ai%s' %sig_in
-        self.daq.add_input(self.sig_in)
-
-        self.sig_in_ac_x = 'ai%s' %sig_in_ac_x
-        self.daq.add_input(self.sig_in_ac_x)
-
-        self.sig_in_ac_y = 'ai%s' %sig_in_ac_y
-        self.daq.add_input(self.sig_in_ac_y)
-
-        self.cap_in = 'ai%s' %cap_in
-        self.daq.add_input(self.cap_in)
-
         self.span = span
         self.center = center
         self.numpts = numpts
-
+        if not plane:
+            plane = planefit.Planefit()
         self.plane = plane
+
         if scanheight < 0:
             inp = input('Scan height is negative, SQUID will ram into sample! Are you sure you want this? \'q\' to quit.')
             if inp == 'q':
@@ -70,12 +75,6 @@ class Scanplane(Measurement):
         self.V_piezo_interp = []
         self.V_squid_interp = []
         self.linecuts = {}
-
-        # self.swap = swap
-        # if swap: # Will rotate scan 90 degrees? Not really tested. Got bugs if false. Keep it true for now. #20160717: just noticed kwarg default is False. Don't touch this for now...
-        #     self.X = self.X.transpose()
-        #     self.Y = self.Y.transpose()
-        #     self.Z = self.Z.transpose()
 
         self.filename = ''
 
@@ -229,6 +228,10 @@ class Scanplane(Measurement):
         '''
         Update all plots.
         '''
+        try:
+            self.im_squid # see if this exists
+        except:
+            self.setup_plots()
         plotting.update2D(self.im_squid, self.V)
         plotting.update2D(self.im_cap, self.C)
         plotting.update2D(self.im_ac_x, self.Vac_x)

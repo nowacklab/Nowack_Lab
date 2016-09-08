@@ -5,9 +5,8 @@ from datetime import datetime
 import time, os
 import matplotlib.pyplot as plt
 import numpy as np
-from ..Utilities import dummy
 from ..Instruments import nidaq, preamp, montana
-from .save import Measurement
+from ..Utilities.save import Measurement
 
 class Touchdown(Measurement):
     def __init__(self, instruments=None, cap_input=None, planescan=False, Vz_max = None):
@@ -23,30 +22,31 @@ class Touchdown(Measurement):
             self.lockin = instruments['cap_lockin']
             self.daq = instruments['nidaq']
             self.montana = instruments['montana']
+
+            self.lockin.ch1_daq_input = 'ai%s' %cap_input
+            self.planescan = planescan
+
+            if Vz_max == None:
+                self.Vz_max = self.piezos.Vmax['z']
+            else:
+                self.Vz_max = Vz_max
+
+            self.configure_attocube()
+            self.configure_piezo() # Need this to set up time constant of lockin properly
+            self.configure_lockin()
+
+            ## voltage sweep is from -Vz_max to Vz_max, step size determined in configure_piezo. 4 V looks good.
+            self.numsteps = int(2*self.Vz_max/self.z_piezo_step)
+            self.V = np.linspace(-self.Vz_max, self.Vz_max, self.numsteps)
+            self.C = np.array([None]*self.numsteps) # Capacitance (fF)
+            self.V_td = -1000.0
         else:
-            self.piezos = dummy.Dummy(piezos.Piezos)
-            self.atto = dummy.Dummy(attocube.Attocube)
-            self.lockin = dummy.Dummy(lockin.SR830)
-            self.daq = dummy.Dummy(nidaq.NIDAQ)
-            self.montana = dummy.Dummy(montana.Montana)
-
-        self.lockin.ch1_daq_input = 'ai%s' %cap_input
-        self.planescan = planescan
-
-        if Vz_max == None:
-            self.Vz_max = self.piezos.Vmax['z']
-        else:
-            self.Vz_max = Vz_max
-
-        self.configure_attocube()
-        self.configure_piezo() # Need this to set up time constant of lockin properly
-        self.configure_lockin()
-
-        ## voltage sweep is from -Vz_max to Vz_max, step size determined in configure_piezo. 4 V looks good.
-        self.numsteps = int(2*self.Vz_max/self.z_piezo_step)
-        self.V = np.linspace(-self.Vz_max, self.Vz_max, self.numsteps)
-        self.C = [None]*self.numsteps # Capacitance (fF)
-        self.V_td = -1000.0
+            self.piezos = None
+            self.atto = None
+            self.lockin = None
+            self.daq = None
+            self.montana = None
+            print('Instruments not loaded... can only plot!')
 
         self.title = ''
         self.filename = ''
@@ -238,7 +238,7 @@ class Touchdown(Measurement):
 
         return V_td
 
-    def plot_cap(self, i):
+    def plot_cap(self):
         try:
             self.fig # see if this exists in the namespace
         except:
@@ -283,7 +283,7 @@ class Touchdown(Measurement):
         self.ax.set_title(self.title, fontsize=20)
         plt.xlabel('Piezo voltage (V)')
         plt.ylabel(r'$C - C_{balance}$ (fF)')
-        plt.xlim(-self.Vz_max, self.Vz_max)
+        plt.xlim(self.V.min(), self.V.max())
         plt.ylim(-1,10)
 
         ## Two lines for fitting

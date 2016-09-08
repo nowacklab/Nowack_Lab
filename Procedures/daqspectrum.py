@@ -6,9 +6,8 @@ import time
 from datetime import datetime
 import os
 import re
-from ..Utilities import dummy
 from ..Instruments import nidaq, preamp
-from .save import Measurement
+from ..Utilities.save import Measurement
 
 class DaqSpectrum(Measurement):
     def __init__(self, instruments=None, input_chan=None, measure_time=0.5, measure_freq=256000, averages=30):
@@ -17,10 +16,9 @@ class DaqSpectrum(Measurement):
             self.daq = instruments['nidaq']
             self.pa = instruments['preamp']
         else:
-            self.daq = dummy.Dummy(nidaq.NIDAQ)
-            self.pa = dummy.Dummy(preamp.SR5113)
-
-
+            self.daq = None
+            self.pa = None
+            print('Instruments not loaded... can only plot!')
 
         for arg in ['input_chan', 'measure_time','measure_freq','averages']:
             setattr(self, arg, eval(arg))
@@ -28,9 +26,15 @@ class DaqSpectrum(Measurement):
         home = os.path.expanduser("~")
         self.path = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'spectra')
 
+        ## So plotting will work with no data
+        self.f = 1
+        self.V = 1
+        self.t = 1
+        self.psdAve = 1
+
+        super().generate_filename(self.path) # overwritten later
         self.notes = ''
         self.time = 'TIME NOT SET' # If we see this, we need to think about timestamp more
-
 
     def __getstate__(self):
         self.save_dict = {"timestamp": self.measurement_time.strftime("%Y-%m-%d %I:%M:%S %p"),
@@ -50,7 +54,7 @@ class DaqSpectrum(Measurement):
 
     def do(self):
         #record the time when the measurement starts
-        self.measurement_time = datetime.now()
+        super().generate_filename(self.path) # modifies self.measurement_time, self.time, self.filename
 
         self.setup_preamp()
 
@@ -82,6 +86,14 @@ class DaqSpectrum(Measurement):
         reMatch = re.search(timeStamp, filename)
         self.time = reMatch.group()
 
+    def plot(self):
+        try:
+            self.ax_loglog # see if this exists
+        except:
+            self.setup_plots()
+        self.plot_loglog()
+        self.plot_semilog()
+
     def plot_loglog(self, calibration=None):
         self.ax_loglog.loglog(self.f, self.psdAve)
 
@@ -89,15 +101,17 @@ class DaqSpectrum(Measurement):
         self.ax_semilog.semilogy(self.f, self.psdAve)
 
     def save(self):
-        self.time = self.measurement_time.strftime('%Y-%m-%d_%H%M%S')
-        traceName = os.path.join(self.path, self.time)+ '_trace.csv'
-        fftName = os.path.join(self.path + self.time) + '_fft.csv'
+        '''
+        Don't use this, use .tojson()
+        '''
+        traceName = self.filename + '_trace.csv'
+        fftName = self.filename + '_fft.csv'
 
         np.savetxt(fftName, (self.f, self.psdAve), delimiter=',')
         np.savetxt(traceName, (self.t, self.V), delimiter=',')
 
-        self.fig_loglog.savefig(os.path.join(self.path,self.time)+'_loglog.pdf')
-        self.fig_semilog.savefig(os.path.join(self.path,self.time)+'_semilog.pdf')
+        self.fig_loglog.savefig(self.filename+'_loglog.pdf')
+        self.fig_semilog.savefig(self.filename+'_semilog.pdf')
 
     def setup_plots(self):
         self.fig_loglog = plt.figure(figsize=(6,6))

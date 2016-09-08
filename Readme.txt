@@ -4,6 +4,11 @@ David Low
 Guen Prawiroatmodjo
 Matt Ferguson
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+You will need to clone PyANC350 from https://github.com/nowacklab/attocube-ANC350-Python-library
+into the GitHub folder and rename the folder PyANC350; dashes are bad!
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Install Utilities by running “runme.py”.

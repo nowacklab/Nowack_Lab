@@ -7,16 +7,22 @@ import matplotlib.pyplot as plt
 from ..Utilities import dummy
 from ..Instruments import piezos, montana
 from IPython import display
-from .save import Measurement
+from ..Utilities.save import Measurement
 
 class Planefit(Measurement):
     '''
     For fitting to the plane of the sample. Will do a series of touchdowns in a grid of size specified by numpts. Vz_max sets the maximum voltage the Z piezo will reach. If None, will use the absolute max safe voltage set in the Piezos class.
     '''
-    def __init__(self, instruments, cap_input=None, span=[400,400], center=[0,0], numpts=[4,4], Vz_max = None):
-        self.instruments = instruments
-        self.piezos = instruments['piezos']
-        self.montana = instruments['montana']
+    def __init__(self, instruments=None, cap_input=None, span=[400,400], center=[0,0], numpts=[4,4], Vz_max = None):
+        if instruments:
+            self.instruments = instruments
+            self.piezos = instruments['piezos']
+            self.montana = instruments['montana']
+        else:
+            self.instruments = None
+            self.piezos = None
+            self.montana = None
+            print('Instruments not loaded... can only plot!')
 
         self.span = span
         self.center = center
@@ -46,7 +52,9 @@ class Planefit(Measurement):
         self.timestamp = datetime.now()
 
     def __getstate__(self):
-        self.save_dict = {"timestamp": self.timestamp.strftime("%Y-%m-%d %I:%M:%S %p"),
+        self.save_dict = super().__getstate__() # from Measurement superclass,
+                               # need this in every getstate to get save_dict
+        self.save_dict.update({"timestamp": self.timestamp.strftime("%Y-%m-%d %I:%M:%S %p"),
                           "a": self.a,
                           "b": self.b,
                           "c": self.c,
@@ -55,7 +63,8 @@ class Planefit(Measurement):
                           "numpts": self.numpts,
                           "piezos": self.piezos,
                           "montana": self.montana,
-                          "cap_input": self.cap_input}
+                          "cap_input": self.cap_input
+                      })
         return self.save_dict
 
     def do(self):

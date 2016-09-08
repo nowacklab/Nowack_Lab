@@ -1,29 +1,36 @@
 import numpy as np
 from . import planefit
 import matplotlib.pyplot as plt
-from ..Utilities import dummy
 from ..Instruments import piezos, nidaq, montana
 import time, os
 from datetime import datetime
-from .save import Measurement
+from ..Utilities.save import Measurement
 
 class Heightsweep(Measurement):
-    def __init__(self, instruments = None, x =0, y=0, plane=dummy.Dummy(planefit.Planefit), acx_in = 0, acy_in=1, dc_in = 2):
+    def __init__(self, instruments = None, x=0, y=0, plane=None, acx_in = 0, acy_in=1, dc_in = 2):
         if instruments:
             self.piezos = instruments['piezos']
             self.daq = instruments['nidaq']
             self.montana = instruments['montana']
         else:
-            self.piezos = dummy.Dummy(piezos.Piezos)
-            self.daq = dummy.Dummy(nidaq.NIDAQ)
-            self.montana = dummy.Dummy(montana.Montana)
+            self.piezos = None
+            self.daq = None
+            self.montana = None
+            print('Instruments not loaded... can only plot!')
 
         self.x = x
         self.y = y
+        if plane is None:
+            plane = planefit.Planefit()
         self.plane = plane
         self.acx_in = 'ai%s' %acx_in
         self.acy_in = 'ai%s' %acy_in
         self.dc_in = 'ai%s' %dc_in
+
+        self.z = np.nan
+        self.Vacx = np.nan
+        self.Vacy = np.nan
+        self.Vdc = np.nan
 
         self.filename = ''
 

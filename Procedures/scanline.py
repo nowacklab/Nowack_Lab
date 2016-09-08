@@ -5,10 +5,15 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 from ..Utilities import dummy, plotting
 from ..Instruments import piezos, nidaq, montana, squidarray
-from .save import Measurement
+from ..Utilities.save import Measurement
 
 class Scanline(Measurement):
     def __init__(self, instruments=None, start=(-100,-100), end=(100,100), plane=dummy.Dummy(planefit.Planefit), scanheight=0, sig_in=0, cap_in=1, sig_in_ac_x=None, sig_in_ac_y=None, freq=1500, return_to_zero=True):
+        self.sig_in = 'ai%s' %sig_in
+        self.sig_in_ac_x = 'ai%s' %sig_in_ac_x
+        self.sig_in_ac_y = 'ai%s' %sig_in_ac_y
+        self.cap_in = 'ai%s' %cap_in
+
         if instruments:
             self.piezos = instruments['piezos']
             self.daq = instruments['nidaq']
@@ -18,23 +23,21 @@ class Scanline(Measurement):
             self.squid_lockin = instruments['squid_lockin']
             self.cap_lockin = instruments['cap_lockin']
             self.atto = instruments['attocube']
+
+            self.daq.add_input(self.sig_in)
+            self.daq.add_input(self.sig_in_ac_x)
+            self.daq.add_input(self.sig_in_ac_y)
+            self.daq.add_input(self.cap_in)
         else:
-            self.piezos = dummy.Dummy(piezos.Piezos)
-            self.daq = dummy.Dummy(nidaq.NIDAQ)
-            self.montana = dummy.Dummy(montana.Montana)
-            self.array = dummy.Dummy(squidarray.SquidArray)
-
-        self.sig_in = 'ai%s' %sig_in
-        self.daq.add_input(self.sig_in)
-
-        self.sig_in_ac_x = 'ai%s' %sig_in_ac_x
-        self.daq.add_input(self.sig_in_ac_x)
-
-        self.sig_in_ac_y = 'ai%s' %sig_in_ac_y
-        self.daq.add_input(self.sig_in_ac_y)
-
-        self.cap_in = 'ai%s' %cap_in
-        self.daq.add_input(self.cap_in)
+            self.piezos = None
+            self.daq = None
+            self.montana = None
+            self.array = None
+            self.preamp = None
+            self.squid_lockin = None
+            self.cap_lockin = None
+            self.atto = None
+            print('Instruments not loaded... can only plot!')
 
         self.start = start
         self.end = end
@@ -47,6 +50,12 @@ class Scanline(Measurement):
                 raise Exception('Terminated by user')
         self.scanheight = scanheight
         self.freq = freq
+
+        self.Vout = np.nan
+        self.V = np.nan
+        self.Vac_x = np.nan
+        self.Vac_y = np.nan
+        self.C = np.nan
 
         self.filename = ''
 

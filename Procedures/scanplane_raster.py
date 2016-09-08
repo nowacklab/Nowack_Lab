@@ -9,7 +9,7 @@ from IPython import display
 from numpy import ma
 from ..Utilities import dummy, plotting
 from ..Instruments import piezos, nidaq, montana, squidarray
-from .save import Measurement
+from ..Utilities.save import Measurement
 
 class Scanplane(Measurement):
     def __init__(self, instruments=None, span=[100,100], center=[0,0], numpts=[50,50], plane=dummy.Dummy(planefit.Planefit), scanheight=5, sig_in=0, cap_in=1, sig_in_ac_x=None, sig_in_ac_y=None, freq=1500):

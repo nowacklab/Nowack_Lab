@@ -7,7 +7,7 @@ import time, os
 from datetime import datetime
 from . import squidIV
 from ..Utilities import plotting
-from .save import Measurement
+from ..Utilities.save import Measurement
 
 
 class Mod2D(Measurement):
@@ -49,7 +49,7 @@ class Mod2D(Measurement):
     def calc_ramp(self):
         self.numpts = int(self.Imodspan/self.Imodstep)
         self.Imod = np.linspace(-self.Imodspan/2, self.Imodspan/2, self.numpts) # Squid current
-        self.V = np.full((self.numpts, self.IVnumpts), np.nan)
+        self.V = np.full((self.numpts, self.IV.numpts), np.nan)
 
     def do(self):
         self.timestamp = datetime.now()
@@ -110,6 +110,10 @@ class Mod2D(Measurement):
         '''
         Plot the 2D mod image
         '''
+        try:
+            self.im # see if this exists
+        except:
+            self.setup_plot()
         plotting.update2D(self.im, self.V)
 
 

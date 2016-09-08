@@ -8,7 +8,7 @@ from IPython import display
 from numpy import ma
 from ..Utilities import dummy, plotting
 from ..Instruments import piezos, nidaq, montana, squidarray
-from .save import Measurement
+from ..Utilities.save import Measurement
 from scipy.interpolate import spline
 from scipy import signal
 
