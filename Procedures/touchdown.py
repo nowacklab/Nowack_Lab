@@ -8,7 +8,15 @@ import numpy as np
 from ..Instruments import nidaq, preamp, montana
 from ..Utilities.save import Measurement
 
+_home = os.path.expanduser("~")
+DATA_FOLDER = os.path.join(_home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Touchdowns')
+
 class Touchdown(Measurement):
+    V_td = -1000
+    C = []
+    V = []
+    numsteps = 0
+
     def __init__(self, instruments=None, cap_input=None, planescan=False, Vz_max = None):
         self.touchdown = False
         self.V_to_C = 2530e3 # 2530 pF/V * (1e3 fF/pF), calibrated 20160423 by BTS, see ipython notebook
@@ -53,14 +61,17 @@ class Touchdown(Measurement):
         self.timestamp = ''
 
     def __getstate__(self):
-        self.save_dict = {"timestamp": self.measurement_start.strftime("%Y-%m-%d %I:%M:%S %p"),
+        super().__getstate__() # from Measurement superclass,
+                               # need this in every getstate to get save_dict
+        self.save_dict.update({"timestamp": self.timestamp,
                           "lockin": self.lockin,
                           "atto": self.atto,
                           "piezos": self.piezos,
                           "daq": self.daq,
                           "montana": self.montana,
                           "V": self.V,
-                          "C": self.C}
+                          "C": self.C
+                      })
         return self.save_dict
 
     def check_balance(self, V_unbalanced=2e-6):
@@ -84,10 +95,10 @@ class Touchdown(Measurement):
         Timestamp is determined at the beginning of this function.
         '''
         #record time when the measurement ends
-        self.measurement_start = datetime.now()
-        self.filename = self.measurement_start.strftime('%Y%m%d_%H%M%S') + '_td'
+        append = 'plane'
         if self.planescan:
-            self.filename = self.filename + '_planescan'
+            append += '_planescan'
+        super().make_timestamp_and_filename(append)
 
         V_td = None
 
@@ -256,24 +267,17 @@ class Touchdown(Measurement):
         self.fig.canvas.draw()
 
 
-    def save(self):
-        home = os.path.expanduser("~")
-        data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Touchdowns')
+    def save(self, savefig=True):
+        '''
+        Saves the planefit object to json in .../TeamData/Montana/Planes/
+        Also saves the figure as a pdf, if wanted.
+        '''
 
-        filename = os.path.join(data_folder, self.filename)
-        with open(filename+'.csv', 'w') as f:
-            f.write('V_td = %f\n' %self.V_td)
-            f.write('V_to_C conversion in fF/V = %f\n' %self.V_to_C)
-            f.write('Lockin parameters\n')
-            f.write(self.lockin.get_all())
-            f.write('\n')
-            f.write('Montana info: \n'+self.montana.log()+'\n')
-            f.write('V (V)\tC (fF)\n')
-            for i in range(len(self.V)):
-                if self.C[i] != None:
-                    f.write('%f' %self.V[i] + ',' + '%f' %self.C[i] + '\n')
+        self.tojson(DATA_FOLDER, self.filename)
 
-        plt.savefig(filename+'.pdf', bbox_inches='tight')
+        if savefig:
+            self.fig.savefig(filename+'.pdf', bbox_inches='tight')
+
 
     def setup_plot(self):
         self.fig, self.ax = plt.subplots()

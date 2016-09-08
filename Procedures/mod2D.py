@@ -9,12 +9,15 @@ from . import squidIV
 from ..Utilities import plotting
 from ..Utilities.save import Measurement
 
+_home = os.path.expanduser("~")
+DATA_FOLDER = os.path.join(_home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'squid_testing', 'mod2D')
 
 class Mod2D(Measurement):
     def __init__(self, instruments=None, squidout=None, squidin=None, modout=None, rate=900):
         '''
         Example: Mod2D({'daq': daq, 'preamp': preamp}, 'ao0','ai0','ao1', rate=900).
-        To make an empty object, then just call Mod2D(). You can do this if you want to plot previously collected data.
+        To make an empty object, then just call Mod2D().
+        You can do this if you want to plot previously collected data.
         '''
 
         self.filename = ''
@@ -36,24 +39,27 @@ class Mod2D(Measurement):
         display.clear_output()
 
     def __getstate__(self):
-        self.save_dict = {"timestamp": self.timestamp.strftime("%Y-%m-%d %I:%M:%S %p"),
-                          "IV": self.IV,
-                          "Imodspan": self.Imodspan,
-                          "Imodstep": self.Imodstep,
-                          "V": self.V,
-                          "notes": self.notes,
-                          "time": self.time,
-                          "Imod": self.Imod}
+        super().__getstate__() # from Measurement superclass,
+                               # need this in every getstate to get save_dict
+        self.save_dict.update({"timestamp": self.timestamp,
+                              "IV": self.IV,
+                              "Imodspan": self.Imodspan,
+                              "Imodstep": self.Imodstep,
+                              "V": self.V,
+                              "notes": self.notes,
+                              "Imod": self.Imod
+                          })
         return self.save_dict
+
 
     def calc_ramp(self):
         self.numpts = int(self.Imodspan/self.Imodstep)
         self.Imod = np.linspace(-self.Imodspan/2, self.Imodspan/2, self.numpts) # Squid current
         self.V = np.full((self.numpts, self.IV.numpts), np.nan)
 
+
     def do(self):
-        self.timestamp = datetime.now()
-        self.filename = self.timestamp.strftime('%Y%m%d_%H%M%S') + '_mod2D'
+        super().make_timestamp_and_filename('mod2D')
 
         self.calc_ramp() #easy way to clear self.V
         self.IV.V = self.IV.V*0
@@ -117,28 +123,17 @@ class Mod2D(Measurement):
         plotting.update2D(self.im, self.V)
 
 
-    def save(self):
-        home = os.path.expanduser("~")
-        data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'squid_testing', 'mod2D')
+    def save(self, savefig=True):
+        '''
+        Saves the planefit object to json in .../TeamData/Montana/Planes/
+        Also saves the figure as a pdf, if wanted.
+        '''
 
-        filename = os.path.join(data_folder, self.filename)
-        with open(filename+'.csv', 'w') as f:
-            f.write(self.notes+'\n')
-            f.write('Montana info: \n'+self.IV.montana.log()+'\n')
-            for param in ['rate', 'Rbias', 'Rbias_mod', 'Irampspan', 'Irampstep']:
-                f.write('IV' + param + ': ' + str(getattr(self.IV, param)) + '\n')
-            for parammod in ['Imodspan','Imodstep']:
-                f.write(parammod + ': ' + str(getattr(self, parammod)) + '\n')
-            for paramamp in ['gain','filter']:
-                f.write('IV preamp ' + paramamp + ': ' + str(getattr(self.IV.preamp, paramamp)) + '\n')
+        self.tojson(DATA_FOLDER, self.filename)
 
-            f.write('Isquid (V),Imod (V),Vsquid (V)\n')
-            for i in range(self.numpts):
-                for j in range(self.IV.numpts):
-                    if self.V[i][j] != None:
-                        f.write('%f' %self.IV.I[j] + ',' + '%f' %self.Imod[i] + ',' + '%f' %self.V[i][j] + '\n')
+        if savefig:
+            self.fig.savefig(self.filename+'.pdf', bbox_inches='tight')
 
-        self.fig.savefig(filename+'.pdf')
 
     def setup_plot(self):
         '''

@@ -81,11 +81,12 @@ class Planefit(Measurement):
         A = numpy.vstack([X, Y, numpy.ones(len(X))]).T
         self.a, self.b, self.c = lstsq(A, Z)[0]
 
+
     def do(self):
         if not self.cap_input:
             raise Exception('Cap_input not set!')
 
-        super().make_timestamp_and_filename('_plane')
+        super().make_timestamp_and_filename('plane')
 
         self.piezos.check_lim({'x':self.X, 'y':self.Y}) # make sure we won't scan outside X, Y piezo ranges!
 
@@ -120,6 +121,7 @@ class Planefit(Measurement):
         self.piezos.V = 0
         self.calculate_plane()
         self.save()
+
 
     @staticmethod
     def load(json_file=None):
@@ -173,7 +175,7 @@ class Planefit(Measurement):
 
         if savefig:
             self.plot()
-            plt.savefig(filename+'.pdf', bbox_inches='tight')
+            plt.savefig(self.filename+'.pdf', bbox_inches='tight')
 
 
     def update_c(self):

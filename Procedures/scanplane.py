@@ -11,37 +11,44 @@ from ..Utilities import plotting
 from ..Instruments import piezos, nidaq, montana, squidarray
 from ..Utilities.save import Measurement
 
-class Scanplane(Measurement):
-    def __init__(self, instruments=None, span=[100,100], center=[0,0], numpts=[50,50], plane=None, scanheight=5, sig_in=0, cap_in=1, sig_in_ac_x=None, sig_in_ac_y=None, freq=1500, raster=False):
+_home = os.path.expanduser("~")
+DATA_FOLDER = os.path.join(_home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Scans')
 
-        self.sig_in = 'ai%s' %sig_in
-        self.sig_in_ac_x = 'ai%s' %sig_in_ac_x
-        self.sig_in_ac_y = 'ai%s' %sig_in_ac_y
-        self.cap_in = 'ai%s' %cap_in
+class Scanplane(Measurement):
+    def __init__(self, instruments=None, span=[100,100],
+                        center=[0,0], numpts=[50,50], plane=None,
+                        scanheight=5, inp_dc=0, inp_cap=1,
+                        inp_acx=None, inp_acy=None,
+                        freq=1500, raster=False):
+
+        self.inp_dc = 'ai%s' %inp_dc
+        self.inp_acx = 'ai%s' %inp_acx
+        self.inp_acy = 'ai%s' %inp_acy
+        self.inp_cap = 'ai%s' %inp_cap
 
         if instruments:
             self.piezos = instruments['piezos']
             self.daq = instruments['nidaq']
             self.montana = instruments['montana']
-            self.array = instruments['squidarray']
+            self.squidarray = instruments['squidarray']
             self.preamp = instruments['preamp']
-            self.squid_lockin = instruments['squid_lockin']
-            self.cap_lockin = instruments['cap_lockin']
-            self.atto = instruments['attocube']
+            self.lockin_squid = instruments['lockin_squid']
+            self.lockin_cap = instruments['lockin_cap']
+            self.attocube = instruments['attocube']
 
-            self.daq.add_input(self.sig_in)
-            self.daq.add_input(self.sig_in_ac_x)
-            self.daq.add_input(self.sig_in_ac_y)
-            self.daq.add_input(self.cap_in)
+            self.daq.add_input(self.inp_dc)
+            self.daq.add_input(self.inp_acx)
+            self.daq.add_input(self.inp_acy)
+            self.daq.add_input(self.inp_cap)
         else:
             self.piezos = None
             self.daq = None
             self.montana = None
-            self.array = None
+            self.squidarray = None
             self.preamp = None
-            self.squid_lockin = None
-            self.cap_lockin = None
-            self.atto = None
+            self.lockin_squid = None
+            self.lockin_cap = None
+            self.attocube = None
             print('Instruments not loaded... can only plot!')
 
         self.freq = freq
@@ -63,7 +70,10 @@ class Scanplane(Measurement):
         self.y = np.linspace(center[1]-span[1]/2, center[1]+span[1]/2, numpts[1])
 
         self.X, self.Y = np.meshgrid(self.x, self.y, indexing='ij') # indexing ij follows matrix indexing convention
-        self.Z = self.plane.plane(self.X, self.Y) - self.scanheight
+        try:
+            self.Z = self.plane.plane(self.X, self.Y) - self.scanheight
+        except:
+            print('plane not loaded... no idea where the surface is without a plane!')
 
         self.V = np.full(self.X.shape, np.nan)
         self.Vac_x = np.full(self.X.shape, np.nan)
@@ -77,23 +87,18 @@ class Scanplane(Measurement):
         self.linecuts = {}
 
         self.filename = ''
-
-        home = os.path.expanduser("~")
-        self.path = os.path.join(home,
-                                'Dropbox (Nowack lab)',
-                                'TeamData',
-                                'Montana',
-                                'Scans'
-                            )
+        self.end_time = ''
 
     def __getstate__(self):
-        self.save_dict = {"start_time": self.timestamp.strftime("%Y-%m-%d %I:%M:%S %p"),
-                          "end_time": self.end_time.strftime("%Y-%m-%d %I:%M:%S %p"),
+        super().__getstate__() # from Measurement superclass,
+                               # need this in every getstate to get save_dict
+        self.save_dict.update({"timestamp": self.timestamp,
+                          "end_time": self.end_time,
                           "piezos": self.piezos,
                           "frequency": self.freq,
                           "daq": self.daq,
                           "montana": self.montana,
-                          "array": self.array,
+                          "squidarray": self.squidarray,
                           "linecuts": self.linecuts,
                           "V": self.V,
                           "Vac_x": self.Vac_x,
@@ -104,17 +109,17 @@ class Scanplane(Measurement):
                           "center": self.center,
                           "numpts": self.numpts,
                           "preamp": self.preamp,
-                          "squid_lockin": self.squid_lockin,
-                          "capacitance_lockin": self.cap_lockin,
-                          "attocubes": self.atto}
+                          "lockin_squid": self.lockin_squid,
+                          "lockin_cap": self.lockin_cap,
+                          "attocube": self.attocube
+                      })
         return self.save_dict
 
     def do(self, fast_axis = 'x'):
         self.setup_plots()
 
         ## Start time and temperature
-        self.timestamp = datetime.now()
-        self.filename = self.timestamp.strftime('%Y%m%d_%H%M%S') + '_scan'
+        super().make_timestamp_and_filename('scan')
         tstart = time.time()
         #temporarily commented out so we can scan witout internet on montana
         #computer
@@ -143,6 +148,7 @@ class Scanplane(Measurement):
                     k = 0 # k is used to determine Vstart/Vend. For forward, will sweep from the 0th element to the -(k+1) = -1st = last element
                 else: # if odd
                     k = -1 # k is used to determine Vstart/Vend. For forward, will sweep from the -1st = last element to the -(k+1) = 0th = first element
+            # if not rastering, k=0, meaning always forward sweeps
 
             ## Starting and ending piezo voltages for the line
             if fast_axis == 'x':
@@ -153,8 +159,8 @@ class Scanplane(Measurement):
                 Vend = {'x': self.X[i,-(k+1)], 'y': self.Y[i,-(k+1)], 'z': self.Z[i,-(k+1)]} # for forward, ends at i,-1; backward: i,0
 
             ## Explicitly go to first point of scan
-            self.piezos.sweep(self.piezos.V, Vstart, freq=1500)
-            self.array.reset()
+            self.piezos.sweep(self.piezos.V, Vstart, freq=1500) # change this frequency to go back faster!!
+            self.squidarray.reset()
             time.sleep(3)
 
             ## Do the sweep
@@ -169,9 +175,9 @@ class Scanplane(Measurement):
             ## Save linecuts
             self.linecuts[str(i)] = {"Vstart": Vstart,
                                 "Vend": Vend,
-                                "Vsquid": {"Vdc": np.array(V[self.sig_in]).tolist(),  #why convert to array and then back to list??
-                                           "Vac_x": np.array(V[self.sig_in_ac_x]).tolist(),
-                                           "Vac_y": np.array(V[self.sig_in_ac_y]).tolist()}}
+                                "Vsquid": {"Vdc": np.array(V[self.inp_dc]).tolist(),  #why convert to array and then back to list??
+                                           "Vac_x": np.array(V[self.inp_acx]).tolist(),
+                                           "Vac_y": np.array(V[self.inp_acy]).tolist()}}
 
             ## Interpolate to the number of lines
             self.V_piezo_full = out[fast_axis] # actual voltages swept in x or y direction
@@ -181,10 +187,10 @@ class Scanplane(Measurement):
                 self.V_piezo_interp = self.Y[i,:]
 
             # Store this line's signals for Vdc, Vac x/y, and Cap
-            self.V_squid_full = V[self.sig_in]
-            self.Vac_x_full = V[self.sig_in_ac_x]
-            self.Vac_y_full = V[self.sig_in_ac_y]
-            self.C_full = V[self.cap_in]
+            self.V_squid_full = V[self.inp_dc]
+            self.Vac_x_full = V[self.inp_acx]
+            self.Vac_y_full = V[self.inp_acy]
+            self.C_full = V[self.inp_cap]
 
             # interpolation functions
             interp_V = interp(self.V_piezo_full, self.V_squid_full)
@@ -218,7 +224,7 @@ class Scanplane(Measurement):
         self.piezos.V = 0
         self.save()
 
-        self.end_time = datetime.now()
+        self.end_time = datetime.now().strftime("%Y-%m-%d %I:%M:%S %p")
         tend = time.time()
         print('Scan took %f minutes' %((tend-tstart)/60))
         return
@@ -256,7 +262,7 @@ class Scanplane(Measurement):
                                         title = '%s\nDC SQUID signal' %self.filename,
                                         xlabel = r'$X (V_{piezo})$',
                                         ylabel = r'$Y (V_{piezo})$',
-                                        clabel = 'Voltage from %s' %self.sig_in
+                                        clabel = 'Voltage from %s' %self.inp_dc
                                     )
 
         ## AC x
@@ -269,7 +275,7 @@ class Scanplane(Measurement):
                                         title = '%s\nAC x SQUID signal' %self.filename,
                                         xlabel = r'$X (V_{piezo})$',
                                         ylabel = r'$Y (V_{piezo})$',
-                                        clabel = 'Voltage from %s' %self.sig_in_ac_x
+                                        clabel = 'Voltage from %s' %self.inp_acx
                                     )
 
         ## AC y
@@ -282,7 +288,7 @@ class Scanplane(Measurement):
                                         title = '%s\nAC y SQUID signal' %self.filename,
                                         xlabel = r'$X (V_{piezo})$',
                                         ylabel = r'$Y (V_{piezo})$',
-                                        clabel = 'Voltage from %s' %self.sig_in_ac_y
+                                        clabel = 'Voltage from %s' %self.inp_acy
                                     )
 
         ## Capacitance
@@ -295,7 +301,7 @@ class Scanplane(Measurement):
                                     title = '%s\nCapacitance' %self.filename,
                                     xlabel = r'$X (V_{piezo})$',
                                     ylabel = r'$Y (V_{piezo})$',
-                                    clabel = 'Voltage from %s' %self.cap_in
+                                    clabel = 'Voltage from %s' %self.inp_cap
                                 )
 
         ## "Last full scan" plot
@@ -324,55 +330,43 @@ class Scanplane(Measurement):
 
         plotting.aspect(self.ax_line, .3)
 
-    def save(self):
-        filename = os.path.join(self.path, self.filename)
+    def save(self, savefig=True):
+        '''
+        Saves the scanplane object to json in .../TeamData/Montana/Scans/
+        Also saves the figure as a pdf, if wanted.
+        '''
 
-        self.fig.savefig(filename+'.pdf')
+        self.tojson(DATA_FOLDER, self.filename)
 
-        with open(filename+'.csv', 'w') as f:
-            for s in ['span', 'center', 'numpts']:
-                f.write('%s = %f, %f \n' %(s, float(getattr(self, s)[0]),float(getattr(self, s)[1])))
-            for s in ['a','b','c']:
-                f.write('plane.%s = %f\n' %(s, float(getattr(self.plane, s))))
-            f.write('scanheight = %f\n' %self.scanheight)
-            f.write('Montana info: \n'+self.montana.log()+'\n')
-            #f.write('starting temperature: %f' %self.temp_start)
-
-            f.write('DC signal\n')
-            f.write('X (V),Y (V),V (V)\n')
-            for i in range(self.X.shape[0]):
-                for j in range(self.X.shape[1]):
-                    if self.V[i][j] != None:
-                        f.write('%f' %self.X[i][j] + ',' + '%f' %self.Y[i][j] + ',' + '%f' %self.V[i][j] + '\n')
-
-            f.write('AC x signal\n')
-            f.write('X (V),Y (V),V (V)\n')
-            for i in range(self.X.shape[0]):
-                for j in range(self.X.shape[1]):
-                    if self.Vac_x[i][j] != None:
-                        f.write('%f' %self.X[i][j] + ',' + '%f' %self.Y[i][j] + ',' + '%f' %self.Vac_x[i][j] + '\n')
-
-            f.write('AC y signal\n')
-            f.write('X (V),Y (V),V (V)\n')
-            for i in range(self.X.shape[0]):
-                for j in range(self.X.shape[1]):
-                    if self.Vac_y[i][j] != None:
-                        f.write('%f' %self.X[i][j] + ',' + '%f' %self.Y[i][j] + ',' + '%f' %self.Vac_y[i][j] + '\n')
+        if savefig:
+            self.fig.savefig(self.filename+'.pdf', bbox_inches='tight')
 
 
     def save_line(self, i, Vstart):
-        filename = os.path.join(self.path, self.filename)
+        '''
+        Saves each line individually to JSON.
+        '''
+        line = Line()
+        line.scan_filename = self.filename
+        line.idx = i
+        line.Vstart = Vstart
+        line.V_squid_full = self.V_squid_full
+        line.V_piezo_full = self.V_piezo_full
+        line.make_timestamp_and_filename('scan_line')
 
-        with open(filename+'_lines.csv', 'a') as f:
-            f.write('Line %i, starting at: ' %i)
-            for k in ['x','y','z']:
-                f.write(str(Vstart[k])+',')
-            f.write('\n Vpiezo:\n ')
-            for x in self.V_squid_full:
-                f.write(str(x)+',')
-            f.write('\n Vsquid:\n')
-            for x in self.V_piezo_full:
-                f.write(str(x)+',')
+        line.tojson(DATA_FOLDER, line.filename)
+
+class Line(Measurement):
+    def __getstate__(self):
+        super().__getstate__() # from Measurement superclass,
+                               # need this in every getstate to get save_dict
+        self.save_dict.update({"idx": self.idx,
+                          "Vstart": self.Vstart,
+                          "V_squid_full": self.V_squid_full,
+                          "V_piezo_full": self.V_piezo_full,
+                          "scan_filename": self.scan_filename
+                      })
+        return self.save_dict
 
 if __name__ == '__main__':
     'hey'

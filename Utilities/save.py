@@ -9,11 +9,25 @@ class Measurement:
     timestamp = ''
 
     def __getstate__(self):
+        '''
+        Returns a dictionary of everything we want to save to JSON.
+        In a subclass, you must call this method and then update self.save_dict.
+        '''
         self.save_dict = {'_replacement': self._replacement,
                         'timestamp': self.timestamp,
                         'filename': self.filename
         }
         return self.save_dict
+
+
+    def __setstate__(self, state):
+        '''
+        Default method for loading from JSON.
+        `state` is a dictionary.
+        '''
+
+        self.__dict__.update(state)
+
 
     def compress(self):
         '''
@@ -101,16 +115,16 @@ class Measurement:
         return Measurement.fromjson(json_file)
 
 
-    def make_timestamp_and_filename(self, postpend=None):
+    def make_timestamp_and_filename(self, append=None):
         '''
         Makes a timestamp and filename from the current time.
-        Use `postpend` to tack on something at the end of the filename.
+        Use `append` to tack on something at the end of the filename.
         '''
         now = datetime.now()
         self.timestamp = now.strftime("%Y-%m-%d %I:%M:%S %p")
-        self.filename = now.strftime('%Y%m%d_%H%M%S')
-        if postpend:
-            self.filename += '_' + postpend
+        self.filename = now.strftime('%Y-%m-%d_%H%M%S')
+        if append:
+            self.filename += '_' + append
 
 
     def save(self):
@@ -130,9 +144,9 @@ class Measurement:
 
         if filename is None:
             try:
-                self.filename # see if this exists
+                filename = self.filename # see if this exists
             except: # if you forgot to make a filename
-                filename = self.filename
+                filename = ''
 
         if filename == '':
             self.make_timestamp_and_filename()
