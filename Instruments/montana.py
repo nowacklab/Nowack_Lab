@@ -26,7 +26,7 @@ class Montana():
 
 
     def __getstate__(self):
-        self.save_dict = {"temperature": self.temperature,
+        self.save_dict = {"temperature": self._temperature,
                           "stability": self._temperature_stability}
         return self.save_dict
 

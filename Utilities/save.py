@@ -1,13 +1,18 @@
-from jsonpickle.ext import numpy
+from jsonpickle.ext import numpy as jspnp
 import json, os, pickle, bz2, jsonpickle as jsp, numpy as np
-numpy.register_handlers()
+from datetime import datetime
+jspnp.register_handlers()
 from copy import copy
 
 class Measurement:
     _replacement = None
+    timestamp = ''
 
     def __getstate__(self):
-        self.save_dict = {'_replacement': self._replacement}
+        self.save_dict = {'_replacement': self._replacement,
+                        'timestamp': self.timestamp,
+                        'filename': self.filename
+        }
         return self.save_dict
 
     def compress(self):
@@ -71,50 +76,71 @@ class Measurement:
         return array
 
 
-    def tojson(self, filename=None, compress=True):
-        '''
-        Saves an object to JSON. Specify a custom filename,
-        or use the `filename` variable under that object.
-        '''
-        if compress:
-            self.compress() # compress the object
-            self.AAAreplacement = self._replacement # in case sort_keys order messes up
-
-        if filename is None:
-            try:
-                filename = self.filename
-            except:
-                filename = 'no_filename_given'
-
-        obj_string = jsp.encode(self)
-        obj_dict = json.loads(obj_string)
-        with open(filename+'.json', 'w', encoding='utf-8') as f:
-            # dumps = json.dumps(obj_dict, f, sort_keys=True, indent=4)
-            # dumps = dumps.replace('\r','\\r')
-            # f.write(dumps)
-            json.dump(obj_dict, f, sort_keys=True, indent=4)
-        if compress:
-            del self.AAAreplacement # in case sort_keys order messes up
-
     @staticmethod
     def fromjson(json_file, decompress=True):
+        '''
+        Loads an object from JSON.
+        '''
         with open(json_file, encoding='utf-8') as f:
             obj_dict = json.load(f)
         obj_string = json.dumps(obj_dict)
         obj = jsp.decode(obj_string)
 
         if decompress:
-            # obj._replacement = obj.AAAreplacement  # in case sort_keys order messes up
-            # del obj.AAAreplacement # in case sort_keys order messes up
             obj.decompress() # undo compression
 
         return obj
 
 
-    def generate_filename(self, path):
+    @staticmethod
+    def load(json_file):
         '''
-        generates a filename from the current time
+        Basic load method. Just calls fromjson.
+        Overwrite this for each subclass if necessary.
         '''
-        self.measurement_time = datetime.now()
-        self.time = self.measurement_time.strftime('%Y-%m-%d_%H%M%S')
-        self.filename = os.path.join(path,self.time)
+        return Measurement.fromjson(json_file)
+
+
+    def make_timestamp_and_filename(self, postpend=None):
+        '''
+        Makes a timestamp and filename from the current time.
+        Use `postpend` to tack on something at the end of the filename.
+        '''
+        now = datetime.now()
+        self.timestamp = now.strftime("%Y-%m-%d %I:%M:%S %p")
+        self.filename = now.strftime('%Y%m%d_%H%M%S')
+        if postpend:
+            self.filename += '_' + postpend
+
+
+    def save(self):
+        '''
+        Basic save method. Just calls tojson. Overwrite this for each subclass.
+        '''
+        self.tojson()
+
+
+    def tojson(self, path = '.', filename=None, compress=True):
+        '''
+        Saves an object to JSON. Specify a custom filename,
+        or use the `filename` variable under that object.
+        '''
+        if compress:
+            self.compress() # compress the object
+
+        if filename is None:
+            try:
+                self.filename # see if this exists
+            except: # if you forgot to make a filename
+                filename = self.filename
+
+        if filename == '':
+            self.make_timestamp_and_filename()
+            filename = self.filename
+
+        filename = os.path.join(path, filename)
+
+        obj_string = jsp.encode(self)
+        obj_dict = json.loads(obj_string)
+        with open(filename+'.json', 'w', encoding='utf-8') as f:
+            json.dump(obj_dict, f, sort_keys=True, indent=4)

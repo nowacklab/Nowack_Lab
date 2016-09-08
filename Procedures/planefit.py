@@ -9,6 +9,9 @@ from ..Instruments import piezos, montana
 from IPython import display
 from ..Utilities.save import Measurement
 
+_home = os.path.expanduser("~")
+DATA_FOLDER = os.path.join(_home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Planes')
+
 class Planefit(Measurement):
     '''
     For fitting to the plane of the sample. Will do a series of touchdowns in a grid of size specified by numpts. Vz_max sets the maximum voltage the Z piezo will reach. If None, will use the absolute max safe voltage set in the Piezos class.
@@ -49,12 +52,11 @@ class Planefit(Measurement):
         self.c = None
 
         self.filename = ''
-        self.timestamp = datetime.now()
 
     def __getstate__(self):
-        self.save_dict = super().__getstate__() # from Measurement superclass,
+        super().__getstate__() # from Measurement superclass,
                                # need this in every getstate to get save_dict
-        self.save_dict.update({"timestamp": self.timestamp.strftime("%Y-%m-%d %I:%M:%S %p"),
+        self.save_dict.update({"timestamp": self.timestamp,
                           "a": self.a,
                           "b": self.b,
                           "c": self.c,
@@ -67,12 +69,23 @@ class Planefit(Measurement):
                       })
         return self.save_dict
 
+
+    def calculate_plane(self):
+        '''
+        Calculates the plane parameters a, b, and c.
+        z = ax + by + c
+        '''
+        X = self.X.flatten()
+        Y = self.Y.flatten()
+        Z = self.Z.flatten()
+        A = numpy.vstack([X, Y, numpy.ones(len(X))]).T
+        self.a, self.b, self.c = lstsq(A, Z)[0]
+
     def do(self):
         if not self.cap_input:
             raise Exception('Cap_input not set!')
 
-        self.timestamp = datetime.now()
-        self.filename = self.timestamp.strftime('%Y%m%d_%H%M%S') + '_plane'
+        super().make_timestamp_and_filename('_plane')
 
         self.piezos.check_lim({'x':self.X, 'y':self.Y}) # make sure we won't scan outside X, Y piezo ranges!
 
@@ -105,19 +118,33 @@ class Planefit(Measurement):
                 self.Z[i,j] = td.do() # Do the touchdown. Planescan True prevents attocubes from moving and only does one touchdown
 
         self.piezos.V = 0
-        self.plane(0, 0, True) # calculates plane
+        self.calculate_plane()
         self.save()
+
+    @staticmethod
+    def load(json_file=None):
+        '''
+        Load method. If no json_file specified, will load the last plane taken.
+        Useful if you lose the object while scanning.
+        '''
+        if json_file is None:
+            # finds the newest plane saved as json
+            json_file =  max(glob.iglob(os.path.join(DATA_FOLDER,'*.json')),
+                                        key=os.path.getctime)
+        plane = Measurement.load(json_file)
+
+        if plane.cap_input is None:
+            print('cap_input not loaded! Set this manually!!!')
+
+        return plane
 
 
     def plane(self, x, y, recal=False):
-        X = self.X.flatten()
-        Y = self.Y.flatten()
-        Z = self.Z.flatten()
-        if self.a == None or recal: #calculate plane from current X, Y data
-            A = numpy.vstack([X, Y, numpy.ones(len(X))]).T
-            self.a, self.b, self.c = lstsq(A, Z)[0]
-
+        '''
+        Given points x and y, calculates a point z on the plane.
+        '''
         return self.a*x + self.b*y + self.c
+
 
     def plot(self):
         from mpl_toolkits.mplot3d import Axes3D
@@ -135,18 +162,25 @@ class Planefit(Measurement):
         plt.xlabel('x')
         plt.title(self.filename,fontsize=15)
 
-    def save(self, savefig=True):
-        home = os.path.expanduser("~")
-        data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Planes')
-        filename = os.path.join(data_folder, self.filename)
 
-        Measurement.tojson(self, filename+'.json')
+    def save(self, savefig=True):
+        '''
+        Saves the planefit object to json in .../TeamData/Montana/Planes/
+        Also saves the figure as a pdf, if wanted.
+        '''
+
+        self.tojson(DATA_FOLDER, self.filename)
 
         if savefig:
             self.plot()
             plt.savefig(filename+'.pdf', bbox_inches='tight')
 
+
     def update_c(self):
+        '''
+        Does a single touchdown to find the plane again (at Vx=Vy=0).
+        Do this after moving the attocubes.
+        '''
         old_c = self.c
         td = touchdown.Touchdown(self.instruments, self.cap_input, Vz_max = self.Vz_max)
         self.c = td.do()
@@ -159,35 +193,8 @@ class Planefit(Measurement):
         self.save(savefig=False)
 
 
-def load_last(instruments):
-    '''
-    Creates a new plane object using parameters from last plane taken.
-    Useful if you lose the object while scanning.
-    Pass in instruments.
-    '''
-    plane = Planefit(instruments=instruments)
-
-    home = os.path.expanduser("~")
-    data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Planes')
-    newest_plane =  max(glob.iglob(os.path.join(data_folder,'*.json')), key=os.path.getctime) # finds the newest plane saved as json
-
-    import json, jsonpickle as jsp
-
-    with open(newest_plane) as f:
-        obj_dict = json.load(f)
-
-    plane.a = obj_dict['py/state']['a']['value']
-    plane.b = obj_dict['py/state']['b']['value']
-    plane.c = obj_dict['py/state']['c']['value']
-    try:
-        plane.cap_input = obj_dict['py/state']['cap_input']
-    except:
-        print('cap_input not loaded! Set this manually!!!')
-
-    return plane
-
 if __name__ == '__main__':
-    """ just testing fitting algorithm """
+    """ just testing fitting algorithm - pretty sure this is way out of date"""
     import random
     from mpl_toolkits.mplot3d import Axes3D
 
