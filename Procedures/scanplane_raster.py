@@ -1,3 +1,6 @@
+'''
+THIS FUNCTION REPLACED BY FUNCTIONALITY IN NORMAL SCANPLANE
+'''
 import numpy as np
 from numpy.linalg import lstsq
 from . import navigation, planefit

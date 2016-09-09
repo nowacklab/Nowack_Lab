@@ -67,7 +67,9 @@ class Scanline(Measurement):
 
 
     def __getstate__(self):
-        self.save_dict = {"timestamp": self.timestamp,
+        super().__getstate__() # from Measurement superclass,
+                               # need this in every getstate to get save_dict
+        self.save_dict.update({"timestamp": self.timestamp,
                           "piezos": self.piezos,
                           "daq": self.daq,
                           "montana": self.montana,
@@ -81,7 +83,8 @@ class Scanline(Measurement):
                           "Vac_y": self.Vac_y,
                           "lockin_squid": self.lockin_squid,
                           "lockin_cap": self.lockin_cap,
-                          "attocube": self.attocube}
+                          "attocube": self.attocube
+                      })
         return self.save_dict
 
 

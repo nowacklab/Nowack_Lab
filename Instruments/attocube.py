@@ -11,33 +11,55 @@ class Attocube(ANC350): ### ANC350 is closed loop controller, we use this one at
 
 
 class ANC350():
+    '''
+    For remote operation of the Attocubes with the ANC350.
+    Control each attocube using the "Positioner" object created.
+    e.g. atto.x.V = 50
+         atto.x.pos = 4000
+         atto.x.move(100)
+         atto.x.step(-100)
+    '''
+    _stages = ['x','y','z'] # order of axis controllers
+    _pos_lims = [20000, 20000, 20000] # um (temporary until LUT calibrated)
+
+    def __init__(self, montana=None):
         '''
-        For remote operation of the Attocubes with the ANC350.
-        Control each attocube using the "Positioner" object created.
-        e.g. atto.x.V = 50
-             atto.x.pos = 4000
-             atto.x.move(100)
-             atto.x.step(-100)
+        Pass instruments as a dict with montana = montana.Montana().
+        This will check the temperature to see if it is safe to go to 60 V.
+        Else, we stay at 45 V.
         '''
-        _stages = ['x','y','z'] # order of axis controllers
-        _pos_lims = [20000, 20000, 20000] # um (temporary until LUT calibrated)
+        self.anc = PyANC350v4.Positioner()
 
-        def __init__(self, montana=None):
-            '''
-            Pass instruments as a dict with montana = montana.Montana().
-            This will check the temperature to see if it is safe to go to 60 V.
-            Else, we stay at 45 V.
-            '''
-            self.anc = PyANC350v4.Positioner()
+        V_lim = 45 # room temperature
+        if montana:
+            if montana.temperature['platform'] < 30:
+                V_lim = 60 # low temperature requires more voltage to step
+        else:
+            print('Voltage limited to 45 V, no communication with Montana!')
 
-            V_lim = 45 # room temperature
-            if montana:
-                if montana.temperature['platform'] < 30:
-                    V_lim = 60 # low temperature requires more voltage to step
+        for (i,s) in enumerate(self._stages):
+            setattr(self, s, Positioner(self.anc, i, V_lim=V_lim, pos_lim=self._pos_lims[i], label=s)) # makes positioners x, y, and z
+            getattr(self,s).check_voltage()
 
-            for (i,s) in enumerate(self._stages):
-                setattr(self, s, Positioner(self.anc, i, V_lim=V_lim, pos_lim=self._pos_lims[i], label=s)) # makes positioners x, y, and z
-                getattr(self,s).check_voltage()
+
+    def __getstate__(self):
+        self.save_dict = {
+            'x attocube': self.x,
+            'y attocube': self.y,
+            'z attocube': self.z
+        }
+        return self.save_dict
+
+
+    def __setstate__(self):
+        state['x'] = state.pop('x attocube')
+        state['y'] = state.pop('x attocube')
+        state['z'] = state.pop('x attocube')
+        self.__dict__.update(state)
+        self.anc = PyANC350v4.Positioner()
+        for (i,s) in enumerate(self._stages):
+            s = getattr(self,s)
+            setattr(s, 'anc', self.anc) # give each positioner the ANC object
 
 
 class Positioner():
@@ -63,6 +85,31 @@ class Positioner():
         self.freq
         self.C # should run this now to collect capacitances for logging purposes.
         self.pos
+
+
+    def __getstate__(self):
+        self.save_dict = {
+            'stepping voltage': self.V,
+            'stepping frequency': self.freq,
+            'capacitance': self.C
+            'position': self.pos
+            'position tolerance': self._pos_tolerance
+            'V_lim': self.V_lim,
+            'pos_lim': self.pos_lim,
+            'num': self.num
+            'label': self.label
+        }
+        return self.save_dict
+
+
+    def __setstate__(self):
+        state['_V'] = state.pop('stepping voltage')
+        state['_freq'] = state.pop('stepping frequency')
+        state['_C'] = state.pop('capacitance')
+        state['_pos'] = state.pop('position')
+        state['_pos_tolerance'] = state.pop('position tolerance')
+
+        self.__dict__.update(state)
 
 
     @property
@@ -417,11 +464,6 @@ class ANC350_like300():
 
         atexit.register(self.stop)  # will stop all motion if program quits
 
-    def __getstate__(self):
-        #We would like to save the resistive readout of the attocubes.
-        #We currently do not get that property form the controller.
-        self.save_dict = {}
-        return self.save_dict
 
     @property
     def freq(self):

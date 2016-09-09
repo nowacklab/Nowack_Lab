@@ -53,7 +53,6 @@ class Measurement:
         ### OKAY DUMB STUFF AHEAD, YOU'VE BEEN WARNED
         # We need to convert carriage returns to something safe
         # or else JSON will throw them away!
-        # AAA makes it first in the list of dict_keys
         self._replacement = b'\\\\\\r' # Something that will not be in a bytes
         while not array.find(self._replacement): # In case it is...
             self._replacement = b'\\' + self._replacement # ...add more \\!!
