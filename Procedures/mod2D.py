@@ -6,7 +6,7 @@ import numpy as np
 import time, os
 from datetime import datetime
 from . import squidIV
-from ..Utilities import plotting
+from ..Utilities.plotting import plot_mpl
 from ..Utilities.save import Measurement
 
 _home = os.path.expanduser("~")
@@ -120,7 +120,7 @@ class Mod2D(Measurement):
             self.im # see if this exists
         except:
             self.setup_plot()
-        plotting.update2D(self.im, self.V)
+        plot_mpl.update2D(self.im, self.V)
 
 
     def save(self, savefig=True):
@@ -143,7 +143,7 @@ class Mod2D(Measurement):
         self.fig.suptitle(self.filename+'\n'+self.notes)
 
         ## Set up 2D plot
-        self.im = plotting.plot2D(self.ax2D,
+        self.im = plot_mpl.plot2D(self.ax2D,
                                 self.IV.I*1e6,
                                 self.Imod*1e6,
                                 self.V,

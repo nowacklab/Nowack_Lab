@@ -23,6 +23,7 @@ class Touchdown(Measurement):
         self.numfit = 10       # number of points to fit line to while collecting data
         self.numextra = 3
         self.attoshift = 40 # move 40 um if no touchdown detected
+        self.Vz_max = 1000
 
         if instruments:
             self.piezos = instruments['piezos']
@@ -287,7 +288,7 @@ class Touchdown(Measurement):
         self.ax.set_title(self.title, fontsize=20)
         plt.xlabel('Piezo voltage (V)')
         plt.ylabel(r'$C - C_{balance}$ (fF)')
-        
+
         plt.xlim(-self.Vz_max, self.Vz_max)
         plt.ylim(-1,13)
 
