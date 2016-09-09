@@ -50,8 +50,8 @@ class ANC350():
 
     def __setstate__(self, state):
         state['x'] = state.pop('x attocube')
-        state['y'] = state.pop('x attocube')
-        state['z'] = state.pop('x attocube')
+        state['y'] = state.pop('y attocube')
+        state['z'] = state.pop('z attocube')
         self.__dict__.update(state)
         self.anc = PyANC350v4.Positioner()
         for (i,s) in enumerate(self._stages):
