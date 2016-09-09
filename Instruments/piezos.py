@@ -144,6 +144,7 @@ class Piezos():
 
 
 class Piezo():
+    _V = None
     def __init__(self, daq, chan_out, label=None, gain=15, Vmax=200, bipolar=2):
         self._daq = daq
         self.chan_out = 'ao%i' %chan_out
@@ -175,7 +176,10 @@ class Piezo():
         '''
         Voltage property. Set or read piezo voltage
         '''
-        self._V = getattr(self._daq, self.chan_out)*self.gain*self.bipolar # convert daq volts to piezo volts
+        try:
+            self._V = getattr(self._daq, self.chan_out)*self.gain*self.bipolar # convert daq volts to piezo volts
+        except:
+            print('Couldn\'t communicate with daq! Current %s piezo voltage unknown!' %self.label)
         return self._V
 
     @V.setter

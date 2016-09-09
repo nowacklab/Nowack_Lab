@@ -30,9 +30,17 @@ class SR5113():
         #might be better to save "gain" and "filter" in the Measurement, since
         #they are chosen in the Measurement
         self.save_dict = {"port": self.port,
-                          "_gain": self.gain,
-                          "_filter": self.filter}
+                          "gain": self.gain,
+                          "filter": self.filter}
         return self.save_dict
+
+
+    def __setstate__(self, state):
+        self.port = state.pop('port')
+        self._first_connect = True
+
+        return self.save_dict
+
 
     @property
     def filter(self):

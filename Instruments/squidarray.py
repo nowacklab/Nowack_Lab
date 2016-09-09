@@ -57,19 +57,9 @@ class PFL102:
     param_filename = os.path.join(os.path.dirname(__file__),'squidarray_params.json')
 
 
-    # def __getstate__(self):
-    #     self.save_dict = {"_S_bias": self._S_bias,
-    #                           "_A_bias": self._A_bias,
-    #                           "_S_flux": self._S_flux,
-    #                           "_A_flux": self._A_flux,
-    #                           "_offset": self._offset,
-    #                           "_integratorCapacitor": self._integratorCapacitor,
-    #                           "_feedbackResistor": self.feedbackResistor}
-    #     return self.save_dict
-
     def __init__(self, channel, pci, load=False):
         """ Will initialize PFL 102 and zero everything (or not) """
-        assert channel>= 1 and channel <=8 # choose 1
+        assert channel >= 1 and channel <= 8 # choose 1
 
         self.label = 'PFL102'
         self.channel = channel
@@ -301,16 +291,6 @@ class PFL102:
         for key, value in datadict.items():
             if key[0] == '_':
                 setattr(self, key, value)
-        # with open(self.param_filename, 'r') as f:
-        #     for line in f:
-        #         exec(line)
-        # for i in ['_squidLocked','_arrayLocked']:
-        #     if getattr(self,i) == 'True':
-        #         setattr(self, i, True)
-        #     else:
-        #         setattr(self, i, False)
-        # for i in ['_S_bias','_A_bias','_S_flux','_A_flux','_offset']:
-        #     setattr(self, i, float(getattr(self,i))) #convert to float
 
 
     def lock(self, what):
@@ -330,30 +310,6 @@ class PFL102:
         self.resetIntegrator = False
         self.updateDigitalControl()
 
-
-    def save(self):
-        '''
-        Save current values of all squid array parameters to a file, so that when we make a new array object, values are initialized correctly.
-        '''
-        data = jsonpickle.encode(self, unpicklable=False, max_depth=2) # max depth 2 needed or else strings saved as "'string'" and cannot be decoded
-        data_dict = json.loads(data)
-
-        with open(self.param_filename, 'w') as f:
-            json.dump(data_dict, f, sort_keys=True, indent=4)
-            # for i in ['_arrayLocked',
-            #             '_squidLocked',
-            #             '_S_bias',
-            #             '_A_bias',
-            #             '_S_flux',
-            #             '_A_flux',
-            #             '_offset']:
-            #     f.write(i+' = %s\n' %getattr(self,i))
-            # for i in ['_integratorCapacitor',
-            #         '_feedbackResistor',
-            #         '_sensitivity',
-            #         '_testSignal',
-            #         '_testInput']:
-            #     f.write(i+' = \'%s\'\n' %getattr(self,i))
 
     def send(self, data, registername):
         '''

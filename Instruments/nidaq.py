@@ -20,6 +20,9 @@ class NIDAQ():
 
     def __init__(self, zero=False, freq=100, dev_name='Dev1', input_range=10, output_range=10):
         self._daq  = ni.NIDAQ(dev_name, input_range, output_range)
+        self._dev_name = dev_name
+        self._input_range = input_range
+        self._output_range = output_range
         self._freq = {}
 
         for chan in self._daq.get_AI_channels():
@@ -27,21 +30,10 @@ class NIDAQ():
 
         for chan in self._daq.get_AO_channels():
             setattr(self, '_%s' %chan, None)# privately store value
-            # The following line works with instrumental modified to add read function to AnalogOut
             setattr(NIDAQ,chan,property(fset=eval('lambda self, value: self.set_chan(\'%s\',value)' %chan), fget=eval('lambda self: self.get_chan(\'%s\')' %chan)))
-            # This works with instrumental after names of input channels added manually
-            # setattr(NIDAQ,chan,property(fset=eval('lambda self, value: self.set_chan(\'%s\',value)' %chan), fget=eval('lambda self: self.get_chan(\'_%s_vs_aognd\')' %chan)))
-            # This works with the current code, since I couldn't figure out internal channels with instrumental:
-            # setattr(NIDAQ,chan,property(fset=eval('lambda self, value: self.set_chan(\'%s\',value)' %chan), fget=eval('lambda self: self.get_internal_chan(\'%s\')' %chan))) #property for output channels NIDAQ.ao# (0-3); monitor using internal channels
             self._freq[chan] = freq
 
-            # DEBUG
-        # for chan in ['ao0_vs_aognd', 'ao1_vs_aognd']:
-            # setattr(self._daq, chan, ni.AnalogIn(self._daq, '%s'%chan))
-            # setattr(NIDAQ,chan,property(fget=eval('lambda self: self.get_chan(\'%s\')' %chan)))
-            # print(chan)
-
-        self.inputs_to_monitor = ['ai23']# at least monitor one input
+        self.inputs_to_monitor = ['ai23'] # at least monitor one input
 
         if zero:
             self.zero()
@@ -49,7 +41,22 @@ class NIDAQ():
 
     def __getstate__(self):
         self.save_dict = {}
+        for chan in self._daq.get_AI_channels():
+            self.save_dict[chan] = getattr(self, chan)
+        for chan in self._daq.get_AO_channels():
+            self.save_dict[chan] = getattr(self, chan)
+        self.save_dict.update({
+            'device name': self._dev_name,
+            'input range': self._input_range,
+            'output range': self._output_range
+        })
+
         return self.save_dict
+
+
+    def __setstate__(self, state):
+        self._daq = ni.NIDAQ(state['device name'], state['input range'], state['output range'])
+
 
     @property
     def freq(self):
@@ -97,18 +104,6 @@ class NIDAQ():
 
         return response, time
 
-        # """ Monitor an input channel for a duration of time (s).
-            # e.g. V = daq.monitor('ai4', 10); V[0] is the voltage            """
-        # if numpy.isscalar(chan_in):
-            # chan_in = [chan_in]
-
-        # for ch in chan_in:
-            # self.add_input(ch)
-
-        # received = getattr(self._daq, chan_in[0]).read(duration = '%fs' %duration, fsamp='%fHz' %freq)
-        # print(received)
-        # return [list(received[b''].magnitude),list(received['t'].magnitude),received] # this is a hack, b'' should really be an ai# channel, but I think Instrumental is handling the name wrong.
-
 
     def send_receive(self, chan_out, orig_data, freq=100):
         """
@@ -136,10 +131,6 @@ class NIDAQ():
             # Weird thing to fix daq issue giving data points late by 1.. appears to only happen with lowest numbered output listed :/
             d = list(d)
             d = d + [d[len(d)-1]]
-            # if ch == min_chan: # the lowest numbered channel
-                # d = d + [d[len(d)-1]] # For the first one, the first data point is garbage, let's send the last data point twice to get that extra point again
-            # else:
-                # d = [d[0]] + d #Every other one is fine, so let's just duplicate the first point and get rid of it later
             data[ch] = d
             write_data[ch] = d * u.V # u.V is units, done to make Instrumental happy
 
@@ -172,10 +163,6 @@ class NIDAQ():
             Vend = {chan_out: Vend}
             chan_out = [chan_out]
 
-        # for cha in chan_out:
-            # if cha not in self.inputs_to_monitor:
-                # self.inputs_to_monitor.append(cha)
-
         V = {}
         for k in Vstart.keys():
             V[k] = list(numpy.linspace(Vstart[k], Vend[k], numsteps))
@@ -201,61 +188,6 @@ class NIDAQ():
         for chan in self._daq.get_AO_channels():
             self.sweep(chan, getattr(self, chan), 0, freq=100000)
         print('Zeroed outputs')
-
-#     def get_internal_chan(self, chan):
-#         """
-#         Modifies example of PyDAQmx from https://pythonhosted.org/PyDAQmx/usage.html#task-object .
-#         """
-#         analog_input = mx.Task()
-#         read = mx.int32()
-#         data = numpy.zeros((1,), dtype=numpy.float64)
-#
-#         # DAQmx Configure Code
-#         analog_input.CreateAIVoltageChan("Dev1/_%s_vs_aognd" %chan,"",mx.DAQmx_Val_Cfg_Default,-10.0,10.0,mx.DAQmx_Val_Volts,None)
-#         analog_input.CfgSampClkTiming("",10000.0,mx.DAQmx_Val_Rising,mx.DAQmx_Val_FiniteSamps,2)
-#
-#         # DAQmx Start Code
-#         analog_input.StartTask()
-#
-#         # DAQmx Read Code
-#         analog_input.ReadAnalogF64(1000,10.0,mx.DAQmx_Val_GroupByChannel,data,1000,mx.byref(read),None)
-#
-#         x = data[0]
-#         return 0 if abs(x) < 1/150 else x # Stupid way to get around crashing at end of execution. If value returned is too small yet still nonzero, program will crash upon completion. Manually found threshold. It's exactly 1/150. No clue why.
-#
-#     def get_internal_chan_old(self, chan):
-#         """
-#         Modifies example of PyDAQmx from https://pythonhosted.org/PyDAQmx/usage.html#task-object . There was a simpler version that I didn't notice before, now that one is implemented above.
-#         """
-#         print('start get chan %s' %chan)
-#         # Declaration of variable passed by reference
-#         taskHandle = mx.TaskHandle()
-#         read = mx.int32()
-#         data = numpy.zeros((1,), dtype=numpy.float64)
-#
-#         try:
-#             # DAQmx Configure Code
-#             mx.DAQmxCreateTask("",mx.byref(taskHandle))
-#             mx.DAQmxCreateAIVoltageChan(taskHandle,"Dev1/_%s_vs_aognd" %chan,"",mx.DAQmx_Val_Cfg_Default,-10.0,10.0,mx.DAQmx_Val_Volts,None)
-#             mx.DAQmxCfgSampClkTiming(taskHandle,"",10000.0,mx.DAQmx_Val_Rising,mx.DAQmx_Val_FiniteSamps,2)
-#
-#             # DAQmx Start Code
-#             mx.DAQmxStartTask(taskHandle)
-#
-#             # DAQmx Read Code
-#             mx.DAQmxReadAnalogF64(taskHandle,1000,10.0,mx.DAQmx_Val_GroupByChannel,data,1000,mx.byref(read),None)
-#
-#         except mx.DAQError as err:
-#             print ("DAQmx Error: %s"%err)
-#         finally:
-#             if taskHandle:
-#                 # DAQmx Stop Code
-#                 mx.DAQmxStopTask(taskHandle)
-#                 mx.DAQmxClearTask(taskHandle)
-#         print('end get chan %s' %chan)
-#
-#         return float(data[0])
-
 
 
 if __name__ == '__main__':
