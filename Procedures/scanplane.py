@@ -7,7 +7,7 @@ from scipy.interpolate import interp1d as interp
 import matplotlib.pyplot as plt
 from IPython import display
 from numpy import ma
-from ..Utilities import plotting
+from ..Utilities.plotting import plot_mpl
 from ..Instruments import piezos, nidaq, montana, squidarray
 from ..Utilities.save import Measurement
 
@@ -238,10 +238,10 @@ class Scanplane(Measurement):
             self.im_squid # see if this exists
         except:
             self.setup_plots()
-        plotting.update2D(self.im_squid, self.V)
-        plotting.update2D(self.im_cap, self.C)
-        plotting.update2D(self.im_ac_x, self.Vac_x)
-        plotting.update2D(self.im_ac_y, self.Vac_y)
+        plot_mpl.update2D(self.im_squid, self.V)
+        plot_mpl.update2D(self.im_cap, self.C)
+        plot_mpl.update2D(self.im_ac_x, self.Vac_x)
+        plot_mpl.update2D(self.im_ac_y, self.Vac_y)
         self.plot_line()
 
         self.fig.canvas.draw()
@@ -255,7 +255,7 @@ class Scanplane(Measurement):
 
         ## DC magnetometry
         self.ax_squid = self.fig.add_subplot(321)
-        self.im_squid = plotting.plot2D(self.ax_squid,
+        self.im_squid = plot_mpl.plot2D(self.ax_squid,
                                         self.X,
                                         self.Y,
                                         self.V,
@@ -267,7 +267,7 @@ class Scanplane(Measurement):
 
         ## AC x
         self.ax_ac_x = self.fig.add_subplot(323)
-        self.im_ac_x = plotting.plot2D(self.ax_ac_x,
+        self.im_ac_x = plot_mpl.plot2D(self.ax_ac_x,
                                         self.X,
                                         self.Y,
                                         self.Vac_x,
@@ -280,7 +280,7 @@ class Scanplane(Measurement):
 
         ## AC y
         self.ax_ac_y = self.fig.add_subplot(325)
-        self.im_ac_y = plotting.plot2D(self.ax_ac_y,
+        self.im_ac_y = plot_mpl.plot2D(self.ax_ac_y,
                                         self.X,
                                         self.Y,
                                         self.Vac_y,
@@ -293,7 +293,7 @@ class Scanplane(Measurement):
 
         ## Capacitance
         self.ax_cap = self.fig.add_subplot(324)
-        self.im_cap = plotting.plot2D(self.ax_cap,
+        self.im_cap = plot_mpl.plot2D(self.ax_cap,
                                     self.X,
                                     self.Y,
                                     self.C,
@@ -328,7 +328,7 @@ class Scanplane(Measurement):
         self.ax_line.relim()
         self.ax_line.autoscale_view()
 
-        plotting.aspect(self.ax_line, .3)
+        plot_mpl.aspect(self.ax_line, .3)
 
     def save(self, savefig=True):
         '''

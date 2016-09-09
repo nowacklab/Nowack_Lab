@@ -17,8 +17,8 @@ _home = os.path.expanduser("~")
 DATA_FOLDER = os.path.join(_home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'squid_testing', 'IV')
 
 class SquidIV(Measurement):
-    V = []
-    I = []
+    V = np.array([])
+    I = np.array([])
 
     def __init__(self, instruments=None, squidout=None, squidin=None, currentin=None, modout=None, rate=90):
         '''
@@ -155,12 +155,12 @@ class SquidIV(Measurement):
                 print(param, ':', getattr(self, param))
             for paramamp in ['gain','filter']:
                 print('preamp', paramamp, ':', getattr(self.preamp, paramamp))
-                if two_preamps:
+                if self.two_preamps:
                     print('preamp_I', paramamp, ':', getattr(self.preamp_I, paramamp))
 
             if self.rate >= self.preamp.filter[1]:
                 print("You're filtering out your signal... fix the preamp cutoff\n")
-            if two_preamps:
+            if self.two_preamps:
                 if self.rate >= self.preamp_I.filter[1]:
                     print("You're filtering out your signal... fix the preamp cutoff\n")
             if self.Irampspan > 200e-6:
@@ -186,7 +186,7 @@ class SquidIV(Measurement):
 
         ax.plot(self.I*1e6, self.V, 'k-')
         ax.set_title(self.filename+'\n'+self.notes) # NEED DESCRIPTIVE TITLE
-        if two_preamps:
+        if self.two_preamps:
             ax.set_xlabel(r'$I_{\rm{bias}} = V_{\rm{meas}}/R_{\rm{meas}}$ ($\mu \rm A$)', fontsize=20)
         else:
             ax.set_xlabel(r'$I_{\rm{bias}} = V_{\rm{bias}}/R_{\rm{bias}}$ ($\mu \rm A$)', fontsize=20)
