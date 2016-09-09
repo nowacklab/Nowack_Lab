@@ -143,11 +143,11 @@ class Touchdown(Measurement):
                         V_td = self.get_touchdown_voltage(i, plot=False)
                         if not self.planescan: # Don't want to move attocubes during planescan
                             ## Check if touchdown near center of z piezo +V range
-                            if V_td > 0.7*self.Vz_max or V_td < 0.3*self.Vz_max:
+                            if V_td > 0.55*self.Vz_max or V_td < 0.45*self.Vz_max:
                                 self.touchdown = False
-                                self.title = 'Found touchdown, centering near 100 Vpiezo'
+                                self.title = 'Found touchdown, centering near %i Vpiezo' %int(self.Vz_max/2)
                                 self.ax.set_title(self.title, fontsize=20)
-                                self.attoshift = (V_td-100)*.127 # e.g. V_td at 0 V means we're too close, will move z atto 12.7 um down)
+                                self.attoshift = (V_td-self.Vz_max/2)*.127 # e.g. V_td at 0 V means we're too close, will move z atto 12.7 um down)
                         elif V_td < 0: # During a planescan, this is probably false touchdown
                             self.touchdown=False
                         elif self.extra == self.numextra: # last extra step, bug fix
@@ -203,7 +203,7 @@ class Touchdown(Measurement):
         # self.lockin.frequency = 5003
         self.lockin.set_out(1, 'R') # Possibly X is better?
         self.lockin.set_out(2, 'theta') # not used, but may be good to see
-        self.lockin.sensitivity = 50e-6 # set this relatively high to make sure get good reading of lockin.R
+        self.lockin.sensitivity = 10e-6 # 9/8/2016 changed from 50 uV. BTS noticed touchdown only went up to ~3 uV
         self.lockin.time_constant = 0.100 # we found 100 ms was good on 7/11/2016 (yay slurpees) #1/(5*self.z_piezo_freq) # time constant five times shorter than dwell time for measurement
         self.lockin.reserve = 'Low Noise'
         self.lockin.ac_coupling()
@@ -212,8 +212,8 @@ class Touchdown(Measurement):
     def configure_piezo(self):
         """ Set up z piezo parameters """
         # As of 5/3/2016, only z_piezo_step is used, and the daq sends points one at a time as fast as possible. But this seems fast enough. Might as well just hard-code a time constant.
-        self.z_piezo_max_rate = 30 #V/s
-        self.z_piezo_step = 2 # 1V at RT, 2V at low T works? # For full 120 V to -120 V sweep, 1 V step is 480 points
+        self.z_piezo_max_rate = 60 #V/s # changed from 30 to 60 V/s 9/8/2016 BTS
+        self.z_piezo_step = 4 # changed to 4V 9/8/2016 BTS.... 1V at RT, 2V at low T works? # For full 120 V to -120 V sweep, 1 V step is 480 points
         self.z_piezo_freq = self.z_piezo_max_rate/self.z_piezo_step
 
     def line_fit(self, x, y):
@@ -287,8 +287,9 @@ class Touchdown(Measurement):
         self.ax.set_title(self.title, fontsize=20)
         plt.xlabel('Piezo voltage (V)')
         plt.ylabel(r'$C - C_{balance}$ (fF)')
-        plt.xlim(self.V.min(), self.V.max())
-        plt.ylim(-1,10)
+        
+        plt.xlim(-self.Vz_max, self.Vz_max)
+        plt.ylim(-1,13)
 
         ## Two lines for fitting
         orange = '#F18C22'

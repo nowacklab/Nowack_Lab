@@ -106,7 +106,7 @@ class DaqSpectrum(Measurement):
             ax.set_ylabel(r'RMS Voltage Noise ($V_{rms}/\sqrt{Hz}$)')
         ax.loglog(self.f, self.psdAve)
         ax.set_xlabel(r'Frequency (Hz)')
-        ax.set_xlim([1, 200000])
+        ax.set_xlim([0, 200000])
         #annotate the plot with the timestamp
         ax.annotate(self.timestamp, xy=(0.005, 1.02), xycoords='axes fraction', fontsize=10, family='monospace')
         #generate the name of the plot from the initial filename
