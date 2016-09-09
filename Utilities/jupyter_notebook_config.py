@@ -1,4 +1,5 @@
 # Based off of https://github.com/jupyter/notebook/blob/master/docs/source/extending/savehooks.rst
+# Belongs in jupyter_path = os.path.join(home, '.jupyter', 'jupyter_notebook_config.py')
 
 import io
 import os
