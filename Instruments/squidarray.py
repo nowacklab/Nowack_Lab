@@ -4,7 +4,7 @@ Classes for controlling StarCryo electronics for the SQUID array: PCI100 (PC pci
 Possible to-do: make parameter values quantized to 12 bits to more accurately reflect actual parameter values
 """
 
-import visa, time, atexit, inspect, os, json, jsonpickle
+import visa, time, atexit, inspect, os, json, jsonpickle as jsp
 
 class PCI100:
     def __init__(self, visaResource='COM3'):
@@ -279,18 +279,18 @@ class PFL102:
         self.updateAll()
         self.reset() # will reset the integrator and restore settings
 
-
-    def load(self):
+    @staticmethod
+    def load(json_file=None):
         '''
         Load last saved parameters for the array from a file.
         '''
-        with open(self.param_filename, 'r') as f:
-            data = json.load(f)
-        datastr = json.dumps(data)
-        datadict = jsonpickle.decode(datastr)
-        for key, value in datadict.items():
-            if key[0] == '_':
-                setattr(self, key, value)
+        if json_file is None:
+            json_file = os.path.join(os.path.dirname(__file__),'squidarray_params.json')
+        with open(json_file, encoding='utf-8') as f:
+            obj_dict = json.load(f)
+        obj_string = json.dumps(obj_dict)
+        obj = jsp.decode(obj_string)
+        return obj
 
 
     def lock(self, what):
@@ -309,6 +309,16 @@ class PFL102:
         self.updateDigitalControl()
         self.resetIntegrator = False
         self.updateDigitalControl()
+
+
+    def save(self):
+        '''
+        Saves current parameters to squidarray_params.json for future loading.
+        '''
+        obj_string = jsp.encode(self)
+        obj_dict = json.loads(obj_string)
+        with open(self.param_filename, 'w', encoding='utf-8') as f:
+            json.dump(obj_dict, f, sort_keys=True, indent=4)
 
 
     def send(self, data, registername):

@@ -4,18 +4,20 @@
     "_S_bias": 0,
     "_S_flux": 0,
     "_arrayLocked": false,
-    "_feedbackResistor": "10kOhm",
-    "_integratorCapacitor": "15nF",
+    "_feedbackResistor": "100kOhm",
+    "_integratorCapacitor": "1.5nF",
     "_offset": 0,
-    "_sensitivity": "Med",
+    "_sensitivity": "High",
     "_squidLocked": false,
-    "_testInput": "S_flux",
-    "_testSignal": "Off",
+    "_testInput": "A_flux",
+    "_testSignal": "Auto",
     "channel": 1,
     "label": "PFL102",
     "pci": {
-        "_visaResource": "'COM3'"
+        "_visaResource": "COM3",
+        "py/object": "Nowack_Lab.Instruments.squidarray.PCI100"
     },
     "pflRegister": null,
+    "py/object": "Nowack_Lab.Instruments.squidarray.SquidArray",
     "resetIntegrator": false
 }
