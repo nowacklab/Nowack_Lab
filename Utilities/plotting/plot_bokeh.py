@@ -305,7 +305,7 @@ def colorbar_slider(fig):
     return wb
 
 
-def figure(title=None, xlabel=None, ylabel=None, show_legend=True):
+def figure(title=None, xlabel=None, ylabel=None, show_legend=True, x_axis_type='linear', y_axis_type='log'):
     '''
     Sets up a bokeh figure.
     '''
@@ -316,7 +316,9 @@ def figure(title=None, xlabel=None, ylabel=None, show_legend=True):
                 tools = 'pan,reset,save,box_zoom,wheel_zoom,resize',
                 title = title,
                 toolbar_location='above',
-                toolbar_sticky=False
+                toolbar_sticky=False,
+                x_axis_type=x_axis_type,
+                y_axis_type=y_axis_type
             )
 
     ## Add data hover tool

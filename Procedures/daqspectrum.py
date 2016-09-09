@@ -8,6 +8,7 @@ import os
 import re
 from ..Instruments import nidaq, preamp
 from ..Utilities.save import Measurement
+from ..Utilities.plotting import plot_bokeh as pb
 
 _home = os.path.expanduser("~")
 DATA_FOLDER = os.path.join(_home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'spectra')
@@ -27,10 +28,10 @@ class DaqSpectrum(Measurement):
             setattr(self, arg, eval(arg))
 
         ## So plotting will work with no data
-        self.f = 1
-        self.V = 1
-        self.t = 1
-        self.psdAve = 1
+        self.f = np.linspace(1,100) #[1]
+        self.V = np.exp(np.linspace(1,100)) #[1]
+        self.t = np.linspace(1,100)**2 #[1]
+        self.psdAve = np.exp(np.linspace(1,100)) #[1]
 
         self.filename = ''
         self.notes = ''
@@ -82,15 +83,17 @@ class DaqSpectrum(Measurement):
 
     def plot(self):
         try:
-            self.ax_loglog # see if this exists
+            self.fig_loglog # see if this exists
         except:
             self.setup_plots()
         self.plot_loglog()
         self.plot_semilog()
+        pb.show(self.grid)
 
 
     def plotLog(self, fname, calibration=None):
         '''
+        DOES NOT WORK YET WITH BOKEH
         Generate a log-log plot of spectrum. If there is a known calibration between RMS voltage noise and flux noise, the plot is generated in units of flux quanta. Use daqspectrum.load to get all the data before calling plotLog
 
         calibration should be in units of Phi_o/V
@@ -118,11 +121,13 @@ class DaqSpectrum(Measurement):
 
 
     def plot_loglog(self, calibration=None):
-        self.ax_loglog.loglog(self.f, self.psdAve)
+        self.line_loglog = pb.line(self.fig_loglog, self.f, self.psdAve)
+        pb.update()
 
 
     def plot_semilog(self):
-        self.ax_semilog.semilogy(self.f, self.psdAve)
+        self.line_semilog = pb.line(self.fig_semilog, self.f, self.psdAve)
+        pb.update()
 
 
     def save(self, savefig=True):
@@ -139,19 +144,31 @@ class DaqSpectrum(Measurement):
 
 
     def setup_plots(self):
-        self.fig_loglog = plt.figure(figsize=(6,6))
-        self.ax_loglog = self.fig_loglog.add_subplot(111)
+        xlabel = 'Frequency (Hz)'
+        ylabel = 'Power Spectral Density (V/√Hz)'
 
-        self.fig_semilog = plt.figure(figsize=(6,6))
-        self.ax_semilog = self.fig_semilog.add_subplot(111)
+        # loglog
+        self.fig_loglog = pb.figure(title=self.filename,
+            xlabel=xlabel,
+            ylabel=ylabel,
+            show_legend=False,
+            x_axis_type='log',
+            y_axis_type='log'
+        )
+        self.fig_loglog.yaxis.axis_label_text_font_size = '12pt'
 
-        for ax in (self.ax_loglog, self.ax_semilog):
-            ax.set_xlabel('Frequency (Hz)')
-            ax.set_ylabel(r'Power Spectral Density ($\mathrm{V/\sqrt{Hz}}$)')
-            #apply a timestamp to the plot
-            ax.annotate(self.timestamp, xy=(0.02,.98), xycoords='axes fraction', fontsize=10,
-            ha='left', va = 'top', family='monospace')
-            ax.set_title(self.notes)
+        # semilog
+        self.fig_semilog = pb.figure(title=self.filename,
+            xlabel=xlabel,
+            ylabel=ylabel,
+            show_legend=False,
+            y_axis_type='log'
+        )
+        self.fig_semilog.yaxis.axis_label_text_font_size = '12pt'
+
+
+        # put into a grid
+        self.grid = pb.plot_grid([[self.fig_loglog, self.fig_semilog]])
 
 
     def setup_preamp(self):
