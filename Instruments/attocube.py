@@ -24,7 +24,7 @@ class ANC350():
 
     def __init__(self, montana=None):
         '''
-        Pass instruments as a dict with montana = montana.Montana().
+        Pass montana = montana.Montana().
         This will check the temperature to see if it is safe to go to 60 V.
         Else, we stay at 45 V.
         '''
@@ -91,12 +91,12 @@ class Positioner():
         self.save_dict = {
             'stepping voltage': self.V,
             'stepping frequency': self.freq,
-            'capacitance': self.C
-            'position': self.pos
-            'position tolerance': self._pos_tolerance
+            'capacitance': self.C,
+            'position': self.pos,
+            'position tolerance': self._pos_tolerance,
             'V_lim': self.V_lim,
             'pos_lim': self.pos_lim,
-            'num': self.num
+            'num': self.num,
             'label': self.label
         }
         return self.save_dict
