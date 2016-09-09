@@ -48,7 +48,7 @@ class ANC350():
         return self.save_dict
 
 
-    def __setstate__(self):
+    def __setstate__(self, state):
         state['x'] = state.pop('x attocube')
         state['y'] = state.pop('x attocube')
         state['z'] = state.pop('x attocube')
@@ -99,7 +99,7 @@ class Positioner():
         return self.save_dict
 
 
-    def __setstate__(self):
+    def __setstate__(self, state):
         state['_V'] = state.pop('stepping voltage')
         state['_freq'] = state.pop('stepping frequency')
         state['_C'] = state.pop('capacitance')
