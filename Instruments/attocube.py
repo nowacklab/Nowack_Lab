@@ -5,10 +5,7 @@ import telnetlib
 import re
 from PyANC350 import PyANC350v4
 
-
-class Attocube(ANC350): ### ANC350 is closed loop controller, we use this one at the moment.
-    pass
-
+''' *** Use the Attocube class, definition is at the bottom *** '''
 
 class ANC350():
     '''
@@ -580,6 +577,10 @@ class ANC350_like300():
 
     def stop(self):
         self.ground()
+
+
+class Attocube(ANC350): ### ANC350 is closed loop controller, we use this one at the moment.
+    pass
 
 
 if __name__ == '__main__':
