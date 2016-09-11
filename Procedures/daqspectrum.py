@@ -14,6 +14,9 @@ _home = os.path.expanduser("~")
 DATA_FOLDER = os.path.join(_home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'spectra')
 
 class DaqSpectrum(Measurement):
+    line_loglog = None
+    line_semilog = None
+
     def __init__(self, instruments=None, input_chan=None, measure_time=0.5, measure_freq=256000, averages=30):
         self.instruments = instruments
         if instruments:
@@ -88,7 +91,6 @@ class DaqSpectrum(Measurement):
             self.setup_plots()
         self.plot_loglog()
         self.plot_semilog()
-        pb.show(self.grid)
 
 
     def plotLog(self, fname, calibration=None):
@@ -121,13 +123,13 @@ class DaqSpectrum(Measurement):
 
 
     def plot_loglog(self, calibration=None):
-        self.line_loglog = pb.line(self.fig_loglog, self.f, self.psdAve)
-        pb.update()
+        self.line_loglog = pb.line(self.fig_loglog, self.f, self.psdAve, line_handle = self.line_loglog)
+        pb.update(self.fig_loglog)
 
 
     def plot_semilog(self):
-        self.line_semilog = pb.line(self.fig_semilog, self.f, self.psdAve)
-        pb.update()
+        self.line_semilog = pb.line(self.fig_semilog, self.f, self.psdAve, line_handle = self.line_semilog)
+        pb.update(self.fig_semilog)
 
 
     def save(self, savefig=True):
@@ -139,8 +141,8 @@ class DaqSpectrum(Measurement):
         self.tojson(DATA_FOLDER, self.filename)
 
         if savefig:
-            self.fig_loglog.savefig(self.filename+'_loglog.pdf')
-            self.fig_semilog.savefig(self.filename+'_semilog.pdf')
+            pb.save(self.fig_loglog, self.filename+'_loglog')
+            pb.save(self.fig_semilog, self.filename+'_semilog')
 
 
     def setup_plots(self):
@@ -155,7 +157,7 @@ class DaqSpectrum(Measurement):
             x_axis_type='log',
             y_axis_type='log'
         )
-        self.fig_loglog.yaxis.axis_label_text_font_size = '12pt'
+        self.fig_loglog.fig.yaxis.axis_label_text_font_size = '12pt'
 
         # semilog
         self.fig_semilog = pb.figure(title=self.filename,
@@ -164,11 +166,14 @@ class DaqSpectrum(Measurement):
             show_legend=False,
             y_axis_type='log'
         )
-        self.fig_semilog.yaxis.axis_label_text_font_size = '12pt'
+        self.fig_semilog.fig.yaxis.axis_label_text_font_size = '12pt'
 
 
         # put into a grid
-        self.grid = pb.plot_grid([[self.fig_loglog, self.fig_semilog]])
+        self.grid = pb.plot_grid([[self.fig_loglog.fig, self.fig_semilog.fig]])
+        self.plot_loglog()
+        self.plot_semilog()
+        pb.show(self.grid)
 
 
     def setup_preamp(self):

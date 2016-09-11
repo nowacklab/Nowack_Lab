@@ -2,8 +2,14 @@ import bokeh.io, numpy as np, os, datetime
 import IPython.display as disp
 from ..utilities import reject_outliers_quick, nanmin, nanmax
 
-global NB_HANDLE
-NB_HANDLE = None
+class Figure():
+    '''
+    Figure class. Contains a bokeh figure and notebook handle for plotting.
+    '''
+    def __init__(self, fig):
+        self.fig = fig
+        self.nb_handle = None
+
 
 def init_notebook():
     '''
@@ -15,6 +21,7 @@ def init_notebook():
 
 def auto_bounds(fig,x,y, square=False, hard_bounds=False):
     '''
+    fig = a Figure object
     Given x-y data, sets the x and y axis ranges on the figure.
     If square=True, Makes x and y ranges the same, taking the larger of the two.
     '''
@@ -44,25 +51,25 @@ def auto_bounds(fig,x,y, square=False, hard_bounds=False):
         y_bound_l = ymin
         y_bound_u = ymax
 
-    # fig.x_range.set(start=x_bound_l, end=x_bound_u)
-    # fig.y_range.set(start=y_bound_l, end=y_bound_u)
+    # fig.fig.x_range.set(start=x_bound_l, end=x_bound_u)
+    # fig.fig.y_range.set(start=y_bound_l, end=y_bound_u)
 
     if hard_bounds:
-        fig.x_range.set(bounds = (x_bound_l,x_bound_u))
-        fig.y_range.set(bounds = (y_bound_l,y_bound_u))
+        fig.fig.x_range.set(bounds = (x_bound_l,x_bound_u))
+        fig.fig.y_range.set(bounds = (y_bound_l,y_bound_u))
 
-    fig.x_range.start = -10
-    fig.x_range.end = 10
-    fig.y_range.start = -10 # NEEDS TO DO THIS TO UPDATE PROPERLY... DUMB DUMB DUMB
-    fig.y_range.end = 10
+    fig.fig.x_range.start = -10
+    fig.fig.x_range.end = 10
+    fig.fig.y_range.start = -10 # NEEDS TO DO THIS TO UPDATE PROPERLY... DUMB DUMB DUMB
+    fig.fig.y_range.end = 10
     import time
     time.sleep(.05) # Needs to be here. I KNOW, SO DUMB. WAT. JUST WOW.
 
-    fig.x_range.start = x_bound_l
-    fig.x_range.end = x_bound_u
-    fig.y_range.start = y_bound_l
-    fig.y_range.end = y_bound_u
-    update()
+    fig.fig.x_range.start = x_bound_l
+    fig.fig.x_range.end = x_bound_u
+    fig.fig.y_range.start = y_bound_l
+    fig.fig.y_range.end = y_bound_u
+    update(fig)
 
 def choose_cmap(cmap_name):
     '''
@@ -81,12 +88,13 @@ def choose_cmap(cmap_name):
 
 def clim(fig, l=None, u=None):
     '''
+    fig = a Figure object
     Update colorscale limits for a bokeh figure.
     `l` and `u` are lower and upper bounds.
     If None, will autoscale the limits.
     '''
     # Get the plot data
-    data = get_image_data(fig)
+    data = get_image_data(fig.fig)
     # filtered_data = reject_outliers(data) # takes a long time...
     filtered_data = reject_outliers_quick(data)
 
@@ -97,13 +105,13 @@ def clim(fig, l=None, u=None):
     if u == None:
         u = nanmax(filtered_data) # ignore nans
 
-    im = get_glyph_renderer(fig) # Get image renderer
+    im = get_glyph_renderer(fig.fig) # Get image renderer
 
     # Set color limits in image
     im.glyph.color_mapper.low = l
     im.glyph.color_mapper.high = u
 
-    cb = get_colorbar_renderer(fig) # Get colorbar renderer
+    cb = get_colorbar_renderer(fig.fig) # Get colorbar renderer
 
     # Set colorbar limits
     if cb:
@@ -111,20 +119,20 @@ def clim(fig, l=None, u=None):
         cb.color_mapper.high = u
 
     # Update everything
-    update()
+    update(fig)
 
 
 def colorbar(fig, cmap, title=None):
     '''
     Adds a colorbar to a bokeh figure.
-    fig: the figure
+    fig: the Figure object
     title: title for colorbar
     cmap: name of desired bokeh or mpl colormap
     '''
     from bokeh.models import LinearColorMapper
     from bokeh.models.annotations import ColorBar
 
-    data = get_image_data(fig)
+    data = get_image_data(fig.fig)
 
     color_mapper = LinearColorMapper(low=data.min(), high=data.max(), palette=choose_cmap(cmap))
 
@@ -138,22 +146,23 @@ def colorbar(fig, cmap, title=None):
     cb.major_label_text_font_size = '12pt'
     cb.major_label_text_align = 'left'
 
-    fig.add_layout(cb, 'left') # 'right' make plot squished with widgets
+    fig.fig.add_layout(cb, 'left') # 'right' make plot squished with widgets
 
     return cb
 
 
 def colorbar_slider(fig):
     '''
+    fig = a Figure object
     Adds interactive sliders and text input boxes for the colorbar.
     Returns a layout object to be put into a gridplot
     '''
-    cb = get_colorbar_renderer(fig)
-    data = get_image_data(fig)
+    cb = get_colorbar_renderer(fig.fig)
+    data = get_image_data(fig.fig)
     data = reject_outliers_quick(data)
     datamin = nanmin(data)
     datamax = nanmax(data)
-    im = get_glyph_renderer(fig) # Get image renderer
+    im = get_glyph_renderer(fig.fig) # Get image renderer
 
     from bokeh.models import CustomJS, Slider, TextInput
     from bokeh.models.widgets import Button
@@ -354,16 +363,16 @@ def figure(title=None, xlabel=None, ylabel=None, show_legend=True, x_axis_type='
     if show_legend:
         legend(fig)
 
-    return fig
+    return Figure(fig)
 
 
 def get_colorbar_renderer(fig):
     '''
-    Returns the colorbar for a given figure.
+    Returns the colorbar for a given Figure.
     '''
     from bokeh.models.annotations import ColorBar
 
-    for r in fig.renderers:
+    for r in fig.fig.renderers:
         if type(r) == ColorBar:
             cb = r
             return cb
@@ -371,13 +380,13 @@ def get_colorbar_renderer(fig):
 
 def get_glyph_renderer(fig):
     '''
-    Gets one glyph renderer for a given figure.
+    Gets one glyph renderer for a given Figure.
     Useful for when you have one thing plotted (like an image).
     Not useful if multipl glyph renderers
     '''
     from bokeh.models import GlyphRenderer
 
-    for r in fig.renderers:
+    for r in fig.fig.renderers:
         if type(r) == GlyphRenderer:
             im = r
             return im
@@ -386,14 +395,14 @@ def get_image_data(fig):
     '''
     Returns the data array for a plotted image.
     '''
-    im = get_glyph_renderer(fig)
+    im = get_glyph_renderer(fig.fig)
     return im.data_source.data['image'][0]
 
 
 def image(fig, x, y, z, show_colorbar = True, z_title=None, im_handle=None, cmap='Viridis256', name=None, slider_handle=None):
     '''
     Adds a 2D image to a Bokeh plot
-    fig: figure to plot on
+    fig: Figure to plot on
     x,y,z: x and y are from np.meshgrid, 2D matrix in Z
     colorbar: whether or not to plot the colorbar
     z_title: title for colorbar
@@ -424,7 +433,7 @@ def image(fig, x, y, z, show_colorbar = True, z_title=None, im_handle=None, cmap
         auto_bounds(fig, x, y, square=True, hard_bounds=True)
 
         ## Plot it
-        im_handle = fig.image(image=[z], x=xmin, y =ymin, dw=(xmax-xmin), dh=(ymax-ymin), palette = choose_cmap(cmap), name=name)
+        im_handle = fig.fig.image(image=[z], x=xmin, y =ymin, dw=(xmax-xmin), dh=(ymax-ymin), palette = choose_cmap(cmap), name=name)
 
     ## Make plot aspect ratio correct and adjust toolbar location
 
@@ -442,10 +451,10 @@ def image(fig, x, y, z, show_colorbar = True, z_title=None, im_handle=None, cmap
 
     ## Set up ColorBar
         if show_colorbar:
-            cb_handle = colorbar(fig, cmap, title=z_title)
+            cb_handle = colorbar(fig.fig, cmap, title=z_title)
 
     if slider_handle:
-        data = get_image_data(fig)
+        data = get_image_data(fig.fig)
         data = reject_outliers_quick(data)
         for child in slider_handle.children[0:-1]: #exclude the button
             child.callback.args['model'].tags[0] = nanmin(data)
@@ -456,7 +465,7 @@ def image(fig, x, y, z, show_colorbar = True, z_title=None, im_handle=None, cmap
         slider_handle.children[-1].callback.args['model'].tags.append('hey')
 
     ## Fix colors
-    clim(fig) # autoscale colors (filtering outliers)
+    clim(fig.fig) # autoscale colors (filtering outliers)
 
     return im_handle
 
@@ -464,7 +473,7 @@ def image(fig, x, y, z, show_colorbar = True, z_title=None, im_handle=None, cmap
 def legend(fig, labels=None):
     '''
     Adds a legend to a Bokeh plot.
-    fig: figure the legend will be plotted next to
+    fig: Figure the legend will be plotted next to
     labels: list of labels for all lines (in order of plotting them). By default, uses the "name" of each line plotted.
     loc: location of legend relative to plot
     '''
@@ -473,7 +482,7 @@ def legend(fig, labels=None):
     from bokeh.models.glyphs import Line
 
     lines = []
-    for r in fig.renderers: # This finds all the lines or scatter plots
+    for r in fig.fig.renderers: # This finds all the lines or scatter plots
         if type(r) == GlyphRenderer:
             if r.glyph.__module__ == 'bokeh.models.markers' or r.glyph == 'bokeh.models.glyphs.Line':
                 lines.append(r)
@@ -489,7 +498,7 @@ def legend(fig, labels=None):
                 label_text_font_size = '12pt'
             )
 
-    fig.add_layout(leg, 'right')
+    fig.fig.add_layout(leg, 'right')
 
     return leg
 
@@ -497,7 +506,7 @@ def legend(fig, labels=None):
 def line(fig, x, y, line_handle=None, color='black', linestyle='-', name=None):
     '''
     Adds a line to a Bokeh plot.
-    Must specify figure and x and y data.
+    Must specify Figure and x and y data.
     Note: once figure is shown, will not add any new lines.
     Optional arguments:
     - line_handle: Pass in the handle for a line to update that line rather than create a new one.
@@ -535,10 +544,10 @@ def line(fig, x, y, line_handle=None, color='black', linestyle='-', name=None):
         from bokeh.models import ColumnDataSource
         source = ColumnDataSource(data=dict(x=x,y=y, name=[name]*len(x))) # an array of "name"s will have "name" show up on hover tooltip
         if linestyle in linestyles.keys(): # plot a line
-            line_handle = fig.line(x, y, source = source)
+            line_handle = fig.fig.line(x, y, source = source)
 
         else: # plot scatter
-            line_handle = fig.scatter(x, y, marker=markerstyles[linestyle],
+            line_handle = fig.fig.scatter(x, y, marker=markerstyles[linestyle],
             source = source)
 
     if linestyle in linestyles.keys():
@@ -551,7 +560,7 @@ def line(fig, x, y, line_handle=None, color='black', linestyle='-', name=None):
     line_handle.glyph.line_color = color
     line_handle.name = name
 
-    update()
+    update(fig)
 
     auto_bounds(fig, x, y)
 
@@ -563,20 +572,20 @@ def line(fig, x, y, line_handle=None, color='black', linestyle='-', name=None):
 def plot_grid(figs, width=700, height=700):
     '''
     Sets up a grid of bokeh plots.
-    `figs` is a list of rows of figures or widgets.
+    `figs` is a list of rows of figures or widgets. (not Figure object defined here)
     For example, a 2x2 grid of plots is [[f1, f2],[f3,f4]]
     Width and height are the dimensions of the whole grid.
     Doesn't quite work well with widgets or colorbars. Best to plot these separately.
     '''
     from bokeh.layouts import gridplot
-    from bokeh.plotting.figure import Figure
+    from bokeh.plotting.figure import Figure as Fig
 
     # Scale all plots, keeping aspect ratio constant.
     numrows = len(figs)
     for row in figs:
         numfigs = 0
         for fig in row: #count the number of figures (excluding widgets)
-            numfigs += 1 if type(fig) is Figure else 0
+            numfigs += 1 if type(fig) is Fig else 0
         for fig in row:
             try:
                 max_width = fig.plot_width
@@ -604,12 +613,13 @@ def plot_grid(figs, width=700, height=700):
     #     row[0].min_border_left = int((width-total_width)/2) # pad left
     #     row[-1].min_border_right = int((width-total_width)/2) # pad right
 
-    return gridplot(figs, merge_tools=True)
+    return Figure(gridplot(figs, merge_tools=True))
 
 
 def plot_html(fig):
     '''
     Plots a bokeh figure.
+    fig = Figure
     Will save plot as html in a subdirectory named bokeh_plots
     Will then show the plot in an iframe in the notebook.
     This is done so plots show up again when reopening a notebook.
@@ -625,21 +635,23 @@ def plot_html(fig):
 
     ## Save and show figure
     bokeh.io.output_file(figfile)
-    bokeh.io.save(fig)
+    bokeh.io.save(fig.fig)
     show_html(figfile)
 
-    fig.name = figfile
+    fig.fig.name = figfile
 
-def save(fig):
+
+def save(fig, figfile=None):
     '''
-    Saves bokeh plots to HTML in ./Bokeh_plots
+    Saves bokeh plots to HTML. By default, in ./Bokeh_plots
     '''
-    ## Set up directory for the plot files
-    plots_dir = os.path.join('.','Bokeh_plots')
-    if not os.path.exists(plots_dir):
-        os.makedirs(plots_dir)
-    filename = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')+'.html'
-    figfile = os.path.join(plots_dir, filename)
+    if figfile is None:
+        ## Set up directory for the plot files
+        plots_dir = os.path.join('.','Bokeh_plots')
+        if not os.path.exists(plots_dir):
+            os.makedirs(plots_dir)
+        filename = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')+'.html'
+        figfile = os.path.join(plots_dir, filename)
 
     ## Save and show figure
     from jinja2 import Template
@@ -647,7 +659,7 @@ def save(fig):
     from bokeh.embed import components
     from bokeh.resources import INLINE
 
-    plots = {'fig':fig}
+    plots = {'fig':fig.fig}
     script, div = components(plots)
 
     template = Template('''<!DOCTYPE html>
@@ -690,13 +702,8 @@ def save(fig):
 def show(fig, show_legend=True):
     '''
     Shows a bokeh plot or gridplot using the normal show function.
-    Uses the the global NB_HANDLE.
     '''
-
-    global NB_HANDLE
-    NB_HANDLE = bokeh.io.show(fig, notebook_handle=True)
-
-    return NB_HANDLE
+    fig.nb_handle = bokeh.io.show(fig.fig, notebook_handle=True)
 
 
 def show_html(figfile, width=700, height=700):
@@ -707,11 +714,13 @@ def show_html(figfile, width=700, height=700):
     disp.display(disp.HTML('<iframe src=%s width=%i height=%i></iframe>' %(figfile, width, height)))
 
 
-def update():
+def update(fig):
     '''
-    Replots a bokeh figure if it has been changed using bokeh.io.push_notebook.
+    Replots a bokeh Figure if it has been changed using bokeh.io.push_notebook.
     Note: changes pushed to the notebook will NOT stay there when reopening a saved notebook.
     Once done updating, make sure you `show` again.
     '''
-    if NB_HANDLE:
-        bokeh.io.push_notebook(handle=NB_HANDLE)
+    try:
+        bokeh.io.push_notebook(handle=fig.nb_handle)
+    except:
+        print('nb_handle note found... possibly you need to look in the grid object?')
