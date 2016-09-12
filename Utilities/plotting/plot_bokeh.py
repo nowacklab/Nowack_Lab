@@ -19,7 +19,7 @@ def init_notebook():
     bokeh.io.output_notebook(hide_banner=True)
 
 
-def auto_bounds(fig,x,y, square=False, hard_bounds=False):
+def auto_bounds(fig,x,y, square=False, hard_bounds=False, padding=True):
     '''
     fig = a Figure object
     Given x-y data, sets the x and y axis ranges on the figure.
@@ -32,13 +32,29 @@ def auto_bounds(fig,x,y, square=False, hard_bounds=False):
         x = np.array(x)
     if type(y) == list:
         y = np.array(y)
-    xmin = x.min()
-    ymin = y.min()
-    xmax = x.max()
-    ymax = y.max()
+    x[x == np.inf] = np.nan # don't want infinite bounds!
+    y[y == np.inf] = np.nan
+    xmin = np.nanmin(x)
+    ymin  =np.nanmin(y)
+    xmax = np.nanmax(x)
+    ymax = np.nanmax(y)
+    print(xmin, xmax, ymin, ymax)
 
     x_range = xmax-xmin
     y_range = ymax-ymin
+
+    if padding:
+        x_range_data = x_range
+        y_range_data = y_range
+        x_range *= 1.1
+        y_range *= 1.2
+        x_range_diff = abs(x_range-x_range_data)
+        y_range_diff = abs(y_range-y_range_data)
+        xmax += x_range_diff/2
+        ymax += y_range_diff/2
+        xmin -= x_range_diff/2
+        ymin -= y_range_diff/2
+
     if square:
         bigger_range = max(x_range, y_range)
         x_bound_l = xmin - (bigger_range-x_range)/2
@@ -314,7 +330,7 @@ def colorbar_slider(fig):
     return wb
 
 
-def figure(title=None, xlabel=None, ylabel=None, show_legend=True, x_axis_type='linear', y_axis_type='log'):
+def figure(title=None, xlabel=None, ylabel=None, show_legend=True, x_axis_type='linear', y_axis_type='linear', x_range=None, y_range=None):
     '''
     Sets up a bokeh figure.
     '''
@@ -327,7 +343,9 @@ def figure(title=None, xlabel=None, ylabel=None, show_legend=True, x_axis_type='
                 toolbar_location='above',
                 toolbar_sticky=False,
                 x_axis_type=x_axis_type,
-                y_axis_type=y_axis_type
+                y_axis_type=y_axis_type,
+                x_range=x_range,
+                y_range=y_range
             )
 
     ## Add data hover tool
@@ -430,7 +448,7 @@ def image(fig, x, y, z, show_colorbar = True, z_title=None, im_handle=None, cmap
         ymax = y.max()
 
         ## Fix axis limits ## Temporary aspect ratio fix: make a squarish plot and make x/y equal lengths
-        auto_bounds(fig, x, y, square=True, hard_bounds=True)
+        auto_bounds(fig, x, y, square=True, hard_bounds=True, padding=False)
 
         ## Plot it
         im_handle = fig.fig.image(image=[z], x=xmin, y =ymin, dw=(xmax-xmin), dh=(ymax-ymin), palette = choose_cmap(cmap), name=name)
@@ -525,6 +543,7 @@ def line(fig, x, y, line_handle=None, color='black', linestyle='-', name=None):
         '-.': 'dashdot'
     }
     markerstyles = {
+        '.': 'circle',
         'o': 'circle',
         's': 'square',
         'v': 'inverted_triangle',

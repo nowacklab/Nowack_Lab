@@ -5,6 +5,7 @@ from ..Instruments import piezos, nidaq, montana
 import time, os
 from datetime import datetime
 from ..Utilities.save import Measurement
+from ..Utilities.plotting import plot_bokeh as pb
 
 _home = os.path.expanduser("~")
 DATA_FOLDER = os.path.join(_home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'heightsweeps')
@@ -30,10 +31,10 @@ class Heightsweep(Measurement):
         self.inp_acy = 'ai%s' %inp_acy
         self.inp_dc = 'ai%s' %inp_dc
 
-        self.z = np.nan
-        self.Vacx = np.nan
-        self.Vacy = np.nan
-        self.Vdc = np.nan
+        self.z = np.array([])
+        self.Vacx = np.array([])
+        self.Vacy = np.array([])
+        self.Vdc = np.array([])
 
         self.filename = ''
 
@@ -83,22 +84,39 @@ class Heightsweep(Measurement):
 
 
     def plot(self):
-        self.fig = plt.figure()
+        self.fig_dc = pb.figure(
+            title = self.filename + '@(%f, %f)'%(self.x, self.y),
+            ylabel = 'DC (V)',
+            show_legend=False
+        )
+        self.fig_dc.fig.plot_width = 1000
+        self.fig_dc.fig.min_border_bottom = 0
 
-        self.ax_dc = self.fig.add_subplot(311)
-        self.ax_dc.set_xlabel(r'$V_z^{samp} - V_z (V)$')
-        self.ax_dc.set_title('%s\nDC Magnetometry (V) at (%f,%f)' %(self.filename, self.x, self.y))
-        self.ax_dc.plot(self.z, self.Vdc, '.k', markersize=6, alpha=0.5)
+        self.fig_acx = pb.figure(
+            ylabel = 'AC X (V)',
+            show_legend=False,
+            x_range = self.fig_dc.fig.x_range #link pan
+        )
+        self.fig_acx.fig.plot_width = 1000
+        self.fig_acx.fig.min_border_top = 0
+        self.fig_acx.fig.min_border_bottom = 0
 
-        self.ax_ac_x = self.fig.add_subplot(312)
-        self.ax_ac_x.set_xlabel(r'$V_z^{samp} - V_z (V)$')
-        self.ax_ac_x.set_title('%s\nX component AC Response (V) at (%f,%f)' %(self.filename, self.x, self.y))
-        self.ax_ac_x.plot(self.z, self.Vacx, '.k', markersize=6)
+        self.fig_acy = pb.figure(
+            xlabel = "Voltage below touchdown (Vpiezo)",
+            ylabel = 'AC Y (V)',
+            show_legend=False,
+            x_range = self.fig_dc.fig.x_range
+        )
+        self.fig_acy.fig.plot_width = 1000
+        self.fig_acy.fig.min_border_top = 0
 
-        self.ax_ac_y = self.fig.add_subplot(313)
-        self.ax_ac_y.set_xlabel(r'$V_z^{samp} - V_z (V)$')
-        self.ax_ac_y.set_title('%s\nY component AC Response (V) at (%f,%f)' %(self.filename, self.x, self.y))
-        self.ax_ac_y.plot(self.z, self.Vacy, '.k', markersize=6)
+
+        self.line_dc = pb.line(self.fig_dc, self.z, self.Vdc, linestyle='o')
+        self.line_acx = pb.line(self.fig_acx, self.z, self.Vacx, linestyle='o')
+        self.line_acy = pb.line(self.fig_acy, self.z, self.Vacy, linestyle='o')
+
+        self.grid = pb.plot_grid([[self.fig_dc.fig], [self.fig_acx.fig], [self.fig_acy.fig]])
+        pb.show(self.grid)
 
     def save(self, savefig=True):
         '''
