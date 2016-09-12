@@ -90,9 +90,13 @@ class Piezos():
         '''
         Sweeps piezos from a starting voltage (dictionary) to an ending voltage (dictionary), with maximum allowed step size and frequency. Maximum allowed step size will be the step size for the piezo that has to sweep over the largest voltage range.
         '''
+        ## Make copies of start and end dictionaries so we can mess them up
+        Vstart = Vstart.copy()
+        Vend = Vend.copy()
+
         ## Sweep to Vstart first if we aren't already there. self.V calls this function, but recursion should only go one level deep.
         if Vstart != self.V:
-            self.V = Vstart.copy() # prevent Vstart from changing
+            self.V = Vstart
         ## Make sure to only have the piezos requested to sweep over
         all_keys = list(set(Vstart) & set(Vend)) # keys in common
         for v in Vstart, Vend:
