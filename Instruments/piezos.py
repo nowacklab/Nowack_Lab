@@ -63,17 +63,18 @@ class Piezos():
     @V.setter
     def V(self, value):
         if np.isscalar(value):
-            value = {k: value for k in ['x','y','z']}
+            value = {k: value for k in self._piezos}
 
         for k in value.keys():
             getattr(self,k).check_lim(value[k])
-
         ## Sweep to the desired voltage
         self.sweep(self.V, value)
-
         ## Store the desired voltage
-        for key in value:
-            self._V[key] = value[key]
+        for key in self._piezos:
+            try:
+                self._V[key] = value[key]
+            except:
+                pass
 
 
     def load_daq(self, daq):
@@ -91,8 +92,7 @@ class Piezos():
         '''
         ## Sweep to Vstart first if we aren't already there. self.V calls this function, but recursion should only go one level deep.
         if Vstart != self.V:
-            self.V = Vstart
-
+            self.V = Vstart.copy() # prevent Vstart from changing
         ## Make sure to only have the piezos requested to sweep over
         all_keys = list(set(Vstart) & set(Vend)) # keys in common
         for v in Vstart, Vend:
@@ -112,7 +112,7 @@ class Piezos():
             getattr(self,k).check_lim(Vend[k])
             Vend[k] = getattr(self,k).remove_gain(Vend[k])
 
-        ## Convert keys to the channel names that the daq expects
+    ## Convert keys to the channel names that the daq expects
         for k in list(Vstart.keys()): # need this a list so that new keys aren't iterated over
             Vstart[getattr(self,k).chan_out] = Vstart.pop(k) # changes key to daq output channel name
             Vend[getattr(self,k).chan_out] = Vend.pop(k)
@@ -126,7 +126,10 @@ class Piezos():
                 V[k] = V.pop(getattr(self,k).chan_out)
             except: # in case one or more keys is not used
                 pass
-
+            try:
+                self._V.pop(getattr(self,k).chan_out) # was keeping daq keys for some reason
+            except:
+                pass
         ## reapply gain
         for k in V.keys():
             V[k] = getattr(self,k).apply_gain(V[k])
@@ -140,7 +143,7 @@ class Piezos():
 
     def zero(self):
         self.V = 0
-        
+
 
 class Piezo():
     _V = None
