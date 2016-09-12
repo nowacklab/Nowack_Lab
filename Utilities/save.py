@@ -4,6 +4,7 @@ from datetime import datetime
 jspnp.register_handlers()
 from copy import copy
 
+
 class Measurement:
     _replacement = None
     timestamp = ''
@@ -160,3 +161,25 @@ class Measurement:
 
         if compress:
             self.decompress() # so we can still play with numpy arrays
+
+
+def get_scan_data_path():
+    with open(os.path.join(os.path.dirname(__file__),'paths.json'),'r') as f:
+        data = json.load(f)
+    return data['cooldown']
+
+def set_scan_data_path(description=''):
+    '''
+    Writes to paths.json, a file that stores the name of
+    the data directory we're currently working in.
+    '''
+    _home = os.path.expanduser("~")
+    montana = os.path.join(_home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana')
+
+    now = datetime.now()
+    now_fmt = now.strftime('%Y-%m-%d')
+    filename = os.path.join(montana,now_fmt + '_' + description)
+
+    paths = {'cooldown': filename}
+    with open(os.path.join(os.path.dirname(__file__),'paths.json'), 'w') as f:
+        json.dump(paths, f)

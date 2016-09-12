@@ -28,7 +28,7 @@ class Touchdown(Measurement):
         if instruments:
             self.piezos = instruments['piezos']
             self.atto = instruments['attocube']
-            self.lockin = instruments['cap_lockin']
+            self.lockin = instruments['lockin_cap']
             self.daq = instruments['nidaq']
             self.montana = instruments['montana']
 
@@ -211,7 +211,7 @@ class Touchdown(Measurement):
         """ Set up z piezo parameters """
         # As of 5/3/2016, only z_piezo_step is used, and the daq sends points one at a time as fast as possible. But this seems fast enough. Might as well just hard-code a time constant.
         self.z_piezo_max_rate = 60 #V/s # changed from 30 to 60 V/s 9/8/2016 BTS
-        self.z_piezo_step = 4 # changed to 4V 9/8/2016 BTS.... 1V at RT, 2V at low T works? # For full 120 V to -120 V sweep, 1 V step is 480 points
+        self.z_piezo_step = 1 # changed to 1V 9/12/2016 # changed to 4V 9/8/2016 BTS.... 1V at RT, 2V at low T works? # For full 120 V to -120 V sweep, 1 V step is 480 points
         self.z_piezo_freq = self.z_piezo_max_rate/self.z_piezo_step
 
     def line_fit(self, x, y):
