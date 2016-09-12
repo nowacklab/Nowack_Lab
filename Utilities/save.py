@@ -157,3 +157,6 @@ class Measurement:
         obj_dict = json.loads(obj_string)
         with open(filename+'.json', 'w', encoding='utf-8') as f:
             json.dump(obj_dict, f, sort_keys=True, indent=4)
+
+        if compress:
+            self.decompress() # so we can still play with numpy arrays

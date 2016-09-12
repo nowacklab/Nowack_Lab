@@ -32,7 +32,7 @@ class ANC350():
             if montana.temperature['platform'] < 30:
                 V_lim = 60 # low temperature requires more voltage to step
         else:
-            print('No communication with Montana, stepping voltage limited to 45 V!')
+            print('Voltage limited to 45 V, no communication with Montana!')
 
         for (i,s) in enumerate(self._stages):
             setattr(self, s, Positioner(self.anc, i, V_lim=V_lim, pos_lim=self._pos_lims[i], label=s)) # makes positioners x, y, and z

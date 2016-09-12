@@ -134,8 +134,8 @@ class DaqSpectrum(Measurement):
         self.tojson(DATA_FOLDER, self.filename)
 
         if savefig:
-            self.fig_loglog.savefig(self.filename+'_loglog.pdf')
-            self.fig_semilog.savefig(self.filename+'_semilog.pdf')
+            self.fig_loglog.savefig(os.path.join(DATA_FOLDER, self.filename+'.pdf')+'_loglog.pdf')
+            self.fig_semilog.savefig(os.path.join(DATA_FOLDER, self.filename+'.pdf')+'_semilog.pdf')
 
 
     def setup_plots(self):

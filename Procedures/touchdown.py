@@ -96,7 +96,7 @@ class Touchdown(Measurement):
         Timestamp is determined at the beginning of this function.
         '''
         #record time when the measurement ends
-        append = 'plane'
+        append = 'td'
         if self.planescan:
             append += '_planescan'
         super().make_timestamp_and_filename(append)
@@ -107,6 +107,7 @@ class Touchdown(Measurement):
         ## Z attocube is moved up between iterations
         ## Loop breaks when true touchdown detected.
         while not self.touchdown:
+            self.piezos.z.V = -self.Vz_max # sweep the piezo all the way down
             self.check_balance() # Make sure capacitance bridge is well-balanced
 
             # Reset capacitance values
@@ -116,8 +117,6 @@ class Touchdown(Measurement):
 
             # Inner loop to sweep z-piezo
             for i in range(self.numsteps):
-                time_start = time.time()
-
                 self.piezos.z.V = self.V[i] # Set the current voltage
 
                 ## Get capacitance
@@ -144,13 +143,11 @@ class Touchdown(Measurement):
                         V_td = self.get_touchdown_voltage(i, plot=False)
                         if not self.planescan: # Don't want to move attocubes during planescan
                             ## Check if touchdown near center of z piezo +V range
-                            if V_td > 0.55*self.Vz_max or V_td < 0.45*self.Vz_max:
+                            if V_td > 0.65*self.Vz_max or V_td < 0.35*self.Vz_max:
                                 self.touchdown = False
                                 self.title = 'Found touchdown, centering near %i Vpiezo' %int(self.Vz_max/2)
                                 self.ax.set_title(self.title, fontsize=20)
                                 self.attoshift = (V_td-self.Vz_max/2)*.127 # e.g. V_td at 0 V means we're too close, will move z atto 12.7 um down)
-                        elif V_td < 0: # During a planescan, this is probably false touchdown
-                            self.touchdown=False
                         elif self.extra == self.numextra: # last extra step, bug fix
                             rsquared = self.line_corr_coef(self.V[i-self.numextra:i+1], self.C[i-self.numextra:i+1]) #check fit of last few points
                             if rsquared < 0.90:
@@ -277,7 +274,7 @@ class Touchdown(Measurement):
         self.tojson(DATA_FOLDER, self.filename)
 
         if savefig:
-            self.fig.savefig(filename+'.pdf', bbox_inches='tight')
+            self.fig.savefig(os.path.join(DATA_FOLDER, self.filename+'.pdf'), bbox_inches='tight')
 
 
     def setup_plot(self):

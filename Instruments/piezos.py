@@ -8,7 +8,7 @@ class Piezos():
     Signal sent to NIDAQ goes through Nanonis HVA4 High Voltage Amplifier.
     Sweeps between voltages smoothly.
     '''
-    _piezos = ['x','y','z'] # Do this order so z moves first when zeroing.
+    _piezos = ['x','y','z']
     _gain = [40, 40, 40]
     _Vmax = [400, 400, 400] # maximum allowed total voltage across piezo
     _bipolar = [2, 2, 2] # multiplier for whether piezos are biased +V/-V or not.
@@ -139,9 +139,8 @@ class Piezos():
 
 
     def zero(self):
-        for p in self._piezos[::-1]: #flip array so z moves first
-            getattr(self,p).zero()
-
+        self.V = 0
+        
 
 class Piezo():
     _V = None

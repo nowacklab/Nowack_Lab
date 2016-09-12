@@ -176,7 +176,7 @@ class Scanline(Measurement):
         self.tojson(DATA_FOLDER, self.filename)
 
         if savefig:
-            self.fig.savefig(self.filename+'.pdf', bbox_inches='tight')
+            self.fig.savefig(os.path.join(DATA_FOLDER, self.filename+'.pdf'), bbox_inches='tight')
 
 
 if __name__ == '__main__':

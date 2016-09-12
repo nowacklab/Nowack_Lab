@@ -203,7 +203,7 @@ class SquidIV(Measurement):
         self.tojson(DATA_FOLDER, self.filename)
 
         if savefig:
-            self.fig.savefig(self.filename+'.pdf')
+            self.fig.savefig(os.path.join(DATA_FOLDER, self.filename+'.pdf'))
 
     def setup_plot(self):
         self.fig, self.ax = plt.subplots()

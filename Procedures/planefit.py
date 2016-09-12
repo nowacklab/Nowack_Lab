@@ -8,6 +8,7 @@ from ..Utilities import dummy
 from ..Instruments import piezos, montana
 from IPython import display
 from ..Utilities.save import Measurement
+from ..Utilities.utilities import reject_outliers
 
 _home = os.path.expanduser("~")
 DATA_FOLDER = os.path.join(_home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Planes')
@@ -65,7 +66,10 @@ class Planefit(Measurement):
                           "numpts": self.numpts,
                           "piezos": self.piezos,
                           "montana": self.montana,
-                          "cap_input": self.cap_input
+                          "cap_input": self.cap_input,
+                          "X": self.X,
+                          "Y": self.Y,
+                          "Z": self.Z
                       })
         return self.save_dict
 
@@ -77,7 +81,7 @@ class Planefit(Measurement):
         '''
         X = self.X.flatten()
         Y = self.Y.flatten()
-        Z = self.Z.flatten()
+        Z = reject_outliers(self.Z.flatten())
         A = numpy.vstack([X, Y, numpy.ones(len(X))]).T
         self.a, self.b, self.c = lstsq(A, Z)[0]
 
@@ -176,7 +180,7 @@ class Planefit(Measurement):
 
         if savefig:
             self.plot()
-            plt.savefig(self.filename+'.pdf', bbox_inches='tight')
+            plt.savefig(os.path.join(DATA_FOLDER, self.filename+'.pdf'), bbox_inches='tight')
 
 
     def update_c(self):
