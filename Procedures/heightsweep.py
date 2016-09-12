@@ -60,7 +60,7 @@ class Heightsweep(Measurement):
         self.temp_start = self.montana.temperature['platform']
 
         Vstart = {'z': self.plane.plane(self.x, self.y)}
-        Vend = {'z': -self.piezos.Vmax['z']}
+        Vend = {'z': -self.piezos.z.Vmax}
 
         self.piezos.V = {'x':self.x, 'y':self.y, 'z': Vstart['z']}
         time.sleep(3) # wait at the surface

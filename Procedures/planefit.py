@@ -33,7 +33,7 @@ class Planefit(Measurement):
 
         if Vz_max == None:
             try:
-                self.Vz_max = self.piezos.Vmax['z']
+                self.Vz_max = self.piezos.z.Vmax
             except:
                 self.Vz_max = None # Will reach here if dummy piezos are used, unfortunately.
         else:
@@ -88,7 +88,8 @@ class Planefit(Measurement):
 
         super().make_timestamp_and_filename('plane')
 
-        self.piezos.check_lim({'x':self.X, 'y':self.Y}) # make sure we won't scan outside X, Y piezo ranges!
+        self.piezos.x.check_lim(self.X)
+        self.piezos.y.check_lim(self.Y) # make sure we won't scan outside X, Y piezo ranges!
 
         ## Initial touchdown
         print('Sweeping z piezo down...')
@@ -186,10 +187,10 @@ class Planefit(Measurement):
         old_c = self.c
         td = touchdown.Touchdown(self.instruments, self.cap_input, Vz_max = self.Vz_max)
         self.c = td.do()
-        for x in [-self.piezos.Vmax['x'], self.piezos.Vmax['x']]:
-            for y in [-self.piezos.Vmax['y'], self.piezos.Vmax['y']]:
+        for x in [-self.piezos.x.Vmax, self.piezos.x.Vmax]:
+            for y in [-self.piezos.y.Vmax, self.piezos.y.Vmax]:
                 z_maxormin = self.plane(x,y)
-                if z_maxormin > self.piezos.Vmax['z'] or z_maxormin < 0:
+                if z_maxormin > self.piezos.z.Vmax or z_maxormin < 0:
                     self.c = old_c
                     raise Exception('Plane now extends outside range of piezos! Move the attocubes and try again.')
         self.save(savefig=False)

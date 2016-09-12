@@ -127,11 +127,9 @@ class Scanplane(Measurement):
 
         ## make sure all points are not out of range of piezos before starting anything
         for i in range(self.X.shape[0]):
-            self.piezos.check_lim({'x':self.X[i,:],
-                                    'y':self.Y[i,:],
-                                    'z':self.Z[i,:]
-                                    }
-                                )
+            self.piezos.x.check_lim(self.X[i,:])
+            self.piezos.y.check_lim(self.Y[i,:])
+            self.piezos.z.check_lim(self.Z[i,:])
 
         ## Loop over Y values if fast_axis is x, X values if fast_axis is y
         if fast_axis == 'x':

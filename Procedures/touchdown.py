@@ -36,7 +36,7 @@ class Touchdown(Measurement):
             self.planescan = planescan
 
             if Vz_max == None:
-                self.Vz_max = self.piezos.Vmax['z']
+                self.Vz_max = self.piezos.z.Vmax
             else:
                 self.Vz_max = Vz_max
 
@@ -118,7 +118,7 @@ class Touchdown(Measurement):
             for i in range(self.numsteps):
                 time_start = time.time()
 
-                self.piezos.V = {'z': self.V[i]} # Set the current voltage
+                self.piezos.z.V = self.V[i] # Set the current voltage
 
                 ## Get capacitance
                 if self.C0 == None:
@@ -132,7 +132,7 @@ class Touchdown(Measurement):
 
                 if i >= self.numfit: # after a few points, check for touchdown
                     self.check_touchdown(i)
-                self.plot_cap(i) # plot the new point
+                self.plot_cap() # plot the new point
 
                 if self.touchdown:
                     if self.extra < self.numextra: # take three extra points for fit
@@ -160,12 +160,12 @@ class Touchdown(Measurement):
             if self.extra != self.numextra: # did not take enough extra steps, TD is at end of range
                 self.touchdown = False
 
-            self.piezos.V = {'z': 0} # bring the piezo back to zero
+            self.piezos.z.V = 0 # bring the piezo back to zero
 
             ## Move the attocubes; either we're too far away for a touchdown or TD voltage not centered
             if not self.planescan: # don't want to move attocubes if in a planescan!
                 if not self.touchdown:
-                    self.piezos.V = {'z': -self.Vz_max} # before moving attocubes, make sure we're far away from the sample!
+                    self.piezos.z.V = -self.Vz_max # before moving attocubes, make sure we're far away from the sample!
                     self.atto.z.move(self.attoshift)
                     time.sleep(2) # was getting weird capacitance values immediately after moving; wait a bit
 
