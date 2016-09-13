@@ -8,11 +8,13 @@ from datetime import datetime
 from . import squidIV
 from ..Utilities.plotting import plot_mpl
 from ..Utilities.save import Measurement
+from ..Utilities.plotting import plot_bokeh as pb
 
 _home = os.path.expanduser("~")
 DATA_FOLDER = os.path.join(_home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'squid_testing', 'mod2D')
 
 class Mod2D(Measurement):
+    image = None
     def __init__(self, instruments=None, squidout=None, squidin=None, modout=None, rate=900):
         '''
         Example: Mod2D({'daq': daq, 'preamp': preamp}, 'ao0','ai0','ao1', rate=900).
@@ -70,8 +72,7 @@ class Mod2D(Measurement):
         for i in range(len(self.Imod)):
             self.IV.Imod = self.Imod[i]
             self.IV.do_IV()
-            self.axIV.clear()
-            self.IV.plot(self.axIV)
+            self.IV.plot(show=False)
             self.V[:][i] = self.IV.V
             self.plot()
             self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
@@ -116,11 +117,10 @@ class Mod2D(Measurement):
         '''
         Plot the 2D mod image
         '''
-        try:
-            self.im # see if this exists
-        except:
+        if not hasattr(self, 'fig'):
             self.setup_plot()
-        plot_mpl.update2D(self.im, self.V)
+
+        self.image = pb.image(self.fig, self.IV.I*1e6, self.Imod*1e6, self.V, z_title = 'V_squid (V)', im_handle = self.image)
 
 
     def save(self, savefig=True):
@@ -139,16 +139,14 @@ class Mod2D(Measurement):
         '''
         Set up the figure. 2D mod image and last IV trace.
         '''
-        self.fig, (self.axIV, self.ax2D) = plt.subplots(2,1,figsize=(7,7),gridspec_kw = {'height_ratios':[1, 3]})
-        self.fig.suptitle(self.filename+'\n'+self.notes)
+        self.IV.plot(show=False)
 
-        ## Set up 2D plot
-        self.im = plot_mpl.plot2D(self.ax2D,
-                                self.IV.I*1e6,
-                                self.Imod*1e6,
-                                self.V,
-                                xlabel=r'$I_{\rm{bias}} = V_{\rm{bias}}/R_{\rm{bias}}$ ($\mu \rm A$)',
-                                ylabel = r'$I_{\rm{mod}} = V_{\rm{mod}}/R_{\rm{mod}}$ ($\mu \rm A$)',
-                                clabel = r'$V_{\rm{squid}}$ $(\rm V)$',
-                                fontsize=20
-                            )
+        self.fig = pb.figure(
+            title=self.filename + ' ' + self.notes,
+            xlabel = 'I_bias = V_bias/R_bias (µA)',
+            ylabel = 'I_mod = V_mod/R_mod (µA)',
+        )
+        self.plot()
+
+        self.grid = pb.plot_grid([[self.fig, self.IV.fig]])
+        pb.show(self.grid)

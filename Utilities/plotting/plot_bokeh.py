@@ -38,7 +38,6 @@ def auto_bounds(fig,x,y, square=False, hard_bounds=False, padding=True):
     ymin  =np.nanmin(y)
     xmax = np.nanmax(x)
     ymax = np.nanmax(y)
-    print(xmin, xmax, ymin, ymax)
 
     x_range = xmax-xmin
     y_range = ymax-ymin
@@ -148,7 +147,7 @@ def colorbar(fig, cmap, title=None):
     from bokeh.models import LinearColorMapper
     from bokeh.models.annotations import ColorBar
 
-    data = get_image_data(fig.fig)
+    data = get_image_data(fig)
 
     color_mapper = LinearColorMapper(low=data.min(), high=data.max(), palette=choose_cmap(cmap))
 
@@ -162,7 +161,7 @@ def colorbar(fig, cmap, title=None):
     cb.major_label_text_font_size = '12pt'
     cb.major_label_text_align = 'left'
 
-    fig.fig.add_layout(cb, 'left') # 'right' make plot squished with widgets
+    fig.add_layout(cb, 'left') # 'right' make plot squished with widgets
 
     return cb
 
@@ -390,7 +389,7 @@ def get_colorbar_renderer(fig):
     '''
     from bokeh.models.annotations import ColorBar
 
-    for r in fig.fig.renderers:
+    for r in fig.renderers:
         if type(r) == ColorBar:
             cb = r
             return cb
@@ -404,7 +403,7 @@ def get_glyph_renderer(fig):
     '''
     from bokeh.models import GlyphRenderer
 
-    for r in fig.fig.renderers:
+    for r in fig.renderers:
         if type(r) == GlyphRenderer:
             im = r
             return im
@@ -413,7 +412,7 @@ def get_image_data(fig):
     '''
     Returns the data array for a plotted image.
     '''
-    im = get_glyph_renderer(fig.fig)
+    im = get_glyph_renderer(fig)
     return im.data_source.data['image'][0]
 
 
@@ -448,7 +447,10 @@ def image(fig, x, y, z, show_colorbar = True, z_title=None, im_handle=None, cmap
         ymax = y.max()
 
         ## Fix axis limits ## Temporary aspect ratio fix: make a squarish plot and make x/y equal lengths
-        auto_bounds(fig, x, y, square=True, hard_bounds=True, padding=False)
+        try:
+            auto_bounds(fig, x, y, square=True, hard_bounds=True, padding=False)
+        except:
+            print('auto_bounds didn\'t work')
 
         ## Plot it
         im_handle = fig.fig.image(image=[z], x=xmin, y =ymin, dw=(xmax-xmin), dh=(ymax-ymin), palette = choose_cmap(cmap), name=name)
@@ -483,7 +485,7 @@ def image(fig, x, y, z, show_colorbar = True, z_title=None, im_handle=None, cmap
         slider_handle.children[-1].callback.args['model'].tags.append('hey')
 
     ## Fix colors
-    clim(fig.fig) # autoscale colors (filtering outliers)
+    clim(fig) # autoscale colors (filtering outliers)
 
     return im_handle
 
@@ -491,7 +493,7 @@ def image(fig, x, y, z, show_colorbar = True, z_title=None, im_handle=None, cmap
 def legend(fig, labels=None):
     '''
     Adds a legend to a Bokeh plot.
-    fig: Figure the legend will be plotted next to
+    fig: figure the legend will be plotted next to
     labels: list of labels for all lines (in order of plotting them). By default, uses the "name" of each line plotted.
     loc: location of legend relative to plot
     '''
@@ -500,7 +502,7 @@ def legend(fig, labels=None):
     from bokeh.models.glyphs import Line
 
     lines = []
-    for r in fig.fig.renderers: # This finds all the lines or scatter plots
+    for r in fig.renderers: # This finds all the lines or scatter plots
         if type(r) == GlyphRenderer:
             if r.glyph.__module__ == 'bokeh.models.markers' or r.glyph == 'bokeh.models.glyphs.Line':
                 lines.append(r)
@@ -516,7 +518,7 @@ def legend(fig, labels=None):
                 label_text_font_size = '12pt'
             )
 
-    fig.fig.add_layout(leg, 'right')
+    fig.add_layout(leg, 'right')
 
     return leg
 
@@ -581,8 +583,10 @@ def line(fig, x, y, line_handle=None, color='black', linestyle='-', name=None):
 
     update(fig)
 
-    auto_bounds(fig, x, y)
-
+    try:
+        auto_bounds(fig, x, y)
+    except:
+        print('auto_bounds didn\'t work!')
 
     # update() # refresh plots in the notebook, doesn't work when adding new lines unfortunately
     return line_handle

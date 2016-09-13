@@ -12,6 +12,7 @@ from datetime import datetime
 from ..Utilities import dummy
 from ..Instruments import nidaq, preamp, montana
 from ..Utilities.save import Measurement
+from ..Utilities.plotting import plot_bokeh as pb
 
 _home = os.path.expanduser("~")
 DATA_FOLDER = os.path.join(_home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'squid_testing', 'IV')
@@ -19,6 +20,7 @@ DATA_FOLDER = os.path.join(_home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana',
 class SquidIV(Measurement):
     V = np.array([])
     I = np.array([])
+    line = None
 
     def __init__(self, instruments=None, squidout=None, squidin=None, currentin=None, modout=None, rate=90):
         '''
@@ -120,9 +122,7 @@ class SquidIV(Measurement):
         self.do_IV()
         self.daq.zero() # zero everything
 
-        self.setup_plot()
         self.plot()
-        self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
 
         self.notes = input('Notes for this IV (r to redo, q to quit): ')
         if self.notes == 'r':
@@ -178,21 +178,12 @@ class SquidIV(Measurement):
                 display.clear_output()
                 print('Invalid command\n')
 
-    def plot(self, ax=None):
-        if ax == None:
-            if not hasattr(self, 'ax'):
-                self.setup_plot()
-            ax = self.ax
+    def plot(self, show=True):
+        if not hasattr(self, 'fig'):
+            self.setup_plot(show)
 
-        ax.plot(self.I*1e6, self.V, 'k-')
-        ax.set_title(self.filename+'\n'+self.notes) # NEED DESCRIPTIVE TITLE
-        if self.two_preamps:
-            ax.set_xlabel(r'$I_{\rm{bias}} = V_{\rm{meas}}/R_{\rm{meas}}$ ($\mu \rm A$)', fontsize=20)
-        else:
-            ax.set_xlabel(r'$I_{\rm{bias}} = V_{\rm{bias}}/R_{\rm{bias}}$ ($\mu \rm A$)', fontsize=20)
-        ax.set_ylabel(r'$V_{\rm{squid}}$ (V)', fontsize=20)
-        ax.ticklabel_format(style='sci', axis='y', scilimits=(-3,3))
-        return ax
+        self.line = pb.line(self.fig, self.I*1e6, self.V, line_handle=self.line)
+
 
     def save(self, savefig=True):
         '''
@@ -203,7 +194,20 @@ class SquidIV(Measurement):
         self.tojson(DATA_FOLDER, self.filename)
 
         if savefig:
-            self.fig.savefig(self.filename+'.pdf')
+            pb.save(self.fig, os.path.join(DATA_FOLDER, self.filename))
 
-    def setup_plot(self):
-        self.fig, self.ax = plt.subplots()
+
+    def setup_plot(self, show=True):
+        if self.two_preamps:
+            xlabel = 'I_bias = V_meas/R_meas (µA)'
+        else:
+            xlabel = 'I_bias = V_bias/R_bias (µA)'
+        self.fig = pb.figure(
+            title= self.filename + ' '+self.notes,
+            xlabel = xlabel,
+            ylabel = 'V_squid (V)',
+            show_legend=False
+        )
+        self.plot(show)
+        if show:
+            pb.show(self.fig)

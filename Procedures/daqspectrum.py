@@ -85,9 +85,7 @@ class DaqSpectrum(Measurement):
 
 
     def plot(self):
-        try:
-            self.fig_loglog # see if this exists
-        except:
+        if not hasattr(self, 'fig_loglog'): #see if this exists
             self.setup_plots()
         self.plot_loglog()
         self.plot_semilog()
