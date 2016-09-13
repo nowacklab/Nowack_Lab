@@ -1,6 +1,10 @@
 from ctypes import cdll
 import atexit
-import sys, clr, os
+import sys, os
+try:
+    import clr
+except:
+    print('package clr not installed, you won\'t be able to communicate with Montana!')
 from tabulate import tabulate
 import time
 
@@ -39,7 +43,7 @@ class Montana():
         state['_temperature_stability'] = state.pop('stability')
 
         self.__dict__.update(state)
-        
+
 
     @property
     def pressure(self):

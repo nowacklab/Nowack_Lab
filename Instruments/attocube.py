@@ -3,7 +3,10 @@ import atexit
 import time
 import telnetlib
 import re
-from PyANC350 import PyANC350v4
+try:
+    from PyANC350 import PyANC350v4
+except:
+    print('PyANC350 not imported, make sure this is in your GitHub folder!')
 
 ''' *** Use the Attocube class, definition is at the bottom *** '''
 
