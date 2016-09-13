@@ -127,4 +127,4 @@ class Heightsweep(Measurement):
         self.tojson(DATA_FOLDER, self.filename)
 
         if savefig:
-            self.fig.savefig(self.filename+'.pdf', bbox_inches='tight')
+            pb.save(self.fig, os.path.join(DATA_FOLDER, self.filename))

@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from ..Utilities import plotting
 from ..Instruments import piezos, nidaq, montana, squidarray
 from ..Utilities.save import Measurement
+from ..Utilities.plotting import plot_bokeh as pb
 
 _home = os.path.expanduser("~")
 DATA_FOLDER = os.path.join(_home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Scans')
@@ -57,11 +58,11 @@ class Scanline(Measurement):
         self.scanheight = scanheight
         self.freq = freq
 
-        self.Vout = np.nan
-        self.V = np.nan
-        self.Vac_x = np.nan
-        self.Vac_y = np.nan
-        self.C = np.nan
+        self.Vout = np.array([])
+        self.V = np.array([])
+        self.Vac_x = np.array([])
+        self.Vac_y = np.array([])
+        self.C = np.array([])
 
         self.filename = ''
 
@@ -133,39 +134,33 @@ class Scanline(Measurement):
         '''
         Set up all plots.
         '''
-        self.fig = plt.figure(figsize=(8,5))
+        self.fig_dc = pb.figure(
+            title = self.filename,
+            ylabel = 'DC %s (V)' %self.inp_dc
+        )
+        self.line_dc = pb.line(self.fig_dc, self.Vout, self.V)
 
-        ## DC magnetometry
-        self.ax_squid = self.fig.add_subplot(221)
-        self.ax_squid.plot(self.Vout, self.V, '-b')
-        self.ax_squid.set_xlabel('$\sqrt{\Delta V_x^2+\Delta V_y^2}$')
-        self.ax_squid.set_ylabel('Voltage from %s' %self.inp_dc)
-        self.ax_squid.set_title('%s\nDC SQUID signal' %self.filename)
+        self.fig_cap = pb.figure(
+            xlabel = 'Distance (V)',
+            ylabel = 'Cap %s (V)' %self.inp_cap,
+            x_range = self.fig_dc.fig.x_range
+        )
+        self.line_cap = pb.line(self.fig_cap, self.Vout, self.C)
 
-        ## AC in-phase
-        self.ax_squid = self.fig.add_subplot(223)
-        self.ax_squid.plot(self.Vout, self.Vac_x, '-b')
-        self.ax_squid.set_xlabel('$\sqrt{\Delta V_x^2+\Delta V_y^2}$')
-        self.ax_squid.set_ylabel('Voltage from %s' %self.inp_acx)
-        self.ax_squid.set_title('%s\nAC x SQUID signal' %self.filename)
+        self.fig_acx = pb.figure(
+            ylabel = 'AC X %s (V)' %self.inp_acx,
+            x_range = self.fig_dc.fig.x_range
+        )
+        self.line_cap = pb.line(self.fig_acx, self.Vout, self.Vac_x)
 
-        ## AC out-of-phase
-        self.ax_squid = self.fig.add_subplot(224)
-        self.ax_squid.plot(self.Vout, self.Vac_y, '-b')
-        self.ax_squid.set_xlabel('$\sqrt{\Delta V_x^2+\Delta V_y^2}$')
-        self.ax_squid.set_ylabel('Voltage from %s' %self.inp_acy)
-        self.ax_squid.set_title('%s\nAC y SQUID signal' %self.filename)
+        self.fig_acy = pb.figure(
+            ylabel = 'AC Y %s (V)' %self.inp_acy,
+            x_range = self.fig_dc.fig.x_range
+        )
+        self.line_cap = pb.line(self.fig_acy, self.Vout, self.Vac_y)
 
-        ## Capacitance
-        self.ax_squid = self.fig.add_subplot(222)
-        self.ax_squid.plot(self.Vout, self.C, '-b')
-        self.ax_squid.set_xlabel('$\sqrt{\Delta V_x^2+\Delta V_y^2}$')
-        self.ax_squid.set_ylabel('Voltage from %s' %self.inp_cap)
-        self.ax_squid.set_title('%s\nCapacitance signal' %self.filename)
-
-        ## Draw everything in the notebook
-        self.fig.canvas.draw()
-
+        self.grid = pb.plot_grid([[self.fig_dc.fig, self.fig_acx.fig],[self.fig_cap.fig, self.fig_acy.fig]])
+        pb.show(self.grid)
 
     def save(self, savefig=True):
         '''
@@ -176,7 +171,7 @@ class Scanline(Measurement):
         self.tojson(DATA_FOLDER, self.filename)
 
         if savefig:
-            self.fig.savefig(self.filename+'.pdf', bbox_inches='tight')
+            pb.save(self.grid, os.path.join(DATA_FOLDER, self.filename))
 
 
 if __name__ == '__main__':
