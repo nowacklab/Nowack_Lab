@@ -114,6 +114,7 @@ class Positioner():
         '''
         Measure capacitance of positioner
         '''
+        time.sleep(0.1) # capacitance was locking up, maybe this helps?
         print('Measuring capacitance of positioner %s...' %self.label)
         self._C = self.anc.measureCapacitance(self.num)
         print('...done.')

@@ -9,10 +9,10 @@ from IPython import display
 from numpy import ma
 from ..Utilities.plotting import plot_mpl
 from ..Instruments import piezos, nidaq, montana, squidarray
-from ..Utilities.save import Measurement
+from ..Utilities.save import Measurement, get_todays_data_path
 
 _home = os.path.expanduser("~")
-DATA_FOLDER = os.path.join(_home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Scans')
+DATA_FOLDER = get_todays_data_path()
 
 class Scanplane(Measurement):
     def __init__(self, instruments=None, span=[100,100],

@@ -95,7 +95,7 @@ class Piezos():
         Vend = Vend.copy()
 
         ## Sweep to Vstart first if we aren't already there. self.V calls this function, but recursion should only go one level deep.
-        if Vstart != self.V:
+        if Vstart != self._V:
             self.V = Vstart
         ## Make sure to only have the piezos requested to sweep over
         all_keys = list(set(Vstart) & set(Vend)) # keys in common
@@ -128,6 +128,10 @@ class Piezos():
         for k in self._piezos:
             try:
                 V[k] = V.pop(getattr(self,k).chan_out)
+            except:
+                pass
+            try:
+                Vend[k] = Vend.pop(getattr(self,k).chan_out) # need to convert Vend back for later
             except: # in case one or more keys is not used
                 pass
             try:
@@ -140,7 +144,7 @@ class Piezos():
 
         ## Keep track of current voltage
         for k in V:
-            self._V[k] = V[k][-1] # end of sweep, for keeping track of voltage
+            self._V[k] = Vend[k] # end of sweep, for keeping track of voltage
 
         return V, response, time
 
@@ -236,7 +240,7 @@ class Piezo():
         '''
         ## Sweep to Vstart first if we aren't already there.
         ## Self.V calls this function, but recursion should only go one level deep.
-        if Vstart != self.V:
+        if Vstart != self._V: #Need self._V or else it will do a measurement and loop forever!
             self.V = Vstart
 
         ## Check voltage limits
@@ -256,7 +260,7 @@ class Piezo():
         ## reapply gain
         V = self.apply_gain(V)
 
-        self.V # check the current voltage
+        self._V = Vend # check the current voltage
 
         return V, response, time
 

@@ -7,10 +7,10 @@ from datetime import datetime
 import os
 import re
 from ..Instruments import nidaq, preamp
-from ..Utilities.save import Measurement
+from ..Utilities.save import Measurement, get_todays_data_path
 
 _home = os.path.expanduser("~")
-DATA_FOLDER = os.path.join(_home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'spectra')
+DATA_FOLDER = get_todays_data_path()
 
 class DaqSpectrum(Measurement):
     def __init__(self, instruments=None, input_chan=None, measure_time=0.5, measure_freq=256000, averages=30):

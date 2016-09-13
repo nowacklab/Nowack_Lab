@@ -4,10 +4,10 @@ import matplotlib.pyplot as plt
 from ..Instruments import piezos, nidaq, montana
 import time, os
 from datetime import datetime
-from ..Utilities.save import Measurement
+from ..Utilities.save import Measurement, get_todays_data_path
 
 _home = os.path.expanduser("~")
-DATA_FOLDER = os.path.join(_home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'heightsweeps')
+DATA_FOLDER = get_todays_data_path()
 
 class Heightsweep(Measurement):
     def __init__(self, instruments = None, x=0, y=0, plane=None, inp_acx = 0, inp_acy=1, inp_dc = 2):

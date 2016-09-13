@@ -7,11 +7,11 @@ import matplotlib.pyplot as plt
 from ..Utilities import dummy
 from ..Instruments import piezos, montana
 from IPython import display
-from ..Utilities.save import Measurement
 from ..Utilities.utilities import reject_outliers
+from ..Utilities.save import Measurement, get_todays_data_path
 
 _home = os.path.expanduser("~")
-DATA_FOLDER = os.path.join(_home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Planes')
+DATA_FOLDER = get_todays_data_path()
 
 class Planefit(Measurement):
     '''

@@ -5,10 +5,10 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 from ..Utilities import plotting
 from ..Instruments import piezos, nidaq, montana, squidarray
-from ..Utilities.save import Measurement
+from ..Utilities.save import Measurement, get_todays_data_path
 
 _home = os.path.expanduser("~")
-DATA_FOLDER = os.path.join(_home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Scans')
+DATA_FOLDER = get_todays_data_path()
 
 class Scanline(Measurement):
     def __init__(self, instruments=None, start=(-100,-100), end=(100,100), plane=None, scanheight=0, inp_dc=0, inp_cap=1, inp_acx=None, inp_acy=None, freq=1500, return_to_zero=True):

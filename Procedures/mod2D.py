@@ -7,10 +7,10 @@ import time, os
 from datetime import datetime
 from . import squidIV
 from ..Utilities.plotting import plot_mpl
-from ..Utilities.save import Measurement
+from ..Utilities.save import Measurement, get_todays_data_path
 
 _home = os.path.expanduser("~")
-DATA_FOLDER = os.path.join(_home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'squid_testing', 'mod2D')
+DATA_FOLDER = get_todays_data_path()
 
 class Mod2D(Measurement):
     def __init__(self, instruments=None, squidout=None, squidin=None, modout=None, rate=900):

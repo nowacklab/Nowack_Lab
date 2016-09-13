@@ -163,18 +163,32 @@ class Measurement:
             self.decompress() # so we can still play with numpy arrays
 
 
-def get_scan_data_path():
+def get_cooldown_data_path():
     with open(os.path.join(os.path.dirname(__file__),'paths.json'),'r') as f:
         data = json.load(f)
     return data['cooldown']
 
-def set_scan_data_path(description=''):
+
+def get_todays_data_path():
+    cooldown_path = get_cooldown_data_path()
+    now = datetime.now()
+    todays_data_path = os.path.join(cooldown_path, now.strftime('%Y-%m-%d'))
+
+    # Make the directory
+    if not os.path.exists(todays_data_path):
+        os.makedirs(todays_data_path)
+    return todays_data_path
+
+
+def set_cooldown_data_path(description=''):
     '''
-    Writes to paths.json, a file that stores the name of
-    the data directory we're currently working in.
+    Run this when you start a new cooldown.
+    Makes a new directory in the Montana data folder
+    with the current date and a description of the cooldown.
+    Writes to paths.json to store the name of the data directory.
     '''
     _home = os.path.expanduser("~")
-    montana = os.path.join(_home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana')
+    montana = os.path.join(_home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'cooldowns')
 
     now = datetime.now()
     now_fmt = now.strftime('%Y-%m-%d')
@@ -183,3 +197,7 @@ def set_scan_data_path(description=''):
     paths = {'cooldown': filename}
     with open(os.path.join(os.path.dirname(__file__),'paths.json'), 'w') as f:
         json.dump(paths, f)
+
+    # Make the directory
+    if not os.path.exists(filename):
+        os.makedirs(filename)

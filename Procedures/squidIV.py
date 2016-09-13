@@ -11,10 +11,10 @@ import time, os
 from datetime import datetime
 from ..Utilities import dummy
 from ..Instruments import nidaq, preamp, montana
-from ..Utilities.save import Measurement
+from ..Utilities.save import Measurement, get_todays_data_path
 
 _home = os.path.expanduser("~")
-DATA_FOLDER = os.path.join(_home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'squid_testing', 'IV')
+DATA_FOLDER = get_todays_data_path()
 
 class SquidIV(Measurement):
     V = np.array([])
