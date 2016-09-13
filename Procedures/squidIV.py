@@ -208,6 +208,13 @@ class SquidIV(Measurement):
             ylabel = 'V_squid (V)',
             show_legend=False
         )
+        self.fig.fig.plot_width = 1000
+        self.fig.fig.plot_height = 1000
+        self.fig.fig.min_border_left=20
+
+        self.fig.fig.min_border_right=20
+
         self.plot(show)
+
         if show:
             pb.show(self.fig)

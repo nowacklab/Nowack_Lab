@@ -149,7 +149,12 @@ def colorbar(fig, cmap, title=None):
 
     data = get_image_data(fig)
 
-    color_mapper = LinearColorMapper(low=data.min(), high=data.max(), palette=choose_cmap(cmap))
+    color_mapper = LinearColorMapper(
+                        low=data.min(),
+                        high=data.max(),
+                        palette=choose_cmap(cmap),
+                        nan_color = 'white'
+                    )
 
     cb = ColorBar(color_mapper=color_mapper,
                     location=(0,0),
@@ -160,6 +165,7 @@ def colorbar(fig, cmap, title=None):
 
     cb.major_label_text_font_size = '12pt'
     cb.major_label_text_align = 'left'
+    cb.title_standoff=7
 
     fig.add_layout(cb, 'left') # 'right' make plot squished with widgets
 
@@ -454,6 +460,7 @@ def image(fig, x, y, z, show_colorbar = True, z_title=None, im_handle=None, cmap
 
         ## Plot it
         im_handle = fig.fig.image(image=[z], x=xmin, y =ymin, dw=(xmax-xmin), dh=(ymax-ymin), palette = choose_cmap(cmap), name=name)
+        im_handle.glyph.color_mapper.nan_color = 'white'
 
     ## Make plot aspect ratio correct and adjust toolbar location
 

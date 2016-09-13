@@ -122,7 +122,6 @@ class Mod2D(Measurement):
 
         self.image = pb.image(self.fig, self.IV.I*1e6, self.Imod*1e6, self.V, z_title = 'V_squid (V)', im_handle = self.image)
 
-
     def save(self, savefig=True):
         '''
         Saves the planefit object to json in .../TeamData/Montana/Planes/
@@ -145,8 +144,15 @@ class Mod2D(Measurement):
             title=self.filename + ' ' + self.notes,
             xlabel = 'I_bias = V_bias/R_bias (µA)',
             ylabel = 'I_mod = V_mod/R_mod (µA)',
+            x_range = self.IV.fig.fig.x_range
         )
+        self.fig.fig.plot_width = 1000
+        self.fig.fig.plot_height = 1000
+        self.fig.fig.min_border_right=50
         self.plot()
 
-        self.grid = pb.plot_grid([[self.fig, self.IV.fig]])
+
+        self.grid = pb.plot_grid([[self.fig.fig, self.IV.fig.fig]])
+        self.fig.fig.min_border_left = 100
+
         pb.show(self.grid)
