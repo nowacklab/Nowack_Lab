@@ -80,10 +80,10 @@ class Scanplane(Measurement):
         self.Vac_y = np.full(self.X.shape, np.nan)
         self.C = np.full(self.X.shape, np.nan)
 
-        self.V_piezo_full = []
-        self.V_squid_full = []
-        self.V_piezo_interp = []
-        self.V_squid_interp = []
+        self.V_piezo_full = np.array([])
+        self.V_squid_full = np.array([])
+        self.V_piezo_interp = np.array([])
+        self.V_squid_interp = np.array([])
         self.linecuts = {}
 
         self.filename = ''
@@ -173,9 +173,9 @@ class Scanplane(Measurement):
             ## Save linecuts
             self.linecuts[str(i)] = {"Vstart": Vstart,
                                 "Vend": Vend,
-                                "Vsquid": {"Vdc": np.array(V[self.inp_dc]).tolist(),  #why convert to array and then back to list??
-                                           "Vac_x": np.array(V[self.inp_acx]).tolist(),
-                                           "Vac_y": np.array(V[self.inp_acy]).tolist()}}
+                                "Vsquid": {"Vdc": V[self.inp_dc],
+                                           "Vac_x": V[self.inp_acx],
+                                           "Vac_y": V[self.inp_acy]}}
 
             ## Interpolate to the number of lines
             self.V_piezo_full = out[fast_axis] # actual voltages swept in x or y direction

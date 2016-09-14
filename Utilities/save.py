@@ -154,10 +154,16 @@ class Measurement:
 
         filename = os.path.join(path, filename)
 
-        obj_string = jsp.encode(self)
-        obj_dict = json.loads(obj_string)
-        with open(filename+'.json', 'w', encoding='utf-8') as f:
-            json.dump(obj_dict, f, sort_keys=True, indent=4)
+        inp='y'
+        if os.path.exists(filename+'.json'):
+            inp = input('File %s already exists! Overwrite? (y/n)' %filename)
+        if inp not in ('y','Y'):
+            print('File not saved!')
+        else:
+            obj_string = jsp.encode(self)
+            obj_dict = json.loads(obj_string)
+            with open(filename+'.json', 'w', encoding='utf-8') as f:
+                json.dump(obj_dict, f, sort_keys=True, indent=4)
 
         if compress:
             self.decompress() # so we can still play with numpy arrays

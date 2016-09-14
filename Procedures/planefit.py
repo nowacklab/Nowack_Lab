@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from ..Utilities import dummy
 from ..Instruments import piezos, montana
 from IPython import display
-from ..Utilities.utilities import reject_outliers
+from ..Utilities.utilities import reject_outliers_quick
 from ..Utilities.save import Measurement, get_todays_data_path
 
 _home = os.path.expanduser("~")
@@ -67,12 +67,18 @@ class Planefit(Measurement):
                           "piezos": self.piezos,
                           "montana": self.montana,
                           "cap_input": self.cap_input,
+                          "Vz_max": self.Vz_max,
                           "X": self.X,
                           "Y": self.Y,
                           "Z": self.Z
                       })
         return self.save_dict
 
+
+    def __setstate__(self, state):
+        state.pop('piezos')
+        state.pop('montana')
+        self.__dict__.update(state)
 
     def calculate_plane(self):
         '''
@@ -81,7 +87,8 @@ class Planefit(Measurement):
         '''
         X = self.X.flatten()
         Y = self.Y.flatten()
-        Z = reject_outliers(self.Z.flatten())
+        Z = reject_outliers_quick(self.Z)
+        Z = Z.flatten()
         A = numpy.vstack([X, Y, numpy.ones(len(X))]).T
         self.a, self.b, self.c = lstsq(A, Z)[0]
 
@@ -102,8 +109,8 @@ class Planefit(Measurement):
         td = touchdown.Touchdown(self.instruments, self.cap_input, Vz_max = self.Vz_max)
         td.do() # Will do initial touchdown at center of plane to (1) find the plane (2) make touchdown voltage near center of piezo's positive voltage range
 
-        check_td = input('Does the initial touchdown look good? Enter \'quit\' to abort.')
-        if check_td == 'quit':
+        check_td = input('Does the initial touchdown look good? Enter \'q\' to abort.')
+        if check_td == 'q':
             raise Exception('Terminated by user')
 
         ## Loop over points sampled from plane.
@@ -115,7 +122,7 @@ class Planefit(Measurement):
 
                 ## Go to location of next touchdown
                 print('Moving to next location...')
-                self.piezos.V = {'x':self.X[i,j], 'y':self.Y[i,j], 'z': -self.Vz_max}
+                self.piezos.V = {'x':self.X[i,j], 'y':self.Y[i,j], 'z': 0}
                 print('...done.')
 
                 td = touchdown.Touchdown(self.instruments, self.cap_input, Vz_max = self.Vz_max, planescan=True) # new touchdown at this point
@@ -129,19 +136,26 @@ class Planefit(Measurement):
 
 
     @staticmethod
-    def load(json_file=None):
+    def load(instruments=None, json_file=None):
         '''
         Load method. If no json_file specified, will load the last plane taken.
         Useful if you lose the object while scanning.
         '''
         if json_file is None:
             # finds the newest plane saved as json
-            json_file =  max(glob.iglob(os.path.join(DATA_FOLDER,'*.json')),
+            json_file =  max(glob.iglob(os.path.join(DATA_FOLDER,'*_plane.json')),
                                         key=os.path.getctime)
         plane = Measurement.load(json_file)
 
         if plane.cap_input is None:
             print('cap_input not loaded! Set this manually!!!')
+
+        if instruments is None:
+            print('Did\'nt load instruments')
+        else:
+            plane.instruments = instruments
+            plane.piezos = instruments['piezos']
+            plane.montana = instruments['montana']
 
         return plane
 
@@ -188,6 +202,8 @@ class Planefit(Measurement):
         Does a single touchdown to find the plane again (at Vx=Vy=0).
         Do this after moving the attocubes.
         '''
+        super().make_timestamp_and_filename('plane')
+
         old_c = self.c
         td = touchdown.Touchdown(self.instruments, self.cap_input, Vz_max = self.Vz_max)
         self.c = td.do()

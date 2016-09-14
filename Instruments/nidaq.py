@@ -5,7 +5,7 @@ sys.path.append(os.path.join(home,'Documents','GitHub','Instrumental'))
 
 from instrumental.drivers.daq import ni
 from instrumental import u
-import numpy
+import numpy as np
 try:
     import PyDAQmx as mx
 except:
@@ -70,8 +70,8 @@ class NIDAQ():
         """ Does an x**2-like ramp. Code looks weird but test it if you want! ^_^ """
         if start == end:
             return [start]*numpts*2 # just return array of the same value
-        part1arg = numpy.linspace(start, (end-start)/2+start, numpts)
-        part2arg = numpy.linspace((end-start)/2+start, end, numpts)
+        part1arg = np.linspace(start, (end-start)/2+start, numpts)
+        part2arg = np.linspace((end-start)/2+start, end, numpts)
         part1 = start+ (part1arg-start)**2/((end-start)/2)**2*(end-start)/2
         part2 = end-(part2arg-end)**2/((end-start)/2)**2*(end-start)/2
         return list(part1)+list(part2[1:])
@@ -89,11 +89,11 @@ class NIDAQ():
 
     def set_chan(self, chan, data):
         setattr(self, '_%s' %chan, data)
-        if numpy.isscalar(data):
+        if np.isscalar(data):
             getattr(self._daq,chan).write('%sV' %data)
 
     def monitor(self, chan_in, duration, freq=100): # similar to send_receive definition; haven't yet built in multiple channels
-        if numpy.isscalar(chan_in):
+        if np.isscalar(chan_in):
             chan_in = [chan_in]
 
         for ch in chan_in:
@@ -112,7 +112,7 @@ class NIDAQ():
         # gotta make these all lists, following code assumes they are list or dict
         data = copy(orig_data) # so we don't modify original data
 
-        if numpy.isscalar(chan_out):
+        if np.isscalar(chan_out):
             data = {chan_out: data}
             chan_out = [chan_out]
 
@@ -146,26 +146,27 @@ class NIDAQ():
         for ch in self.inputs_to_monitor:
             d = received[ch].magnitude #.magnitude from pint units package;
             if ch == min_chan:#self.inputs_to_monitor[0]:
-                data_in[ch] = list(d[1:len(d)]) # get rid of the first data point because of the weird thing we died earlier
+                data_in[ch] = np.array(d[1:len(d)]) # get rid of the first data point because of the weird thing we died earlier
             else:
-                data_in[ch] = list(d[0:len(d)-1]) # last data point should be a dupe
+                data_in[ch] = np.array(d[0:len(d)-1]) # last data point should be a dupe
         time = received['t'].magnitude
 
-        return data_in, list(time[0:len(time)-1]) #list limits undo extra point added for daq weirdness
+        return data_in, np.array(time[0:len(time)-1]) #list limits undo extra point added for daq weirdness
 
     def sweep(self, chan_out, Vstart, Vend, freq=100, numsteps=1000, accel=False):
         '''
         e.g. V, response, time = daq.sweep(['ao1', 'ao2'], {'ao1': -1,'ao1': -2}, {'ao1': 1,'ao0': 0})
             V['ao1']
+        accel will not work...
         '''
-        if numpy.isscalar(chan_out): #Make these dicts and lists
+        if np.isscalar(chan_out): #Make these dicts and lists
             Vstart = {chan_out: Vstart}
             Vend = {chan_out: Vend}
             chan_out = [chan_out]
 
         V = {}
         for k in Vstart.keys():
-            V[k] = list(numpy.linspace(Vstart[k], Vend[k], numsteps))
+            V[k] = list(np.linspace(Vstart[k], Vend[k], numsteps))
             if max(abs(Vstart[k]), abs(Vend[k])) > 10:
                 raise Exception('NIDAQ out of range!')
             if accel:
@@ -178,7 +179,7 @@ class NIDAQ():
         # Trim off acceleration
         if accel:
             for k in V.keys():
-                V[k] = V[k][2*numaccel-1:-2*numaccel+1] # slice off first 2*numaccel+1 and last 2*numaccel+1 points
+                V[k] = np.array(V[k][2*numaccel-1:-2*numaccel+1]) # slice off first 2*numaccel+1 and last 2*numaccel+1 points
             response = response[2*numaccel-1:-2*numaccel+1]
             time = time[2*numaccel-1:-2*numaccel+1]
 

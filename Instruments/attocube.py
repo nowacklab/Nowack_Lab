@@ -88,7 +88,7 @@ class Positioner():
         self.save_dict = {
             'stepping voltage': self.V,
             'stepping frequency': self.freq,
-            'capacitance': self.C,
+            'capacitance': self._C,
             'position': self.pos,
             'position tolerance': self._pos_tolerance,
             'V_lim': self.V_lim,

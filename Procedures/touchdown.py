@@ -20,7 +20,7 @@ class Touchdown(Measurement):
     def __init__(self, instruments=None, cap_input=None, planescan=False, Vz_max = None):
         self.touchdown = False
         self.V_to_C = 2530e3 # 2530 pF/V * (1e3 fF/pF), calibrated 20160423 by BTS, see ipython notebook
-        self.numfit = 3       # number of points to fit line to while collecting data
+        self.numfit = 10       # number of points to fit line to while collecting data
         self.numextra = 3
         self.attoshift = 40 # move 40 um if no touchdown detected
         self.Vz_max = 1000
@@ -110,6 +110,8 @@ class Touchdown(Measurement):
         while not self.touchdown:
             if slow_scan:
                 self.piezos.z.V = V_td-30
+            elif self.planescan:
+                self.piezos.z.V = 0
             else:
                 self.piezos.z.V = -self.Vz_max # sweep the piezo all the way down
             self.check_balance() # Make sure capacitance bridge is well-balanced
@@ -125,11 +127,13 @@ class Touchdown(Measurement):
                     if self.V[i] < V_td-30:
                         self.C[i] = np.inf
                         continue # skip all of these
+                if self.planescan:
+                    if self.V[i] < 0:
+                        self.C[i] = np.inf
+                        continue
                 self.piezos.z.V = self.V[i] # Set the current voltage
                 if slow_scan:
                     time.sleep(2) # wait a long time
-                    if self.V[i] > V_td+5: # we must have missed it
-                        raise Exception('Missed touchdown?')
 
                 ## Get capacitance
                 if self.C0 == None:
@@ -143,7 +147,7 @@ class Touchdown(Measurement):
 
                 ## gotta cheat and take care of the infs by making them the same
                 ## as the first real data point... this is because we skipped them
-                if slow_scan:
+                if slow_scan or self.planescan:
                     if self.C[0] == np.inf: # set at beginning of loop
                         if self.C[i] not in (np.inf, np.nan):
                             for j in range(len(self.C)):

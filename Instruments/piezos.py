@@ -13,6 +13,7 @@ class Piezos():
     _Vmax = [400, 400, 400] # maximum allowed total voltage across piezo
     _bipolar = [2, 2, 2] # multiplier for whether piezos are biased +V/-V or not.
     _V = {}
+    _daq = None
 
     def __init__(self, daq=None, chan_out = [0,1,2], zero = False):
         '''
@@ -45,7 +46,7 @@ class Piezos():
     def __setstate__(self, state):
         state.pop('daq') # don't want to load the daq automatically
         self.__dict__.update(state)
-        print('Daq not loaded! Load with load_daq(daq)!')
+        print('Daq not loaded in piezos! Load with load_daq(daq)!')
 
 
     @property
