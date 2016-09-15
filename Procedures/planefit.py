@@ -144,8 +144,15 @@ class Planefit(Measurement):
         '''
         if json_file is None:
             # finds the newest plane saved as json
-            json_file =  max(glob.iglob(os.path.join(DATA_FOLDER,'*_plane.json')),
+            try:
+                json_file =  max(glob.iglob(os.path.join(DATA_FOLDER,'*_plane.json')),
                                         key=os.path.getctime)
+            except: # we must have taken one during the previous day's work
+                folders = list(glob.iglob(os.path.join(DATA_FOLDER,'..','*')))
+                # -2 should be the previous day (-1 is today)
+                json_file =  max(glob.iglob(os.path.join(folders[-2],'*_plane.json')),
+                                        key=os.path.getctime)
+
         plane = Measurement.load(json_file)
 
         if plane.cap_input is None:
