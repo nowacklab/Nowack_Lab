@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from ..Instruments import nidaq, preamp, montana
 from ..Utilities.save import Measurement, get_todays_data_path
+from ..Utilities import conversions
 
 _home = os.path.expanduser("~")
 DATA_FOLDER = get_todays_data_path()
@@ -114,6 +115,7 @@ class Touchdown(Measurement):
                 self.piezos.z.V = 0
             else:
                 self.piezos.z.V = -self.Vz_max # sweep the piezo all the way down
+            time.sleep(2) # wait for capacitance to stabilize
             self.check_balance() # Make sure capacitance bridge is well-balanced
 
             # Reset capacitance values
@@ -140,7 +142,7 @@ class Touchdown(Measurement):
                     time.sleep(1) # wait for stabilization, was getting weird first values
                 Vcap = getattr(self.daq, self.lockin.ch1_daq_input) # Read the voltage from the daq
                 Vcap = self.lockin.convert_output(Vcap) # convert to a lockin voltage
-                Cap = Vcap*self.V_to_C # convert to true capacitance (fF)
+                Cap = Vcap*conversions.V_to_C # convert to true capacitance (fF)
                 if self.C0 == None:
                     self.C0 = Cap # Sets the offset datum
                 self.C[i] = Cap - self.C0 # remove offset
@@ -191,9 +193,10 @@ class Touchdown(Measurement):
 
             ## Do a slow scan next
             if self.touchdown: # if this is a true touchdown
-                if not slow_scan: # if we haven't done a slow scan yet
-                    slow_scan = True
-                    self.touchdown = False
+                if not self.planescan: # but not a planescan
+                    if not slow_scan: # if we haven't done a slow scan yet
+                        slow_scan = True
+                        self.touchdown = False
 
         self.piezos.z.V = 0 # bring the piezo back to zero
 
@@ -234,7 +237,7 @@ class Touchdown(Measurement):
         self.lockin.set_out(1, 'R') # Possibly X is better?
         self.lockin.set_out(2, 'theta') # not used, but may be good to see
         self.lockin.sensitivity = 10e-6 # 9/8/2016 changed from 50 uV. BTS noticed touchdown only went up to ~3 uV
-        self.lockin.time_constant = 0.100 # we found 100 ms was good on 7/11/2016 (yay slurpees) #1/(5*self.z_piezo_freq) # time constant five times shorter than dwell time for measurement
+        self.lockin.time_constant = 0.300 # changed 9/14 to 300 ms # we found 100 ms was good on 7/11/2016 (yay slurpees) #1/(5*self.z_piezo_freq) # time constant five times shorter than dwell time for measurement
         self.lockin.reserve = 'Low Noise'
         self.lockin.ac_coupling()
         self.lockin.auto_phase()
@@ -242,7 +245,11 @@ class Touchdown(Measurement):
     def configure_piezo(self):
         """ Set up z piezo parameters """
         # As of 5/3/2016, only z_piezo_step is used, and the daq sends points one at a time as fast as possible. But this seems fast enough. Might as well just hard-code a time constant.
-        self.z_piezo_step = 1 #changed to 1V 9/13/2016 BTS # changed to 4V 9/8/2016 BTS.... 1V at RT, 2V at low T works? # For full 120 V to -120 V sweep, 1 V step is 480 points
+        # self.z_piezo_step = 1 #changed to 1V 9/13/2016 BTS # changed to 4V 9/8/2016 BTS.... 1V at RT, 2V at low T works? # For full 120 V to -120 V sweep, 1 V step is 480 points
+        if self.planescan:
+            self.z_piezo_step = 4
+        else:
+            self.z_piezo_step = 1 # for update_c, etc. Do a really slow scan.
 
     def line_fit(self, x, y):
         """ Fits a line given x data, y data. Not sure if curve_fit or linregress is better, or if there is no difference. """

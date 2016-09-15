@@ -159,6 +159,7 @@ class NIDAQ():
             V['ao1']
         accel will not work...
         '''
+
         if np.isscalar(chan_out): #Make these dicts and lists
             Vstart = {chan_out: Vstart}
             Vend = {chan_out: Vend}
@@ -167,7 +168,7 @@ class NIDAQ():
         V = {}
         for k in Vstart.keys():
             V[k] = list(np.linspace(Vstart[k], Vend[k], numsteps))
-            if max(abs(Vstart[k]), abs(Vend[k])) > 10:
+            if max(abs(Vstart[k]), abs(Vend[k])) > self._output_range*1.1: # a bit of tolerance
                 raise Exception('NIDAQ out of range!')
             if accel:
                 numaccel = 250

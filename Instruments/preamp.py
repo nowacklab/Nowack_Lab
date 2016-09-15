@@ -39,7 +39,7 @@ class SR5113():
         self.port = state.pop('port')
         self._first_connect = True
 
-        return self.save_dict
+        return state
 
 
     @property

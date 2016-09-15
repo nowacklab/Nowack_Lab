@@ -1,7 +1,7 @@
 import visa
 import atexit
 from tabulate import tabulate
-import numpy
+import numpy as np
 
 _time_constant_values = [10e-6, 30e-6, 100e-6, 300e-6, 1e-3, 3e-3, 10e-3, 30e-3, 100e-3, 300e-3, 1, 3, 10, 30, 100, 300, 1000, 3000, 10000, 30000]
 _sensitivity_options = [
@@ -86,7 +86,7 @@ class SR830():
         '''Set the sensitivity'''
         if value > 1:
             value = 1
-        index = abs(numpy.array([v - value  if (v - value)>=0 else -100000 for v in _sensitivity_options])).argmin() #finds sensitivity just above input
+        index = abs(np.array([v - value  if (v - value)>=0 else -100000 for v in _sensitivity_options])).argmin() #finds sensitivity just above input
         good_value = _sensitivity_options[index]
 
         self.write('SENS%d' %_sensitivity_options.index(good_value))
@@ -152,7 +152,7 @@ class SR830():
         elif type(value) in (float, int):
             if value < 10e-6:
                 value = 10e-6
-            index = abs(numpy.array([value - v  if (value-v)>=0 else -100000 for v in _time_constant_values])).argmin() #finds time constant just below input
+            index = abs(np.array([value - v  if (value-v)>=0 else -100000 for v in _time_constant_values])).argmin() #finds time constant just below input
             good_value = _time_constant_values[index]
 
         self.write('OFLT %s' %index)
@@ -222,9 +222,9 @@ class SR830():
             self.write('FPOP%i,0' %chan)
 
     def convert_output(self, value):
-        if not numpy.isscalar(value):
-            value = numpy.array(value)
-            return list(value/10*self.sensitivity) # will give actual output in volts, since output is scaled to 10 V == sensitivity
+        if not np.isscalar(value):
+            value = np.array(value)
+            return np.array(value/10*self.sensitivity) # will give actual output in volts, since output is scaled to 10 V == sensitivity
         return value/10*self.sensitivity
 
     def close(self):

@@ -10,16 +10,18 @@ from numpy import ma
 from ..Utilities.plotting import plot_mpl
 from ..Instruments import piezos, nidaq, montana, squidarray
 from ..Utilities.save import Measurement, get_todays_data_path
+from ..Utilities import conversions
 
 _home = os.path.expanduser("~")
 DATA_FOLDER = get_todays_data_path()
 
 class Scanplane(Measurement):
+
     def __init__(self, instruments=None, span=[100,100],
                         center=[0,0], numpts=[50,50], plane=None,
                         scanheight=5, inp_dc=0, inp_cap=1,
                         inp_acx=None, inp_acy=None,
-                        freq=1500, raster=False):
+                        scan_rate=120, raster=False):
 
         self.inp_dc = 'ai%s' %inp_dc
         self.inp_acx = 'ai%s' %inp_acx
@@ -51,7 +53,7 @@ class Scanplane(Measurement):
             self.attocube = None
             print('Instruments not loaded... can only plot!')
 
-        self.freq = freq
+        self.scan_rate = scan_rate
         self.raster = raster
         self.span = span
         self.center = center
@@ -95,7 +97,7 @@ class Scanplane(Measurement):
         self.save_dict.update({"timestamp": self.timestamp,
                           "end_time": self.end_time,
                           "piezos": self.piezos,
-                          "frequency": self.freq,
+                          "scan_rate": self.scan_rate,
                           "daq": self.daq,
                           "montana": self.montana,
                           "squidarray": self.squidarray,
@@ -111,9 +113,15 @@ class Scanplane(Measurement):
                           "preamp": self.preamp,
                           "lockin_squid": self.lockin_squid,
                           "lockin_cap": self.lockin_cap,
-                          "attocube": self.attocube
+                          "attocube": self.attocube,
+                          "X": self.X,
+                          "Y": self.Y
                       })
         return self.save_dict
+
+    def __setstate__(self,state):
+        state.pop('attocube')
+        self.__dict__.update(state)
 
     def do(self, fast_axis = 'x'):
         self.setup_plots()
@@ -157,12 +165,12 @@ class Scanplane(Measurement):
                 Vend = {'x': self.X[i,-(k+1)], 'y': self.Y[i,-(k+1)], 'z': self.Z[i,-(k+1)]} # for forward, ends at i,-1; backward: i,0
 
             ## Explicitly go to first point of scan
-            self.piezos.sweep(self.piezos.V, Vstart, freq=1500) # change this frequency to go back faster!!
+            self.piezos.sweep(self.piezos.V, Vstart)
             self.squidarray.reset()
             time.sleep(3)
 
             ## Do the sweep
-            out, V, t = self.piezos.sweep(Vstart, Vend, freq=self.freq) # sweep over X
+            out, V, t = self.piezos.sweep(Vstart, Vend, sweep_rate=self.scan_rate) # sweep over X
 
             ## Flip the backwards sweeps
             if k == -1: # flip only the backwards sweeps
@@ -188,7 +196,10 @@ class Scanplane(Measurement):
             self.V_squid_full = V[self.inp_dc]
             self.Vac_x_full = V[self.inp_acx]
             self.Vac_y_full = V[self.inp_acy]
-            self.C_full = V[self.inp_cap]
+
+            Vcap = V[self.inp_cap]
+            Vcap = self.lockin_cap.convert_output(Vcap) # convert to a lockin voltage
+            self.C_full = Vcap*conversions.V_to_C # convert to true capacitance (fF)
 
             # interpolation functions
             interp_V = interp(self.V_piezo_full, self.V_squid_full)
@@ -299,7 +310,7 @@ class Scanplane(Measurement):
                                     title = '%s\nCapacitance' %self.filename,
                                     xlabel = r'$X (V_{piezo})$',
                                     ylabel = r'$Y (V_{piezo})$',
-                                    clabel = 'Voltage from %s' %self.inp_cap
+                                    clabel = 'Capacitance from %s' %self.inp_cap
                                 )
 
         ## "Last full scan" plot

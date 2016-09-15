@@ -10,7 +10,7 @@ _home = os.path.expanduser("~")
 DATA_FOLDER = get_todays_data_path()
 
 class Heightsweep(Measurement):
-    def __init__(self, instruments = None, x=0, y=0, plane=None, inp_acx = 0, inp_acy=1, inp_dc = 2):
+    def __init__(self, instruments = None, x=0, y=0, plane=None, inp_acx = 0, inp_acy=1, inp_dc = 2, scan_rate=120):
         if instruments:
             self.piezos = instruments['piezos']
             self.daq = instruments['nidaq']
@@ -29,6 +29,7 @@ class Heightsweep(Measurement):
         self.inp_acx = 'ai%s' %inp_acx
         self.inp_acy = 'ai%s' %inp_acy
         self.inp_dc = 'ai%s' %inp_dc
+        self.scan_rate = scan_rate
 
         self.z = np.nan
         self.Vacx = np.nan
@@ -49,7 +50,8 @@ class Heightsweep(Measurement):
                           "plane": self.plane,
                           "inp_acx": self.inp_acx,
                           "inp_acy": self.inp_acy,
-                          "inp_dc": self.inp_dc
+                          "inp_dc": self.inp_dc,
+                          "scan_rate": self.scan_rate
                       })
         return self.save_dict
 
@@ -68,7 +70,7 @@ class Heightsweep(Measurement):
         self.daq.add_input(self.inp_acx)
         self.daq.add_input(self.inp_acy)
         self.daq.add_input(self.inp_dc)
-        out, V, t = self.piezos.sweep(Vstart, Vend)
+        out, V, t = self.piezos.sweep(Vstart, Vend, sweep_rate = self.scan_rate)
 
         self.z = self.plane.plane(self.x, self.y)-np.array(out['z'])
         self.Vacx = V[self.inp_acx]

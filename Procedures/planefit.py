@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 from numpy.linalg import lstsq
 from . import touchdown, navigation
 import time, os, glob
@@ -42,11 +42,11 @@ class Planefit(Measurement):
 
         self.cap_input = cap_input
 
-        self.x = numpy.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
-        self.y = numpy.linspace(center[1]-span[1]/2, center[1]+span[1]/2, numpts[1])
+        self.x = np.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
+        self.y = np.linspace(center[1]-span[1]/2, center[1]+span[1]/2, numpts[1])
 
-        self.X, self.Y = numpy.meshgrid(self.x, self.y)
-        self.Z = numpy.nan*self.X # makes array of nans same size as grid
+        self.X, self.Y = np.meshgrid(self.x, self.y)
+        self.Z = np.nan*self.X # makes array of nans same size as grid
 
         self.a = None
         self.b = None
@@ -89,7 +89,7 @@ class Planefit(Measurement):
         Y = self.Y.flatten()
         Z = reject_outliers_quick(self.Z)
         Z = Z.flatten()
-        A = numpy.vstack([X, Y, numpy.ones(len(X))]).T
+        A = np.vstack([X, Y, np.ones(len(X))]).T
         self.a, self.b, self.c = lstsq(A, Z)[0]
 
 
@@ -107,7 +107,7 @@ class Planefit(Measurement):
         self.piezos.V = {'x': self.center[0], 'y':self.center[1], 'z':-self.Vz_max}
         print('...done.')
         td = touchdown.Touchdown(self.instruments, self.cap_input, Vz_max = self.Vz_max)
-        td.do() # Will do initial touchdown at center of plane to (1) find the plane (2) make touchdown voltage near center of piezo's positive voltage range
+        center_z_value = td.do() # Will do initial touchdown at center of plane to (1) find the plane (2) make touchdown voltage near center of piezo's positive voltage range
 
         check_td = input('Does the initial touchdown look good? Enter \'q\' to abort.')
         if check_td == 'q':
@@ -132,6 +132,7 @@ class Planefit(Measurement):
 
         self.piezos.V = 0
         self.calculate_plane()
+        self.c = center_z_value # take the first slow touchdown as a more accurate center
         self.save()
 
 
@@ -151,7 +152,7 @@ class Planefit(Measurement):
             print('cap_input not loaded! Set this manually!!!')
 
         if instruments is None:
-            print('Did\'nt load instruments')
+            print('Didn\'t load instruments')
         else:
             plane.instruments = instruments
             plane.piezos = instruments['piezos']
@@ -224,9 +225,9 @@ if __name__ == '__main__':
     def gauss(X, a):
         random.seed(random.random())
         r = [(random.random()+1/2+x) for x in X]
-        return numpy.exp(-a*(r-X)**2)
+        return np.exp(-a*(r-X)**2)
 
-    xx, yy = numpy.meshgrid(numpy.linspace(0,10,10), numpy.linspace(0,10,10))
+    xx, yy = np.meshgrid(np.linspace(0,10,10), np.linspace(0,10,10))
     X = xx.flatten()
     Y = yy.flatten()
 

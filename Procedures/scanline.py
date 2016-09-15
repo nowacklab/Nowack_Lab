@@ -11,7 +11,7 @@ _home = os.path.expanduser("~")
 DATA_FOLDER = get_todays_data_path()
 
 class Scanline(Measurement):
-    def __init__(self, instruments=None, start=(-100,-100), end=(100,100), plane=None, scanheight=0, inp_dc=0, inp_cap=1, inp_acx=None, inp_acy=None, freq=1500, return_to_zero=True):
+    def __init__(self, instruments=None, start=(-100,-100), end=(100,100), plane=None, scanheight=0, inp_dc=0, inp_cap=1, inp_acx=None, inp_acy=None, scan_rate=120, return_to_zero=True):
         self.inp_dc = 'ai%s' %inp_dc
         self.inp_acx = 'ai%s' %inp_acx
         self.inp_acy = 'ai%s' %inp_acy
@@ -55,7 +55,7 @@ class Scanline(Measurement):
             if inp == 'quit':
                 raise Exception('Terminated by user')
         self.scanheight = scanheight
-        self.freq = freq
+        self.scan_rate = scan_rate
 
         self.Vout = np.nan
         self.V = np.nan
@@ -77,7 +77,7 @@ class Scanline(Measurement):
                           "preamp":self.preamp,
                           "start": self.start,
                           "end": self.end,
-                          "freq": self.freq,
+                          "scan_rate": self.scan_rate,
                           "V": self.V,
                           "Vac_x": self.Vac_x,
                           "Vac_y": self.Vac_y,
@@ -110,12 +110,14 @@ class Scanline(Measurement):
         # time.sleep(3)
 
         ## Do the sweep
-        self.out, V, t = self.piezos.sweep(Vstart, Vend, freq=self.freq) # sweep over Y
+        self.out, V, t = self.piezos.sweep(Vstart, Vend, sweep_rate=self.scan_rate) # sweep over Y
 
         dist_between_points = np.sqrt((self.out['x'][0]-self.out['x'][-1])**2+(self.out['y'][0]-self.out['y'][-1])**2)
         self.Vout = np.linspace(0, dist_between_points, len(self.out['x'])) # plots vs 0 to whatever the maximum distance travelled was
         self.V = V[self.inp_dc]
-        self.C = V[self.inp_cap]
+        Vcap = V[self.inp_cap]
+        Vcap = self.lockin_cap.convert_output(Vcap) # convert to a lockin voltage
+        self.C = Vcap*conversions.V_to_C # convert to true capacitance (fF)
         self.Vac_x = V[self.inp_acx]
         self.Vac_y = V[self.inp_acy]
 
@@ -160,7 +162,7 @@ class Scanline(Measurement):
         self.ax_squid = self.fig.add_subplot(222)
         self.ax_squid.plot(self.Vout, self.C, '-b')
         self.ax_squid.set_xlabel('$\sqrt{\Delta V_x^2+\Delta V_y^2}$')
-        self.ax_squid.set_ylabel('Voltage from %s' %self.inp_cap)
+        self.ax_squid.set_ylabel('Capacitance from %s' %self.inp_cap)
         self.ax_squid.set_title('%s\nCapacitance signal' %self.filename)
 
         ## Draw everything in the notebook
