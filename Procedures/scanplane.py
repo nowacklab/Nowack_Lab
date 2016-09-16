@@ -7,7 +7,7 @@ from scipy.interpolate import interp1d as interp
 import matplotlib.pyplot as plt
 from IPython import display
 from numpy import ma
-from ..Utilities.plotting import plot_mpl
+from ..Utilities.plotting import plot_bokeh as pb
 from ..Instruments import piezos, nidaq, montana, squidarray
 from ..Utilities.save import Measurement
 
@@ -15,6 +15,13 @@ _home = os.path.expanduser("~")
 DATA_FOLDER = os.path.join(_home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Scans')
 
 class Scanplane(Measurement):
+    im_dc = None
+    im_cap = None
+    im_acx = None
+    im_acy = None
+    line_full = None
+    line_interp = None
+
     def __init__(self, instruments=None, span=[100,100],
                         center=[0,0], numpts=[50,50], plane=None,
                         scanheight=5, inp_dc=0, inp_cap=1,
@@ -76,14 +83,14 @@ class Scanplane(Measurement):
             print('plane not loaded... no idea where the surface is without a plane!')
 
         self.V = np.full(self.X.shape, np.nan)
-        self.Vac_x = np.full(self.X.shape, np.nan)
-        self.Vac_y = np.full(self.X.shape, np.nan)
+        self.V_acx = np.full(self.X.shape, np.nan)
+        self.V_acy = np.full(self.X.shape, np.nan)
         self.C = np.full(self.X.shape, np.nan)
 
-        self.V_piezo_full = []
-        self.V_squid_full = []
-        self.V_piezo_interp = []
-        self.V_squid_interp = []
+        self.V_piezo_full = np.array([])
+        self.V_squid_full = np.array([])
+        self.V_piezo_interp = np.array([])
+        self.V_squid_interp = np.array([])
         self.linecuts = {}
 
         self.filename = ''
@@ -101,8 +108,8 @@ class Scanplane(Measurement):
                           "squidarray": self.squidarray,
                           "linecuts": self.linecuts,
                           "V": self.V,
-                          "Vac_x": self.Vac_x,
-                          "Vac_y": self.Vac_y,
+                          "V_acx": self.V_acx,
+                          "V_acy": self.V_acy,
                           "C": self.C,
                           "plane": self.plane,
                           "span": self.span,
@@ -116,8 +123,6 @@ class Scanplane(Measurement):
         return self.save_dict
 
     def do(self, fast_axis = 'x'):
-        self.setup_plots()
-
         ## Start time and temperature
         super().make_timestamp_and_filename('scan')
         tstart = time.time()
@@ -176,8 +181,8 @@ class Scanplane(Measurement):
             self.linecuts[str(i)] = {"Vstart": Vstart,
                                 "Vend": Vend,
                                 "Vsquid": {"Vdc": np.array(V[self.inp_dc]).tolist(),  #why convert to array and then back to list??
-                                           "Vac_x": np.array(V[self.inp_acx]).tolist(),
-                                           "Vac_y": np.array(V[self.inp_acy]).tolist()}}
+                                           "V_acx": np.array(V[self.inp_acx]).tolist(),
+                                           "V_acy": np.array(V[self.inp_acy]).tolist()}}
 
             ## Interpolate to the number of lines
             self.V_piezo_full = out[fast_axis] # actual voltages swept in x or y direction
@@ -188,32 +193,32 @@ class Scanplane(Measurement):
 
             # Store this line's signals for Vdc, Vac x/y, and Cap
             self.V_squid_full = V[self.inp_dc]
-            self.Vac_x_full = V[self.inp_acx]
-            self.Vac_y_full = V[self.inp_acy]
+            self.V_acx_full = V[self.inp_acx]
+            self.V_acy_full = V[self.inp_acy]
             self.C_full = V[self.inp_cap]
 
             # interpolation functions
             interp_V = interp(self.V_piezo_full, self.V_squid_full)
-            interp_Vac_x = interp(self.V_piezo_full, self.Vac_x_full)
-            interp_Vac_y = interp(self.V_piezo_full, self.Vac_y_full)
+            interp_V_acx = interp(self.V_piezo_full, self.V_acx_full)
+            interp_V_acy = interp(self.V_piezo_full, self.V_acy_full)
             interp_C = interp(self.V_piezo_full, self.C_full)
 
             # interpolated signals
             self.V_squid_interp = interp_V(self.V_piezo_interp)
-            self.Vac_x_interp = interp_Vac_x(self.V_piezo_interp)
-            self.Vac_y_interp = interp_Vac_y(self.V_piezo_interp)
+            self.V_acx_interp = interp_V_acx(self.V_piezo_interp)
+            self.V_acy_interp = interp_V_acy(self.V_piezo_interp)
             self.C_interp = interp_C(self.V_piezo_interp)
 
             # store these in the 2D arrays
             if fast_axis == 'x':
                 self.V[:,i] = self.V_squid_interp # changes from actual output data to give desired number of points
-                self.Vac_x[:,i] = self.Vac_x_interp
-                self.Vac_y[:,i] = self.Vac_y_interp
+                self.V_acx[:,i] = self.V_acx_interp
+                self.V_acy[:,i] = self.V_acy_interp
                 self.C[:,i] = self.C_interp
             elif fast_axis == 'y':
                 self.V[i,:] = self.V_squid_interp # changes from actual output data to give desired number of points
-                self.Vac_x[i,:] = self.Vac_x_interp
-                self.Vac_y[i,:] = self.Vac_y_interp
+                self.V_acx[i,:] = self.V_acx_interp
+                self.V_acy[i,:] = self.V_acy_interp
                 self.C[i,:] = self.C_interp
 
             self.save_line(i, Vstart)
@@ -234,101 +239,92 @@ class Scanplane(Measurement):
         '''
         Update all plots.
         '''
-        try:
-            self.im_squid # see if this exists
-        except:
+        if not hasattr(self, 'fig_dc'): # see if this exists
             self.setup_plots()
-        plot_mpl.update2D(self.im_squid, self.V)
-        plot_mpl.update2D(self.im_cap, self.C)
-        plot_mpl.update2D(self.im_ac_x, self.Vac_x)
-        plot_mpl.update2D(self.im_ac_y, self.Vac_y)
+
+        self.im_dc = pb.image(self.fig_dc, self.X, self.Y, self.V,
+            z_title = 'DC %s (V)' %self.inp_dc, im_handle = self.im_dc
+        )
+
+        self.im_cap = pb.image(self.fig_cap, self.X, self.Y, self.C,
+            z_title = 'Cap %s (V)' %self.inp_cap, im_handle = self.im_cap,
+            cmap = 'afmhot'
+        )
+
+        self.im_acx = pb.image(self.fig_acx, self.X, self.Y, self.V_acx,
+            z_title = 'AC X %s (V)' %self.inp_acx, im_handle = self.im_acx
+        )
+
+        self.im_acy = pb.image(self.fig_acy, self.X, self.Y, self.V_acy,
+            z_title = 'AC Y %s (V)' %self.inp_acy, im_handle = self.im_acy
+        )
+
         self.plot_line()
 
-        self.fig.canvas.draw()
 
 
     def setup_plots(self):
         '''
         Set up all plots.
         '''
-        self.fig = plt.figure(figsize=(11,11))
+        ## Grid will be 2x2 with linecut at bottom
+        ## top left
+        self.fig_dc = pb.figure(
+            title = self.filename
+        )
+        self.fig_dc.fig.plot_width=700 # correct room taken up by colorbar
+        self.fig_dc.fig.min_border_top = 0
+        self.fig_dc.fig.min_border_bottom = 0
 
-        ## DC magnetometry
-        self.ax_squid = self.fig.add_subplot(321)
-        self.im_squid = plot_mpl.plot2D(self.ax_squid,
-                                        self.X,
-                                        self.Y,
-                                        self.V,
-                                        title = '%s\nDC SQUID signal' %self.filename,
-                                        xlabel = r'$X (V_{piezo})$',
-                                        ylabel = r'$Y (V_{piezo})$',
-                                        clabel = 'Voltage from %s' %self.inp_dc
-                                    )
+        self.fig_cap = pb.figure(
+            x_range = self.fig_dc.fig.x_range,
+            y_range = self.fig_dc.fig.y_range
+        )
+        self.fig_cap.fig.plot_width=700
+        self.fig_cap.fig.min_border_top = 0
+        self.fig_cap.fig.min_border_bottom = 0
 
-        ## AC x
-        self.ax_ac_x = self.fig.add_subplot(323)
-        self.im_ac_x = plot_mpl.plot2D(self.ax_ac_x,
-                                        self.X,
-                                        self.Y,
-                                        self.Vac_x,
-                                        cmap='rainbow',
-                                        title = '%s\nAC x SQUID signal' %self.filename,
-                                        xlabel = r'$X (V_{piezo})$',
-                                        ylabel = r'$Y (V_{piezo})$',
-                                        clabel = 'Voltage from %s' %self.inp_acx
-                                    )
+        self.fig_acx = pb.figure(
+            x_range = self.fig_dc.fig.x_range,
+            y_range = self.fig_dc.fig.y_range
+        )
+        self.fig_acx.fig.plot_width=700
+        self.fig_acx.fig.min_border_top = 0
+        self.fig_acx.fig.min_border_bottom = 0
 
-        ## AC y
-        self.ax_ac_y = self.fig.add_subplot(325)
-        self.im_ac_y = plot_mpl.plot2D(self.ax_ac_y,
-                                        self.X,
-                                        self.Y,
-                                        self.Vac_y,
-                                        cmap='rainbow',
-                                        title = '%s\nAC y SQUID signal' %self.filename,
-                                        xlabel = r'$X (V_{piezo})$',
-                                        ylabel = r'$Y (V_{piezo})$',
-                                        clabel = 'Voltage from %s' %self.inp_acy
-                                    )
+        self.fig_acy = pb.figure(
+            x_range = self.fig_dc.fig.x_range,
+            y_range = self.fig_dc.fig.y_range
+        )
+        self.fig_acy.fig.plot_width=700
+        self.fig_acy.fig.min_border_top = 0
+        self.fig_acy.fig.min_border_bottom = 0
 
-        ## Capacitance
-        self.ax_cap = self.fig.add_subplot(324)
-        self.im_cap = plot_mpl.plot2D(self.ax_cap,
-                                    self.X,
-                                    self.Y,
-                                    self.C,
-                                    cmap='afmhot',
-                                    title = '%s\nCapacitance' %self.filename,
-                                    xlabel = r'$X (V_{piezo})$',
-                                    ylabel = r'$Y (V_{piezo})$',
-                                    clabel = 'Voltage from %s' %self.inp_cap
-                                )
+        self.fig_line = pb.figure(
+            xlabel = 'Distance (Vpiezo)',
+            ylabel = 'Signal (V)'
+        )
+        self.fig_line.fig.plot_width=1200
+        self.fig_line.fig.min_border_top = 0
+        self.fig_line.fig.min_border_bottom = 0
 
-        ## "Last full scan" plot
-        self.ax_line = self.fig.add_subplot(326)
-        self.ax_line.set_title('last full line scan', fontsize=8)
-        self.line_full = self.ax_line.plot(self.V_piezo_full, self.V_squid_full, '-.k') # commas only take first element of array? ANyway, it works.
-        self.line_interp = self.ax_line.plot(self.V_piezo_interp, self.V_squid_interp, '.r', markersize=12)
-        self.ax_line.set_xlabel('X (a.u.)', fontsize=8)
-        self.ax_line.set_ylabel('V', fontsize=8)
+        self.plot() # plot all the images and lines
 
-        self.line_full = self.line_full[0] # it is given as an array
-        self.line_interp = self.line_interp[0]
-
-        ## Draw everything in the notebook
-        self.fig.canvas.draw()
+        self.grid = pb.plot_grid([[self.fig_dc.fig, self.fig_acx.fig],
+                    [self.fig_cap.fig, self.fig_acy.fig],
+                     [self.fig_line.fig]], width=1000, height=1000
+                 )
+        pb.show(self.grid)
 
 
     def plot_line(self):
-        self.line_full.set_xdata(self.V_piezo_full)
-        self.line_full.set_ydata(self.V_squid_full)
-        self.line_interp.set_xdata(self.V_piezo_interp)
-        self.line_interp.set_ydata(self.V_squid_interp)
-
-        self.ax_line.relim()
-        self.ax_line.autoscale_view()
-
-        plot_mpl.aspect(self.ax_line, .3)
+        self.line_full = pb.line(self.fig_line, self.V_piezo_full,
+            self.V_squid_full, line_handle = self.line_full,
+        )
+        self.line_interp = pb.line(self.fig_line, self.V_piezo_interp,
+            self.V_squid_interp, line_handle = self.line_interp,
+            color='red', linestyle='.'
+        )
 
     def save(self, savefig=True):
         '''

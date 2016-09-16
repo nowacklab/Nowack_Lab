@@ -60,8 +60,8 @@ class Scanline(Measurement):
 
         self.Vout = np.array([])
         self.V = np.array([])
-        self.Vac_x = np.array([])
-        self.Vac_y = np.array([])
+        self.V_acx = np.array([])
+        self.V_acy = np.array([])
         self.C = np.array([])
 
         self.filename = ''
@@ -80,8 +80,8 @@ class Scanline(Measurement):
                           "end": self.end,
                           "freq": self.freq,
                           "V": self.V,
-                          "Vac_x": self.Vac_x,
-                          "Vac_y": self.Vac_y,
+                          "V_acx": self.V_acx,
+                          "V_acy": self.V_acy,
                           "lockin_squid": self.lockin_squid,
                           "lockin_cap": self.lockin_cap,
                           "attocube": self.attocube
@@ -117,8 +117,8 @@ class Scanline(Measurement):
         self.Vout = np.linspace(0, dist_between_points, len(self.out['x'])) # plots vs 0 to whatever the maximum distance travelled was
         self.V = V[self.inp_dc]
         self.C = V[self.inp_cap]
-        self.Vac_x = V[self.inp_acx]
-        self.Vac_y = V[self.inp_acy]
+        self.V_acx = V[self.inp_acx]
+        self.V_acy = V[self.inp_acy]
 
         self.plot()
 
@@ -136,28 +136,40 @@ class Scanline(Measurement):
         '''
         self.fig_dc = pb.figure(
             title = self.filename,
-            ylabel = 'DC %s (V)' %self.inp_dc
+            ylabel = 'DC %s (V)' %self.inp_dc,
         )
         self.line_dc = pb.line(self.fig_dc, self.Vout, self.V)
+        self.fig_dc.fig.plot_width=1000
+        self.fig_dc.fig.min_border_bottom = 0
 
         self.fig_cap = pb.figure(
-            xlabel = 'Distance (V)',
+            xlabel = 'Distance (Vpiezo)',
             ylabel = 'Cap %s (V)' %self.inp_cap,
             x_range = self.fig_dc.fig.x_range
         )
         self.line_cap = pb.line(self.fig_cap, self.Vout, self.C)
+        self.fig_cap.fig.plot_width=1000
+        self.fig_cap.fig.min_border_top = 0
+        self.fig_cap.fig.min_border_bottom = 0
 
         self.fig_acx = pb.figure(
             ylabel = 'AC X %s (V)' %self.inp_acx,
             x_range = self.fig_dc.fig.x_range
         )
-        self.line_cap = pb.line(self.fig_acx, self.Vout, self.Vac_x)
+        self.line_acx = pb.line(self.fig_acx, self.Vout, self.V_acx)
+        self.fig_acx.fig.plot_width=1000
+        self.fig_acx.fig.min_border_bottom = 0
+
 
         self.fig_acy = pb.figure(
+            xlabel = 'Distance (Vpiezo)',
             ylabel = 'AC Y %s (V)' %self.inp_acy,
             x_range = self.fig_dc.fig.x_range
         )
-        self.line_cap = pb.line(self.fig_acy, self.Vout, self.Vac_y)
+        self.line_acy = pb.line(self.fig_acy, self.Vout, self.V_acy)
+        self.fig_acy.fig.plot_width=1000
+        self.fig_acy.fig.min_border_top = 0
+        self.fig_acy.fig.min_border_bottom = 0
 
         self.grid = pb.plot_grid([[self.fig_dc.fig, self.fig_acx.fig],[self.fig_cap.fig, self.fig_acy.fig]])
         pb.show(self.grid)

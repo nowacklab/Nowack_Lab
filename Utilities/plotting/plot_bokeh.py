@@ -186,7 +186,7 @@ def colorbar_slider(fig):
     im = get_glyph_renderer(fig.fig) # Get image renderer
 
     from bokeh.models import CustomJS, Slider, TextInput
-    from bokeh.models.widgets import Button
+    from bokeh.models.widgets import Button, RadioButtonGroup
     from bokeh.layouts import widgetbox
 
     model = Slider() # trick it into letting datamin and datamax into CustomJS
@@ -257,6 +257,7 @@ def colorbar_slider(fig):
     callback_reset_js = CustomJS(args=dict(cb=cb, im=im, model=model), code="""
         var cm = cb.color_mapper;
         var low = model.tags[0];
+        alert(selector.active)
         var high = model.tags[1];
         low = parseFloat(low.toPrecision(3)) // 3 sig figs
         high = parseFloat(high.toPrecision(3)) // 3 sig figs
@@ -306,14 +307,9 @@ def colorbar_slider(fig):
     # reset_button.trigger('clicks',0,1)
     reset_button.on_click(callback_reset)
 
-    # def callback_die(attr, old, new):
-    #     from IPython.display import display
-    #     display('yoooo')
-    #     display(old)
-    #     display(new)
-    #     raise Exception()
-    # exception_button = Button(label='KILL ME')
-    # exception_button.on_click(callback_die)
+    selector = RadioButtonGroup(
+        labels = ['DC', 'Cap', 'AC X','AC Y'], active=1
+    )
 
     lower_slider = Slider(start=datamin, end=datamax, value=datamin, step=(datamax-datamin)/50, # smallest step is 1e-5
                         title="Lower lim", callback=callback_l)
@@ -328,10 +324,10 @@ def colorbar_slider(fig):
 
     # add all of these widgets as arguments to the callback functions
     for callback in ['l', 'u', 'lt', 'ut', 'reset_js']:
-        for widget in ['lower_slider', 'upper_slider','lower_input','upper_input', 'reset_button']:
+        for widget in ['lower_slider', 'upper_slider','lower_input','upper_input', 'reset_button', 'selector']:
             exec('callback_%s.args["%s"] = %s' %(callback, widget, widget))
 
-    wb = widgetbox([upper_slider, upper_input, lower_slider, lower_input, reset_button], width=100, sizing_mode = 'stretch_both')
+    wb = widgetbox([upper_slider, upper_input, lower_slider, lower_input, reset_button, selector], width=100, sizing_mode = 'stretch_both')
     return wb
 
 
@@ -562,11 +558,9 @@ def line(fig, x, y, line_handle=None, color='black', linestyle='-', name=None):
         '*': 'asterisk'
     }
 
-    new_line = True
     if line_handle: # if updating an existing line
         line_handle.data_source.data['x'] = x
         line_handle.data_source.data['y'] = y
-        new_line = False
 
     else: # create a new line
         from bokeh.models import ColumnDataSource
@@ -582,8 +576,6 @@ def line(fig, x, y, line_handle=None, color='black', linestyle='-', name=None):
         line_handle.glyph.line_dash = linestyles[linestyle]
         line_handle.glyph.line_width = 2
     else:
-        if not new_line:
-            print('Unfortunately can\'t change marker type!')
         line_handle.glyph.size = 10
     line_handle.glyph.line_color = color
     line_handle.name = name
@@ -593,7 +585,8 @@ def line(fig, x, y, line_handle=None, color='black', linestyle='-', name=None):
     try:
         auto_bounds(fig, x, y)
     except:
-        print('auto_bounds didn\'t work!')
+        pass
+        # print('auto_bounds didn\'t work!')
 
     # update() # refresh plots in the notebook, doesn't work when adding new lines unfortunately
     return line_handle
