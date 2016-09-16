@@ -3,7 +3,7 @@ from . import planefit
 import time, os
 from datetime import datetime
 import matplotlib.pyplot as plt
-from ..Utilities import plotting
+from ..Utilities import plotting, conversions
 from ..Instruments import piezos, nidaq, montana, squidarray
 from ..Utilities.save import Measurement, get_todays_data_path
 

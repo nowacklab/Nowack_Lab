@@ -100,7 +100,9 @@ class NIDAQ():
             self.add_input(ch)
 
         numsteps = duration*freq
-        V, response, time = self.sweep('ao0', self.ao0, self.ao0, freq=freq, numsteps=numsteps)
+        current_ao0 = self.ao0
+        # Sweep nowhere but get data in.
+        V, response, time = self.sweep('ao0', current_ao0, current_ao0, freq=freq, numsteps=numsteps)
 
         return response, time
 
@@ -177,6 +179,9 @@ class NIDAQ():
 
         response, time = self.send_receive(chan_out, V, freq=freq)
 
+        for k in V.keys():
+            V[k] = np.array(V[k]) # convert to array
+
         # Trim off acceleration
         if accel:
             for k in V.keys():
@@ -185,6 +190,30 @@ class NIDAQ():
             time = time[2*numaccel-1:-2*numaccel+1]
 
         return V, response, time
+
+    def sweep_custom(self, chan_out, V, freq=100, numsteps=1000):
+        '''
+        e.g. V, response, time = daq.sweep(['ao1', 'ao2'], {'ao1': np.array([1,2,3,4,5])})
+            V['ao1']
+        '''
+
+        if np.isscalar(chan_out): #Make these dicts and lists
+            Vstart = {chan_out: Vstart}
+            Vend = {chan_out: Vend}
+            chan_out = [chan_out]
+
+        V = {}
+        for k in Vstart.keys():
+            if max(abs(V[k])) > self._output_range*1.1: # a bit of tolerance
+                raise Exception('NIDAQ out of range!')
+
+        response, time = self.send_receive(chan_out, V, freq=freq)
+
+        for k in V.keys():
+            V[k] = np.array(V[k]) # convert to array
+
+        return V, response, time
+
 
     def zero(self):
         for chan in self._daq.get_AO_channels():

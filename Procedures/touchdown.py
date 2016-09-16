@@ -20,7 +20,6 @@ class Touchdown(Measurement):
 
     def __init__(self, instruments=None, cap_input=None, planescan=False, Vz_max = None):
         self.touchdown = False
-        self.V_to_C = 2530e3 # 2530 pF/V * (1e3 fF/pF), calibrated 20160423 by BTS, see ipython notebook
         self.numfit = 10       # number of points to fit line to while collecting data
         self.numextra = 3
         self.attoshift = 40 # move 40 um if no touchdown detected
@@ -48,7 +47,7 @@ class Touchdown(Measurement):
             ## voltage sweep is from -Vz_max to Vz_max, step size determined in configure_piezo. 4 V looks good.
             self.numsteps = int(2*self.Vz_max/self.z_piezo_step)
             self.V = np.linspace(-self.Vz_max, self.Vz_max, self.numsteps)
-            self.C = np.array([None]*self.numsteps) # Capacitance (fF)
+            self.C = np.array([np.nan]*self.numsteps) # Capacitance (fF)
             self.V_td = -1000.0
         else:
             self.piezos = None
@@ -75,6 +74,16 @@ class Touchdown(Measurement):
                           "C": self.C
                       })
         return self.save_dict
+
+
+    def __setstate__(self, state):
+        state.pop('atto')
+        state.pop('daq')
+        state.pop('piezos')
+        state.pop('montana')
+        state.pop('lockin')
+        self.__dict__.update(state)
+
 
     def check_balance(self, V_unbalanced=2e-6):
         '''
@@ -119,7 +128,7 @@ class Touchdown(Measurement):
             self.check_balance() # Make sure capacitance bridge is well-balanced
 
             # Reset capacitance values
-            self.C = [None]*self.numsteps # Capacitance (fF)
+            self.C = np.array([np.nan]*self.numsteps) # Capacitance (fF)
             self.C0 = None # Cap offset: will take on value of the first point
             self.extra = 0 # Counter to keep track of extra points after touchdown (for fitting the line)
 
@@ -174,7 +183,7 @@ class Touchdown(Measurement):
                                 self.touchdown = False
                                 self.title = 'Found touchdown, centering near %i Vpiezo' %int(self.Vz_max/2)
                                 self.ax.set_title(self.title, fontsize=20)
-                                self.attoshift = (V_td-self.Vz_max/2)*.127 # e.g. V_td at 0 V means we're too close, will move z atto 12.7 um down)
+                                self.attoshift = (V_td-self.Vz_max/2)*conversions.Vpiezo_to_attomicron
                         elif self.extra == self.numextra: # last extra step, bug fix
                             rsquared = self.line_corr_coef(self.V[i-self.numextra:i+1], self.C[i-self.numextra:i+1]) #check fit of last few points
                             if rsquared < 0.90:
@@ -257,7 +266,7 @@ class Touchdown(Measurement):
         # return m,b
         def f(x, m, b):
             return m*x + b
-        popt, _ = curve_fit(f, x, y)
+        popt, _ = curve_fit(f, np.ma.masked_invalid(x), np.ma.masked_invalid(y)) # hide nans
         return popt[0], popt[1] # m, b
 
     def line_corr_coef(self, x,y):
