@@ -12,10 +12,14 @@ except:
     print('PyDAQmx not imported!')
 import time
 from copy import copy
+from ..Utilities.logging import log
 
 class NIDAQ():
     '''
-    For remote operation of the NI DAQ-6363. Slightly simplified version of Guen's squidpy driver, does not import/inherit anything from squidpy. Uses package Instrumental from Mabuchi lab at Stanford
+    For remote operation of the NI DAQ-6363.
+    Slightly simplified version of Guen's squidpy driver;
+    does not import/inherit anything from squidpy.
+    Uses package Instrumental from Mabuchi lab at Stanford
     '''
 
     def __init__(self, zero=False, dev_name='Dev1', input_range=10, output_range=10):
@@ -111,15 +115,15 @@ class NIDAQ():
         if np.isscalar(chan_in):
             chan_in = [chan_in]
 
-        for ch in chan_in:
-            self.add_input(ch)
-
+        ## Prepare "data" for the Task. We'll just send the current value of ao0
+        ## and tell the DAQ to output that value of ao0 for every data point.
         numsteps = duration*sample_rate
         current_ao0 = self.ao0
-        # Sweep nowhere but get data in.
-        V, response, time = self.sweep('ao0', current_ao0, current_ao0, sample_rate=sample_rate, numsteps=numsteps)
+        data = {'ao0': np.array([current_ao0]*numsteps)}
 
-        return response, time
+        received = send_receive(data, chan_in=chan_in, sample_rate=sample_rate)
+
+        return received
 
 
     def send_receive(self, data, chan_in=None, sample_rate=100):
@@ -156,6 +160,8 @@ class NIDAQ():
         ## Make sure there's at least one input channel (or DAQmx complains)
         if chan_in is None:
             chan_in = ['ai23']
+        elif np.isscalar(chan_in):
+            chan_in = [chan_in]
 
         ## prepare a NIDAQ Task
         taskargs = tuple([getattr(self._daq, ch) for ch in list(data.keys())+chan_in])
@@ -185,71 +191,29 @@ class NIDAQ():
 
         return received
 
-    def sweep(self, chan_in, chan_out, Vstart, Vend, sample_rate=100, numsteps=1000, accel=False):
+
+    def sweep(self, Vstart, Vend, chan_in=None, sample_rate=100, numsteps=1000):
         '''
-        e.g. V, response, time = daq.sweep(['ao1', 'ao2'], {'ao1': -1,'ao1': -2}, {'ao1': 1,'ao0': 0})
-            V['ao1']
-        accel will not work...
+        Sweeps between voltages specified in Vstart and Vend, dictionaries with
+        output channels as keys. (e.g. Vstart={'ao1':3, 'ao2':4})
+        Specify the input channels you want to monitor.
+        Returns (output voltage dictionary, input voltage dictionary)
         '''
 
-        if np.isscalar(chan_out): #Make these dicts and lists
-            Vstart = {chan_out: Vstart}
-            Vend = {chan_out: Vend}
-            chan_out = [chan_out]
-
-        V = {}
+        output_data = {}
         for k in Vstart.keys():
-            V[k] = list(np.linspace(Vstart[k], Vend[k], numsteps))
-            if max(abs(Vstart[k]), abs(Vend[k])) > self._output_range*1.1: # a bit of tolerance
-                raise Exception('NIDAQ out of range!')
-            if accel:
-                numaccel = 250
-                V[k][:0] = self.accel_function(0, V[k][0], numaccel) # accelerate from 0 to first value of sweep
-                V[k] = V[k] + self.accel_function(V[k][-1], 0, numaccel) # accelerate from last value of sweep to 0
+            output_data[k] = np.linspace(Vstart[k], Vend[k], numsteps)
 
-        response, time = self.send_receive(chan_in, chan_out, V, sample_rate=sample_rate)
+        received = self.send_receive(output_data, chan_in, sample_rate=sample_rate)
 
-        for k in V.keys():
-            V[k] = np.array(V[k]) # convert to array
-
-        # Trim off acceleration
-        if accel:
-            for k in V.keys():
-                V[k] = np.array(V[k][2*numaccel-1:-2*numaccel+1]) # slice off first 2*numaccel+1 and last 2*numaccel+1 points
-            response = response[2*numaccel-1:-2*numaccel+1]
-            time = time[2*numaccel-1:-2*numaccel+1]
-
-        return V, response, time
-
-    def sweep_custom(self, chan_in, chan_out, V, sample_rate=100, numsteps=1000):
-        '''
-        Do a custom sweep
-        e.g. V, response, time = daq.sweep(['ao1', 'ao2'], {'ao1': np.array([1,2,3,4,5])})
-            V['ao1']
-        '''
-
-        if np.isscalar(chan_out): #Make these dicts and lists
-            Vstart = {chan_out: Vstart}
-            Vend = {chan_out: Vend}
-            chan_out = [chan_out]
-
-        V = {}
-        for k in Vstart.keys():
-            if max(abs(V[k])) > self._output_range*1.1: # a bit of tolerance
-                raise Exception('NIDAQ out of range!')
-
-        response, time = self.send_receive(chan_in, chan_out, V, sample_rate=sample_rate)
-
-        for k in V.keys():
-            V[k] = np.array(V[k]) # convert to array
-
-        return V, response, time
+        return output_data, received
 
 
     def zero(self):
         for chan in self._daq.get_AO_channels():
-            self.sweep(None, chan, getattr(self, chan), 0, sample_rate=100000)
-        print('Zeroed outputs')
+            self.sweep(getattr(self, chan), 0, sample_rate=100000, numsteps=100000)
+        print('Zeroed DAQ outputs.')
+        log('Zeroed DAQ outputs.')
 
 
 if __name__ == '__main__':

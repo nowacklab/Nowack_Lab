@@ -23,7 +23,8 @@ class DaqSpectrum(Measurement):
             self.pa = None
             print('Instruments not loaded... can only plot!')
 
-        for arg in ['input_chan', 'measure_time','measure_freq','averages']:
+        self.input_chan = 'ai%i' %input_chan
+        for arg in ['measure_time','measure_freq','averages']:
             setattr(self, arg, eval(arg))
 
         ## So plotting will work with no data
@@ -63,8 +64,11 @@ class DaqSpectrum(Measurement):
         psdAve = np.zeros(Nfft)
 
         for i in range(self.averages):
-            self.V, self.t = self.daq.monitor('ai%i' %self.input_chan, self.measure_time, self.measure_freq)
-            self.V = self.V['ai%i' %self.input_chan] #extract data from the required channel
+            received = self.daq.monitor(self.input_chan, self.measure_time,
+                                        sample_rate=self.measure_freq
+                                    )
+            self.V = self.V[self.input_chan] #extract data from the required channel
+            self.t = self.V['t']
             self.f, psd = signal.periodogram(self.V, self.measure_freq, 'blackmanharris')
             psdAve = psdAve + psd
 

@@ -13,11 +13,9 @@ class Heightsweep(Measurement):
     def __init__(self, instruments = None, x=0, y=0, plane=None, inp_acx = 0, inp_acy=1, inp_dc = 2, scan_rate=120):
         if instruments:
             self.piezos = instruments['piezos']
-            self.daq = instruments['nidaq']
             self.montana = instruments['montana']
         else:
             self.piezos = None
-            self.daq = None
             self.montana = None
             print('Instruments not loaded... can only plot!')
 
@@ -43,7 +41,6 @@ class Heightsweep(Measurement):
                                # need this in every getstate to get save_dict
         self.save_dict.update({"timestamp": self.timestamp,
                           "piezos": self.piezos,
-                          "daq": self.daq,
                           "montana": self.montana,
                           "x": self.x,
                           "y": self.y,
@@ -67,15 +64,17 @@ class Heightsweep(Measurement):
         self.piezos.V = {'x':self.x, 'y':self.y, 'z': Vstart['z']}
         time.sleep(3) # wait at the surface
 
-        self.daq.add_input(self.inp_acx)
-        self.daq.add_input(self.inp_acy)
-        self.daq.add_input(self.inp_dc)
-        out, V, t = self.piezos.sweep(Vstart, Vend, sweep_rate = self.scan_rate)
+        output_data, received = self.piezos.sweep(Vstart, Vend,
+                                        chan_in = [self.inp_acx,
+                                                    self.inp_acy,
+                                                    self.inp_dc
+                                                ],
+                                        sweep_rate = self.scan_rate)
 
-        self.z = self.plane.plane(self.x, self.y)-np.array(out['z'])
-        self.Vacx = V[self.inp_acx]
-        self.Vacy = V[self.inp_acy]
-        self.Vdc = V[self.inp_dc]
+        self.z = self.plane.plane(self.x, self.y)-np.array(output_data['z'])
+        self.Vacx = received[self.inp_acx]
+        self.Vacy = received[self.inp_acy]
+        self.Vdc = received[self.inp_dc]
 
         self.piezos.zero()
 

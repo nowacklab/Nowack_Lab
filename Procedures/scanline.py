@@ -19,7 +19,6 @@ class Scanline(Measurement):
 
         if instruments:
             self.piezos = instruments['piezos']
-            self.daq = instruments['nidaq']
             self.montana = instruments['montana']
             self.squidarray = instruments['squidarray']
             self.preamp = instruments['preamp']
@@ -27,13 +26,8 @@ class Scanline(Measurement):
             self.lockin_cap = instruments['lockin_cap']
             self.attocube = instruments['attocube']
 
-            self.daq.add_input(self.inp_dc)
-            self.daq.add_input(self.inp_acx)
-            self.daq.add_input(self.inp_acy)
-            self.daq.add_input(self.inp_cap)
         else:
             self.piezos = None
-            self.daq = None
             self.montana = None
             self.squidarray = None
             self.preamp = None
@@ -71,7 +65,6 @@ class Scanline(Measurement):
                                # need this in every getstate to get save_dict
         self.save_dict.update({"timestamp": self.timestamp,
                           "piezos": self.piezos,
-                          "daq": self.daq,
                           "montana": self.montana,
                           "squidarray": self.squidarray,
                           "preamp":self.preamp,
@@ -110,16 +103,17 @@ class Scanline(Measurement):
         # time.sleep(3)
 
         ## Do the sweep
-        self.out, V, t = self.piezos.sweep(Vstart, Vend, sweep_rate=self.scan_rate) # sweep over Y
+        in_chans = [self.inp_dc, self.inp_acx, self.inp_acy, self.inp_cap]
+        self.output_data, received = self.piezos.sweep(Vstart, Vend, chan_in=in_chans, sweep_rate=self.scan_rate) # sweep over Y
 
-        dist_between_points = np.sqrt((self.out['x'][0]-self.out['x'][-1])**2+(self.out['y'][0]-self.out['y'][-1])**2)
-        self.Vout = np.linspace(0, dist_between_points, len(self.out['x'])) # plots vs 0 to whatever the maximum distance travelled was
-        self.V = V[self.inp_dc]
-        Vcap = V[self.inp_cap]
+        dist_between_points = np.sqrt((self.output_data['x'][0]-self.output_data['x'][-1])**2+(self.output_data['y'][0]-self.output_data['y'][-1])**2)
+        self.Vout = np.linspace(0, dist_between_points, len(self.output_data['x'])) # plots vs 0 to whatever the maximum distance travelled was
+        self.V = received[self.inp_dc]
+        Vcap = received[self.inp_cap]
         Vcap = self.lockin_cap.convert_output(Vcap) # convert to a lockin voltage
         self.C = Vcap*conversions.V_to_C # convert to true capacitance (fF)
-        self.Vac_x = V[self.inp_acx]
-        self.Vac_y = V[self.inp_acy]
+        self.Vac_x = received[self.inp_acx]
+        self.Vac_y = received[self.inp_acy]
 
         self.plot()
 

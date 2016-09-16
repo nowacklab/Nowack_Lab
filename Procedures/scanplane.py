@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from IPython import display
 from numpy import ma
 from ..Utilities.plotting import plot_mpl
-from ..Instruments import piezos, nidaq, montana, squidarray
+from ..Instruments import piezos, montana, squidarray
 from ..Utilities.save import Measurement, get_todays_data_path
 from ..Utilities import conversions
 
@@ -30,7 +30,6 @@ class Scanplane(Measurement):
 
         if instruments:
             self.piezos = instruments['piezos']
-            self.daq = instruments['nidaq']
             self.montana = instruments['montana']
             self.squidarray = instruments['squidarray']
             self.preamp = instruments['preamp']
@@ -38,13 +37,8 @@ class Scanplane(Measurement):
             self.lockin_cap = instruments['lockin_cap']
             self.attocube = instruments['attocube']
 
-            self.daq.add_input(self.inp_dc)
-            self.daq.add_input(self.inp_acx)
-            self.daq.add_input(self.inp_acy)
-            self.daq.add_input(self.inp_cap)
         else:
             self.piezos = None
-            self.daq = None
             self.montana = None
             self.squidarray = None
             self.preamp = None
@@ -98,7 +92,6 @@ class Scanplane(Measurement):
                           "end_time": self.end_time,
                           "piezos": self.piezos,
                           "scan_rate": self.scan_rate,
-                          "daq": self.daq,
                           "montana": self.montana,
                           "squidarray": self.squidarray,
                           "linecuts": self.linecuts,
@@ -170,34 +163,37 @@ class Scanplane(Measurement):
             time.sleep(3)
 
             ## Do the sweep
-            out, V, t = self.piezos.sweep(Vstart, Vend, sweep_rate=self.scan_rate) # sweep over X
+            in_chans = [self.inp_dc, self.inp_acx, self.inp_acy, self.inp_cap]
+            output_data, received = self.piezos.sweep(Vstart, Vend, chan_in = in_chans,
+                                    sweep_rate=self.scan_rate
+                                ) # sweep over X
 
             ## Flip the backwards sweeps
             if k == -1: # flip only the backwards sweeps
-                for d in out, V:
+                for d in output_data, received:
                     for key, value in d.items():
                         d[key] = value[::-1] # flip the 1D array
 
             ## Save linecuts
             self.linecuts[str(i)] = {"Vstart": Vstart,
                                 "Vend": Vend,
-                                "Vsquid": {"Vdc": V[self.inp_dc],
-                                           "Vac_x": V[self.inp_acx],
-                                           "Vac_y": V[self.inp_acy]}}
+                                "Vsquid": {"Vdc": receivedself.inp_dc],
+                                           "Vac_x": received[self.inp_acx],
+                                           "Vac_y": received[self.inp_acy]}}
 
             ## Interpolate to the number of lines
-            self.V_piezo_full = out[fast_axis] # actual voltages swept in x or y direction
+            self.V_piezo_full = output_data[fast_axis] # actual voltages swept in x or y direction
             if fast_axis == 'x':
                 self.V_piezo_interp = self.X[:,i]
             elif fast_axis == 'y':
                 self.V_piezo_interp = self.Y[i,:]
 
             # Store this line's signals for Vdc, Vac x/y, and Cap
-            self.V_squid_full = V[self.inp_dc]
-            self.Vac_x_full = V[self.inp_acx]
-            self.Vac_y_full = V[self.inp_acy]
+            self.V_squid_full = received[self.inp_dc]
+            self.Vac_x_full = received[self.inp_acx]
+            self.Vac_y_full = received[self.inp_acy]
 
-            Vcap = V[self.inp_cap]
+            Vcap = received[self.inp_cap]
             Vcap = self.lockin_cap.convert_output(Vcap) # convert to a lockin voltage
             self.C_full = Vcap*conversions.V_to_C # convert to true capacitance (fF)
 

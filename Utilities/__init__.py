@@ -1,1 +1,1 @@
-__all__ = ['dummy', 'make_instruments', 'plotting', 'utilities', 'save']
+__all__ = ['dummy', 'logging', 'make_instruments', 'plotting', 'save', 'utilities']

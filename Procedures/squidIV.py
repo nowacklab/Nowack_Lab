@@ -28,6 +28,8 @@ class SquidIV(Measurement):
 
         self.squidout = 'ao%s' %squidout
         self.squidin = 'ai%s' %squidin
+        if currentin is None:
+            currentin=23 # monitor a real channel!
         self.currentin = 'ai%s' %currentin # for the two-preamp setup
         self.modout = 'ao%s' %modout
 
@@ -39,11 +41,8 @@ class SquidIV(Measurement):
             self.montana = instruments['montana']
             try:
                 self.preamp_I = instruments['preamp_I']
-                self.daq.add_input(self.currentin) # make sure to monitor this channel with the daq
             except:
                 self.two_preamps = False
-
-            self.daq.add_input(self.squidin) # make sure to monitor this channel with the daq
 
             try:
                 for pa in [self.preamp, self.preamp_I]:
@@ -140,10 +139,16 @@ class SquidIV(Measurement):
             setattr(self.daq, self.modout, self.Imod*(self.Rbias_mod+self.Rcold_mod)) # Set mod current
 
         # Collect data
-        Vout, Vin, time = self.daq.sweep(self.squidout, self.Vbias[0], self.Vbias[-1], freq=self.rate, numsteps=self.numpts)
-        self.V = np.array(Vin[self.squidin])/self.preamp.gain
+        in_chans = [self.squidin, self.currentin]
+        output_data, received = self.daq.sweep({self.squidout: self.Vbias[0]},
+                                               {self.squidout: self.Vbias[-1]},
+                                               chan_in=in_chans,
+                                               sample_rate=self.rate,
+                                               numsteps=self.numpts
+                                           )
+        self.V = np.array(received[self.squidin])/self.preamp.gain
         if self.two_preamps:
-            self.I = np.array(Vin[self.currentin])/self.preamp_I.gain/self.Rmeas # Measure current from series resistor
+            self.I = np.array(received[self.currentin])/self.preamp_I.gain/self.Rmeas # Measure current from series resistor
         else:
             self.I = self.Vbias/(self.Rbias + self.Rcold + self.Rmeas) # estimate current by assuming Rbias >> Rsquid
 
