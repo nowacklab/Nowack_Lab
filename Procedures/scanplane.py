@@ -177,7 +177,7 @@ class Scanplane(Measurement):
             ## Save linecuts
             self.linecuts[str(i)] = {"Vstart": Vstart,
                                 "Vend": Vend,
-                                "Vsquid": {"Vdc": receivedself.inp_dc],
+                                "Vsquid": {"Vdc": received[self.inp_dc],
                                            "Vac_x": received[self.inp_acx],
                                            "Vac_y": received[self.inp_acy]}}
 

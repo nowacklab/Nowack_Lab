@@ -135,6 +135,7 @@ class NIDAQ():
         chan_in is a list of all input channels you wish to monitor.
         '''
         ## Make everything a numpy array
+        data = data.copy() # so we don't modify original data
         for key, value in data.items():
             value = value.copy() # so we don't modify original data
             if np.isscalar(value):
@@ -152,7 +153,7 @@ class NIDAQ():
             value = np.append(value, value[-1])
 
             ## Add units for Instrumental
-            value *= u.V
+            value = value * u.V
 
             data[key] = value
 
@@ -170,8 +171,8 @@ class NIDAQ():
         task.set_timing(n_samples = len(some_data), fsamp='%fHz' %sample_rate)
 
         ## run the task and remove units
-        received = task.run(write_data)
-        for key, value in received:
+        received = task.run(data)
+        for key, value in received.items():
             received[key] = value.magnitude
 
         ## Undo added data point

@@ -162,7 +162,7 @@ class Piezos():
             if key not in all_keys:
                 Vend.pop(key)
 
-        output_data, received = self._daq.sweep(Vstart, Vend, chan_in =
+        output_data, received = self._daq.sweep(Vstart, Vend, chan_in = chan_in,
                                 sample_rate=meas_rate, numsteps=numsteps
                             )
 
@@ -254,7 +254,7 @@ class Piezo():
         if np.isscalar(value):
             return value*self.gain*self.bipolar
         else:
-            return list(np.array(value)*self.gain*self.bipolar)
+            return np.array(value)*self.gain*self.bipolar
 
 
     def remove_gain(self, value):
@@ -264,7 +264,7 @@ class Piezo():
         if np.isscalar(value):
             return value/self.gain/self.bipolar
         else:
-            return list(np.array(value)/self.gain/self.bipolar)
+            return np.array(value)/self.gain/self.bipolar
 
 
     def check_lim(self, V):
