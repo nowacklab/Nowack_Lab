@@ -193,21 +193,26 @@ class Piezos():
     def sweep_surface(self, voltages, chan_in=None, sweep_rate=180, meas_rate=900):
         '''
         Sweeps piezos using arrays given in a voltage dictionary.
-         specify the channels you want to monitor as a list
-         Maximum allowed step size will be the step size for the piezo that has
-         to sweep over the largest voltage range (looks at start and end points).
+        This function will take that dictionary and interpolate to a different
+         number of steps. This number is determined by figuring out the total
+         distance (in volts) traveled by each piezo, and then dividing by the
+         average step size determined by sweep_rate and meas_rate. Note that
+         this does not ensure that the step size is kept constant between all
+          data points; it only ensures that the average is not too high.
+         Specify the channels you want to monitor as a list.
          Maximum step size set at 0.2 Vpiezo by default for class.
          Piezo sweep rate limited to 180 V/s when not scanning, 120 V/s when scanning.
          This sets a typical minimum output rate of 180/.2 = 900 Hz.
          Sampling faster will decrease the step size.
          Lowering the sweep rate open ups smaller measure rates
         '''
+        voltages = voltages.copy() # so we don't modify voltages
+
         Vstart = {}
         Vend = {}
         for key, value in voltages.items():
             Vstart[key] = value[0]
             Vend[key] = value[-1]
-
 
         ## Sweep to Vstart first if we aren't already there. self.V calls this function, but recursion should only go one level deep.
         if Vstart != self._V:
@@ -222,6 +227,25 @@ class Piezos():
         if step_size > self._max_step_size:
             raise Exception('Sweeping piezos too choppily! Decrease sweep_rate or increase meas_rate to increase the step size!')
 
+        ## Figure out the number of steps we need to take to get this average step size
+        from scipy.interpolate import interp1d
+        numsteps = []
+        for k in voltages.keys():
+            diffs = abs(np.diff(voltages[k])) # step sizes
+            total_voltage_distance = sum(diffs)
+            numsteps.append(total_voltage_distance/step_size)
+
+        numsteps = max(numsteps) # we will follow whichever piezo needs the most steps
+
+        ## Now interpolate to this number of steps:
+        for k in voltages.keys():
+            f = interp1d(np.linspace(0,1,len(voltages[k])), voltages[k])
+            voltages[k] = f(np.linspace(0,1,numsteps))
+
+            # check if step size is way too large
+            diffs = abs(np.diff(voltages[k]))
+            if len(diffs[diffs>self._max_step_size*3]):
+                raise Exception('Piezo step size too large! Max is %s' %self._max_step_size)
 
         ## Check voltage limits and remove gain
         for k in voltages.keys():
@@ -233,20 +257,26 @@ class Piezos():
             voltages[getattr(self,k).chan_out] = voltages.pop(k) # changes key to daq output channel name
 
         received = self._daq.send_receive(voltages, chan_in = chan_in,
-                                sample_rate=meas_rate, numsteps=numsteps
-                            )
+                                sample_rate=meas_rate)
 
         ## Go back to piezo keys
         for k in self._piezos:
+            try:
+                voltages[k] = voltages.pop(getattr(self,k).chan_out)
+            except:
+                pass
             try:
                 self._V.pop(getattr(self,k).chan_out) # was keeping daq keys for some reason
             except:
                 pass
 
+        for k in voltages.keys():
+            voltages[k] = getattr(self,k).apply_gain(voltages[k])
+
         ## Keep track of current voltage
         self.V # does a measurement of daq output channels
 
-        return received
+        return voltages, received
 
 
     def zero(self):

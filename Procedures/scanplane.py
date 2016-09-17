@@ -118,7 +118,7 @@ class Scanplane(Measurement):
         state.pop('attocube')
         self.__dict__.update(state)
 
-    def do(self, fast_axis = 'x'):
+    def do(self, fast_axis = 'x', linear=True): # linear True = sweep in lines, False sweep over plane surface
         self.setup_plots()
 
         ## Start time and temperature
@@ -169,9 +169,23 @@ class Scanplane(Measurement):
 
             ## Do the sweep
             in_chans = [self.inp_dc, self.inp_acx, self.inp_acy, self.inp_cap]
-            output_data, received = self.piezos.sweep(Vstart, Vend, chan_in = in_chans,
-                                    sweep_rate=self.scan_rate
-                                ) # sweep over X
+
+            if linear:
+                output_data, received = self.piezos.sweep(Vstart, Vend, chan_in = in_chans,
+                                        sweep_rate=self.scan_rate
+                                    ) # sweep over X
+            else:
+                x = np.linspace(Vstart['x'], Vend['x']) # 50 points should be good for giving this to piezos.sweep_surface
+                y = np.linspace(Vstart['y'], Vend['y'])
+                if fast_axis == 'x':
+                    Z = self.plane.surface(x,y)[:,i]
+                else:
+                    Z = self.plane.surface(x,y)[i,:]
+                output_data = {'x': x, 'y':y, 'z': Z}
+                output_data, received = self.piezos.sweep_surface(output_data,
+                                                        chan_in = in_chans,
+                                                        sweep_rate = self.scan_rate
+                                                    )
 
             ## Flip the backwards sweeps
             if k == -1: # flip only the backwards sweeps

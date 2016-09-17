@@ -163,7 +163,9 @@ class Planefit(Measurement):
         self.calculate_plane()
 
         ## take the first slow touchdown as a more accurate center
+        c_fit = self.c
         self.c = center_z_value - self.a*self.center[0] - self.b*self.center[1]
+        self.Z -= (c_fit-self.c) # c was lowered by the correction, so we lower the plane.
 
         self.save()
 
@@ -238,6 +240,16 @@ class Planefit(Measurement):
             plt.savefig(os.path.join(DATA_FOLDER, self.filename+'.pdf'), bbox_inches='tight')
 
 
+    def surface(self, x, y):
+        '''
+        Does an interpolation on the surface to give an array of z values
+        for x, y points specified by arrays.
+        '''
+        from scipy.interpolate import interp2d
+        f = interp2d(self.X[0,:],self.Y[:,0],self.Z)
+        return f(x,y)
+
+
     def update_c(self):
         '''
         Does a single touchdown to find the plane again (at Vx=Vy=0).
@@ -254,6 +266,7 @@ class Planefit(Measurement):
                 if z_maxormin > self.piezos.z.Vmax or z_maxormin < 0:
                     self.c = old_c
                     raise Exception('Plane now extends outside range of piezos! Move the attocubes and try again.')
+        self.Z -= (old_c-self.c) # for example, if c decrased, then we want to subtract a positive number from the plane
         self.save(savefig=False)
 
 
