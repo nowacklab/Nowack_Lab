@@ -26,9 +26,20 @@ class Montana():
 
 
     def __getstate__(self):
-        self.save_dict = {"temperature": self.temperature,
+        self.save_dict = {"temperature": self._temperature,
                           "stability": self._temperature_stability}
         return self.save_dict
+
+
+    def __setstate__(self, state):
+        '''
+        For loading.
+        '''
+        state['_temperature'] = state.pop('temperature')
+        state['_temperature_stability'] = state.pop('stability')
+
+        self.__dict__.update(state)
+        
 
     @property
     def pressure(self):

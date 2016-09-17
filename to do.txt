@@ -1,4 +1,4 @@
-Change cap_lockin to lockin_cap, and the other one
+Maybe take 4-5 points at a time for touchdown?
 
 Allow for sig_in_ac_x = None
 

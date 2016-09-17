@@ -1,1 +1,1 @@
-__all__ = ["attocube", "montana", "nanonis", "nidaq", "piezos", "preamp", "squidarray", "lockin"]
+__all__ = ["attocube", "montana", "nidaq", "piezos", "preamp", "squidarray", "lockin"]

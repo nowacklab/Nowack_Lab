@@ -1,48 +1,62 @@
 import numpy as np
-import time
-import atexit
+from ..Utilities.logging import log
 
 class Piezos():
     '''
-    Piezo benders on the scanner. Signal sent to NIDAQ goes through Nanonis HVA4 High Voltage Amplifier. Sweeps between voltages smoothly. One hiccup is that it jumps to zero upon creating the Piezo object.
+    Piezo benders on the scanner.
+    Signal sent to NIDAQ goes through Nanonis HVA4 High Voltage Amplifier.
+    Sweeps between voltages smoothly.
     '''
-    # amp = nanonis.HVA4('COM2')
+    _piezos = ['x','y','z']
+    _gain = [40, 40, 40]
+    _Vmax = [400, 400, 400] # maximum allowed total voltage across piezo
+    _bipolar = [2, 2, 2] # multiplier for whether piezos are biased +V/-V or not.
+    _V = {}
+    _daq = None
+    _max_sweep_rate = 180 # Vpiezo/s
+    _max_step_size = 0.2 #Vpiezo = 0.0025 Vdaq * 2 * 40, assuming these are typical values for bipolar and gain.
+                        # 0.0025 V is approximately the resolution of the daq, so it doesn't make sense to go much slower than that.
+                        # 0.2 is a nice number
 
-    def __init__(self, daq, chan_out = {'x':0,'y':1,'z':2}, gain = {i:15 for i in ['x','y','z']}, Vmax={'x':200, 'y':200, 'z':200}, bipolar = {i: True for i in ['x','y','z']}, zero = True):
+    def __init__(self, daq=None, chan_out = [0,1,2], zero = False):
         '''
-        e.g. pz = piezos.Piezos(daq=daq,
-                                chan_out = {'x':0,'y':1,'z':2},
-                                gain={'x': 15,'y':15, 'z':15},
-                                Vmax = {'x':200, 'y':200, 'z':200},
-                                bipolar = {'x':True, 'y':True, 'z':True},
-                                zero = True
-                                )
+        e.g. pz = piezos.Piezos(daq=daq, chan_out = [0,1,2], zero = True)
             daq: the nidaq.NIDAQ() object
-            chan_out: output channel of daq (just the number, ao#)
-            gain: gain setting on HVA4
-            Vmax: maximum delta voltage across piezo (includes bipolar multiplier)
-            bipolar: whether the piezo is driven with +/- V (True) or +V/gnd (False)
+            chan_out: output channels of daq for each positioner (just the number, ao#) [x,y,z]
             zero: whether to zero the daq or not
         '''
-        self.daq = daq
-        self.gain = gain
-        self.chan_out = {key: 'ao%s'%chan_out[key] for key in chan_out}
-        self.Vmax = Vmax
-        self.bipolar = {}
-        for key, value in bipolar.items():
-            self.bipolar[key] = value + 1 # Bipolar multiplier; False = 1, True = 2
+        self._daq = daq
+        if daq is None:
+            print('Daq not loaded... piezos will not work until you give them a daq!')
 
-        self._V = {}
+        for (i,p) in enumerate(self._piezos):
+            setattr(self, p, Piezo(self._daq, chan_out[i], label=p,
+                                    gain = self._gain[i], Vmax=self._Vmax[i],
+                                    bipolar = self._bipolar[i],
+                                max_sweep_rate = self._max_sweep_rate,
+                                max_step_size=self._max_step_size))
+                                # makes benders x, y, and z
+
         if zero:
             self.zero()
 
     def __getstate__(self):
-        self.save_dict = {"V": self.V,
-                          "Vmax": self.Vmax,
-                          "bipolar": self.bipolar,
-                          "gain": self.gain,
-                          "daq": self.daq}
+        self.save_dict = {"x": self.x,
+                            "y": self.y,
+                            "z": self.z,
+                            "daq": self._daq,
+                            "max sweep rate": self._max_sweep_rate,
+                            "max step size": self._max_step_size
+                            }
         return self.save_dict
+
+
+    def __setstate__(self, state):
+        state.pop('daq') # don't want to load the daq automatically
+        state['_max_sweep_rate'] = state.pop('max sweep rate')
+        state['_max_step_size'] = state.pop('max step size')
+        self.__dict__.update(state)
+        # print('Daq not loaded in piezos! Load with load_daq(daq)!')
 
 
     @property
@@ -53,74 +67,58 @@ class Piezos():
             pz.V = {'z':150, 'y':100}
             pz.V = 0 will zero all piezos
         '''
-        for key in self.chan_out:
-            self._V[key] = getattr(self.daq, self.chan_out[key])*self.gain[key]*self.bipolar[key] # convert daq volts to piezo volts
+        for p in self._piezos:
+            self._V[p] = getattr(self,p).V
         return self._V
 
     @V.setter
     def V(self, value):
         if np.isscalar(value):
-            value = {k:value for k in ['x','y','z']}
+            value = {k: value for k in self._piezos}
 
-        self.check_lim(value)
-
+        for k in value.keys():
+            getattr(self,k).check_lim(value[k])
         ## Sweep to the desired voltage
         self.sweep(self.V, value)
-
         ## Store the desired voltage
-        for key in value:
-            self._V[key] = value[key]
+        for key in self._piezos:
+            try:
+                self._V[key] = value[key]
+            except:
+                pass
 
 
-    def apply_gain(self, value):
+    def load_daq(self, daq):
         '''
-        Converts DAQ volts to piezo volts by multiplying a voltage (dictionary) by the gain and bipolar factor for each axis.
+        If piezos object loaded without a daq, give it a daq.
         '''
-        gains = {}
-        for k in value:
-            if np.isscalar(value[k]):
-                gains[k] =  value[k]*self.gain[k]*self.bipolar[k]
-            else:
-                gains[k] = list(np.array(value[k])*self.gain[k]*self.bipolar[k])
-        return gains
+        self._daq = daq
+        for p in self._piezos:
+            getattr(self,p)._daq = daq
 
 
-    def remove_gain(self, value):
+    def sweep(self, Vstart, Vend, chan_in=None, sweep_rate=180, meas_rate=900):
         '''
-        Converts piezo volts to DAQ volts by dividing a voltage (dictionary) by the gain and bipolar factor for each axis.
+        Sweeps piezos from a starting voltage (dictionary) to an ending voltage
+         (dictionary).
+         specify the channels you want to monitor as a list
+         Maximum allowed step size will be the step size for the piezo that has
+         to sweep over the largest voltage range.
+         Maximum step size set at 0.2 Vpiezo by default for class.
+         Piezo sweep rate limited to 180 V/s when not scanning, 120 V/s when scanning.
+         This sets a typical minimum output rate of 180/.2 = 900 Hz.
+         Sampling faster will decrease the step size.
+         Lowering the sweep rate open ups smaller measure rates
         '''
-        gains = {}
-        for k in value:
-            if np.isscalar(value[k]):
-                gains[k] =  value[k]/self.gain[k]/self.bipolar[k]
-            else:
-                gains[k] = list(np.array(value[k])/self.gain[k]/self.bipolar[k])
-        return gains
+        ## Make copies of start and end dictionaries so we can mess them up
+        Vstart = Vstart.copy()
+        Vend = Vend.copy()
 
-
-    def check_lim(self, V):
-        '''
-        checks dictionary {'x': Vx, 'y': Vy, 'z': Vz} of voltage lists Vj = [...] to see if they are out of range for the piezos
-        '''
-        Vtemp = V.copy() # need to do this or else V is modified
-        for k in Vtemp:
-            if np.isscalar(Vtemp[k]):
-                Vtemp[k] = [Vtemp[k]]
-            if type(Vtemp[k]) is not np.ndarray:
-                Vtemp[k] = np.array(Vtemp[k])
-            if Vtemp[k].max()-1 > self.Vmax[k] or Vtemp[k].min()+1 < -self.Vmax[k]:# +/- 1 is tolerance, daq noise was throwing it off
-                raise Exception('Voltage out of range for %s piezo! Max is %s' %(k, self.Vmax[k]))
-
-
-    def sweep(self, Vstart, Vend, Vstepmax = 0.01, freq = 1500):
-        '''
-        Sweeps piezos from a starting voltage (dictionary) to an ending voltage (dictionary), with maximum allowed step size and frequency. Maximum allowed step size will be the step size for the piezo that has to sweep over the largest voltage range.
-        '''
         ## Sweep to Vstart first if we aren't already there. self.V calls this function, but recursion should only go one level deep.
-        if Vstart != self.V:
+        if Vstart != self._V:
             self.V = Vstart
 
-        ## Make sure to only have the piezos requested to sweep over
+        ## Make sure to only have the piezos we want to sweep over
         all_keys = list(set(Vstart) & set(Vend)) # keys in common
         for v in Vstart, Vend:
             keys = list(v.keys()) # keys in each one
@@ -128,96 +126,310 @@ class Piezos():
                 if key not in all_keys:
                     v.pop(key) # get rid of unwanted items
 
+        ## Figuring out how fast to sweep
+        if sweep_rate > self._max_sweep_rate:
+            raise Exception('Sweeping piezos too fast! Max is 180 V/s!')
+
+        # Figure out the step size demanded by sweep_rate and meas_rate
+        step_size = sweep_rate/meas_rate # default: 0.2 V
+        if step_size > self._max_step_size:
+            raise Exception('Sweeping piezos too choppily! Decrease sweep_rate or increase meas_rate to increase the step size!')
+
+        msg = 'Sweeping piezos! '
+        for key in all_keys:
+            msg = msg + '%s: %.1f to %.1f ' %(key, Vstart[key], Vend[key])
+        log(msg)
+
+        ## Calculate number of steps. This is max(|(Whole voltage range)/(step size)|).
+        ## Add 1 so there is at least 1 step
+        ## All piezos use the same numsteps. This is based on which piezo needs to move the furthest.
+        numsteps = max([int(abs(Vstart[k]-Vend[k])/step_size)+1 for k in Vstart])
+
+        ## Check voltage limits and remove gain
+        for k in Vstart.keys():
+            getattr(self,k).check_lim(Vstart[k])
+            Vstart[k] = getattr(self,k).remove_gain(Vstart[k])
+        for k in Vend.keys():
+            getattr(self,k).check_lim(Vend[k])
+            Vend[k] = getattr(self,k).remove_gain(Vend[k])
+
+        ## Convert keys to the channel names that the daq expects
+        for k in list(Vstart.keys()): # need this a list so that new keys aren't iterated over
+            Vstart[getattr(self,k).chan_out] = Vstart.pop(k) # changes key to daq output channel name
+            Vend[getattr(self,k).chan_out] = Vend.pop(k)
+
+        ## If for some reason you give extra keys, get rid of them.
+        all_keys = list(set(Vstart) & set(Vend))
+        for key in Vstart.keys():
+            if key not in all_keys:
+                Vstart.pop(key)
+        for key in Vend.keys():
+            if key not in all_keys:
+                Vend.pop(key)
+
+        output_data, received = self._daq.sweep(Vstart, Vend, chan_in = chan_in,
+                                sample_rate=meas_rate, numsteps=numsteps
+                            )
+
+        ## Go back to piezo keys
+        for k in self._piezos:
+            try:
+                output_data[k] = output_data.pop(getattr(self,k).chan_out)
+            except:
+                pass
+            try:
+                Vend[k] = Vend.pop(getattr(self,k).chan_out) # need to convert Vend back for later
+            except: # in case one or more keys is not used
+                pass
+            try:
+                self._V.pop(getattr(self,k).chan_out) # was keeping daq keys for some reason
+            except:
+                pass
+        ## reapply gain
+        for k in output_data.keys():
+            output_data[k] = getattr(self,k).apply_gain(output_data[k])
+
+        ## Keep track of current voltage
+        for k in output_data:
+            self._V[k] = Vend[k] # end of sweep, for keeping track of voltage
+
+        return output_data, received
+
+    def sweep_surface(self, voltages, chan_in=None, sweep_rate=180, meas_rate=900):
+        '''
+        Sweeps piezos using arrays given in a voltage dictionary.
+        This function will take that dictionary and interpolate to a different
+         number of steps. This number is determined by figuring out the total
+         distance (in volts) traveled by each piezo, and then dividing by the
+         average step size determined by sweep_rate and meas_rate. Note that
+         this does not ensure that the step size is kept constant between all
+          data points; it only ensures that the average is not too high.
+         Specify the channels you want to monitor as a list.
+         Maximum step size set at 0.2 Vpiezo by default for class.
+         Piezo sweep rate limited to 180 V/s when not scanning, 120 V/s when scanning.
+         This sets a typical minimum output rate of 180/.2 = 900 Hz.
+         Sampling faster will decrease the step size.
+         Lowering the sweep rate open ups smaller measure rates
+        '''
+        voltages = voltages.copy() # so we don't modify voltages
+
+        Vstart = {}
+        Vend = {}
+        for key, value in voltages.items():
+            Vstart[key] = value[0]
+            Vend[key] = value[-1]
+
+        ## Sweep to Vstart first if we aren't already there. self.V calls this function, but recursion should only go one level deep.
+        if Vstart != self._V:
+            self.V = Vstart
+
+        ## Figuring out how fast to sweep
+        if sweep_rate > self._max_sweep_rate:
+            raise Exception('Sweeping piezos too fast! Max is 180 V/s!')
+
+        # Figure out the step size demanded by sweep_rate and meas_rate
+        step_size = sweep_rate/meas_rate # default: 0.2 V
+        if step_size > self._max_step_size:
+            raise Exception('Sweeping piezos too choppily! Decrease sweep_rate or increase meas_rate to increase the step size!')
+
+        ## Figure out the number of steps we need to take to get this average step size
+        from scipy.interpolate import interp1d
+        numsteps = []
+        for k in voltages.keys():
+            diffs = abs(np.diff(voltages[k])) # step sizes
+            total_voltage_distance = sum(diffs)
+            numsteps.append(total_voltage_distance/step_size)
+
+        numsteps = max(numsteps) # we will follow whichever piezo needs the most steps
+
+        ## Now interpolate to this number of steps:
+        for k in voltages.keys():
+            f = interp1d(np.linspace(0,1,len(voltages[k])), voltages[k])
+            voltages[k] = f(np.linspace(0,1,numsteps))
+
+            # check if step size is way too large
+            diffs = abs(np.diff(voltages[k]))
+            if len(diffs[diffs>self._max_step_size*3]):
+                raise Exception('Piezo step size too large! Max is %s' %self._max_step_size)
+
+        ## Check voltage limits and remove gain
+        for k in voltages.keys():
+            getattr(self,k).check_lim(voltages[k])
+            voltages[k] = getattr(self,k).remove_gain(voltages[k])
+
+        ## Convert keys to the channel names that the daq expects
+        for k in list(voltages.keys()): # need this a list so that new keys aren't iterated over
+            voltages[getattr(self,k).chan_out] = voltages.pop(k) # changes key to daq output channel name
+
+        received = self._daq.send_receive(voltages, chan_in = chan_in,
+                                sample_rate=meas_rate)
+
+        ## Go back to piezo keys
+        for k in self._piezos:
+            try:
+                voltages[k] = voltages.pop(getattr(self,k).chan_out)
+            except:
+                pass
+            try:
+                self._V.pop(getattr(self,k).chan_out) # was keeping daq keys for some reason
+            except:
+                pass
+
+        for k in voltages.keys():
+            voltages[k] = getattr(self,k).apply_gain(voltages[k])
+
+        ## Keep track of current voltage
+        self.V # does a measurement of daq output channels
+
+        return voltages, received
+
+
+    def zero(self):
+        self.V = 0
+
+
+class Piezo():
+    _V = None
+    def __init__(self, daq, chan_out, label=None, gain=15, Vmax=200, bipolar=2, max_sweep_rate=180, max_step_size=.2):
+        self._daq = daq
+        self.chan_out = 'ao%i' %chan_out
+        self.label = label
+        self.gain = gain
+        self.Vmax = Vmax
+        self.bipolar = bipolar
+        self.V # get voltage from daq
+        self.max_sweep_rate = max_sweep_rate
+        self.max_step_size = max_step_size
+
+    def __getstate__(self):
+        self.save_dict = {"chan_out": self.chan_out,
+                            "label": self.label,
+                            "gain": self.gain,
+                            "Vmax": self.Vmax,
+                            "bipolar multiplier": self.bipolar,
+                            "V": self.V,
+                            "max sweep rate": self.max_sweep_rate,
+                            "sweep step size": self.max_step_size
+                        }
+        return self.save_dict
+
+
+    def __setstate__(self, state):
+        state['bipolar'] = state.pop('bipolar multiplier')
+        state['_V'] = state.pop('V')
+        state['max_sweep_rate'] = state.pop('max sweep rate')
+        state['max_step_size'] = state.pop('sweep step size')
+        self.__dict__.update(state)
+
+
+    @property
+    def V(self):
+        '''
+        Voltage property. Set or read piezo voltage
+        '''
+        try:
+            self._V = getattr(self._daq, self.chan_out)*self.gain*self.bipolar # convert daq volts to piezo volts
+        except:
+            print('Couldn\'t communicate with daq! Current %s piezo voltage unknown!' %self.label)
+        return self._V
+
+    @V.setter
+    def V(self, value):
+        self.check_lim(value)
+        self.sweep(self.V, value)
+        self._V = value
+
+
+    def apply_gain(self, value):
+        '''
+        Converts DAQ volts to piezo volts by multiplying a voltage by the gain and bipolar factor
+        '''
+        if np.isscalar(value):
+            return value*self.gain*self.bipolar
+        else:
+            return np.array(value)*self.gain*self.bipolar
+
+
+    def remove_gain(self, value):
+        '''
+        Converts piezo volts to DAQ volts by dividing a voltage by the gain and bipolar factor
+        '''
+        if np.isscalar(value):
+            return value/self.gain/self.bipolar
+        else:
+            return np.array(value)/self.gain/self.bipolar
+
+
+    def check_lim(self, V):
+        '''
+        checks voltage list V = [...] to see if it is out of range for the piezo
+        '''
+        if np.isscalar(V):
+            Vtemp = [V]
+        else:
+            Vtemp = V
+        if type(Vtemp) is not np.ndarray:
+            Vtemp = np.array(Vtemp)
+        if Vtemp.max()-1 > self.Vmax or Vtemp.min()+1 < -self.Vmax:# +/- 1 is tolerance, daq noise was throwing it off
+            raise Exception('Voltage out of range for %s piezo! Max is %s' %(self.label, self.Vmax))
+
+
+    def sweep(self, Vstart, Vend, chan_in=None, sweep_rate=180, meas_rate=900):
+        '''
+        Sweeps piezos linearly from a starting voltage to an ending voltage.
+        Specify a list of input channels you want to monitor.
+         Maximum allowed step size will be the step size for the piezo that has
+         to sweep over the largest voltage range.
+         Maximum step size set at 0.2 Vpiezo by default for class.
+         Piezo sweep rate limited to 180 V/s when not scanning, 120 V/s when scanning.
+         This sets a typical minimum output rate of 180/.2 = 900 Hz.
+         Sampling faster will decrease the step size.
+         Lowering the sweep rate open ups smaller measure rates
+        '''
+        ## Sweep to Vstart first if we aren't already there.
+        ## Self.V calls this function, but recursion should only go one level deep.
+        if Vstart != self._V: #Need self._V or else it will do a measurement and loop forever!
+            self.V = Vstart
+
         ## Check voltage limits
         self.check_lim(Vstart)
         self.check_lim(Vend)
 
-        ## Calculate number of steps. This is max(|(Whole voltage range)/(step size)| + 1). All piezos use the same numsteps.
-        numsteps = max([int(abs(Vstart[k]-Vend[k])/Vstepmax)+1 for k in Vstart])
+        ## Figuring out how fast to sweep
+        if sweep_rate > self.max_sweep_rate:
+            raise Exception('Sweeping piezos too fast! Max is 180 V/s!')
+
+        # Figure out the step size demanded by sweep_rate and meas_rate
+        step_size = sweep_rate/meas_rate # default: 0.2 V
+        if step_size > self.max_step_size:
+            raise Exception('Sweeping piezos too choppily! Decrease sweep_rate or increase meas_rate to increase the step size!')
+
+        ## Calculate number of steps. This is |(Whole voltage range)/(step size)|.
+        ## Add 1 so there is at least 1 step
+        numsteps = int(abs(Vstart-Vend)/step_size)+1
 
         ## Remove gain
         Vstart = self.remove_gain(Vstart)
         Vend = self.remove_gain(Vend)
 
-        ## Convert keys to the channel names that the daq expects
-        for k in list(Vstart.keys()): # need this a list so that new keys aren't iterated over
-            Vstart[self.chan_out[k]] = Vstart.pop(k) # changes key to daq output channel name
-            Vend[self.chan_out[k]] = Vend.pop(k)
-        all_keys = list(set(Vstart) & set(Vend))
+        output_data, received = self._daq.sweep({self.chan_out: Vstart},
+                                            {self.chan_out: Vend},
+                                            chan_in = chan_in,
+                                            sample_rate=meas_rate,
+                                            numsteps=numsteps
+                                        )
 
-        V, response, time = self.daq.sweep(all_keys, Vstart, Vend, freq=freq, numsteps=numsteps)
-
-        ## Go back to piezo keys
-        for k in ['x','y','z']:
-            try:
-                V[k] = V.pop(self.chan_out[k])
-            except: # in case one or more keys is not used
-                pass
-
+        output_data = output_data[self.chan_out]
         ## reapply gain
-        V = self.apply_gain(V)
+        output_data = self.apply_gain(output_data)
 
-        ## Keep track of current voltage
-        for k in V:
-            self._V[k] = V[k][-1] # end of sweep, for keeping track of voltage
+        self._V = Vend # check the current voltage
 
-        return V, response, time
+        return output_data, received
+
 
     def zero(self):
-        print('Zeroing piezos...')
-        self.V = {'x': 0, 'y': 0, 'z': 0}
+        print('Zeroing %s piezo...' %self.label)
+        self.V = 0
         print('...done.')
-
-if __name__ == '__main__':
-    """ Testing the code.  """
-    # import matplotlib.pyplot as plt
-
-    # piezo = Piezo('z', 15, False, 'ao2', 'ai22')
-    # sweep_data = piezo.full_sweep(1000)
-    # plt.plot(sweep_data[0],sweep_data[1])
-    # plt.show()
-
-
-    ##### OLD DUMB CODE
-        # def sweep(self, Vstart, Vend, Vstep=0.01, numsteps=None):
-        # # self._V = Vstart
-
-        # if numsteps == None:
-            # numsteps = int((Vstart-Vend)/Vstep)+1
-        # else:
-            # Vstep = (Vend-Vstart)/(numsteps-1)
-
-        # # t_wait_min = 0.035 # set by code execution time
-        # # if t_wait < t_wait_min:
-            # # t_wait = t_wait_min
-            # # print('time limited to 0.035 by current code execution time')
-
-        # max_rate = 40 #V/s
-
-        # V = list(np.linspace(Vstart, Vend, numsteps))
-        # if self.remove_gain(abs(max(V))) > 10:
-            # raise Exception('NIDAQ out of range!')
-
-        # response = daq.send_receive(self.out_channel, self.in_channel, self.remove_gain(V), freq=max_rate/Vstep)
-
-        # # Upward sweep
-        # # for step in range(numsteps):
-            # # start_time = time.time()
-            # # V_step = self.remove_gain(V[step])
-
-            # # setattr(self.daq, self.out_channel, V_step) # takes 0.009 seconds
-            # # if self.in_channel != None:
-                # # response.append(getattr(self.daq,self.in_channel)) # takes 0.025 seconds
-
-            # # elapsed_time = time.time() - start_time
-            # # if elapsed_time < t_wait:
-                # # time.sleep(t_wait - elapsed_time)
-
-        # self._V = V[len(V)-1] # end of sweep
-
-        # return V, response
-
-    # def full_sweep(self, t_wait, numsteps):
-        # Vup, responseup = (self.sweep(0, self.Vmax, t_wait,numsteps)) # up sweep
-        # Vdown, responsedown = (self.sweep(self.Vmax-self.Vmax/numsteps, 0, t_wait,numsteps-1)) # down sweep # extra term avoids duplicate data point at top of sweep; minus 1 makes it symmetric
-        # return Vup + Vdown, responseup + responsedown
+        log('Zeroed all piezos safely.')

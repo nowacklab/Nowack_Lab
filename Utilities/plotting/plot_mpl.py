@@ -28,7 +28,11 @@ def clim(im, l, u):
     cb.draw_all()
 
 
-def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='', ylabel='', clabel='', fontsize=12):
+def plotline(ax, x, y, z):
+    pass
+
+
+def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='', ylabel='', clabel='', fontsize=20):
     '''
     Plots a 2D heatmap on axes ax using plt.imshow.
     x,y must be a meshgrid with 'ij' indexing. (list functionality to come?)
@@ -70,7 +74,6 @@ def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='', 
     aspect(ax, 1, absolute=False) # equal aspect ratio based on data scales
 
     return im
-
 
 def update2D(im, z, center_at_zero=False):
     '''

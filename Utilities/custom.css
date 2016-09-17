@@ -3,13 +3,12 @@
     transition: height .2s ease;
 }
 
-/* 
-div#notebook {  
-    border-bottom: 100px solid rgba(0,0,0,0.15);
-}
- */
 
-/* 
+div#notebook-container {
+    margin-left: 2px; margin-right:2px;
+}
+
+/*
  .fix{
 position:fixed;
 bottom:0px;
@@ -21,7 +20,7 @@ img {
  class:"fix";
  }
  */
-/* 
+/*
 #footer {
    position:absolute;
    bottom:0;

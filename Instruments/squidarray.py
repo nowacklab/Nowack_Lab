@@ -4,7 +4,8 @@ Classes for controlling StarCryo electronics for the SQUID array: PCI100 (PC pci
 Possible to-do: make parameter values quantized to 12 bits to more accurately reflect actual parameter values
 """
 
-import visa, time, atexit, inspect, os, json, jsonpickle
+import visa, time, atexit, inspect, os, json, jsonpickle as jsp
+from IPython.display import clear_output
 
 class PCI100:
     def __init__(self, visaResource='COM3'):
@@ -57,48 +58,68 @@ class PFL102:
     param_filename = os.path.join(os.path.dirname(__file__),'squidarray_params.json')
 
 
-    # def __getstate__(self):
-    #     self.save_dict = {"_S_bias": self._S_bias,
-    #                           "_A_bias": self._A_bias,
-    #                           "_S_flux": self._S_flux,
-    #                           "_A_flux": self._A_flux,
-    #                           "_offset": self._offset,
-    #                           "_integratorCapacitor": self._integratorCapacitor,
-    #                           "_feedbackResistor": self.feedbackResistor}
-    #     return self.save_dict
-
-    def __init__(self, channel, pci, load=False):
+    def __init__(self, channel, pci):
         """ Will initialize PFL 102 and zero everything (or not) """
-        assert channel>= 1 and channel <=8 # choose 1
+        assert channel >= 1 and channel <= 8 # choose 1
 
-        self.label = 'PFL102'
         self.channel = channel
         self.pci = pci
         self.pflRegister = None
         self.resetIntegrator = False
 
-        if not load:
-            self._arrayLocked = False
-            self._squidLocked = False
+        self._arrayLocked = False
+        self._squidLocked = False
 
-            self._S_bias = 0
-            self._A_bias = 0
-            self._S_flux = 0
-            self._A_flux = 0
-            self._offset = 0
+        self._S_bias = 0
+        self._A_bias = 0
+        self._S_flux = 0
+        self._A_flux = 0
+        self._offset = 0
 
-            self._integratorCapacitor = '1.5nF'
-            self._feedbackResistor = '100kOhm'
-            self._sensitivity = 'High'
-            self._testSignal = 'Auto'
-            self._testInput = 'A_flux'
+        self._integratorCapacitor = '1.5nF'
+        self._feedbackResistor = '100kOhm'
+        self._sensitivity = 'High'
+        self._testSignal = 'Auto'
+        self._testInput = 'A_flux'
 
-            self.unlock() # make sure nothing is trying to lock and update digital control
+        self.unlock() # make sure nothing is trying to lock and update digital control
 
-        else:
-            self.load()
         self.updateAll()
         self.updateDigitalControl()
+
+    def __getstate__(self):
+        self.save_dict = {"Array bias": self._A_bias,
+                          "Array flux": self._A_flux,
+                          "SQUID bias": self._S_bias,
+                          "SQUID flux": self._S_flux,
+                          "Array locked": self._arrayLocked,
+                          "Feedback resistor": self._feedbackResistor,
+                          "Integrator capacitor": self._integratorCapacitor,
+                          "Preamp voltage offset": self._offset,
+                          "sensitivity": self._sensitivity,
+                          "SQUID locked": self._squidLocked,
+                          "Test input": self._testInput,
+                          "Test signal": self._testSignal,
+                          "channel": self.channel,
+                          "resetIntegrator": self.resetIntegrator
+                      }
+        return self.save_dict
+
+    def __setstate__(self, state):
+        state['_A_bias'] = state.pop('Array bias')
+        state['_A_flux'] = state.pop('Array flux')
+        state['_S_bias'] = state.pop('SQUID bias')
+        state['_S_flux'] = state.pop('SQUID flux')
+        state['_arrayLocked'] = state.pop('Array locked')
+        state['_feedbackResistor'] = state.pop('Feedback resistor')
+        state['_integratorCapacitor'] = state.pop('Integrator capacitor')
+        state['_offset'] = state.pop('Preamp voltage offset')
+        state['_sensitivity'] = state.pop('sensitivity')
+        state['_testInput'] = state.pop('Test input')
+        state['_squidLocked'] = state.pop('SQUID locked')
+        state['_testSignal'] = state.pop('Test signal')
+
+        self.__dict__.update(state)
 
     ######### PROPERTY DEFINITIONS ###################
 
@@ -290,27 +311,20 @@ class PFL102:
         self.reset() # will reset the integrator and restore settings
 
 
-    def load(self):
+    @staticmethod
+    def load(json_file=None):
         '''
         Load last saved parameters for the array from a file.
         '''
-        with open(self.param_filename, 'r') as f:
-            data = json.load(f)
-        datastr = json.dumps(data)
-        datadict = jsonpickle.decode(datastr)
-        for key, value in datadict.items():
-            if key[0] == '_':
-                setattr(self, key, value)
-        # with open(self.param_filename, 'r') as f:
-        #     for line in f:
-        #         exec(line)
-        # for i in ['_squidLocked','_arrayLocked']:
-        #     if getattr(self,i) == 'True':
-        #         setattr(self, i, True)
-        #     else:
-        #         setattr(self, i, False)
-        # for i in ['_S_bias','_A_bias','_S_flux','_A_flux','_offset']:
-        #     setattr(self, i, float(getattr(self,i))) #convert to float
+        if json_file is None:
+            json_file = os.path.join(os.path.dirname(__file__),'squidarray_params.json')
+        with open(json_file, encoding='utf-8') as f:
+            obj_dict = json.load(f)
+        obj_string = json.dumps(obj_dict)
+        obj = jsp.decode(obj_string)
+
+        obj.pci = PCI100()
+        return obj
 
 
     def lock(self, what):
@@ -333,27 +347,12 @@ class PFL102:
 
     def save(self):
         '''
-        Save current values of all squid array parameters to a file, so that when we make a new array object, values are initialized correctly.
+        Saves current parameters to squidarray_params.json for future loading.
         '''
-        data = jsonpickle.encode(self, unpicklable=False, max_depth=2) # max depth 2 needed or else strings saved as "'string'" and cannot be decoded
-        data_dict = json.loads(data)
-
-        with open(self.param_filename, 'w') as f:
-            json.dump(data_dict, f, sort_keys=True, indent=4)
-            # for i in ['_arrayLocked',
-            #             '_squidLocked',
-            #             '_S_bias',
-            #             '_A_bias',
-            #             '_S_flux',
-            #             '_A_flux',
-            #             '_offset']:
-            #     f.write(i+' = %s\n' %getattr(self,i))
-            # for i in ['_integratorCapacitor',
-            #         '_feedbackResistor',
-            #         '_sensitivity',
-            #         '_testSignal',
-            #         '_testInput']:
-            #     f.write(i+' = \'%s\'\n' %getattr(self,i))
+        obj_string = jsp.encode(self)
+        obj_dict = json.loads(obj_string)
+        with open(self.param_filename, 'w', encoding='utf-8') as f:
+            json.dump(obj_dict, f, sort_keys=True, indent=4)
 
     def send(self, data, registername):
         '''
@@ -379,6 +378,7 @@ class PFL102:
         self.pci.send(command)
 
         self.save()
+
 
     def unlock(self):
         """ Unlock both SQUID and array"""
@@ -448,34 +448,39 @@ class PFL102:
 
 
 class SquidArray(PFL102):
-    def __init__(self, load=False):
-        super().__init__(1, PCI100(), load=load)
+    def __init__(self):
+        super().__init__(1, PCI100())
 
     def tune(self):
         '''
         Walks you through tuning and locking array/squid
         '''
         input("Turn test signal on. Ramp, 3.5 Vpp, 100 Hz. Press enter to continue.")
+        clear_output()
+        self.unlock()
         self.testSignal = 'Auto'
         self.testInput = 'A_flux'
 
         ## Array bias
         while True:
-            inp = input('ARRAY BIAS\nEnter the desired array bias (uA) and press enter.\nIf the bias point looks fine, press enter.')
+            inp = input('ARRAY BIAS = %.1f uA\nEnter the desired array bias (uA) and press enter.\nIf the bias point looks fine, press enter.' %self.A_bias)
+            clear_output()
             if inp == '':
                 break
             self.A_bias = float(inp)
 
         ## Offset
         while True:
-            inp = input('OFFSET\nEnter the desired offset (mV) and press enter.\nIf offset looks good, press enter.')
+            inp = input('OFFSET = %.3f mV\nEnter the desired offset (mV) and press enter.\nIf offset looks good, press enter.' %self.offset)
+            clear_output()
             if inp =='':
                 break
             self.offset = float(inp)
 
         ## Squid bias
         while True:
-            inp = input('SQUID BIAS\nEnter the desired SQUID bias (uA) and press enter. If SQUID bias looks alright, press enter.')
+            inp = input('SQUID BIAS = %.1f uA\nEnter the desired SQUID bias (uA) and press enter. If SQUID bias looks alright, press enter.' %self.S_bias)
+            clear_output()
             if inp == '':
                 break
             self.S_bias = float(inp)
@@ -485,10 +490,12 @@ class SquidArray(PFL102):
         if inp =='q':
             raise Exception('Quit by user')
         self.lock('array')
+        clear_output()
 
         ## Confirm array locked
         while True:
             inp = input('Array should be locked? Enter to proceed, reset to reset feedback, q to quit.')
+            clear_output()
             if inp =='q':
                 raise Exception('Quit by user')
             elif inp == 'reset':
@@ -500,14 +507,16 @@ class SquidArray(PFL102):
         input('Increase amplitude of test signal to max.')
         self.testInput = 'S_flux'
         while True:
-            inp = input('SQUID BIAS AGAIN\nEnter the desired squid bias (uA) and press enter.\nIf the bias point looks fine, press enter.')
+            inp = input('SQUID BIAS = %.1f uA\nEnter the desired squid bias (uA) and press enter.\nIf the bias point looks fine, press enter.' %self.S_bias)
+            clear_output()
             if inp == '':
                 break
             self.S_bias = float(inp)
 
         ## Array flux
         while True:
-            inp = input('ARRAY FLUX\nEnter the desired array flux (uA) and press enter.\n"reset" to reset.\nIf the bias point looks fine, press enter.')
+            inp = input('ARRAY FLUX = %.1f uA\nEnter the desired array flux (uA) and press enter.\n"reset" to reset.\nIf the bias point looks fine, press enter.'%self.A_flux)
+            clear_output()
             if inp == '':
                 break
             elif inp == 'reset':
@@ -517,6 +526,7 @@ class SquidArray(PFL102):
 
         ## Lock the squid
         inp = input('About to lock the SQUID. Okay to proceed? (q to quit)')
+        clear_output()
         if inp =='q':
             raise Exception('Quit by user')
         self.lock('squid')
@@ -524,6 +534,7 @@ class SquidArray(PFL102):
         ## Confirm array locked
         while True:
             inp = input('SQUID should be locked? Enter to proceed, reset to reset feedback, q to quit.')
+            clear_output()
             if inp =='q':
                 raise Exception('Quit by user')
             elif inp == 'reset':
@@ -533,15 +544,20 @@ class SquidArray(PFL102):
 
         ## Squid flux
         while True:
-            inp = input('SQUID FLUX\nEnter the desired SQUID flux (uA) and press enter.\n"reset" to reset.\nIf the bias point looks fine, press enter.')
+            inp = input('SQUID FLUX = %.1f uA\nEnter the desired SQUID flux (uA) and press enter.\n"reset" to reset.\nIf the bias point looks fine, press enter.' %self.S_flux)
+            clear_output()
             if inp == '':
                 break
             elif inp == 'reset':
                 self.reset()
             else:
                 self.S_flux = float(inp)
+                self.reset()
 
-        print('...and we\'re all tuned up!')
+        print('...and we\'re all tuned up!\n')
+        for var in ['A_bias', 'A_flux', 'S_bias', 'S_flux']:
+            print(var+' = %.1f'%getattr(self,var))
+        print('offset = %.3f' %self.offset)
 
 
     def zero(self):
