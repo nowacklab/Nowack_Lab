@@ -143,7 +143,11 @@ class Scanplane(Measurement):
             raise Exception('Specify x or y as fast axis!')
 
         ## Measure capacitance offset
-        C0 = self.lockin_cap.convert_output(getattr(self.daq, self.inp_cap))*conversions.V_to_C
+        C0s = []
+        for i in range(5):
+            time.sleep(0.5)
+            C0s.append(self.lockin_cap.convert_output(getattr(self.daq, self.inp_cap))*conversions.V_to_C)
+        C0 = np.mean(C0s)
 
         for i in range(num_lines): # loop over every line
             k = 0
@@ -192,6 +196,10 @@ class Scanplane(Measurement):
                 for d in output_data, received:
                     for key, value in d.items():
                         d[key] = value[::-1] # flip the 1D array
+
+            ## Return to zero for a couple of seconds:
+            self.piezos.V = 0
+            time.sleep(2)
 
             ## Save linecuts
             self.linecuts[str(i)] = {"Vstart": Vstart,

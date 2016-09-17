@@ -135,6 +135,11 @@ class Piezos():
         if step_size > self._max_step_size:
             raise Exception('Sweeping piezos too choppily! Decrease sweep_rate or increase meas_rate to increase the step size!')
 
+        msg = 'Sweeping piezos! '
+        for key in all_keys:
+            msg = msg + '%s: %.1f to %.1f ' %(key, Vstart[key], Vend[key])
+        log(msg)
+
         ## Calculate number of steps. This is max(|(Whole voltage range)/(step size)|).
         ## Add 1 so there is at least 1 step
         ## All piezos use the same numsteps. This is based on which piezo needs to move the furthest.
