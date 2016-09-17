@@ -36,8 +36,10 @@ class Scanplane(Measurement):
             self.lockin_squid = instruments['lockin_squid']
             self.lockin_cap = instruments['lockin_cap']
             self.attocube = instruments['attocube']
+            self.daq = instruments['nidaq']
 
         else:
+            self.daq = None
             self.piezos = None
             self.montana = None
             self.squidarray = None
@@ -140,6 +142,9 @@ class Scanplane(Measurement):
         else:
             raise Exception('Specify x or y as fast axis!')
 
+        ## Measure capacitance offset
+        C0 = self.lockin_cap.convert_output(getattr(self.daq, self.inp_cap))*conversions.V_to_C
+
         for i in range(num_lines): # loop over every line
             k = 0
             if self.raster:
@@ -195,7 +200,7 @@ class Scanplane(Measurement):
 
             Vcap = received[self.inp_cap]
             Vcap = self.lockin_cap.convert_output(Vcap) # convert to a lockin voltage
-            self.C_full = Vcap*conversions.V_to_C # convert to true capacitance (fF)
+            self.C_full = Vcap*conversions.V_to_C - C0 # convert to capacitance (fF)
 
             # interpolation functions
             interp_V = interp(self.V_piezo_full, self.V_squid_full)

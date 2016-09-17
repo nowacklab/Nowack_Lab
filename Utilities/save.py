@@ -30,17 +30,23 @@ class Measurement:
         self.__dict__.update(state)
 
 
-    def compress(self):
+    def _compress(self, d = None):
         '''
-        Compresses variables in __dict__. Right now, just numpy arrays
+        Compresses variables in the given dictionary.
+        By default, uses self.__dict__.
+        Right now, just numpy arrays are compressed.
         '''
-        d = copy(self.__dict__)
-        for var in d:
-            if type(getattr(self,var)) is np.ndarray:
-                setattr(self, var, self.compress_numpy(getattr(self,var)))
+        if d is None:
+            d = self.__dict__
+
+        for key in list(d.keys()):
+            if type(d[key]) is np.ndarray:
+                d[key] = self._compress_numpy(d[key])
+            elif type(d[key]) is dict:
+                self._compress(d[key])
 
 
-    def compress_numpy(self, array):
+    def _compress_numpy(self, array):
         '''
         Compresses a numpy array before saving to json
         First pickles, and then compresses with bz2.
@@ -61,25 +67,28 @@ class Measurement:
         return array
 
 
-    def decompress(self):
+    def _decompress(self, d=None):
         '''
-        Decompresses variables in __dict__.
+        Deompresses variables in the given dictionary.
+        By default, uses self.__dict__.
+        Right now, just numpy arrays are decompressed.
         '''
-        d = copy(self.__dict__)
-        for var in d:
-            vari = getattr(self,var)
-            if type(vari) is bytes:
+        if d is None:
+            d = self.__dict__
+
+        for key in list(d.keys()):
+            if type(d[key]) is bytes:
                 try:
-                    vari = self.decompress_numpy(vari)
-                    if type(vari) is np.ndarray:
-                        setattr(self,var,vari)
+                    d[key] = self._decompress_numpy(d[key])
                 except:
                     pass
+            elif type(d[key]) is dict:
+                self._decompress(d[key])
 
 
-    def decompress_numpy(self, array):
+    def _decompress_numpy(self, array):
         '''
-        Decompresses a numpy array loaded from json.
+        decompresses a numpy array loaded from json.
         First undoes carriage returns BS, then bz2 compression, then unpickles.
         '''
 
@@ -101,18 +110,21 @@ class Measurement:
         obj = jsp.decode(obj_string)
 
         if decompress:
-            obj.decompress() # undo compression
+            obj._decompress() # undo compression
 
         return obj
 
 
     @staticmethod
-    def load(json_file):
+    def load(json_file, instruments=None):
         '''
-        Basic load method. Just calls fromjson.
+        Basic load method. Calls fromjson to load data.
+        Give it an instruments dictionary to load instruments.
         Overwrite this for each subclass if necessary.
         '''
-        return Measurement.fromjson(json_file)
+        obj = Measurement.fromjson(json_file)
+        obj.instruments = instruments
+        return obj
 
 
     def make_timestamp_and_filename(self, append=None):
@@ -140,7 +152,7 @@ class Measurement:
         or use the `filename` variable under that object.
         '''
         if compress:
-            self.compress() # compress the object
+            self._compress() # compress the object
 
         if filename is None:
             try:
@@ -166,7 +178,7 @@ class Measurement:
                 json.dump(obj_dict, f, sort_keys=True, indent=4)
 
         if compress:
-            self.decompress() # so we can still play with numpy arrays
+            self._decompress() # so we can still play with numpy arrays
 
 
 def get_cooldown_data_path():

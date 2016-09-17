@@ -190,6 +190,64 @@ class Piezos():
 
         return output_data, received
 
+    def sweep_surface(self, voltages, chan_in=None, sweep_rate=180, meas_rate=900):
+        '''
+        Sweeps piezos using arrays given in a voltage dictionary.
+         specify the channels you want to monitor as a list
+         Maximum allowed step size will be the step size for the piezo that has
+         to sweep over the largest voltage range (looks at start and end points).
+         Maximum step size set at 0.2 Vpiezo by default for class.
+         Piezo sweep rate limited to 180 V/s when not scanning, 120 V/s when scanning.
+         This sets a typical minimum output rate of 180/.2 = 900 Hz.
+         Sampling faster will decrease the step size.
+         Lowering the sweep rate open ups smaller measure rates
+        '''
+        Vstart = {}
+        Vend = {}
+        for key, value in voltages.items():
+            Vstart[key] = value[0]
+            Vend[key] = value[-1]
+
+
+        ## Sweep to Vstart first if we aren't already there. self.V calls this function, but recursion should only go one level deep.
+        if Vstart != self._V:
+            self.V = Vstart
+
+        ## Figuring out how fast to sweep
+        if sweep_rate > self._max_sweep_rate:
+            raise Exception('Sweeping piezos too fast! Max is 180 V/s!')
+
+        # Figure out the step size demanded by sweep_rate and meas_rate
+        step_size = sweep_rate/meas_rate # default: 0.2 V
+        if step_size > self._max_step_size:
+            raise Exception('Sweeping piezos too choppily! Decrease sweep_rate or increase meas_rate to increase the step size!')
+
+
+        ## Check voltage limits and remove gain
+        for k in voltages.keys():
+            getattr(self,k).check_lim(voltages[k])
+            voltages[k] = getattr(self,k).remove_gain(voltages[k])
+
+        ## Convert keys to the channel names that the daq expects
+        for k in list(voltages.keys()): # need this a list so that new keys aren't iterated over
+            voltages[getattr(self,k).chan_out] = voltages.pop(k) # changes key to daq output channel name
+
+        received = self._daq.send_receive(voltages, chan_in = chan_in,
+                                sample_rate=meas_rate, numsteps=numsteps
+                            )
+
+        ## Go back to piezo keys
+        for k in self._piezos:
+            try:
+                self._V.pop(getattr(self,k).chan_out) # was keeping daq keys for some reason
+            except:
+                pass
+
+        ## Keep track of current voltage
+        self.V # does a measurement of daq output channels
+
+        return received
+
 
     def zero(self):
         self.V = 0
@@ -283,7 +341,7 @@ class Piezo():
 
     def sweep(self, Vstart, Vend, chan_in=None, sweep_rate=180, meas_rate=900):
         '''
-        Sweeps piezos from a starting voltage to an ending voltage.
+        Sweeps piezos linearly from a starting voltage to an ending voltage.
         Specify a list of input channels you want to monitor.
          Maximum allowed step size will be the step size for the piezo that has
          to sweep over the largest voltage range.
@@ -333,6 +391,7 @@ class Piezo():
         self._V = Vend # check the current voltage
 
         return output_data, received
+
 
     def zero(self):
         print('Zeroing %s piezo...' %self.label)

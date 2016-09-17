@@ -117,11 +117,11 @@ class NIDAQ():
 
         ## Prepare "data" for the Task. We'll just send the current value of ao0
         ## and tell the DAQ to output that value of ao0 for every data point.
-        numsteps = duration*sample_rate
+        numsteps = int(duration*sample_rate)
         current_ao0 = self.ao0
         data = {'ao0': np.array([current_ao0]*numsteps)}
 
-        received = send_receive(data, chan_in=chan_in, sample_rate=sample_rate)
+        received = self.send_receive(data, chan_in=chan_in, sample_rate=sample_rate)
 
         return received
 

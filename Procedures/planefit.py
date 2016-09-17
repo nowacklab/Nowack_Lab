@@ -4,7 +4,7 @@ from . import touchdown, navigation
 import time, os, glob
 from datetime import datetime
 import matplotlib.pyplot as plt
-from ..Utilities import dummy
+from ..Utilities import logging
 from ..Instruments import piezos, montana
 from IPython import display
 from ..Utilities.utilities import reject_outliers_quick
@@ -87,13 +87,25 @@ class Planefit(Measurement):
         '''
         X = self.X.flatten()
         Y = self.Y.flatten()
-        Z = reject_outliers_quick(self.Z)
+        Z = self.Z.copy()
+        Z = reject_outliers_quick(Z)
         Z = Z.flatten()
+
+        if type(X) is np.ma.MaskedArray: #edges only
+            mask = X.mask.copy() # mask will be different after next line!
+            X = X[np.invert(mask)] # removes masked values
+            Y = Y[np.invert(mask)] # removes masked values
+            Z = Z[np.invert(mask)] # use X mask in case reject outliers modified mask
+
         A = np.vstack([X, Y, np.ones(len(X))]).T
         self.a, self.b, self.c = lstsq(A, Z)[0]
 
 
-    def do(self):
+    def do(self, edges_only=False):
+        '''
+        Do the planefit.
+        set edges_only to true, and will only do the outermost points of the plane.
+        '''
         if not self.cap_input:
             raise Exception('Cap_input not set!')
 
@@ -113,26 +125,46 @@ class Planefit(Measurement):
         if check_td == 'q':
             raise Exception('Terminated by user')
 
+        ## If only taking plane from edges, make masked array
+        if edges_only:
+            mask = np.full(self.X.shape, True)
+            mask[0,:] = False
+            mask[-1,:] = False
+            mask[:,0] = False
+            mask[:,-1] = False
+
+            self.X = np.ma.masked_array(self.X, mask)
+            self.Y = np.ma.masked_array(self.Y, mask)
+
         ## Loop over points sampled from plane.
         counter = 0
         for i in range(self.X.shape[0]):
             for j in range(self.X.shape[1]):
+                if np.ma.is_masked(self.X[i,j]):
+                    continue
+
                 counter = counter + 1
                 display.clear_output(wait=True)
 
                 ## Go to location of next touchdown
-                print('Moving to next location...')
+                logging.log('Start moving to (%.2f, %.2f)...' %(self.X[i,j], self.Y[i,j]))
                 self.piezos.V = {'x':self.X[i,j], 'y':self.Y[i,j], 'z': 0}
-                print('...done.')
+                logging.log('Done moving to (%.2f, %.2f).' %(self.X[i,j], self.Y[i,j]))
 
                 td = touchdown.Touchdown(self.instruments, self.cap_input, Vz_max = self.Vz_max, planescan=True) # new touchdown at this point
                 td.title = '(%i, %i). TD# %i' %(i,j, counter)
 
                 self.Z[i,j] = td.do() # Do the touchdown. Planescan True prevents attocubes from moving and only does one touchdown
 
+        if edges_only:
+            self.Z = np.ma.masked_array(self.Z, mask) # to prepare it for lstsq
+
         self.piezos.V = 0
         self.calculate_plane()
-        self.c = center_z_value # take the first slow touchdown as a more accurate center
+
+        ## take the first slow touchdown as a more accurate center
+        self.c = center_z_value - self.a*self.center[0] - self.b*self.center[1]
+
         self.save()
 
 
@@ -197,6 +229,7 @@ class Planefit(Measurement):
         Saves the planefit object to json in .../TeamData/Montana/Planes/
         Also saves the figure as a pdf, if wanted.
         '''
+        logging.log('Plane saved. a=%.4f, b=%.4f, c=%.4f' %(self.a, self.b, self.c))
 
         self.tojson(DATA_FOLDER, self.filename)
 
