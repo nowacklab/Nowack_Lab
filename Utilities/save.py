@@ -100,12 +100,14 @@ class Measurement:
 
 
     @staticmethod
-    def fromjson(json_file, decompress=True):
+    def fromjson(json_file, unwanted_keys = [], decompress=True):
         '''
         Loads an object from JSON.
         '''
         with open(json_file, encoding='utf-8') as f:
             obj_dict = json.load(f)
+        for key in unwanted_keys: # get rid of keys you don't want to load
+            obj_dict['py/state'].pop(key)
         obj_string = json.dumps(obj_dict)
         obj = jsp.decode(obj_string)
 
@@ -116,15 +118,13 @@ class Measurement:
 
 
     @staticmethod
-    def load(json_file, instruments=None):
+    def load(json_file, unwanted_keys=[]):
         '''
-        Basic load method. Calls fromjson to load data.
-        Give it an instruments dictionary to load instruments.
+        Basic load method. Just calls fromjson.
         Overwrite this for each subclass if necessary.
+        Pass in an array of the names of things you don't want to load.
         '''
-        obj = Measurement.fromjson(json_file)
-        obj.instruments = instruments
-        return obj
+        return Measurement.fromjson(json_file, unwanted_keys)
 
 
     def make_timestamp_and_filename(self, append=None):
@@ -184,7 +184,8 @@ class Measurement:
 def get_cooldown_data_path():
     with open(os.path.join(os.path.dirname(__file__),'paths.json'),'r') as f:
         data = json.load(f)
-    return data['cooldown']
+    path = os.path.join(os.path.expanduser('~'), data['cooldown'])
+    return path
 
 
 def get_todays_data_path():
@@ -205,8 +206,7 @@ def set_cooldown_data_path(description=''):
     with the current date and a description of the cooldown.
     Writes to paths.json to store the name of the data directory.
     '''
-    _home = os.path.expanduser("~")
-    montana = os.path.join(_home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'cooldowns')
+    montana = os.path.join('Dropbox (Nowack lab)', 'TeamData', 'Montana', 'cooldowns')
 
     now = datetime.now()
     now_fmt = now.strftime('%Y-%m-%d')
@@ -217,5 +217,7 @@ def set_cooldown_data_path(description=''):
         json.dump(paths, f)
 
     # Make the directory
+    _home = os.path.expanduser('~')
+    filename = os.path.join(_home, filename)
     if not os.path.exists(filename):
         os.makedirs(filename)
