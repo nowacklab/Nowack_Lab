@@ -125,6 +125,7 @@ class Piezos():
             for key in keys:
                 if key not in all_keys:
                     v.pop(key) # get rid of unwanted items
+        all_keys.sort()
 
         ## Figuring out how fast to sweep
         if sweep_rate > self._max_sweep_rate:
@@ -137,7 +138,7 @@ class Piezos():
 
         msg = 'Sweeping piezos! '
         for key in all_keys:
-            msg = msg + '%s: %.1f to %.1f ' %(key, Vstart[key], Vend[key])
+            msg = msg + '\n%s: %.1f to %.1f ' %(key, Vstart[key], Vend[key])
         log(msg)
 
         ## Calculate number of steps. This is max(|(Whole voltage range)/(step size)|).

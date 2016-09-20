@@ -154,7 +154,7 @@ class Planefit(Measurement):
                 td = touchdown.Touchdown(self.instruments, self.cap_input, Vz_max = self.Vz_max, planescan=True) # new touchdown at this point
                 td.title = '(%i, %i). TD# %i' %(i,j, counter)
 
-                self.Z[i,j] = td.do() # Do the touchdown. Planescan True prevents attocubes from moving and only does one touchdown
+                self.Z[i,j] = td.do() # Do the touchdown, starting 200 V below the location of the surface at the center of the plane. Hopefully planes are not more tilted than this.
 
         if edges_only:
             self.Z = np.ma.masked_array(self.Z, mask) # to prepare it for lstsq
