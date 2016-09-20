@@ -229,7 +229,7 @@ class Touchdown(Measurement):
             m,b,r,_,_ = linregress(self.V[i-self.numfit:i], self.C[i-self.numfit:i])
             self.rs[i] = r # assigns correlation coefficient for the last data point
             for j in range(4):
-                if self.rs[i-j] < 0.95: #if any of the last four fits are bad...
+                if self.rs[i-j] < 0.97: #if any of the last four fits are bad...
                     return False # no touchdown
                 self.good_r_index = i-j # where good correlation starts
             if self.C[i] != np.nanmax(self.C):
@@ -255,20 +255,50 @@ class Touchdown(Measurement):
 
 
     def get_touchdown_voltage(self):
-        i2 = self.good_r_index - self.numfit # start of well-correlated data
+        '''
+        Determines the touchdown voltage.
+        First finds the best fit for the touchdown curve fitting from i to the last point.
+        Then finds the best fit for the approach curve fitting from j to the best i.
+        Considers minimizing slope in determining good approach fit.
+        Returns the intersection of these two lines.
+        '''
         i3 = np.where(np.isnan(self.C))[0][0] # finds the location of the first nan (i.e. the last point taken)
-        i1 = max(0, i2 - self.numfit*5) # fit approach curve from further back, but don't go to negative values!
+        V = self.V[:i3]
+        C = self.C[:i3]
+
+        ## How many lines to try to fit
+        N2 = len(C)+1-5 # last number is minimum number of points to fit
+        r2 = np.array([np.nan]*N2) # correlation coefficients go here
+
+        ## Loop over fits of the touchdown curve
+        start = 1
+        for i in range(start, N2):
+            _, _, r2[i], _, _ = linregress(V[i:], C[i:])
+
+        ## find touchdown index and perform final fit
+        i = np.nanargmax(r2) # this is the index where touchdown probably is
+
+        ## Figure out how many lines to try to fit for approach curve
+        N1 = i+1-3 # last number is minimum number of points to fit for the approach curve: half of how many points there are on the approach curve
+        r1 = np.array([np.nan]*N1) # correlation coefficients go here
+        m1 = np.array([np.nan]*N1) # slopes go here
 
         ## Approach curve
-        m1, b1, r1, _, _ = linregress(self.V[i1:i2], self.C[i1:i2])
+        for j in range(start, N1):
+            m1[j], b1, r1[j], _, _ = linregress(V[j:i], C[j:i])
 
-        ## Touchdown curve
-        m2, b2, r2, _, _ = linregress(self.V[i2:i3], self.C[i2:i3])
+        ## Determine best approach curve
+        minimize_this = (1-r1)*1 + abs(m1)*100 # Two weight factors: how much we care that it's a good fit, how much we care that the slope is near zero.
+        j = np.nanargmin(minimize_this)
 
-        self.lines_data['V_app'] = self.V[i1:i2]
-        self.lines_data['C_app'] = m1*self.V[i1:i2] + b1
-        self.lines_data['V_td'] = self.V[i2:i3]
-        self.lines_data['C_td'] = m2*self.V[i2:i3] + b2
+        ## Recalculate slopes and intercepts
+        m2, b2, r2, _, _ = linregress(V[i:], C[i:])
+        m1, b1, r1, _, _ = linregress(V[j:i], C[j:i])
+
+        self.lines_data['V_app'] = V[j:i]
+        self.lines_data['C_app'] = m1*V[j:i] + b1
+        self.lines_data['V_td'] = V[i:]
+        self.lines_data['C_td'] = m2*V[i:] + b2
 
         Vtd = -(b2 - b1)/(m2 - m1) # intersection point of two lines
 
@@ -276,6 +306,29 @@ class Touchdown(Measurement):
 
         return Vtd
 
+
+# def get_touchdown_voltage(self):
+#     i2 = self.good_r_index - self.numfit # start of well-correlated data
+#     i3 = np.where(np.isnan(self.C))[0][0] # finds the location of the first nan (i.e. the last point taken)
+#     i1 = max(0, i2 - self.numfit*5) # fit approach curve from further back, but don't go to negative values!
+#
+#     ## Approach curve
+#     m1, b1, r1, _, _ = linregress(self.V[i1:i2], self.C[i1:i2])
+#
+#     ## Touchdown curve
+#     m2, b2, r2, _, _ = linregress(self.V[i2:i3], self.C[i2:i3])
+#
+#     self.lines_data['V_app'] = self.V[i1:i2]
+#     self.lines_data['C_app'] = m1*self.V[i1:i2] + b1
+#     self.lines_data['V_td'] = self.V[i2:i3]
+#     self.lines_data['C_td'] = m2*self.V[i2:i3] + b2
+#
+#     Vtd = -(b2 - b1)/(m2 - m1) # intersection point of two lines
+#
+#     self.title = '%s\nTouchdown at %.2f V' %(self.filename, Vtd)
+#
+#     return Vtd
+#
 
     @staticmethod
     def load(json_file, instruments=None):

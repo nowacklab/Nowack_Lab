@@ -5,6 +5,11 @@ import io
 import os
 from notebook.utils import to_api_path
 
+## Try to load notebook extensions
+ipythondir = get_ipython_dir()
+extensions = os.path.join(ipythondir,'extensions')
+sys.path.append(extensions)
+
 # _script_exporter = None
 _html_exporter = None
 

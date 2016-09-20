@@ -21,3 +21,9 @@ package_path = os.path.join(os.getcwd(),'Utilities','custom.css')
 notebook_path = os.path.join(site_packages, 'notebook', 'static', 'custom', 'custom.css')
 
 shutil.copyfile(package_path, notebook_path)
+
+## Add custom.js file to disable autosave
+package_path = os.path.join(os.getcwd(),'Utilities','custom.js')
+notebook_path = os.path.join(site_packages, 'notebook', 'static', 'custom', 'custom.js')
+
+shutil.copyfile(package_path, notebook_path)
