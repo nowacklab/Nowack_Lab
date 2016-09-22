@@ -9,8 +9,6 @@ import re
 from ..Instruments import nidaq, preamp
 from ..Utilities.save import Measurement, get_todays_data_path
 
-_home = os.path.expanduser("~")
-DATA_FOLDER = get_todays_data_path()
 
 class DaqSpectrum(Measurement):
     def __init__(self, instruments=None, input_chan=None, measure_time=0.5, measure_freq=256000, averages=30):
@@ -135,11 +133,11 @@ class DaqSpectrum(Measurement):
         Also saves the figures as pdfs, if wanted.
         '''
 
-        self.tojson(DATA_FOLDER, self.filename)
+        self.tojson(get_todays_data_path(), self.filename)
 
         if savefig:
-            self.fig_loglog.savefig(os.path.join(DATA_FOLDER, self.filename)+'_loglog.pdf')
-            self.fig_semilog.savefig(os.path.join(DATA_FOLDER, self.filename)+'_semilog.pdf')
+            self.fig_loglog.savefig(os.path.join(get_todays_data_path(), self.filename)+'_loglog.pdf')
+            self.fig_semilog.savefig(os.path.join(get_todays_data_path(), self.filename)+'_semilog.pdf')
 
 
     def setup_plots(self):

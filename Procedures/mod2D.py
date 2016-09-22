@@ -9,8 +9,6 @@ from . import squidIV
 from ..Utilities.plotting import plot_mpl
 from ..Utilities.save import Measurement, get_todays_data_path
 
-_home = os.path.expanduser("~")
-DATA_FOLDER = get_todays_data_path()
 
 class Mod2D(Measurement):
     def __init__(self, instruments=None, squidout=None, squidin=None, modout=None, rate=900):
@@ -129,10 +127,10 @@ class Mod2D(Measurement):
         Also saves the figure as a pdf, if wanted.
         '''
 
-        self.tojson(DATA_FOLDER, self.filename)
+        self.tojson(get_todays_data_path(), self.filename)
 
         if savefig:
-            self.fig.savefig(os.path.join(DATA_FOLDER, self.filename+'.pdf'), bbox_inches='tight')
+            self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
 
 
     def setup_plot(self):

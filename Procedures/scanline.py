@@ -7,8 +7,6 @@ from ..Utilities import plotting, conversions
 from ..Instruments import piezos, nidaq, montana, squidarray
 from ..Utilities.save import Measurement, get_todays_data_path
 
-_home = os.path.expanduser("~")
-DATA_FOLDER = get_todays_data_path()
 
 class Scanline(Measurement):
     def __init__(self, instruments=None, start=(-100,-100), end=(100,100), plane=None, scanheight=0, inp_dc=0, inp_cap=1, inp_acx=None, inp_acy=None, scan_rate=120, return_to_zero=True):
@@ -169,10 +167,10 @@ class Scanline(Measurement):
         Also saves the figure as a pdf, if wanted.
         '''
 
-        self.tojson(DATA_FOLDER, self.filename)
+        self.tojson(get_todays_data_path(), self.filename)
 
         if savefig:
-            self.fig.savefig(os.path.join(DATA_FOLDER, self.filename+'.pdf'), bbox_inches='tight')
+            self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
 
 
 if __name__ == '__main__':

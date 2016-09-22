@@ -9,8 +9,6 @@ from ..Instruments import nidaq, preamp, montana
 from ..Utilities.save import Measurement, get_todays_data_path
 from ..Utilities import conversions, logging
 
-_home = os.path.expanduser("~")
-DATA_FOLDER = get_todays_data_path()
 
 class Touchdown(Measurement):
     Vtd = None
@@ -285,6 +283,7 @@ class Touchdown(Measurement):
 
         ## Approach curve
         k = i-3 # fit the approach curve ending this 2 points away from the touchdown curve
+        N1 = N1-3 # must adjust N1 by this same amount
         for j in range(start, N1):
             m1[j], b1, r1[j], _, _ = linregress(V[j:k], C[j:k])
 
@@ -358,10 +357,10 @@ class Touchdown(Measurement):
         Also saves the figure as a pdf, if wanted.
         '''
 
-        self.tojson(DATA_FOLDER, self.filename)
+        self.tojson(get_todays_data_path(), self.filename)
 
         if savefig:
-            self.fig.savefig(os.path.join(DATA_FOLDER, self.filename+'.pdf'), bbox_inches='tight')
+            self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
 
 
     def setup_plot(self):

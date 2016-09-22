@@ -10,8 +10,6 @@ from IPython import display
 from ..Utilities.utilities import reject_outliers_plane, fit_plane
 from ..Utilities.save import Measurement, get_todays_data_path
 
-_home = os.path.expanduser("~")
-DATA_FOLDER = get_todays_data_path()
 
 class Planefit(Measurement):
     '''
@@ -171,10 +169,10 @@ class Planefit(Measurement):
         if json_file is None:
             # finds the newest plane saved as json
             try:
-                json_file =  max(glob.iglob(os.path.join(DATA_FOLDER,'*_plane.json')),
+                json_file =  max(glob.iglob(os.path.join(get_todays_data_path(),'*_plane.json')),
                                         key=os.path.getctime)
             except: # we must have taken one during the previous day's work
-                folders = list(glob.iglob(os.path.join(DATA_FOLDER,'..','*')))
+                folders = list(glob.iglob(os.path.join(get_todays_data_path(),'..','*')))
                 # -2 should be the previous day (-1 is today)
                 json_file =  max(glob.iglob(os.path.join(folders[-2],'*_plane.json')),
                                         key=os.path.getctime)
@@ -225,11 +223,11 @@ class Planefit(Measurement):
         '''
         logging.log('Plane saved. a=%.4f, b=%.4f, c=%.4f' %(self.a, self.b, self.c))
 
-        self.tojson(DATA_FOLDER, self.filename)
+        self.tojson(get_todays_data_path(), self.filename)
 
         if savefig:
             self.plot()
-            plt.savefig(os.path.join(DATA_FOLDER, self.filename+'.pdf'), bbox_inches='tight')
+            plt.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
 
 
     def surface(self, x, y):

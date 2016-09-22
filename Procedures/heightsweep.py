@@ -6,8 +6,6 @@ import time, os
 from datetime import datetime
 from ..Utilities.save import Measurement, get_todays_data_path
 
-_home = os.path.expanduser("~")
-DATA_FOLDER = get_todays_data_path()
 
 class Heightsweep(Measurement):
     def __init__(self, instruments = None, x=0, y=0, plane=None, inp_acx = 0, inp_acy=1, inp_dc = 2, scan_rate=120):
@@ -107,7 +105,7 @@ class Heightsweep(Measurement):
         Also saves the figure as pdf, if wanted.
         '''
 
-        self.tojson(DATA_FOLDER, self.filename)
+        self.tojson(get_todays_data_path(), self.filename)
 
         if savefig:
-            self.fig.savefig(os.path.join(DATA_FOLDER, self.filename+'.pdf')+'.pdf', bbox_inches='tight')
+            self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf')+'.pdf', bbox_inches='tight')

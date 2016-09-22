@@ -12,8 +12,6 @@ from ..Instruments import piezos, montana, squidarray
 from ..Utilities.save import Measurement, get_todays_data_path
 from ..Utilities import conversions
 
-_home = os.path.expanduser("~")
-DATA_FOLDER = get_todays_data_path()
 
 class Scanplane(Measurement):
 
@@ -368,10 +366,10 @@ class Scanplane(Measurement):
         Also saves the figure as a pdf, if wanted.
         '''
 
-        self.tojson(DATA_FOLDER, self.filename)
+        self.tojson(get_todays_data_path(), self.filename)
 
         if savefig:
-            self.fig.savefig(os.path.join(DATA_FOLDER, self.filename+'.pdf'), bbox_inches='tight')
+            self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
 
 
     def save_line(self, i, Vstart):
@@ -386,7 +384,7 @@ class Scanplane(Measurement):
         line.V_piezo_full = self.V_piezo_full
         line.make_timestamp_and_filename('scan_line')
 
-        line.tojson(DATA_FOLDER, line.filename)
+        line.tojson(get_todays_data_path(), line.filename)
 
 class Line(Measurement):
     def __getstate__(self):

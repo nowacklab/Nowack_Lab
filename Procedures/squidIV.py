@@ -13,8 +13,6 @@ from ..Utilities import dummy
 from ..Instruments import nidaq, preamp, montana
 from ..Utilities.save import Measurement, get_todays_data_path
 
-_home = os.path.expanduser("~")
-DATA_FOLDER = get_todays_data_path()
 
 class SquidIV(Measurement):
     V = np.array([])
@@ -205,10 +203,10 @@ class SquidIV(Measurement):
         Also saves the figure as a pdf, if wanted.
         '''
 
-        self.tojson(DATA_FOLDER, self.filename)
+        self.tojson(get_todays_data_path(), self.filename)
 
         if savefig:
-            self.fig.savefig(os.path.join(DATA_FOLDER, self.filename+'.pdf'))
+            self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'))
 
     def setup_plot(self):
         self.fig, self.ax = plt.subplots()
