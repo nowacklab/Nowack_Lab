@@ -117,14 +117,14 @@ class Scanplane(Measurement):
         self.__dict__.update(state)
 
     def do(self, fast_axis = 'x', linear=True): # linear True = sweep in lines, False sweep over plane surface
-        self.setup_plots()
-
         ## Start time and temperature
         super().make_timestamp_and_filename('scan')
         tstart = time.time()
         #temporarily commented out so we can scan witout internet on montana
         #computer
         #self.temp_start = self.montana.temperature['platform']
+
+        self.setup_plots()
 
         ## make sure all points are not out of range of piezos before starting anything
         for i in range(self.X.shape[0]):
@@ -265,10 +265,10 @@ class Scanplane(Measurement):
         Update all plots.
         '''
         try:
-            self.im_squid # see if this exists
+            self.im_dc # see if this exists
         except:
             self.setup_plots()
-        plot_mpl.update2D(self.im_squid, self.V)
+        plot_mpl.update2D(self.im_dc, self.V)
         plot_mpl.update2D(self.im_cap, self.C)
         plot_mpl.update2D(self.im_ac_x, self.Vac_x)
         plot_mpl.update2D(self.im_ac_y, self.Vac_y)
@@ -284,15 +284,15 @@ class Scanplane(Measurement):
         self.fig = plt.figure(figsize=(11,11))
 
         ## DC magnetometry
-        self.ax_squid = self.fig.add_subplot(321)
-        self.im_squid = plot_mpl.plot2D(self.ax_squid,
+        self.ax_dc = self.fig.add_subplot(321)
+        self.im_dc = plot_mpl.plot2D(self.ax_dc,
                                         self.X,
                                         self.Y,
                                         self.V,
-                                        title = '%s\nDC SQUID signal' %self.filename,
+                                        title = self.filename,
                                         xlabel = r'$X (V_{piezo})$',
                                         ylabel = r'$Y (V_{piezo})$',
-                                        clabel = 'Voltage from %s' %self.inp_dc
+                                        clabel = 'DC V %s' %self.inp_dc
                                     )
 
         ## AC x
@@ -302,10 +302,10 @@ class Scanplane(Measurement):
                                         self.Y,
                                         self.Vac_x,
                                         cmap='cubehelix',
-                                        title = '%s\nAC x SQUID signal' %self.filename,
+                                        title = self.filename,
                                         xlabel = r'$X (V_{piezo})$',
                                         ylabel = r'$Y (V_{piezo})$',
-                                        clabel = 'Voltage from %s' %self.inp_acx
+                                        clabel = 'AC X V %s' %self.inp_acx
                                     )
 
         ## AC y
@@ -315,10 +315,10 @@ class Scanplane(Measurement):
                                         self.Y,
                                         self.Vac_y,
                                         cmap='cubehelix',
-                                        title = '%s\nAC y SQUID signal' %self.filename,
+                                        title = self.filename,
                                         xlabel = r'$X (V_{piezo})$',
                                         ylabel = r'$Y (V_{piezo})$',
-                                        clabel = 'Voltage from %s' %self.inp_acy
+                                        clabel = 'AC Y V %s' %self.inp_acx
                                     )
 
         ## Capacitance
@@ -328,19 +328,19 @@ class Scanplane(Measurement):
                                     self.Y,
                                     self.C,
                                     cmap='afmhot',
-                                    title = '%s\nCapacitance' %self.filename,
+                                    title = self.filename,
                                     xlabel = r'$X (V_{piezo})$',
                                     ylabel = r'$Y (V_{piezo})$',
-                                    clabel = 'Capacitance from %s' %self.inp_cap
+                                    clabel = 'Cap fF %s' %self.inp_cap
                                 )
 
         ## "Last full scan" plot
         self.ax_line = self.fig.add_subplot(326)
-        self.ax_line.set_title('last full line scan', fontsize=8)
+        self.ax_line.set_title(self.filename, fontsize=8)
         self.line_full = self.ax_line.plot(self.V_piezo_full, self.V_squid_full, '-.k') # commas only take first element of array? ANyway, it works.
         self.line_interp = self.ax_line.plot(self.V_piezo_interp, self.V_squid_interp, '.r', markersize=12)
-        self.ax_line.set_xlabel('X (a.u.)', fontsize=8)
-        self.ax_line.set_ylabel('V', fontsize=8)
+        self.ax_line.set_xlabel('Vpiezo (V)', fontsize=8)
+        self.ax_line.set_ylabel('Last DC V line (V)', fontsize=8)
 
         self.line_full = self.line_full[0] # it is given as an array
         self.line_interp = self.line_interp[0]

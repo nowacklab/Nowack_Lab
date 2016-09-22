@@ -208,7 +208,7 @@ class Touchdown(Measurement):
 
                     if not self.planescan: # Don't want to move attocubes during planescan
                         ## Check if touchdown near center of z piezo +V range
-                        if Vtd > 0.65*self.Vz_max or Vtd < 0.35*self.Vz_max:
+                        if Vtd > 0.75*self.Vz_max or Vtd < 0.25*self.Vz_max:
                             self.touchdown = False
                             slow_scan = False
                             start = -self.Vz_max # because we don't know where the td will be
