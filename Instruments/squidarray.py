@@ -467,7 +467,10 @@ class SquidArray(PFL102):
             clear_output()
             if inp == '':
                 break
-            self.A_bias = float(inp)
+            try:
+                self.A_bias = float(inp)
+            except:
+                pass
 
         ## Offset
         while True:
@@ -475,7 +478,10 @@ class SquidArray(PFL102):
             clear_output()
             if inp =='':
                 break
-            self.offset = float(inp)
+            try:
+                self.offset = float(inp)
+            except:
+                pass
 
         ## Squid bias
         while True:
@@ -483,7 +489,10 @@ class SquidArray(PFL102):
             clear_output()
             if inp == '':
                 break
-            self.S_bias = float(inp)
+            try:
+                self.S_bias = float(inp)
+            except:
+                pass
 
         ## Lock the array
         inp = input('About to lock the array. Okay to proceed? (q to quit)')
@@ -494,11 +503,11 @@ class SquidArray(PFL102):
 
         ## Confirm array locked
         while True:
-            inp = input('Array should be locked? Enter to proceed, reset to reset feedback, q to quit.')
+            inp = input('Array should be locked? Enter to proceed, r to reset feedback, q to quit.')
             clear_output()
             if inp =='q':
                 raise Exception('Quit by user')
-            elif inp == 'reset':
+            elif inp == 'r':
                 self.reset()
             else:
                 break
@@ -511,18 +520,24 @@ class SquidArray(PFL102):
             clear_output()
             if inp == '':
                 break
-            self.S_bias = float(inp)
+            try:
+                self.S_bias = float(inp)
+            except:
+                pass
 
         ## Array flux
         while True:
-            inp = input('ARRAY FLUX = %.1f uA\nEnter the desired array flux (uA) and press enter.\n"reset" to reset.\nIf the bias point looks fine, press enter.'%self.A_flux)
+            inp = input('ARRAY FLUX = %.1f uA\nEnter the desired array flux (uA) and press enter.\n"r" to reset.\nIf the bias point looks fine, press enter.'%self.A_flux)
             clear_output()
             if inp == '':
                 break
-            elif inp == 'reset':
+            elif inp == 'r':
                 self.reset()
             else:
-                self.A_flux = float(inp)
+                try:
+                    self.A_flux = float(inp)
+                except:
+                    pass
 
         ## Lock the squid
         inp = input('About to lock the SQUID. Okay to proceed? (q to quit)')
@@ -533,25 +548,28 @@ class SquidArray(PFL102):
 
         ## Confirm array locked
         while True:
-            inp = input('SQUID should be locked? Enter to proceed, reset to reset feedback, q to quit.')
+            inp = input('SQUID should be locked? Enter to proceed, reset to r feedback, q to quit.')
             clear_output()
             if inp =='q':
                 raise Exception('Quit by user')
-            elif inp == 'reset':
+            elif inp == 'r':
                 self.reset()
             else:
                 break
 
         ## Squid flux
         while True:
-            inp = input('SQUID FLUX = %.1f uA\nEnter the desired SQUID flux (uA) and press enter.\n"reset" to reset.\nIf the bias point looks fine, press enter.' %self.S_flux)
+            inp = input('SQUID FLUX = %.1f uA\nEnter the desired SQUID flux (uA) and press enter.\n"r" to reset.\nIf the bias point looks fine, press enter.' %self.S_flux)
             clear_output()
             if inp == '':
                 break
-            elif inp == 'reset':
+            elif inp == 'r':
                 self.reset()
             else:
-                self.S_flux = float(inp)
+                try:
+                    self.S_flux = float(inp)
+                except:
+                    pass
                 self.reset()
 
         print('...and we\'re all tuned up!\n')

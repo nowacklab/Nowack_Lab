@@ -19,7 +19,7 @@ class Touchdown(Measurement):
     rs = np.array([])
     numsteps = 100
     numfit = 5       # number of points to fit line to while collecting data
-    attoshift = 20 # move 20 um if no touchdown detected
+    attoshift = 40 # move 20 um if no touchdown detected
     Vz_max = 400
     touchdown = False
     lines_data = dict(
@@ -40,7 +40,7 @@ class Touchdown(Measurement):
             self.configure_lockin(cap_input)
 
         if planescan:
-            self.z_piezo_step = 8 #may be able to go to 4
+            self.z_piezo_step = 4 #may be able to go to 4
         else:
             self.z_piezo_step = 1 # for update_c, etc. Do a really slow scan.
 
@@ -88,6 +88,43 @@ class Touchdown(Measurement):
             if inp == 'q':
                 raise Exception('quit by user')
 
+    def check_touchdown(self, corr_coeff_thresh=0.95):
+        '''
+        Checks for touchdown.
+        Fits a line including the last five data points taken.
+        If the correlation coefficient of the last three fits is better than
+        corr_coeff_thresh, returns True. Otherwise, we have not touched down.
+        '''
+        i = np.where(~np.isnan(self.C))[0][-1] # index of last data point taken
+        if i > self.numfit + self.start_offset:
+            m,b,r,_,_ = linregress(self.V[i-self.numfit:i], self.C[i-self.numfit:i])
+            self.rs[i] = r # assigns correlation coefficient for the last data point
+            for j in range(3):
+                if self.rs[i-j] < 0.97: #if any of the last three fits are bad...
+                    return False # no touchdown
+                self.good_r_index = i-j # where good correlation starts
+            if self.C[i] != np.nanmax(self.C):
+                return False #the last point taken should be the maximum
+            return True
+        return False
+
+
+    def configure_lockin(self, cap_input=None):
+        '''
+        Set up lockin amplifier for a touchdown.
+        '''
+        self.lockin.ch1_daq_input = 'ai%s' %cap_input
+        self.lockin.amplitude = 1
+        self.lockin.frequency = 24989 # prime number ^_^
+        self.lockin.set_out(1, 'R') # Possibly X is better?
+        self.lockin.set_out(2, 'theta') # not used, but may be good to see
+        self.lockin.sensitivity = 20e-6
+        self.lockin.time_constant = 0.100
+        self.lockin.reserve = 'Low Noise'
+        self.lockin.ac_coupling()
+        self.lockin.auto_phase()
+
+
     def do(self, start=None):
         '''
         Does the touchdown.
@@ -108,7 +145,7 @@ class Touchdown(Measurement):
         while not self.touchdown:
             ## Determine where to start sweeping
             if slow_scan:
-                start = Vtd-30 # once it finds touchdown, will try again slower
+                start = Vtd-40 # once it finds touchdown, will try again slower
             if start is not None:
                 self.piezos.z.V = start
             else:
@@ -179,7 +216,7 @@ class Touchdown(Measurement):
                             start = -self.Vz_max # because we don't know where the td will be
                             self.title = 'Found touchdown, centering near %i Vpiezo' %int(self.Vz_max/2)
                             self.plot()
-                            self.attoshift = (Vtd-self.Vz_max/2)*conversions.Vpiezo_to_attomicron/4 # quarter of how far it should move if conversion is exact (accounts for when the conversion is not exact)
+                            self.attoshift = (Vtd-self.Vz_max/2)*conversions.Vpiezo_to_attomicron/2 # half of how far it should move if conversion is exact (accounts for when the conversion is not exact)
                             self.lines_data['V_app'] = []
                             self.lines_data['C_app'] = []
                             self.lines_data['V_td'] = []
@@ -215,43 +252,6 @@ class Touchdown(Measurement):
         self.save()
 
         return Vtd
-
-
-    def check_touchdown(self, corr_coeff_thresh=0.95):
-        '''
-        Checks for touchdown.
-        Fits a line including the last five data points taken.
-        If the correlation coefficient of the last three fits is better than
-        corr_coeff_thresh, returns True. Otherwise, we have not touched down.
-        '''
-        i = np.where(~np.isnan(self.C))[0][-1] # index of last data point taken
-        if i > self.numfit + self.start_offset:
-            m,b,r,_,_ = linregress(self.V[i-self.numfit:i], self.C[i-self.numfit:i])
-            self.rs[i] = r # assigns correlation coefficient for the last data point
-            for j in range(4):
-                if self.rs[i-j] < 0.97: #if any of the last four fits are bad...
-                    return False # no touchdown
-                self.good_r_index = i-j # where good correlation starts
-            if self.C[i] != np.nanmax(self.C):
-                return False #the last point taken should be the maximum
-            return True
-        return False
-
-
-    def configure_lockin(self, cap_input=None):
-        '''
-        Set up lockin amplifier for a touchdown.
-        '''
-        self.lockin.ch1_daq_input = 'ai%s' %cap_input
-        self.lockin.amplitude = 1
-        self.lockin.frequency = 24989 # prime number ^_^
-        self.lockin.set_out(1, 'R') # Possibly X is better?
-        self.lockin.set_out(2, 'theta') # not used, but may be good to see
-        self.lockin.sensitivity = 10e-6
-        self.lockin.time_constant = 0.100
-        self.lockin.reserve = 'Low Noise'
-        self.lockin.ac_coupling()
-        self.lockin.auto_phase()
 
 
     def get_touchdown_voltage(self):
@@ -307,29 +307,6 @@ class Touchdown(Measurement):
         return Vtd
 
 
-# def get_touchdown_voltage(self):
-#     i2 = self.good_r_index - self.numfit # start of well-correlated data
-#     i3 = np.where(np.isnan(self.C))[0][0] # finds the location of the first nan (i.e. the last point taken)
-#     i1 = max(0, i2 - self.numfit*5) # fit approach curve from further back, but don't go to negative values!
-#
-#     ## Approach curve
-#     m1, b1, r1, _, _ = linregress(self.V[i1:i2], self.C[i1:i2])
-#
-#     ## Touchdown curve
-#     m2, b2, r2, _, _ = linregress(self.V[i2:i3], self.C[i2:i3])
-#
-#     self.lines_data['V_app'] = self.V[i1:i2]
-#     self.lines_data['C_app'] = m1*self.V[i1:i2] + b1
-#     self.lines_data['V_td'] = self.V[i2:i3]
-#     self.lines_data['C_td'] = m2*self.V[i2:i3] + b2
-#
-#     Vtd = -(b2 - b1)/(m2 - m1) # intersection point of two lines
-#
-#     self.title = '%s\nTouchdown at %.2f V' %(self.filename, Vtd)
-#
-#     return Vtd
-#
-
     @staticmethod
     def load(json_file, instruments=None):
         '''
@@ -362,7 +339,7 @@ class Touchdown(Measurement):
             self.setup_plot()
 
         self.line.set_ydata(self.C) #updates plot with new capacitance values
-        self.ax.set_ylim(top=max(np.nanmax(self.C), 5))
+        self.ax.set_ylim(-1, max(np.nanmax(self.C), 10))
 
         self.line_app.set_xdata(self.lines_data['V_app'])
         self.line_app.set_ydata(self.lines_data['C_app'])
@@ -396,7 +373,6 @@ class Touchdown(Measurement):
         plt.ylabel(r'$C - C_{balance}$ (fF)')
 
         plt.xlim(self.V.min(), self.V.max())
-        plt.ylim(-1,5)
 
         ## Two lines for fitting
         orange = '#F18C22'

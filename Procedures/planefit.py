@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from ..Utilities import logging
 from ..Instruments import piezos, montana
 from IPython import display
-from ..Utilities.utilities import reject_outliers_quick
+from ..Utilities.utilities import reject_outliers_plane, fit_plane
 from ..Utilities.save import Measurement, get_todays_data_path
 
 _home = os.path.expanduser("~")
@@ -80,25 +80,18 @@ class Planefit(Measurement):
         state.pop('montana')
         self.__dict__.update(state)
 
-    def calculate_plane(self):
+    def calculate_plane(self, no_outliers=True):
         '''
         Calculates the plane parameters a, b, and c.
         z = ax + by + c
         '''
-        X = self.X.flatten()
-        Y = self.Y.flatten()
-        Z = self.Z.copy()
-        Z = reject_outliers_quick(Z)
-        Z = Z.flatten()
+        ## Remove outliers
+        if no_outliers:
+            Z = reject_outliers_plane(self.Z)
+        else:
+            Z = self.Z
 
-        if type(X) is np.ma.MaskedArray: #edges only
-            mask = X.mask.copy() # mask will be different after next line!
-            X = X[np.invert(mask)] # removes masked values
-            Y = Y[np.invert(mask)] # removes masked values
-            Z = Z[np.invert(mask)] # use X mask in case reject outliers modified mask
-
-        A = np.vstack([X, Y, np.ones(len(X))]).T
-        self.a, self.b, self.c = lstsq(A, Z)[0]
+        self.a, self.b, self.c = fit_plane(self.X, self.Y, Z)
 
 
     def do(self, edges_only=False):

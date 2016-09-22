@@ -2,6 +2,34 @@
 For random utilities
 '''
 import json, numpy as np
+from numpy.linalg import lstsq
+
+def fit_plane(x,y,z):
+    '''
+    Calculates plane parameters a, b, and c for 2D data.
+    z = ax + by + c
+    '''
+    X = x.flatten()
+    Y = y.flatten()
+    Z = z.copy()
+    Z = Z.flatten()
+
+    if type(X) is np.ma.MaskedArray: # used when doing edges only
+        mask = X.mask.copy() # mask will be different after next line!
+        X = X[np.invert(mask)] # removes masked values
+        Y = Y[np.invert(mask)] # removes masked values
+        Z = Z[np.invert(mask)] # use X mask in case reject outliers modified mask
+
+    if type(Z) is np.ma.MaskedArray: # from rejected outliers:
+        mask = Z.mask.copy()
+        X = X[np.invert(mask)]
+        Y = Y[np.invert(mask)]
+        Z = Z[np.invert(mask)]
+
+
+    A = np.vstack([X, Y, np.ones(len(X))]).T
+    return lstsq(A, Z)[0] # a,b,c
+
 
 def get_nb_kernel():
     '''
@@ -101,6 +129,26 @@ def reject_outliers(data, radius=[None,None], m=2):
             new_data[x,y] = np.nan
     return new_data
 
+
+def reject_outliers_plane(z, m=2):
+    '''
+    Reject outliers from 2D data that lies mainly on a plane.
+    '''
+    x = np.array(range(z.shape[0]))
+    y = np.array(range(z.shape[1]))
+    X, Y = np.meshgrid(x,y)
+
+    a,b,c = fit_plane(X,Y,z)
+    Zplane = a*X + b*Y + c
+    Zdiff = z - Zplane
+
+    mean =  np.nanmean(Zdiff)
+    std = np.nanstd(Zdiff)
+    Z_no_outliers = np.ma.masked_where(abs(Zdiff - mean) > m*std, Zdiff)
+
+    return Z_no_outliers + Zplane # this should be original data with outliers removed, considering that the data lie on a plane
+
+
 def reject_outliers_quick(data, m=2):
     '''
     Quicker way to reject outlier using a masked array
@@ -109,6 +157,7 @@ def reject_outliers_quick(data, m=2):
     std = np.nanstd(data)
     new_data = np.ma.masked_where(abs(data - mean) > m*std, data)
     return new_data
+
 
 def hide_code_button():
     '''
