@@ -276,16 +276,17 @@ class Touchdown(Measurement):
             _, _, r2[i], _, _ = linregress(V[i:], C[i:])
 
         ## find touchdown index and perform final fit
-        i = np.nanargmax(r2) # this is the index where touchdown probably is
+        i = np.nanargmax(r2) # this is the index near or a little after where touchdown probably is
 
         ## Figure out how many lines to try to fit for approach curve
-        N1 = i+1-3 # last number is minimum number of points to fit for the approach curve: half of how many points there are on the approach curve
+        N1 = i+1-3 # last number is minimum number of points to fit for the approach curve
         r1 = np.array([np.nan]*N1) # correlation coefficients go here
         m1 = np.array([np.nan]*N1) # slopes go here
 
         ## Approach curve
+        k = i-3 # fit the approach curve ending this 2 points away from the touchdown curve
         for j in range(start, N1):
-            m1[j], b1, r1[j], _, _ = linregress(V[j:i], C[j:i])
+            m1[j], b1, r1[j], _, _ = linregress(V[j:k], C[j:k])
 
         ## Determine best approach curve
         minimize_this = (1-r1)*1 + abs(m1)*100 # Two weight factors: how much we care that it's a good fit, how much we care that the slope is near zero.
@@ -293,10 +294,10 @@ class Touchdown(Measurement):
 
         ## Recalculate slopes and intercepts
         m2, b2, r2, _, _ = linregress(V[i:], C[i:])
-        m1, b1, r1, _, _ = linregress(V[j:i], C[j:i])
+        m1, b1, r1, _, _ = linregress(V[j:k], C[j:k])
 
-        self.lines_data['V_app'] = V[j:i]
-        self.lines_data['C_app'] = m1*V[j:i] + b1
+        self.lines_data['V_app'] = V[j:k]
+        self.lines_data['C_app'] = m1*V[j:k] + b1
         self.lines_data['V_td'] = V[i:]
         self.lines_data['C_td'] = m2*V[i:] + b2
 

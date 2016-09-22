@@ -17,6 +17,9 @@ class Planefit(Measurement):
     '''
     For fitting to the plane of the sample. Will do a series of touchdowns in a grid of size specified by numpts. Vz_max sets the maximum voltage the Z piezo will reach. If None, will use the absolute max safe voltage set in the Piezos class.
     '''
+    a = 0
+    b = 0
+    c = 0
     def __init__(self, instruments=None, cap_input=None, span=[400,400], center=[0,0], numpts=[4,4], Vz_max = None):
         if instruments:
             self.instruments = instruments
@@ -47,10 +50,6 @@ class Planefit(Measurement):
 
         self.X, self.Y = np.meshgrid(self.x, self.y)
         self.Z = np.nan*self.X # makes array of nans same size as grid
-
-        self.a = None
-        self.b = None
-        self.c = None
 
         self.filename = ''
 

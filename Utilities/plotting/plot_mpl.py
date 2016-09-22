@@ -28,6 +28,24 @@ def clim(im, l, u):
     cb.draw_all()
 
 
+def cubehelix(g=1.0, s=0.5, r=-1.0, h=1.5):
+    '''
+    Returns a "cubehelix", brightness-adjusted colormap.
+    Help from https://gist.github.com/gazzar/11369614.
+    See examples here http://www.mrao.cam.ac.uk/~dag/CUBEHELIX/cubewedges.html
+
+    g: gamma
+    s: start color
+    r: number of rgb rotations in color made from start to end
+    h: hue (adjust saturation)
+    '''
+    import matplotlib as mpl
+    from matplotlib.colors import LinearSegmentedColormap
+    cdict = mpl._cm.cubehelix(g, s, r, h)
+    cm = LinearSegmentedColormap('cubehelix_custom', cdict)
+    return cm
+
+
 def plotline(ax, x, y, z):
     pass
 
