@@ -1,4 +1,16 @@
-import os, shutil, matplotlib
+import os, shutil, matplotlib, pip
+
+## Install required packages
+packages = [
+    'pint',
+    'tabulate',
+    'jsonpickle',
+    'https://github.com/nowacklab/PyANC350/tarball/master',
+    'https://github.com/nowacklab/Instrumental/tarball/master'
+]
+for package in packages:
+    pip.main(['install', '--upgrade', package])
+
 
 home = os.path.expanduser('~')
 site_packages = os.path.dirname(os.path.abspath(os.path.join(matplotlib.__file__, '..')))

@@ -214,7 +214,7 @@ class Touchdown(Measurement):
                             start = -self.Vz_max # because we don't know where the td will be
                             self.title = 'Found touchdown, centering near %i Vpiezo' %int(self.Vz_max/2)
                             self.plot()
-                            self.attoshift = (Vtd-self.Vz_max/2)*conversions.Vpiezo_to_attomicron/2 # half of how far it should move if conversion is exact (accounts for when the conversion is not exact)
+                            self.attoshift = (Vtd-self.Vz_max/2)*conversions.Vpiezo_to_attomicron
                             self.lines_data['V_app'] = []
                             self.lines_data['C_app'] = []
                             self.lines_data['V_td'] = []

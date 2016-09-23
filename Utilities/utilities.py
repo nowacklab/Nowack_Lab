@@ -15,14 +15,14 @@ def fit_plane(x,y,z):
     Z = Z.flatten()
 
     if type(X) is np.ma.MaskedArray: # used when doing edges only
-        if X.mask:
+        if np.ma.is_mask(X.mask): #if no mask, X.mask = False
             mask = X.mask.copy() # mask will be different after next line!
             X = X[np.invert(mask)] # removes masked values
             Y = Y[np.invert(mask)] # removes masked values
             Z = Z[np.invert(mask)] # use X mask in case reject outliers modified mask
 
     if type(Z) is np.ma.MaskedArray: # from rejected outliers:
-        if Z.mask:
+        if np.ma.is_mask(Z.mask): #if no mask, Z.mask = False
             mask = Z.mask.copy()
             X = X[np.invert(mask)]
             Y = Y[np.invert(mask)]
