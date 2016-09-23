@@ -8,6 +8,7 @@ from copy import copy
 class Measurement:
     _replacement = None
     timestamp = ''
+    instrument_list = []
 
     def __getstate__(self):
         '''
@@ -118,13 +119,30 @@ class Measurement:
 
 
     @staticmethod
-    def load(json_file, unwanted_keys=[]):
+    def load(json_file, instruments={}, unwanted_keys=[]):
         '''
-        Basic load method. Just calls fromjson.
+        Basic load method. Calls fromjson, not loading instruments, then loads instruments.
         Overwrite this for each subclass if necessary.
         Pass in an array of the names of things you don't want to load.
+        By default, we won't load any instruments, but you can pass in an instruments dictionary to load them.
         '''
-        return Measurement.fromjson(json_file, unwanted_keys)
+        unwanted_keys += instrument_list
+        obj = Measurement.fromjson(json_file, unwanted_keys)
+        obj.load_instruments(instruments)
+        return obj
+
+
+    def load_instruments(self, instruments={}):
+        '''
+        Loads instruments from a dictionary.
+        Specify instruments needed using self.instrument_list.
+        '''
+        for instrument in instrument_list:
+            if instrument in instruments:
+                setattr(self, instrument, instruments[instrument])
+            else:
+                setattr(self, instrument, None)
+                print('%s not loaded!\n' %instrument)
 
 
     def make_timestamp_and_filename(self, append=None):

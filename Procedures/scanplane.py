@@ -12,7 +12,6 @@ from ..Instruments import piezos, montana, squidarray
 from ..Utilities.save import Measurement, get_todays_data_path
 from ..Utilities import conversions
 
-
 class Scanplane(Measurement):
     inp_dc = None
     inp_cap = None
@@ -22,6 +21,7 @@ class Scanplane(Measurement):
     V_squid_full = np.array([])
     V_piezo_interp = np.array([])
     V_squid_interp = np.array([])
+    instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','attocube','daq']
 
     def __init__(self, instruments=None, span=[100,100],
                         center=[0,0], numpts=[50,50], plane=None,
@@ -34,7 +34,7 @@ class Scanplane(Measurement):
         self.inp_acy = 'ai%s' %inp_acy
         self.inp_cap = 'ai%s' %inp_cap
 
-        self.load_instruments()
+        self.load_instruments(instruments)
 
         self.scan_rate = scan_rate
         self.raster = raster
@@ -244,40 +244,6 @@ class Scanplane(Measurement):
         tend = time.time()
         print('Scan took %f minutes' %((tend-tstart)/60))
         return
-
-
-    @staticmethod
-    def load(json_file, instruments=None):
-        '''
-        Load a scanplane with or without any instruments.
-        '''
-        unwanted_keys = ['attocube','piezos','lockin_squid','lockin_cap']
-        obj = Measurement.load(json_file, unwanted_keys)
-        obj.load_instruments(instruments)
-        return obj
-
-
-    def load_instruments(self, instruments):
-        if instruments:
-            self.piezos = instruments['piezos']
-            self.montana = instruments['montana']
-            self.squidarray = instruments['squidarray']
-            self.preamp = instruments['preamp']
-            self.lockin_squid = instruments['lockin_squid']
-            self.lockin_cap = instruments['lockin_cap']
-            self.attocube = instruments['attocube']
-            self.daq = instruments['nidaq']
-
-        else:
-            self.daq = None
-            self.piezos = None
-            self.montana = None
-            self.squidarray = None
-            self.preamp = None
-            self.lockin_squid = None
-            self.lockin_cap = None
-            self.attocube = None
-            print('Instruments not loaded... can only plot!')
 
 
     def plot(self):

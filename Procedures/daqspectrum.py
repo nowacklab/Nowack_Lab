@@ -11,15 +11,10 @@ from ..Utilities.save import Measurement, get_todays_data_path
 
 
 class DaqSpectrum(Measurement):
+    instrument_list = ['daq','preamp']
+
     def __init__(self, instruments=None, input_chan=None, measure_time=0.5, measure_freq=256000, averages=30):
-        self.instruments = instruments
-        if instruments:
-            self.daq = instruments['nidaq']
-            self.pa = instruments['preamp']
-        else:
-            self.daq = None
-            self.pa = None
-            print('Instruments not loaded... can only plot!')
+        self.load_instruments(instruments)
 
         self.input_chan = 'ai%i' %input_chan
         for arg in ['measure_time','measure_freq','averages']:

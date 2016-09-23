@@ -17,6 +17,7 @@ from ..Utilities.save import Measurement, get_todays_data_path
 class SquidIV(Measurement):
     V = np.array([])
     I = np.array([])
+    instrument_list = ['daq','preamp','montana','preamp_I']
 
     def __init__(self, instruments=None, squidout=None, squidin=None, currentin=None, modout=None, rate=90):
         '''
@@ -31,33 +32,23 @@ class SquidIV(Measurement):
         self.currentin = 'ai%s' %currentin # for the two-preamp setup
         self.modout = 'ao%s' %modout
 
-        self.two_preamps = True
+        self.two_preamps = False
 
-        if instruments: # Only set up instruments if running for real
-            self.daq = instruments['nidaq']
-            self.preamp = instruments['preamp']
-            self.montana = instruments['montana']
-            try:
-                self.preamp_I = instruments['preamp_I']
-            except:
-                self.two_preamps = False
+        self.load_instruments(instruments)
 
-            try:
-                for pa in [self.preamp, self.preamp_I]:
-                    pa.gain = 500
-                    pa.filter_mode('low',6)
-                    pa.filter = (0, rate) # Hz
-                    pa.dc_coupling()
-                    pa.diff_input()
-                self.preamp_I.gain = 50 # was overloading
-            except:
-                pass # should set up the first preamp correctly either way
-        else:
-            self.daq = None
-            self.preamp = preamp.SR5113()
-            self.montana = None
-            self.preamp_I = None
-            print('Instruments not loaded... can only plot!')
+        if self.preamp_I is not None:
+            self.two_preamps = True
+
+        try:
+            for pa in [self.preamp, self.preamp_I]:
+                pa.gain = 500
+                pa.filter_mode('low',6)
+                pa.filter = (0, rate) # Hz
+                pa.dc_coupling()
+                pa.diff_input()
+            self.preamp_I.gain = 50 # was overloading
+        except:
+            pass # if we have no instruments, or maybe just one preamp
 
         self.filename = ''
         self.notes = ''
