@@ -5,6 +5,9 @@ packages = [
     'pint',
     'tabulate',
     'jsonpickle',
+    'pydaqmx',
+    'pyvisa',
+    'setuptools',
     'https://github.com/nowacklab/PyANC350/tarball/master',
     'https://github.com/nowacklab/Instrumental/tarball/master'
 ]

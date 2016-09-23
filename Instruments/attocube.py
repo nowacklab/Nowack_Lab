@@ -3,7 +3,7 @@ import atexit
 import time
 import telnetlib
 import re
-from PyANC350 import PyANC350v4
+from pyanc350v4 import Positioner as ANC350Pos
 
 ''' *** Use the Attocube class, definition is at the bottom *** '''
 
@@ -25,7 +25,7 @@ class ANC350():
         This will check the temperature to see if it is safe to go to 60 V.
         Else, we stay at 45 V.
         '''
-        self.anc = PyANC350v4.Positioner()
+        self.anc = ANC350Pos()
 
         V_lim = 45 # room temperature
         if montana:
@@ -53,7 +53,7 @@ class ANC350():
         state['y'] = state.pop('y attocube')
         state['z'] = state.pop('z attocube')
         self.__dict__.update(state)
-        self.anc = PyANC350v4.Positioner()
+        self.anc = ANC350Pos()
         for (i,s) in enumerate(self._stages):
             s = getattr(self,s)
             setattr(s, 'anc', self.anc) # give each positioner the ANC object
@@ -582,62 +582,3 @@ class ANC350_like300():
 
 class Attocube(ANC350): ### ANC350 is closed loop controller, we use this one at the moment.
     pass
-
-
-if __name__ == '__main__':
-    """ Testing the code. If for some reason communication does not work, first check for IP 192.168.69.3 in cmd using arp -a, then troubleshoot using cygwin terminal: telnet 192.168.69.3 7230 """
-
-
-
-    #### EVERYTHING BELOW IS OUT OF DATE
-
-
-    # atto = Attocube()
-    # # atto.V = [55, 55, 55]
-    # atto.mode = ['gnd', 'gnd', 'stp']
-
-    # atto.step([None, None, 0], [None, None, '+'])
-    # # # prescribed number of steps, will wait by default until current action is done. Does axes sequentially
-    # # for i in range(2):
-        # # atto.step([None, 2000, 2000], [None, '+', '+'])
-        # # # time.sleep(5)
-        # # atto.step([None, 2000, 2000], [None, '-', '-'])
-        # # # time.sleep(5)
-    # time.sleep(2)
-    # # atto.stop()
-    # #continuous motion - must stop before changing direction
-        # # for i in range(2):
-        # # atto.step([None, None, 0], [None, None, 'up'])
-        # # time.sleep(5)
-        # # atto.stop() # must stop before changing direction!
-        # # atto.step([None, None, 0], [None, None, 'down'])
-        # # time.sleep(5)
-        # # atto.stop()
-    # # print(atto.cap(True))
-    # # print(atto.frequency)
-    # # atto.frequency = [200, 800, 800]
-    # # print(atto.frequency)
-    # # print(atto.mode)
-    # # atto.mode = ['gnd', None, None]
-    # # print(atto.mode)
-    # # print(atto.voltage)
-    # # atto.voltage = [50, 50, 50]
-    # # print(atto.voltage)
-
-    # """ Test code that worked"""
-    # # import telnetlib
-    # # HOST = '192.168.69.3'
-    # # print(1)
-    # # tn = telnetlib.Telnet(HOST,7230)
-    # # print(2);
-    # # print(tn.read_until(b"Authorization code: "))
-    # # print(3)
-    # # tn.write(b'123456'+ b'\n')
-    # # print(4)
-    # # print(tn.read_until(b'> '))
-    # # print(4.5)
-    # # tn.write(b"getf 1\n")
-    # # print(5)
-    # # print(tn.read_until(b'> '))
-    # # print(5.5)
-    # ###########################
