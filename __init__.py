@@ -1,5 +1,6 @@
-__all__ = ['Procedures', 'Instruments', 'Utilities']
-
+from .Procedures import *
+from .Instruments import *
+from .Utilities import *
 
 from matplotlib import rcParams
 rcParams.update({'figure.autolayout': True}) # will avoid axis labels getting cut off

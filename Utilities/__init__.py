@@ -1,1 +1,3 @@
-__all__ = ['dummy', 'logging', 'make_instruments', 'plotting', 'save', 'utilities']
+from .save import *
+from .utilities import reject_outliers_quick
+from .plotting import *

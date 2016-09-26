@@ -1,9 +1,9 @@
 # Based off of https://github.com/jupyter/notebook/blob/master/docs/source/extending/savehooks.rst
 # Belongs in jupyter_path = os.path.join(home, '.jupyter', 'jupyter_notebook_config.py')
 
-import io
-import os
+import io, os, sys
 from notebook.utils import to_api_path
+from IPython.paths import get_ipython_dir
 
 ## Try to load notebook extensions
 ipythondir = get_ipython_dir()
