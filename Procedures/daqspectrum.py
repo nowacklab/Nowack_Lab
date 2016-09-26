@@ -13,7 +13,7 @@ from ..Utilities.save import Measurement, get_todays_data_path
 class DaqSpectrum(Measurement):
     instrument_list = ['daq','preamp']
 
-    def __init__(self, instruments=None, input_chan=None, measure_time=0.5, measure_freq=256000, averages=30):
+    def __init__(self, instruments={}}, input_chan=None, measure_time=0.5, measure_freq=256000, averages=30):
         super().__init__('spectrum')
 
         self.load_instruments(instruments)

@@ -31,7 +31,7 @@ class Touchdown(Measurement):
     title = ''
     instrument_list = []
 
-    def __init__(self, instruments=None, cap_input=None, planescan=False, Vz_max = None):
+    def __init__(self, instruments={}}, cap_input=None, planescan=False, Vz_max = None):
         append = 'td'
         if self.planescan:
             append += '_planescan'
@@ -54,7 +54,7 @@ class Touchdown(Measurement):
         self.C = np.array([np.nan]*self.numsteps) # Capacitance (fF)
         self.rs = np.array([np.nan]*self.numsteps) # correlation coefficients of each fit
 
-        if self.Vz_max is None and instruments is not None:
+        if self.Vz_max is None and instruments:
             self.Vz_max = self.piezos.z.Vmax
 
         self.planescan = planescan

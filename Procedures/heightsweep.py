@@ -9,7 +9,7 @@ from ..Utilities.save import Measurement, get_todays_data_path
 
 class Heightsweep(Measurement):
     instrument_list = ['piezos','montana']
-    def __init__(self, instruments = None, x=0, y=0, plane=None, inp_acx = 0, inp_acy=1, inp_dc = 2, scan_rate=120):
+    def __init__(self, instruments = {}}, x=0, y=0, plane=None, inp_acx = 0, inp_acy=1, inp_dc = 2, scan_rate=120):
         super().__init__('heightsweep')
 
         self.load_instruments(instruments)
