@@ -10,7 +10,7 @@ class Measurement:
     timestamp = ''
     instrument_list = []
 
-    def __init__(self):
+    def __init__(self, append=None):
         self.make_timestamp_and_filename(append)
         self.__getstate__() # to create the save_dict
 
