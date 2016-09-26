@@ -65,12 +65,6 @@ class Planefit(Measurement):
                       })
         return self.save_dict
 
-
-    def __setstate__(self, state):
-        state.pop('piezos')
-        state.pop('montana')
-        self.__dict__.update(state)
-
     def calculate_plane(self, no_outliers=True):
         '''
         Calculates the plane parameters a, b, and c.
@@ -170,8 +164,7 @@ class Planefit(Measurement):
                 json_file =  max(glob.iglob(os.path.join(folders[-2],'*_plane.json')),
                                         key=os.path.getctime)
 
-
-        unwanted_keys += instrument_list
+        unwanted_keys += Planefit.instrument_list
         obj = Measurement.fromjson(json_file, unwanted_keys)
         obj.load_instruments(instruments)
 

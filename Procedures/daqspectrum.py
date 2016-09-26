@@ -48,7 +48,6 @@ class DaqSpectrum(Measurement):
         return self.save_dict
 
     def do(self):
-
         self.setup_preamp()
 
         Nfft = int((self.measure_freq*self.measure_time / 2) + 1)

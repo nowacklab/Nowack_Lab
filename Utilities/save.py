@@ -12,7 +12,7 @@ class Measurement:
 
     def __init__(self, append=None):
         self.make_timestamp_and_filename(append)
-        self.__getstate__() # to create the save_dict
+        Measurement.__getstate__(self) # to create the save_dict without using overridden subclass getstate
 
     def __getstate__(self):
         '''
@@ -130,7 +130,7 @@ class Measurement:
         Pass in an array of the names of things you don't want to load.
         By default, we won't load any instruments, but you can pass in an instruments dictionary to load them.
         '''
-        unwanted_keys += instrument_list
+        unwanted_keys += __class__.instrument_list
         obj = Measurement.fromjson(json_file, unwanted_keys)
         obj.load_instruments(instruments)
         return obj
@@ -141,7 +141,7 @@ class Measurement:
         Loads instruments from a dictionary.
         Specify instruments needed using self.instrument_list.
         '''
-        for instrument in instrument_list:
+        for instrument in self.instrument_list:
             if instrument in instruments:
                 setattr(self, instrument, instruments[instrument])
             else:

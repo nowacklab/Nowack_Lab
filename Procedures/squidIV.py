@@ -88,7 +88,6 @@ class SquidIV(Measurement):
 
 
     def __setstate__(self, state):
-        self.preamp = preamp.SR5113()
         self.preamp.gain = state.pop('preamp gain')
         self.preamp.filter = state.pop('preamp filter')
         self.__dict__.update(state)
