@@ -29,12 +29,14 @@ class Scanplane(Measurement):
                         inp_acx=None, inp_acy=None,
                         scan_rate=120, raster=False):
 
+        super().__init__('scan')
+
         self.inp_dc = 'ai%s' %inp_dc
         self.inp_acx = 'ai%s' %inp_acx
         self.inp_acy = 'ai%s' %inp_acy
         self.inp_cap = 'ai%s' %inp_cap
 
-        self.load_instruments()
+        self.load_instruments(instruments)
 
         self.scan_rate = scan_rate
         self.raster = raster
@@ -75,8 +77,6 @@ class Scanplane(Measurement):
         self.end_time = ''
 
     def __getstate__(self):
-        super().__getstate__() # from Measurement superclass,
-                               # need this in every getstate to get save_dict
         self.save_dict.update({"timestamp": self.timestamp,
                           "end_time": self.end_time,
                           "piezos": self.piezos,
@@ -104,7 +104,6 @@ class Scanplane(Measurement):
 
     def do(self, fast_axis = 'x', linear=True): # linear True = sweep in lines, False sweep over plane surface
         ## Start time and temperature
-        super().make_timestamp_and_filename('scan')
         tstart = time.time()
         #temporarily commented out so we can scan witout internet on montana
         #computer

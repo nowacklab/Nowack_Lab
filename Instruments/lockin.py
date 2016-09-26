@@ -1,7 +1,5 @@
-import visa
-import atexit
+import visa, atexit, time, numpy as np
 from tabulate import tabulate
-import numpy as np
 
 _time_constant_values = [10e-6, 30e-6, 100e-6, 300e-6, 1e-3, 3e-3, 10e-3, 30e-3, 100e-3, 300e-3, 1, 3, 10, 30, 100, 300, 1000, 3000, 10000, 30000]
 _sensitivity_options = [
@@ -17,6 +15,8 @@ class SR830():
     Instrument driver for SR830, modified from Guen's squidpy driver
     '''
     def __init__(self, gpib_address=''):
+        if type(gpib_address) is int:
+            gpib_address = 'GPIB::%02i::INSTR' %gpib_address
         self.gpib_address = gpib_address
         self.ch1_daq_input = None
         self.ch2_daq_input = None
@@ -171,6 +171,7 @@ class SR830():
     def ask(self, cmd):
         self.init_visa()
         out = self._visa_handle.ask(cmd)
+        time.sleep(0.1)
         self.close()
         return out
 

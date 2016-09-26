@@ -17,6 +17,7 @@ class Mod2D(Measurement):
         To make an empty object, then just call Mod2D().
         You can do this if you want to plot previously collected data.
         '''
+        super().__init__('mod2D')
 
         self.filename = ''
         self.notes = ''
@@ -37,8 +38,6 @@ class Mod2D(Measurement):
         display.clear_output()
 
     def __getstate__(self):
-        super().__getstate__() # from Measurement superclass,
-                               # need this in every getstate to get save_dict
         self.save_dict.update({"timestamp": self.timestamp,
                               "IV": self.IV,
                               "Imodspan": self.Imodspan,
@@ -57,8 +56,6 @@ class Mod2D(Measurement):
 
 
     def do(self):
-        super().make_timestamp_and_filename('mod2D')
-
         self.calc_ramp() #easy way to clear self.V
         self.IV.V = self.IV.V*0
 

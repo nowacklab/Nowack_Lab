@@ -23,6 +23,7 @@ class SquidIV(Measurement):
         Example: SquidIV({'daq': daq, 'preamp': preamp}, 0, 0, None, 90)
         To make an empty object, then just call SquidIV(). You can do this if you want to plot previously collected data.
         '''
+        super().__init__('IV')
 
         self.squidout = 'ao%s' %squidout
         self.squidin = 'ai%s' %squidin
@@ -80,8 +81,6 @@ class SquidIV(Measurement):
         display.clear_output()
 
     def __getstate__(self):
-        super().__getstate__() # from Measurement superclass,
-                               # need this in every getstate to get save_dict
         self.save_dict = {"timestamp": self.timestamp,
                           "Rbias": self.Rbias,
                           "Rbias_mod": self.Rbias_mod,
@@ -110,8 +109,6 @@ class SquidIV(Measurement):
         self.Vbias = Ibias*(self.Rbias+self.Rcold+self.Rmeas) # SQUID bias voltage
 
     def do(self):
-        super().make_timestamp_and_filename('IV')
-
         self.param_prompt() # Check parameters
 
         self.do_IV()

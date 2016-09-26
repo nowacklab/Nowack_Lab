@@ -12,6 +12,8 @@ from ..Utilities.save import Measurement, get_todays_data_path
 
 class DaqSpectrum(Measurement):
     def __init__(self, instruments=None, input_chan=None, measure_time=0.5, measure_freq=256000, averages=30):
+        super().__init__('spectrum')
+
         self.instruments = instruments
         if instruments:
             self.daq = instruments['nidaq']
@@ -35,8 +37,6 @@ class DaqSpectrum(Measurement):
         self.notes = ''
 
     def __getstate__(self):
-        super().__getstate__() # from Measurement superclass,
-                               # need this in every getstate to get save_dict
         self.save_dict.update({"timestamp": self.timestamp,
                           "V": self.V,
                           "t": self.t,
@@ -53,8 +53,6 @@ class DaqSpectrum(Measurement):
         return self.save_dict
 
     def do(self):
-        #record the time when the measurement starts
-        super().make_timestamp_and_filename('spectra')
 
         self.setup_preamp()
 

@@ -9,6 +9,8 @@ from ..Utilities.save import Measurement, get_todays_data_path
 
 class Heightsweep(Measurement):
     def __init__(self, instruments = None, x=0, y=0, plane=None, inp_acx = 0, inp_acy=1, inp_dc = 2, scan_rate=120):
+        super().__init__('heightsweep')
+
         if instruments:
             self.piezos = instruments['piezos']
             self.montana = instruments['montana']
@@ -35,8 +37,6 @@ class Heightsweep(Measurement):
         self.filename = ''
 
     def __getstate__(self):
-        super().__getstate__() # from Measurement superclass,
-                               # need this in every getstate to get save_dict
         self.save_dict.update({"timestamp": self.timestamp,
                           "piezos": self.piezos,
                           "montana": self.montana,
@@ -51,8 +51,6 @@ class Heightsweep(Measurement):
         return self.save_dict
 
     def do(self):
-        #record the time when the measurement starts
-        super().make_timestamp_and_filename('spectra')
 
         self.temp_start = self.montana.temperature['platform']
 

@@ -9,6 +9,10 @@ class Measurement:
     _replacement = None
     timestamp = ''
 
+    def __init__(self):
+        self.make_timestamp_and_filename(append)
+        self.__getstate__() # to create the save_dict
+
     def __getstate__(self):
         '''
         Returns a dictionary of everything we want to save to JSON.

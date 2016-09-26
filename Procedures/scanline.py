@@ -10,6 +10,8 @@ from ..Utilities.save import Measurement, get_todays_data_path
 
 class Scanline(Measurement):
     def __init__(self, instruments=None, start=(-100,-100), end=(100,100), plane=None, scanheight=0, inp_dc=0, inp_cap=1, inp_acx=None, inp_acy=None, scan_rate=120, return_to_zero=True):
+        super().__init__('scan_line')
+
         self.inp_dc = 'ai%s' %inp_dc
         self.inp_acx = 'ai%s' %inp_acx
         self.inp_acy = 'ai%s' %inp_acy
@@ -59,8 +61,6 @@ class Scanline(Measurement):
 
 
     def __getstate__(self):
-        super().__getstate__() # from Measurement superclass,
-                               # need this in every getstate to get save_dict
         self.save_dict.update({"timestamp": self.timestamp,
                           "piezos": self.piezos,
                           "montana": self.montana,
@@ -80,8 +80,6 @@ class Scanline(Measurement):
 
 
     def do(self):
-        super().make_timestamp_and_filename('scan_line')
-
         tstart = time.time()
         self.temp_start = self.montana.temperature['platform']
 

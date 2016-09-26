@@ -19,6 +19,8 @@ class Planefit(Measurement):
     b = np.nan
     c = np.nan
     def __init__(self, instruments=None, cap_input=None, span=[400,400], center=[0,0], numpts=[4,4], Vz_max = None):
+        super().__init__('plane')
+
         if instruments:
             self.instruments = instruments
             self.piezos = instruments['piezos']
@@ -52,8 +54,6 @@ class Planefit(Measurement):
         self.filename = ''
 
     def __getstate__(self):
-        super().__getstate__() # from Measurement superclass,
-                               # need this in every getstate to get save_dict
         self.save_dict.update({"timestamp": self.timestamp,
                           "a": self.a,
                           "b": self.b,
@@ -98,8 +98,6 @@ class Planefit(Measurement):
         '''
         if not self.cap_input:
             raise Exception('Cap_input not set!')
-
-        super().make_timestamp_and_filename('plane')
 
         self.piezos.x.check_lim(self.X)
         self.piezos.y.check_lim(self.Y) # make sure we won't scan outside X, Y piezo ranges!

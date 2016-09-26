@@ -31,6 +31,10 @@ class Touchdown(Measurement):
     title = ''
 
     def __init__(self, instruments=None, cap_input=None, planescan=False, Vz_max = None):
+        append = 'td'
+        if self.planescan:
+            append += '_planescan'
+        super().__init__(append)
 
         self.load_instruments(instruments)
         if instruments:
@@ -57,8 +61,6 @@ class Touchdown(Measurement):
         self.timestamp = ''
 
     def __getstate__(self):
-        super().__getstate__() # from Measurement superclass,
-                               # need this in every getstate to get save_dict
         self.save_dict.update({"timestamp": self.timestamp,
                           "lockin": self.lockin,
                           "atto": self.atto,
@@ -129,10 +131,6 @@ class Touchdown(Measurement):
         Timestamp is determined at the beginning of this function.
         Can specify a voltage from which to start the sweep
         '''
-        append = 'td'
-        if self.planescan:
-            append += '_planescan'
-        super().make_timestamp_and_filename(append)
 
         Vtd = None
         slow_scan = False
@@ -208,7 +206,13 @@ class Touchdown(Measurement):
 
                     if not self.planescan: # Don't want to move attocubes during planescan
                         ## Check if touchdown near center of z piezo +V range
-                        if Vtd > 0.75*self.Vz_max or Vtd < 0.25*self.Vz_max:
+                        if slow_scan:
+                            u = 0.65 # percentages of the total voltage range to aim touchdown to be within
+                            l = 0.35
+                        else:
+                            u = 0.75 # touchdown is at a higher voltage for a not-slow scan
+                            l = 0.45
+                        if Vtd > u*self.Vz_max or Vtd < l*self.Vz_max:
                             self.touchdown = False
                             slow_scan = False
                             start = -self.Vz_max # because we don't know where the td will be
@@ -274,7 +278,7 @@ class Touchdown(Measurement):
             _, _, r2[i], _, _ = linregress(V[i:], C[i:])
 
         ## find touchdown index and perform final fit
-        i = np.nanargmax(r2) # this is the index near or a little after where touchdown probably is
+        i = np.nanargmax(r2)-2 # this is where touchdown probably is, gave it a couple of extra points; it always seemed to need them
 
         ## Figure out how many lines to try to fit for approach curve
         N1 = i+1-3 # last number is minimum number of points to fit for the approach curve
