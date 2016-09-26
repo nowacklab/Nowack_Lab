@@ -29,6 +29,7 @@ class Touchdown(Measurement):
     good_r_index = None
     start_offset = 0
     title = ''
+    instrument_list = []
 
     def __init__(self, instruments=None, cap_input=None, planescan=False, Vz_max = None):
         append = 'td'
@@ -37,6 +38,7 @@ class Touchdown(Measurement):
         super().__init__(append)
 
         self.load_instruments(instruments)
+
         if instruments:
             self.atto.z.freq = 200
             self.configure_lockin(cap_input)
@@ -309,33 +311,6 @@ class Touchdown(Measurement):
         self.title = '%s\nTouchdown at %.2f V' %(self.filename, Vtd)
 
         return Vtd
-
-
-    @staticmethod
-    def load(json_file, instruments=None):
-        '''
-        Load a touchdown with or without any instruments.
-        '''
-        unwanted_keys = ['daq', 'lockin', 'atto', 'piezos']
-        obj = Measurement.load(json_file, unwanted_keys)
-        obj.load_instruments(instruments)
-        return obj
-
-
-    def load_instruments(self, instruments):
-        if instruments:
-            self.piezos = instruments['piezos']
-            self.atto = instruments['attocube']
-            self.lockin = instruments['lockin_cap']
-            self.daq = instruments['nidaq']
-            self.montana = instruments['montana']
-        else:
-            self.piezos = None
-            self.atto = None
-            self.lockin = None
-            self.daq = None
-            self.montana = None
-            print('Instruments not loaded... can only plot!')
 
 
     def plot(self):

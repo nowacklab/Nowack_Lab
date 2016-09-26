@@ -18,18 +18,12 @@ class Planefit(Measurement):
     a = np.nan
     b = np.nan
     c = np.nan
+    instrument_list = ['piezos','montana']
     def __init__(self, instruments=None, cap_input=None, span=[400,400], center=[0,0], numpts=[4,4], Vz_max = None):
         super().__init__('plane')
 
-        if instruments:
-            self.instruments = instruments
-            self.piezos = instruments['piezos']
-            self.montana = instruments['montana']
-        else:
-            self.instruments = None
-            self.piezos = None
-            self.montana = None
-            print('Instruments not loaded... can only plot!')
+        self.load_instruments(instruments)
+        self.instruments = instruments
 
         self.span = span
         self.center = center
@@ -159,9 +153,10 @@ class Planefit(Measurement):
 
 
     @staticmethod
-    def load(instruments=None, json_file=None):
+    def load(json_file=None, instruments={}, unwanted_keys=[]):
         '''
-        Load method. If no json_file specified, will load the last plane taken.
+        Plane load method.
+        If no json_file specified, will load the last plane taken.
         Useful if you lose the object while scanning.
         '''
         if json_file is None:
@@ -175,19 +170,15 @@ class Planefit(Measurement):
                 json_file =  max(glob.iglob(os.path.join(folders[-2],'*_plane.json')),
                                         key=os.path.getctime)
 
-        plane = Measurement.load(json_file)
 
-        if plane.cap_input is None:
+        unwanted_keys += instrument_list
+        obj = Measurement.fromjson(json_file, unwanted_keys)
+        obj.load_instruments(instruments)
+
+        if obj.cap_input is None:
             print('cap_input not loaded! Set this manually!!!')
 
-        if instruments is None:
-            print('Didn\'t load instruments')
-        else:
-            plane.instruments = instruments
-            plane.piezos = instruments['piezos']
-            plane.montana = instruments['montana']
-
-        return plane
+        return obj
 
 
     def plane(self, x, y, recal=False):

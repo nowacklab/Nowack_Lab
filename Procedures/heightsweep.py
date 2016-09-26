@@ -8,16 +8,11 @@ from ..Utilities.save import Measurement, get_todays_data_path
 
 
 class Heightsweep(Measurement):
+    instrument_list = ['piezos','montana']
     def __init__(self, instruments = None, x=0, y=0, plane=None, inp_acx = 0, inp_acy=1, inp_dc = 2, scan_rate=120):
         super().__init__('heightsweep')
 
-        if instruments:
-            self.piezos = instruments['piezos']
-            self.montana = instruments['montana']
-        else:
-            self.piezos = None
-            self.montana = None
-            print('Instruments not loaded... can only plot!')
+        self.load_instruments(instruments)
 
         self.x = x
         self.y = y
