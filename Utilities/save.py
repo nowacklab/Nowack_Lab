@@ -206,7 +206,7 @@ class Measurement:
 def get_cooldown_data_path():
     with open(os.path.join(os.path.dirname(__file__),'paths.json'),'r') as f:
         data = json.load(f)
-    path = os.path.join(os.path.expanduser('~'), data['cooldown'])
+    path = os.path.join(os.path.expanduser('~'), *data['cooldown'])
     return path
 
 
@@ -228,18 +228,17 @@ def set_cooldown_data_path(description=''):
     with the current date and a description of the cooldown.
     Writes to paths.json to store the name of the data directory.
     '''
-    montana = os.path.join('Dropbox (Nowack lab)', 'TeamData', 'Montana', 'cooldowns')
-
     now = datetime.now()
     now_fmt = now.strftime('%Y-%m-%d')
-    filename = os.path.join(montana,now_fmt + '_' + description)
 
-    paths = {'cooldown': filename}
+    filetuple = ('Dropbox (Nowack lab)', 'TeamData', 'Montana', 'cooldowns', now_fmt + '_' + description)
+
+    paths = {'cooldown': filetuple}
     with open(os.path.join(os.path.dirname(__file__),'paths.json'), 'w') as f:
         json.dump(paths, f)
 
     # Make the directory
     _home = os.path.expanduser('~')
-    filename = os.path.join(_home, filename)
+    filename = os.path.join(_home, os.path.join(*filetuple))
     if not os.path.exists(filename):
         os.makedirs(filename)
