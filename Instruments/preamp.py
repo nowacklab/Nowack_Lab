@@ -17,7 +17,6 @@ class SR5113():
         self.port = port
         self._first_connect = True
 
-
         for cg in COARSE_GAIN:
             for fg in FINE_GAIN:
                 ALL_GAINS.append(int(cg*fg))

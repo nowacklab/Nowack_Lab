@@ -9,7 +9,7 @@ from ..Utilities.save import Measurement, get_todays_data_path
 
 
 class Scanline(Measurement):
-    instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','attocube']
+    instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto']
     def __init__(self, instruments={}, start=(-100,-100), end=(100,100), plane=None, scanheight=0, inp_dc=0, inp_cap=1, inp_acx=None, inp_acy=None, scan_rate=120, return_to_zero=True):
         super().__init__('scan_line')
 
@@ -58,7 +58,7 @@ class Scanline(Measurement):
                           "Vac_y": self.Vac_y,
                           "lockin_squid": self.lockin_squid,
                           "lockin_cap": self.lockin_cap,
-                          "attocube": self.attocube
+                          "atto": self.atto
                       })
         return self.save_dict
 

@@ -21,7 +21,7 @@ class Scanplane(Measurement):
     V_squid_full = np.array([])
     V_piezo_interp = np.array([])
     V_squid_interp = np.array([])
-    instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','attocube','daq']
+    instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto','daq']
 
     def __init__(self, instruments={}, span=[100,100],
                         center=[0,0], numpts=[50,50], plane=None,
@@ -95,7 +95,7 @@ class Scanplane(Measurement):
                           "preamp": self.preamp,
                           "lockin_squid": self.lockin_squid,
                           "lockin_cap": self.lockin_cap,
-                          "attocube": self.attocube,
+                          "atto": self.atto,
                           "X": self.X,
                           "Y": self.Y
                       })

@@ -29,11 +29,11 @@ class Touchdown(Measurement):
     good_r_index = None
     start_offset = 0
     title = ''
-    instrument_list = []
+    instrument_list = ['lockin_cap','atto','piezos','daq','montana']
 
     def __init__(self, instruments={}, cap_input=None, planescan=False, Vz_max = None):
         append = 'td'
-        if self.planescan:
+        if planescan:
             append += '_planescan'
         super().__init__(append)
 
@@ -64,7 +64,7 @@ class Touchdown(Measurement):
 
     def __getstate__(self):
         self.save_dict.update({"timestamp": self.timestamp,
-                          "lockin": self.lockin,
+                          "lockin_cap": self.lockin_cap,
                           "atto": self.atto,
                           "piezos": self.piezos,
                           "daq": self.daq,
@@ -82,8 +82,8 @@ class Touchdown(Measurement):
         By default, this is heuristically 2 uV.
         '''
         # Read daq voltage and conver to real lockin voltage
-        Vcap = getattr(self.daq, self.lockin.ch1_daq_input)
-        Vcap = self.lockin.convert_output(Vcap)
+        Vcap = getattr(self.daq, self.lockin_cap.ch1_daq_input)
+        Vcap = self.lockin_cap.convert_output(Vcap)
 
         if Vcap > V_unbalanced:
             inp = input('Check balance of capacitance bridge! Press enter to continue, q to quit')
@@ -113,18 +113,18 @@ class Touchdown(Measurement):
 
     def configure_lockin(self, cap_input=None):
         '''
-        Set up lockin amplifier for a touchdown.
+        Set up lockin_cap amplifier for a touchdown.
         '''
-        self.lockin.ch1_daq_input = 'ai%s' %cap_input
-        self.lockin.amplitude = 1
-        self.lockin.frequency = 24989 # prime number ^_^
-        self.lockin.set_out(1, 'R') # Possibly X is better?
-        self.lockin.set_out(2, 'theta') # not used, but may be good to see
-        self.lockin.sensitivity = 20e-6
-        self.lockin.time_constant = 0.100
-        self.lockin.reserve = 'Low Noise'
-        self.lockin.ac_coupling()
-        self.lockin.auto_phase()
+        self.lockin_cap.ch1_daq_input = 'ai%s' %cap_input
+        self.lockin_cap.amplitude = 1
+        self.lockin_cap.frequency = 24989 # prime number ^_^
+        self.lockin_cap.set_out(1, 'R') # Possibly X is better?
+        self.lockin_cap.set_out(2, 'theta') # not used, but may be good to see
+        self.lockin_cap.sensitivity = 20e-6
+        self.lockin_cap.time_constant = 0.100
+        self.lockin_cap.reserve = 'Low Noise'
+        self.lockin_cap.ac_coupling()
+        self.lockin_cap.auto_phase()
 
 
     def do(self, start=None):
@@ -138,7 +138,7 @@ class Touchdown(Measurement):
         slow_scan = False
 
         ## Loop that does sweeps of z piezo
-        ## Z attocube is moved up between iterations
+        ## Z atto is moved up between iterations
         ## Loop breaks when true touchdown detected.
         while not self.touchdown:
             ## Determine where to start sweeping
@@ -181,8 +181,8 @@ class Touchdown(Measurement):
                 ## Get capacitance
                 if self.C0 == None:
                     time.sleep(2) # wait for stabilization, was getting weird first values
-                Vcap = getattr(self.daq, self.lockin.ch1_daq_input) # Read the voltage from the daq
-                Vcap = self.lockin.convert_output(Vcap) # convert to a lockin voltage
+                Vcap = getattr(self.daq, self.lockin_cap.ch1_daq_input) # Read the voltage from the daq
+                Vcap = self.lockin_cap.convert_output(Vcap) # convert to a lockin voltage
                 Cap = Vcap*conversions.V_to_C # convert to true capacitance (fF)
                 if self.C0 == None:
                     self.C0 = Cap # Sets the offset datum
@@ -206,7 +206,7 @@ class Touchdown(Measurement):
                     logging.log(self.title)
                     self.plot()
 
-                    if not self.planescan: # Don't want to move attocubes during planescan
+                    if not self.planescan: # Don't want to move attos during planescan
                         ## Check if touchdown near center of z piezo +V range
                         if slow_scan:
                             u = 0.65 # percentages of the total voltage range to aim touchdown to be within
@@ -230,14 +230,14 @@ class Touchdown(Measurement):
 
             ## end of inner loop
 
-            ## Move the attocubes; either we're too far away for a touchdown or TD voltage not centered
-            if not self.planescan: # don't want to move attocubes if in a planescan!
+            ## Move the attos; either we're too far away for a touchdown or TD voltage not centered
+            if not self.planescan: # don't want to move attos if in a planescan!
                 if not self.touchdown:
-                    self.piezos.z.V = -self.Vz_max # before moving attocubes, make sure we're far away from the sample!
+                    self.piezos.z.V = -self.Vz_max # before moving attos, make sure we're far away from the sample!
                     start = -self.Vz_max # we should start here next time
                     self.atto.z.move(self.attoshift)
                     time.sleep(2) # was getting weird capacitance values immediately after moving; wait a bit
-                    while getattr(self.daq, self.lockin.ch1_daq_input) > 10: # overloading
+                    while getattr(self.daq, self.lockin_cap.ch1_daq_input) > 10: # overloading
                         self.atto.z.move(-self.attoshift/2) # we probably moved too far
                         time.sleep(2)
 

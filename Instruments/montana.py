@@ -15,7 +15,7 @@ class Montana():
         directory_of_this_module = os.path.dirname(os.path.realpath(__file__))
         sys.path.append(directory_of_this_module) # so CryostationComm is discoverable
 
-        clr.AddReference('CryostationComm')
+        clr.AddReference(os.path.join(directory_of_this_module,'CryostationComm'))
         from CryostationComm import CryoComm
 
         self.cryo = CryoComm()

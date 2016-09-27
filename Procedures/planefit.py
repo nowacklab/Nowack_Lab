@@ -167,6 +167,7 @@ class Planefit(Measurement):
         unwanted_keys += Planefit.instrument_list
         obj = Measurement.fromjson(json_file, unwanted_keys)
         obj.load_instruments(instruments)
+        obj.instruments = instruments
 
         if obj.cap_input is None:
             print('cap_input not loaded! Set this manually!!!')
