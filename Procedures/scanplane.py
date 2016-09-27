@@ -184,13 +184,6 @@ class Scanplane(Measurement):
             self.piezos.V = 0
             time.sleep(2)
 
-            ## Save linecuts
-            self.linecuts[str(i)] = {"Vstart": Vstart,
-                                "Vend": Vend,
-                                "Vsquid": {"Vdc": received[self.inp_dc],
-                                           "Vac_x": received[self.inp_acx],
-                                           "Vac_y": received[self.inp_acy]}}
-
             ## Interpolate to the number of lines
             self.V_piezo_full = output_data[fast_axis] # actual voltages swept in x or y direction
             if fast_axis == 'x':
@@ -198,14 +191,30 @@ class Scanplane(Measurement):
             elif fast_axis == 'y':
                 self.V_piezo_interp = self.Y[i,:]
 
+
             # Store this line's signals for Vdc, Vac x/y, and Cap
-            self.V_squid_full = received[self.inp_dc]
-            self.Vac_x_full = received[self.inp_acx]
-            self.Vac_y_full = received[self.inp_acy]
+            # Convert from DAQ volts to lockin volts
+            Vdc = received[self.inp_dc]
+            self.V_squid_full = self.lockin_squid.convert_output(Vdc)
+
+            Vac_x_full = received[self.inp_acx]
+            self.Vac_x_full = self.lockin_squid.convert_output(Vac_x_full)
+
+            Vac_y_full = received[self.inp_acy]
+            self.Vac_y_full = self.lockin_squid.convert_output(Vac_y_full)
 
             Vcap = received[self.inp_cap]
             Vcap = self.lockin_cap.convert_output(Vcap) # convert to a lockin voltage
             self.C_full = Vcap*conversions.V_to_C - C0 # convert to capacitance (fF)
+
+            ## Save linecuts
+            self.linecuts[str(i)] = {"Vstart": Vstart,
+                                "Vend": Vend,
+                                "Vsquid": {"Vdc": self.V_squid_full,
+                                           "Vac_x": self.Vac_x_full,
+                                           "Vac_y": self.Vac_y_full
+                                       }
+                                   }
 
             # interpolation functions
             interp_V = interp(self.V_piezo_full, self.V_squid_full)
