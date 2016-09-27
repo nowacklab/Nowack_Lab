@@ -11,12 +11,6 @@ from ..Utilities.save import Measurement, get_todays_data_path
 class Scanline(Measurement):
     instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto']
 
-    Vout = np.nan
-    V = np.nan
-    Vac_x = np.nan
-    Vac_y = np.nan
-    C = np.nan
-
     def __init__(self, instruments={}, start=(-100,-100), end=(100,100), plane=None, scanheight=0, inp_dc=0, inp_cap=1, inp_acx=None, inp_acy=None, scan_rate=120, return_to_zero=True):
         super().__init__('scan_line')
 
@@ -41,6 +35,12 @@ class Scanline(Measurement):
                 raise Exception('Terminated by user')
         self.scanheight = scanheight
         self.scan_rate = scan_rate
+
+        self.Vout = np.nan
+        self.V = np.nan
+        self.Vac_x = np.nan
+        self.Vac_y = np.nan
+        self.C = np.nan
 
 
     def __getstate__(self):
@@ -87,12 +87,22 @@ class Scanline(Measurement):
 
         dist_between_points = np.sqrt((self.output_data['x'][0]-self.output_data['x'][-1])**2+(self.output_data['y'][0]-self.output_data['y'][-1])**2)
         self.Vout = np.linspace(0, dist_between_points, len(self.output_data['x'])) # plots vs 0 to whatever the maximum distance travelled was
-        self.V = received[self.inp_dc]
+
+        # Store this line's signals for Vdc, Vac x/y, and Cap
+        # Convert from DAQ volts to lockin volts
+        Vdc = received[self.inp_dc]
+        self.V_squid_full = self.lockin_squid.convert_output(Vdc)
+
+        Vac_x_full = received[self.inp_acx]
+        self.Vac_x_full = self.lockin_squid.convert_output(Vac_x_full)
+
+        Vac_y_full = received[self.inp_acy]
+        self.Vac_y_full = self.lockin_squid.convert_output(Vac_y_full)
+
         Vcap = received[self.inp_cap]
         Vcap = self.lockin_cap.convert_output(Vcap) # convert to a lockin voltage
-        self.C = Vcap*conversions.V_to_C # convert to true capacitance (fF)
-        self.Vac_x = received[self.inp_acx]
-        self.Vac_y = received[self.inp_acy]
+        self.C_full = Vcap*conversions.V_to_C - C0 # convert to capacitance (fF)
+
 
         self.plot()
 

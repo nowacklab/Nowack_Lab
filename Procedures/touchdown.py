@@ -11,27 +11,13 @@ from ..Utilities import conversions, logging
 
 
 class Touchdown(Measurement):
-    Vtd = None
-    C = np.array([])
-    V = np.array([])
-    rs = np.array([])
+    instrument_list = ['lockin_cap','atto','piezos','daq','montana']
+
     numsteps = 100
     numfit = 5       # number of points to fit line to while collecting data
     attoshift = 40 # move 20 um if no touchdown detected
     Vz_max = 400
-    touchdown = False
-    lines_data = dict(
-        V_app = np.array([]),
-        C_app = np.array([]),
-        V_td = np.array([]),
-        C_td = np.array([])
-    )
-    good_r_index = None
     start_offset = 0
-    title = ''
-    instrument_list = ['lockin_cap','atto','piezos','daq','montana']
-    filename = ''
-    timestamp = ''
 
     def __init__(self, instruments={}, cap_input=None, planescan=False, Vz_max = None):
         append = 'td'
@@ -44,6 +30,21 @@ class Touchdown(Measurement):
         if instruments:
             self.atto.z.freq = 200
             self.configure_lockin(cap_input)
+
+        self.Vtd = None
+        self.touchdown = False
+        self.C = np.array([])
+        self.V = np.array([])
+        self.rs = np.array([])
+
+        self.lines_data = dict(
+            V_app = np.array([]),
+            C_app = np.array([]),
+            V_td = np.array([]),
+            C_td = np.array([])
+        )
+        self.good_r_index = None
+        self.title = ''
 
         if planescan:
             self.z_piezo_step = 4 #may be able to go to 4
