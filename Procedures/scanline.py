@@ -10,6 +10,13 @@ from ..Utilities.save import Measurement, get_todays_data_path
 
 class Scanline(Measurement):
     instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto']
+
+    Vout = np.nan
+    V = np.nan
+    Vac_x = np.nan
+    Vac_y = np.nan
+    C = np.nan
+
     def __init__(self, instruments={}, start=(-100,-100), end=(100,100), plane=None, scanheight=0, inp_dc=0, inp_cap=1, inp_acx=None, inp_acy=None, scan_rate=120, return_to_zero=True):
         super().__init__('scan_line')
 
@@ -34,14 +41,6 @@ class Scanline(Measurement):
                 raise Exception('Terminated by user')
         self.scanheight = scanheight
         self.scan_rate = scan_rate
-
-        self.Vout = np.nan
-        self.V = np.nan
-        self.Vac_x = np.nan
-        self.Vac_y = np.nan
-        self.C = np.nan
-
-        self.filename = ''
 
 
     def __getstate__(self):

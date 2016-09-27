@@ -11,6 +11,7 @@ from ..Utilities.save import Measurement, get_todays_data_path
 
 
 class Mod2D(Measurement):
+    notes = ''
     def __init__(self, instruments={}, squidout=None, squidin=None, modout=None, rate=900):
         '''
         Example: Mod2D({'daq': daq, 'preamp': preamp}, 'ao0','ai0','ao1', rate=900).
@@ -18,9 +19,6 @@ class Mod2D(Measurement):
         You can do this if you want to plot previously collected data.
         '''
         super().__init__('mod2D')
-
-        self.filename = ''
-        self.notes = ''
 
         self.IV = squidIV.SquidIV(instruments, squidout, squidin, modout, rate=rate)
 

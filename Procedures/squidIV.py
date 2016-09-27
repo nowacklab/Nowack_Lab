@@ -18,6 +18,7 @@ class SquidIV(Measurement):
     V = np.array([])
     I = np.array([])
     instrument_list = ['daq','preamp','montana','preamp_I']
+    notes = ''
 
     def __init__(self, instruments={}, squidout=None, squidin=None, currentin=None, modout=None, rate=90):
         '''
@@ -50,9 +51,6 @@ class SquidIV(Measurement):
             self.preamp_I.gain = 50 # was overloading
         except:
             pass # if we have no instruments, or maybe just one preamp
-
-        self.filename = ''
-        self.notes = ''
 
         self.rate = rate # Hz # measurement rate of the daq
 

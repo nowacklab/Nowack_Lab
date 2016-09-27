@@ -12,6 +12,13 @@ from ..Utilities.save import Measurement, get_todays_data_path
 
 class DaqSpectrum(Measurement):
     instrument_list = ['daq','preamp']
+    notes = ''
+
+    ## So plotting will work with no data
+    f = 1
+    V = 1
+    t = 1
+    psdAve = 1
 
     def __init__(self, instruments={}, input_chan=None, measure_time=0.5, measure_freq=256000, averages=30):
         super().__init__('spectrum')
@@ -22,14 +29,6 @@ class DaqSpectrum(Measurement):
         for arg in ['measure_time','measure_freq','averages']:
             setattr(self, arg, eval(arg))
 
-        ## So plotting will work with no data
-        self.f = 1
-        self.V = 1
-        self.t = 1
-        self.psdAve = 1
-
-        self.filename = ''
-        self.notes = ''
 
     def __getstate__(self):
         self.save_dict.update({"timestamp": self.timestamp,

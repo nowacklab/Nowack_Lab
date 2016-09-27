@@ -30,6 +30,8 @@ class Touchdown(Measurement):
     start_offset = 0
     title = ''
     instrument_list = ['lockin_cap','atto','piezos','daq','montana']
+    filename = ''
+    timestamp = ''
 
     def __init__(self, instruments={}, cap_input=None, planescan=False, Vz_max = None):
         append = 'td'
@@ -58,9 +60,6 @@ class Touchdown(Measurement):
             self.Vz_max = self.piezos.z.Vmax
 
         self.planescan = planescan
-        self.title = ''
-        self.filename = ''
-        self.timestamp = ''
 
     def __getstate__(self):
         self.save_dict.update({"timestamp": self.timestamp,

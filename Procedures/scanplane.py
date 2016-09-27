@@ -23,6 +23,14 @@ class Scanplane(Measurement):
     V_squid_interp = np.array([])
     instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto','daq']
 
+    V_piezo_full = np.array([])
+    V_squid_full = np.array([])
+    V_piezo_interp = np.array([])
+    V_squid_interp = np.array([])
+    linecuts = {}
+
+    end_time = ''
+
     def __init__(self, instruments={}, span=[100,100],
                         center=[0,0], numpts=[50,50], plane=None,
                         scanheight=5, inp_dc=0, inp_cap=1,
@@ -67,14 +75,6 @@ class Scanplane(Measurement):
         self.Vac_y = np.full(self.X.shape, np.nan)
         self.C = np.full(self.X.shape, np.nan)
 
-        self.V_piezo_full = np.array([])
-        self.V_squid_full = np.array([])
-        self.V_piezo_interp = np.array([])
-        self.V_squid_interp = np.array([])
-        self.linecuts = {}
-
-        self.filename = ''
-        self.end_time = ''
 
     def __getstate__(self):
         self.save_dict.update({"timestamp": self.timestamp,

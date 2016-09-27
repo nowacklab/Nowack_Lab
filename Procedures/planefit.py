@@ -45,8 +45,6 @@ class Planefit(Measurement):
         self.X, self.Y = np.meshgrid(self.x, self.y)
         self.Z = np.nan*self.X # makes array of nans same size as grid
 
-        self.filename = ''
-
     def __getstate__(self):
         self.save_dict.update({"timestamp": self.timestamp,
                           "a": self.a,
@@ -228,7 +226,7 @@ class Planefit(Measurement):
         Does a single touchdown to find the plane again (at Vx=Vy=0).
         Do this after moving the attocubes.
         '''
-        super().make_timestamp_and_filename('plane')
+        super().__init__('plane')
 
         old_c = self.c
         td = touchdown.Touchdown(self.instruments, self.cap_input, Vz_max = self.Vz_max)
