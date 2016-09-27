@@ -7,6 +7,7 @@ from copy import copy
 
 class Measurement:
     instrument_list = []
+    save_dict = {}
 
     def __init__(self, append=None):
         self._replacement = None

@@ -92,17 +92,17 @@ class Scanline(Measurement):
         # Store this line's signals for Vdc, Vac x/y, and Cap
         # Convert from DAQ volts to lockin volts
         Vdc = received[self.inp_dc]
-        self.V_squid_full = self.lockin_squid.convert_output(Vdc)
+        self.V = self.lockin_squid.convert_output(Vdc)
 
-        Vac_x_full = received[self.inp_acx]
-        self.Vac_x_full = self.lockin_squid.convert_output(Vac_x_full)
+        Vac_x = received[self.inp_acx]
+        self.Vac_x = self.lockin_squid.convert_output(Vac_x)
 
-        Vac_y_full = received[self.inp_acy]
-        self.Vac_y_full = self.lockin_squid.convert_output(Vac_y_full)
+        Vac_y = received[self.inp_acy]
+        self.Vac_y = self.lockin_squid.convert_output(Vac_y)
 
         Vcap = received[self.inp_cap]
         Vcap = self.lockin_cap.convert_output(Vcap) # convert to a lockin voltage
-        self.C_full = Vcap*conversions.V_to_C - C0 # convert to capacitance (fF)
+        self.C = Vcap*conversions.V_to_C # convert to capacitance (fF)
 
 
         self.plot()
