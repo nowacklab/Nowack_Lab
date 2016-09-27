@@ -23,7 +23,7 @@ class Scanplane(Measurement):
     V_squid_interp = np.array([])
     instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','attocube','daq']
 
-    def __init__(self, instruments={}}, span=[100,100],
+    def __init__(self, instruments={}, span=[100,100],
                         center=[0,0], numpts=[50,50], plane=None,
                         scanheight=5, inp_dc=0, inp_cap=1,
                         inp_acx=None, inp_acy=None,

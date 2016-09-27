@@ -19,7 +19,7 @@ class Planefit(Measurement):
     b = np.nan
     c = np.nan
     instrument_list = ['piezos','montana']
-    def __init__(self, instruments={}}, cap_input=None, span=[400,400], center=[0,0], numpts=[4,4], Vz_max = None):
+    def __init__(self, instruments={}, cap_input=None, span=[400,400], center=[0,0], numpts=[4,4], Vz_max = None):
         super().__init__('plane')
 
         self.load_instruments(instruments)

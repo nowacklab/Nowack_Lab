@@ -19,7 +19,7 @@ class SquidIV(Measurement):
     I = np.array([])
     instrument_list = ['daq','preamp','montana','preamp_I']
 
-    def __init__(self, instruments={}}, squidout=None, squidin=None, currentin=None, modout=None, rate=90):
+    def __init__(self, instruments={}, squidout=None, squidin=None, currentin=None, modout=None, rate=90):
         '''
         Example: SquidIV({'daq': daq, 'preamp': preamp}, 0, 0, None, 90)
         To make an empty object, then just call SquidIV(). You can do this if you want to plot previously collected data.

@@ -11,7 +11,7 @@ from ..Utilities.save import Measurement, get_todays_data_path
 
 
 class Mod2D(Measurement):
-    def __init__(self, instruments={}}, squidout=None, squidin=None, modout=None, rate=900):
+    def __init__(self, instruments={}, squidout=None, squidin=None, modout=None, rate=900):
         '''
         Example: Mod2D({'daq': daq, 'preamp': preamp}, 'ao0','ai0','ao1', rate=900).
         To make an empty object, then just call Mod2D().

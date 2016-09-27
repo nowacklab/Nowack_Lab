@@ -31,7 +31,7 @@ class Touchdown(Measurement):
     title = ''
     instrument_list = []
 
-    def __init__(self, instruments={}}, cap_input=None, planescan=False, Vz_max = None):
+    def __init__(self, instruments={}, cap_input=None, planescan=False, Vz_max = None):
         append = 'td'
         if self.planescan:
             append += '_planescan'
