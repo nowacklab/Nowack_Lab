@@ -113,7 +113,10 @@ class Measurement:
         with open(json_file, encoding='utf-8') as f:
             obj_dict = json.load(f)
         for key in unwanted_keys: # get rid of keys you don't want to load
-            obj_dict['py/state'].pop(key)
+            try:
+                obj_dict['py/state'].pop(key)
+            except:
+                pass # if we accidentally give a key that's not there
         obj_string = json.dumps(obj_dict)
         obj = jsp.decode(obj_string)
 
@@ -123,15 +126,15 @@ class Measurement:
         return obj
 
 
-    @staticmethod
-    def load(json_file, instruments={}, unwanted_keys=[]):
+    @classmethod
+    def load(cls, json_file, instruments={}, unwanted_keys=[]):
         '''
         Basic load method. Calls fromjson, not loading instruments, then loads instruments.
         Overwrite this for each subclass if necessary.
         Pass in an array of the names of things you don't want to load.
         By default, we won't load any instruments, but you can pass in an instruments dictionary to load them.
         '''
-        unwanted_keys += __class__.instrument_list
+        unwanted_keys += cls.instrument_list
         obj = Measurement.fromjson(json_file, unwanted_keys)
         obj.load_instruments(instruments)
         return obj

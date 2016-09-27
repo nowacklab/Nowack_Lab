@@ -57,7 +57,8 @@ class Scanline(Measurement):
                           "Vac_y": self.Vac_y,
                           "lockin_squid": self.lockin_squid,
                           "lockin_cap": self.lockin_cap,
-                          "atto": self.atto
+                          "atto": self.atto,
+                          "Vout": self.Vout
                       })
         return self.save_dict
 
