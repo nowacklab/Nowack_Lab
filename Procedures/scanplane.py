@@ -190,9 +190,8 @@ class Scanplane(Measurement):
 
 
             # Store this line's signals for Vdc, Vac x/y, and Cap
-            # Convert from DAQ volts to lockin volts
-            Vdc = received[self.inp_dc]
-            self.V_squid_full = self.lockin_squid.convert_output(Vdc)
+            # Convert from DAQ volts to lockin volts where applicable
+            self.V_squid_full = received[self.inp_dc]
 
             Vac_x_full = received[self.inp_acx]
             self.Vac_x_full = self.lockin_squid.convert_output(Vac_x_full)

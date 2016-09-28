@@ -48,6 +48,7 @@ class Planefit(Measurement):
         self.Z = np.nan*self.X # makes array of nans same size as grid
 
     def __getstate__(self):
+        super().__getstate__()
         self.save_dict.update({"timestamp": self.timestamp,
                           "a": self.a,
                           "b": self.b,
@@ -146,8 +147,8 @@ class Planefit(Measurement):
         self.save()
 
 
-    @staticmethod
-    def load(json_file=None, instruments={}, unwanted_keys=[]):
+    @classmethod
+    def load(cls, json_file=None, instruments={}, unwanted_keys=[]):
         '''
         Plane load method.
         If no json_file specified, will load the last plane taken.
@@ -164,10 +165,7 @@ class Planefit(Measurement):
                 json_file =  max(glob.iglob(os.path.join(folders[-2],'*_plane.json')),
                                         key=os.path.getctime)
 
-        unwanted_keys += Planefit.instrument_list
-        obj = Measurement.fromjson(json_file, unwanted_keys)
-        obj.load_instruments(instruments)
-        obj.instruments = instruments
+        obj = super(Planefit, cls).load(json_file, instruments, unwanted_keys)
 
         if obj.cap_input is None:
             print('cap_input not loaded! Set this manually!!!')

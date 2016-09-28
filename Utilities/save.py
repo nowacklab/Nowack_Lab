@@ -7,9 +7,10 @@ from copy import copy
 
 class Measurement:
     instrument_list = []
+    save_dict = {}
 
-    self._replacement = b'\\\\\\r'
-    self.timestamp = ''
+    _replacement = '\\\\\\r'
+    timestamp = ''
 
     def __init__(self, append=None):
         self.make_timestamp_and_filename(append)
@@ -20,10 +21,10 @@ class Measurement:
         Returns a dictionary of everything we want to save to JSON.
         In a subclass, you must call this method and then update self.save_dict.
         '''
-        self.save_dict = {'_replacement': self._replacement,
+        self.save_dict.update({'_replacement': self._replacement,
                         'timestamp': self.timestamp,
                         'filename': self.filename
-        }
+        })
         return self.save_dict
 
 
@@ -66,10 +67,10 @@ class Measurement:
         ### OKAY DUMB STUFF AHEAD, YOU'VE BEEN WARNED
         # We need to convert carriage returns to something safe
         # or else JSON will throw them away!
-        self._replacement = b'\\\\\\r' # Something that will not be in a bytes
-        while not array.find(self._replacement): # In case it is...
-            self._replacement = b'\\' + self._replacement # ...add more \\!!
-        array = array.replace(b'\r', self._replacement)
+        self._replacement = '\\\\\\r' # Something that will not be in a bytes
+        while not array.find(self._replacement.encode('utf-8')): # In case it is...
+            self._replacement = '\\' + self._replacement # ...add more \\!!
+        array = array.replace(b'\r', self._replacement.encode('utf-8'))
         return array
 
 
@@ -98,7 +99,7 @@ class Measurement:
         First undoes carriage returns BS, then bz2 compression, then unpickles.
         '''
 
-        array = array.replace(self._replacement, b'\r') #_replacement should exist
+        array = array.replace(self._replacement.encode('utf-8'), b'\r') #_replacement should exist
 
         array = bz2.decompress(array)
         array = pickle.loads(array)
@@ -137,6 +138,9 @@ class Measurement:
         unwanted_keys += cls.instrument_list
         obj = Measurement.fromjson(json_file, unwanted_keys)
         obj.load_instruments(instruments)
+
+        append = json_file[json_file.rfind('_')+1:json_file.rfind('.')] # extracts the appended string
+        Measurement.__init__(obj, append) # to create save_dict
         return obj
 
 

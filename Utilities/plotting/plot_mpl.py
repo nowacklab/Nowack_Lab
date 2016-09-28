@@ -61,7 +61,7 @@ def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='', 
     '''
 
     ## Format axes
-    ax.set_title(title, fontsize=fontsize)
+    ax.set_title(title, fontsize=12)
     ax.set_xlabel(xlabel, fontsize=fontsize)
     ax.set_ylabel(ylabel, fontsize=fontsize)
 
