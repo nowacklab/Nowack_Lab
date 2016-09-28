@@ -200,7 +200,7 @@ class Planefit(Measurement):
 
     def save(self, savefig=True):
         '''
-        Saves the planefit object to json in .../TeamData/Montana/Planes/
+        Saves the planefit object to json.
         Also saves the figure as a pdf, if wanted.
         '''
         logging.log('Plane saved. a=%.4f, b=%.4f, c=%.4f' %(self.a, self.b, self.c))

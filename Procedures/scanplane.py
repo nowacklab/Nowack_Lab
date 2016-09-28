@@ -347,7 +347,7 @@ class Scanplane(Measurement):
 
     def save(self, savefig=True):
         '''
-        Saves the scanplane object to json in .../TeamData/Montana/Scans/
+        Saves the scanplane object to json.
         Also saves the figure as a pdf, if wanted.
         '''
 
@@ -367,9 +367,14 @@ class Scanplane(Measurement):
         line.Vstart = Vstart
         line.V_squid_full = self.V_squid_full
         line.V_piezo_full = self.V_piezo_full
+
         line.make_timestamp_and_filename('scan_line')
 
-        line.tojson(get_todays_data_path(), line.filename)
+        path = os.path.join(get_todays_data_path(), 'extras')
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        line.tojson(path, line.filename)
 
 class Line(Measurement):
     def __getstate__(self):

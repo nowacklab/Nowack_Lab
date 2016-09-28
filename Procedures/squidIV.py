@@ -185,7 +185,7 @@ class SquidIV(Measurement):
 
     def save(self, savefig=True):
         '''
-        Saves the squidIV object to json in .../TeamData/Montana/squid_testing/IV/
+        Saves the squidIV object to json.
         Also saves the figure as a pdf, if wanted.
         '''
 

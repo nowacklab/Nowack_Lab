@@ -12,7 +12,7 @@ class Scanline(Measurement):
     instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto']
 
     def __init__(self, instruments={}, start=(-100,-100), end=(100,100), plane=None, scanheight=0, inp_dc=0, inp_cap=1, inp_acx=None, inp_acy=None, scan_rate=120, return_to_zero=True):
-        super().__init__('scan_line')
+        super().__init__('line')
 
         self.inp_dc = 'ai%s' %inp_dc
         self.inp_acx = 'ai%s' %inp_acx
@@ -92,17 +92,17 @@ class Scanline(Measurement):
         # Store this line's signals for Vdc, Vac x/y, and Cap
         # Convert from DAQ volts to lockin volts
         Vdc = received[self.inp_dc]
-        self.V = self.lockin_squid.convert_output(Vdc)
+        self.V_squid_full = self.lockin_squid.convert_output(Vdc)
 
-        Vac_x = received[self.inp_acx]
-        self.Vac_x = self.lockin_squid.convert_output(Vac_x)
+        Vac_x_full = received[self.inp_acx]
+        self.Vac_x_full = self.lockin_squid.convert_output(Vac_x_full)
 
-        Vac_y = received[self.inp_acy]
-        self.Vac_y = self.lockin_squid.convert_output(Vac_y)
+        Vac_y_full = received[self.inp_acy]
+        self.Vac_y_full = self.lockin_squid.convert_output(Vac_y_full)
 
         Vcap = received[self.inp_cap]
         Vcap = self.lockin_cap.convert_output(Vcap) # convert to a lockin voltage
-        self.C = Vcap*conversions.V_to_C # convert to capacitance (fF)
+        self.C_full = Vcap*conversions.V_to_C - C0 # convert to capacitance (fF)
 
 
         self.plot()
@@ -125,29 +125,29 @@ class Scanline(Measurement):
         self.ax_squid = self.fig.add_subplot(221)
         self.ax_squid.plot(self.Vout, self.V, '-b')
         self.ax_squid.set_xlabel('$\sqrt{\Delta V_x^2+\Delta V_y^2}$')
-        self.ax_squid.set_ylabel('Voltage from %s' %self.inp_dc)
-        self.ax_squid.set_title('%s\nDC SQUID signal' %self.filename)
+        self.ax_squid.set_ylabel('DC V %s' %self.inp_dc)
+        self.ax_squid.set_title(self.filename)
 
         ## AC in-phase
         self.ax_squid = self.fig.add_subplot(223)
         self.ax_squid.plot(self.Vout, self.Vac_x, '-b')
         self.ax_squid.set_xlabel('$\sqrt{\Delta V_x^2+\Delta V_y^2}$')
-        self.ax_squid.set_ylabel('Voltage from %s' %self.inp_acx)
-        self.ax_squid.set_title('%s\nAC x SQUID signal' %self.filename)
+        self.ax_squid.set_ylabel('AC Vx')
+        self.ax_squid.set_title(self.filename)
 
         ## AC out-of-phase
         self.ax_squid = self.fig.add_subplot(224)
         self.ax_squid.plot(self.Vout, self.Vac_y, '-b')
         self.ax_squid.set_xlabel('$\sqrt{\Delta V_x^2+\Delta V_y^2}$')
-        self.ax_squid.set_ylabel('Voltage from %s' %self.inp_acy)
-        self.ax_squid.set_title('%s\nAC y SQUID signal' %self.filename)
+        self.ax_squid.set_ylabel('AC Vy')
+        self.ax_squid.set_title(self.filename)
 
         ## Capacitance
         self.ax_squid = self.fig.add_subplot(222)
         self.ax_squid.plot(self.Vout, self.C, '-b')
         self.ax_squid.set_xlabel('$\sqrt{\Delta V_x^2+\Delta V_y^2}$')
-        self.ax_squid.set_ylabel('Capacitance from %s' %self.inp_cap)
-        self.ax_squid.set_title('%s\nCapacitance signal' %self.filename)
+        self.ax_squid.set_ylabel('C (fF)')
+        self.ax_squid.set_title(self.filename)
 
         ## Draw everything in the notebook
         self.fig.canvas.draw()
@@ -155,7 +155,7 @@ class Scanline(Measurement):
 
     def save(self, savefig=True):
         '''
-        Saves the scanline object to json in .../TeamData/Montana/Scans/
+        Saves the scanline object to json.
         Also saves the figure as a pdf, if wanted.
         '''
 

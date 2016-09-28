@@ -93,7 +93,7 @@ class Heightsweep(Measurement):
 
     def save(self, savefig=True):
         '''
-        Saves the heightsweep object to json in .../TeamData/Montana/heightsweeps/
+        Saves the heightsweep object to json.
         Also saves the figure as pdf, if wanted.
         '''
 

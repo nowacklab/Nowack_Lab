@@ -332,11 +332,14 @@ class Touchdown(Measurement):
 
     def save(self, savefig=True):
         '''
-        Saves the planefit object to json in .../TeamData/Montana/Planes/
+        Saves the touchdown object to json.
         Also saves the figure as a pdf, if wanted.
         '''
 
-        self.tojson(get_todays_data_path(), self.filename)
+        path = os.path.join(get_todays_data_path(), 'extras')
+        if not os.path.exists(path):
+            os.makedirs(path)
+        self.tojson(path, self.filename)
 
         if savefig:
             self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')

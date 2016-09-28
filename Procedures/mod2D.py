@@ -119,7 +119,7 @@ class Mod2D(Measurement):
 
     def save(self, savefig=True):
         '''
-        Saves the planefit object to json in .../TeamData/Montana/Planes/
+        Saves the mod2d object to json.
         Also saves the figure as a pdf, if wanted.
         '''
 

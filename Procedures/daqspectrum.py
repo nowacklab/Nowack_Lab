@@ -120,7 +120,7 @@ class DaqSpectrum(Measurement):
 
     def save(self, savefig=True):
         '''
-        Saves the planefit object to json in .../TeamData/Montana/spectra/
+        Saves the daqspectrum object to json.
         Also saves the figures as pdfs, if wanted.
         '''
 
