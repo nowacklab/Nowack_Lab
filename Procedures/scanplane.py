@@ -14,6 +14,19 @@ from ..Utilities import conversions
 
 class Scanplane(Measurement):
     instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto','daq']
+    ## Put things here necessary to have when reloading object
+    inp_dc = None
+    inp_acx = None
+    inp_acy = None
+    inp_cap = None
+
+    V_piezo_full = np.array([])
+    V_squid_full = np.array([])
+    V_piezo_interp = np.array([])
+    V_squid_interp = np.array([])
+    linecuts = {}
+
+    end_time = ''
 
     def __init__(self, instruments={}, span=[100,100],
                         center=[0,0], numpts=[50,50], plane=None,
@@ -59,13 +72,6 @@ class Scanplane(Measurement):
         self.Vac_y = np.full(self.X.shape, np.nan)
         self.C = np.full(self.X.shape, np.nan)
 
-        self.V_piezo_full = np.array([])
-        self.V_squid_full = np.array([])
-        self.V_piezo_interp = np.array([])
-        self.V_squid_interp = np.array([])
-        self.linecuts = {}
-
-        self.end_time = ''
 
     def __getstate__(self):
         self.save_dict.update({"timestamp": self.timestamp,

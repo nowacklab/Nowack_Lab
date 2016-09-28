@@ -11,6 +11,7 @@ from ..Utilities.save import Measurement, get_todays_data_path
 
 
 class Mod2D(Measurement):
+    notes = ''
     def __init__(self, instruments={}, squidout=None, squidin=None, modout=None, rate=900):
         '''
         Example: Mod2D({'daq': daq, 'preamp': preamp}, 'ao0','ai0','ao1', rate=900).
@@ -31,8 +32,6 @@ class Mod2D(Measurement):
 
         self.IV.calc_ramp()
         self.calc_ramp()
-
-        self.notes = ''
 
         display.clear_output()
 

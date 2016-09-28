@@ -10,6 +10,11 @@ from ..Utilities.save import Measurement, get_todays_data_path
 class Heightsweep(Measurement):
     instrument_list = ['piezos','montana']
 
+    z = np.nan
+    Vacx = np.nan
+    Vacy = np.nan
+    Vdc = np.nan
+
     def __init__(self, instruments = {}, x=0, y=0, plane=None, inp_acx = 0, inp_acy=1, inp_dc = 2, scan_rate=120):
         super().__init__('heightsweep')
 
@@ -24,11 +29,6 @@ class Heightsweep(Measurement):
         self.inp_acy = 'ai%s' %inp_acy
         self.inp_dc = 'ai%s' %inp_dc
         self.scan_rate = scan_rate
-
-        self.z = np.nan
-        self.Vacx = np.nan
-        self.Vacy = np.nan
-        self.Vdc = np.nan
 
     def __getstate__(self):
         self.save_dict.update({"timestamp": self.timestamp,

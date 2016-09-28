@@ -17,6 +17,10 @@ from ..Utilities.save import Measurement, get_todays_data_path
 class SquidIV(Measurement):
     instrument_list = ['daq','preamp','montana','preamp_I']
 
+    V = np.array([])
+    I = np.array([])
+    notes = ''
+
     def __init__(self, instruments={}, squidout=None, squidin=None, currentin=None, modout=None, rate=90):
         '''
         Example: SquidIV({'daq': daq, 'preamp': preamp}, 0, 0, None, 90)
@@ -61,10 +65,6 @@ class SquidIV(Measurement):
         self.Irampcenter = 0
         self.Irampspan = 200e-6 # A # Will sweep from -Irampspan/2 to +Irampspan/2
         self.Irampstep = 0.5e-6 # A # Step size
-
-        self.V = np.array([])
-        self.I = np.array([])
-        self.notes = ''
 
         self.calc_ramp()
 
