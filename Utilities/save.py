@@ -7,12 +7,12 @@ from copy import copy
 
 class Measurement:
     instrument_list = []
-    save_dict = {}
-
-    _replacement = '\\\\\\r'
-    timestamp = ''
 
     def __init__(self, append=None):
+        self.save_dict = {}
+        self._replacement = '\\\\\\r'
+        self.timestamp = ''
+
         self.make_timestamp_and_filename(append)
         Measurement.__getstate__(self) # to create the save_dict without using overridden subclass getstate
 

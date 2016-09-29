@@ -362,20 +362,14 @@ class Scanplane(Measurement):
         line.Vstart = Vstart
         line.V_squid_full = self.V_squid_full
         line.V_piezo_full = self.V_piezo_full
-
-        line.make_timestamp_and_filename('scan_line')
-
-        path = os.path.join(get_todays_data_path(), 'extras')
-        if not os.path.exists(path):
-            os.makedirs(path)
-
-        line.tojson(path, line.filename)
+        line.save()
 
 
 class Line(Measurement):
+    def __init__(self):
+        super().__init__('scan_line')
+
     def __getstate__(self):
-        super().__getstate__() # from Measurement superclass,
-                               # need this in every getstate to get save_dict
         self.save_dict.update({
                             "idx": self.idx,
                             "Vstart": self.Vstart,
@@ -384,6 +378,14 @@ class Line(Measurement):
                             "scan_filename": self.scan_filename
                       })
         return self.save_dict
+
+    def save(self):
+        path = os.path.join(get_todays_data_path(), 'extras')
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        self.tojson(path, self.filename)
+
 
 if __name__ == '__main__':
     'hey'
