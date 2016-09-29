@@ -24,7 +24,6 @@ class Scanplane(Measurement):
     V_squid_full = np.array([])
     V_piezo_interp = np.array([])
     V_squid_interp = np.array([])
-    linecuts = {}
 
     end_time = ''
 
@@ -80,7 +79,6 @@ class Scanplane(Measurement):
                           "scan_rate": self.scan_rate,
                           "montana": self.montana,
                           "squidarray": self.squidarray,
-                          "linecuts": self.linecuts,
                           "V": self.V,
                           "Vac_x": self.Vac_x,
                           "Vac_y": self.Vac_y,
@@ -202,15 +200,6 @@ class Scanplane(Measurement):
             Vcap = received[self.inp_cap]
             Vcap = self.lockin_cap.convert_output(Vcap) # convert to a lockin voltage
             self.C_full = Vcap*conversions.V_to_C - C0 # convert to capacitance (fF)
-
-            ## Save linecuts
-            self.linecuts[str(i)] = {"Vstart": Vstart,
-                                "Vend": Vend,
-                                "Vsquid": {"Vdc": self.V_squid_full,
-                                           "Vac_x": self.Vac_x_full,
-                                           "Vac_y": self.Vac_y_full
-                                       }
-                                   }
 
             # interpolation functions
             interp_V = interp(self.V_piezo_full, self.V_squid_full)
@@ -382,15 +371,17 @@ class Scanplane(Measurement):
 
         line.tojson(path, line.filename)
 
+
 class Line(Measurement):
     def __getstate__(self):
         super().__getstate__() # from Measurement superclass,
                                # need this in every getstate to get save_dict
-        self.save_dict.update({"idx": self.idx,
-                          "Vstart": self.Vstart,
-                          "V_squid_full": self.V_squid_full,
-                          "V_piezo_full": self.V_piezo_full,
-                          "scan_filename": self.scan_filename
+        self.save_dict.update({
+                            "idx": self.idx,
+                            "Vstart": self.Vstart,
+                            "V_squid_full": self.V_squid_full,
+                            "V_piezo_full": self.V_piezo_full,
+                            "scan_filename": self.scan_filename
                       })
         return self.save_dict
 

@@ -21,6 +21,7 @@ class NIDAQ():
     does not import/inherit anything from squidpy.
     Uses package Instrumental from Mabuchi lab at Stanford
     '''
+    inputs = {}
 
     def __init__(self, zero=False, dev_name='Dev1', input_range=10, output_range=10):
         self._daq  = ni.NIDAQ(dev_name, input_range, output_range)
