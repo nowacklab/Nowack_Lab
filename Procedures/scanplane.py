@@ -295,11 +295,11 @@ class Scanplane(Measurement):
                                         title = self.filename,
                                         xlabel = r'$X (V_{piezo})$',
                                         ylabel = r'$Y (V_{piezo})$',
-                                        clabel = 'AC X V %s' %self.inp_acx
+                                        clabel = 'AC X V'
                                     )
 
         ## AC y
-        self.ax_ac_y = self.fig.add_subplot(325)
+        self.ax_ac_y = self.fig.add_subplot(324)
         self.im_ac_y = plot_mpl.plot2D(self.ax_ac_y,
                                         self.X,
                                         self.Y,
@@ -308,11 +308,11 @@ class Scanplane(Measurement):
                                         title = self.filename,
                                         xlabel = r'$X (V_{piezo})$',
                                         ylabel = r'$Y (V_{piezo})$',
-                                        clabel = 'AC Y V %s' %self.inp_acx
+                                        clabel = 'AC Y V'
                                     )
 
         ## Capacitance
-        self.ax_cap = self.fig.add_subplot(324)
+        self.ax_cap = self.fig.add_subplot(322)
         self.im_cap = plot_mpl.plot2D(self.ax_cap,
                                     self.X,
                                     self.Y,
@@ -325,7 +325,7 @@ class Scanplane(Measurement):
                                 )
 
         ## "Last full scan" plot
-        self.ax_line = self.fig.add_subplot(326)
+        self.ax_line = self.fig.add_subplot(338)
         self.ax_line.set_title(self.filename, fontsize=8)
         self.line_full = self.ax_line.plot(self.V_piezo_full, self.V_squid_full, '-.k') # commas only take first element of array? ANyway, it works.
         self.line_interp = self.ax_line.plot(self.V_piezo_interp, self.V_squid_interp, '.r', markersize=12)
@@ -349,6 +349,7 @@ class Scanplane(Measurement):
         self.ax_line.autoscale_view()
 
         plot_mpl.aspect(self.ax_line, .3)
+
 
     def save(self, savefig=True):
         '''

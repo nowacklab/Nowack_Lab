@@ -39,6 +39,9 @@ class ANC350():
             getattr(self,s).check_voltage()
 
 
+    def __del__(self):
+        del self.anc
+
     def __getstate__(self):
         self.save_dict = {
             'x attocube': self.x,

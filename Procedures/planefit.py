@@ -166,6 +166,7 @@ class Planefit(Measurement):
                                         key=os.path.getctime)
 
         obj = super(Planefit, cls).load(json_file, instruments, unwanted_keys)
+        obj.instruments = instruments
 
         if obj.cap_input is None:
             print('cap_input not loaded! Set this manually!!!')
