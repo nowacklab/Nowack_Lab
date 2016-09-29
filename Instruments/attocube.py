@@ -56,10 +56,10 @@ class ANC350():
         state['y'] = state.pop('y attocube')
         state['z'] = state.pop('z attocube')
         self.__dict__.update(state)
-        self.anc = ANC350Pos()
-        for (i,s) in enumerate(self._stages):
-            s = getattr(self,s)
-            setattr(s, 'anc', self.anc) # give each positioner the ANC object
+        # self.anc = ANC350Pos()
+        # for (i,s) in enumerate(self._stages):
+        #     s = getattr(self,s)
+        #     setattr(s, 'anc', self.anc) # give each positioner the ANC object
 
 
 class Positioner():

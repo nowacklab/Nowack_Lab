@@ -314,7 +314,7 @@ class Scanplane(Measurement):
                                 )
 
         ## "Last full scan" plot
-        self.ax_line = self.fig.add_subplot(338)
+        self.ax_line = self.fig.add_subplot(313)
         self.ax_line.set_title(self.filename, fontsize=8)
         self.line_full = self.ax_line.plot(self.V_piezo_full, self.V_squid_full, '-.k') # commas only take first element of array? ANyway, it works.
         self.line_interp = self.ax_line.plot(self.V_piezo_interp, self.V_squid_interp, '.r', markersize=12)

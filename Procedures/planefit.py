@@ -165,6 +165,7 @@ class Planefit(Measurement):
                 json_file =  max(glob.iglob(os.path.join(folders[-2],'*_plane.json')),
                                         key=os.path.getctime)
 
+        unwanted_keys += cls.instrument_list
         obj = super(Planefit, cls).load(json_file, instruments, unwanted_keys)
         obj.instruments = instruments
 

@@ -12,7 +12,7 @@ class Scanline(Measurement):
     instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto']
 
     Vout = np.nan
-    V = np.nan
+    Vdc = np.nan
     Vac_x = np.nan
     Vac_y = np.nan
     C = np.nan
@@ -52,7 +52,7 @@ class Scanline(Measurement):
                           "start": self.start,
                           "end": self.end,
                           "scan_rate": self.scan_rate,
-                          "V": self.V,
+                          "Vdc": self.Vdc,
                           "Vac_x": self.Vac_x,
                           "Vac_y": self.Vac_y,
                           "lockin_squid": self.lockin_squid,
@@ -92,17 +92,17 @@ class Scanline(Measurement):
         # Store this line's signals for Vdc, Vac x/y, and Cap
         # Convert from DAQ volts to lockin volts
         Vdc = received[self.inp_dc]
-        self.V_squid_full = self.lockin_squid.convert_output(Vdc)
+        self.Vdc = self.lockin_squid.convert_output(Vdc)
 
-        Vac_x_full = received[self.inp_acx]
-        self.Vac_x_full = self.lockin_squid.convert_output(Vac_x_full)
+        Vac_x = received[self.inp_acx]
+        self.Vac_x = self.lockin_squid.convert_output(Vac_x)
 
-        Vac_y_full = received[self.inp_acy]
-        self.Vac_y_full = self.lockin_squid.convert_output(Vac_y_full)
+        Vac_y = received[self.inp_acy]
+        self.Vac_y = self.lockin_squid.convert_output(Vac_y)
 
         Vcap = received[self.inp_cap]
         Vcap = self.lockin_cap.convert_output(Vcap) # convert to a lockin voltage
-        self.C_full = Vcap*conversions.V_to_C - C0 # convert to capacitance (fF)
+        self.C = Vcap*conversions.V_to_C # convert to capacitance (fF)
 
 
         self.plot()
@@ -123,7 +123,7 @@ class Scanline(Measurement):
 
         ## DC magnetometry
         self.ax_squid = self.fig.add_subplot(221)
-        self.ax_squid.plot(self.Vout, self.V, '-b')
+        self.ax_squid.plot(self.Vout, self.Vdc, '-b')
         self.ax_squid.set_xlabel('$\sqrt{\Delta V_x^2+\Delta V_y^2}$')
         self.ax_squid.set_ylabel('DC V %s' %self.inp_dc)
         self.ax_squid.set_title(self.filename)
