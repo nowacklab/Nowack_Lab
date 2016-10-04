@@ -41,7 +41,7 @@ class DaqSpectrum(Measurement):
                           "averages": self.averages,
                           "notes": self.notes,
                           "daq": self.daq,
-                          "pa": self.pa
+                          "preamp": self.preamp
                       })
         return self.save_dict
 
@@ -147,8 +147,8 @@ class DaqSpectrum(Measurement):
 
 
     def setup_preamp(self):
-        self.pa.gain = 1
-        self.pa.filter = (0, 100e3)
-        self.pa.dc_coupling()
-        self.pa.diff_input(False)
-        self.pa.filter_mode('low',12)
+        self.preamp.gain = 1
+        self.preamp.filter = (0, 100e3)
+        self.preamp.dc_coupling()
+        self.preamp.diff_input(False)
+        self.preamp.filter_mode('low',12)

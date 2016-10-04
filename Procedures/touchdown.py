@@ -342,7 +342,7 @@ class Touchdown(Measurement):
         self.tojson(path, self.filename)
 
         if savefig:
-            self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
+            self.fig.savefig(os.path.join(path, self.filename+'.pdf'), bbox_inches='tight')
 
 
     def setup_plot(self):

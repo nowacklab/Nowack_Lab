@@ -27,10 +27,10 @@ class Scanplane(Measurement):
 
     end_time = ''
 
-    def __init__(self, instruments={}, span=[100,100],
-                        center=[0,0], numpts=[50,50], plane=None,
-                        scanheight=5, inp_dc=0, inp_cap=1,
-                        inp_acx=None, inp_acy=None,
+    def __init__(self, instruments={}, span=[800,800],
+                        center=[0,0], numpts=[20,20], plane=None,
+                        scanheight=15, inp_dc=0, inp_cap=1,
+                        inp_acx=2, inp_acy=3,
                         scan_rate=120, raster=False):
 
         super().__init__('scan')
@@ -319,7 +319,7 @@ class Scanplane(Measurement):
         self.line_full = self.ax_line.plot(self.V_piezo_full, self.V_squid_full, '-.k') # commas only take first element of array? ANyway, it works.
         self.line_interp = self.ax_line.plot(self.V_piezo_interp, self.V_squid_interp, '.r', markersize=12)
         self.ax_line.set_xlabel('Vpiezo (V)', fontsize=8)
-        self.ax_line.set_ylabel('Last DC V line (V)', fontsize=8)
+        self.ax_line.set_ylabel('Last V AC x line (V)', fontsize=8)
 
         self.line_full = self.line_full[0] # it is given as an array
         self.line_interp = self.line_interp[0]
@@ -330,9 +330,9 @@ class Scanplane(Measurement):
 
     def plot_line(self):
         self.line_full.set_xdata(self.V_piezo_full)
-        self.line_full.set_ydata(self.V_squid_full)
+        self.line_full.set_ydata(self.Vac_x_full)
         self.line_interp.set_xdata(self.V_piezo_interp)
-        self.line_interp.set_ydata(self.V_squid_interp)
+        self.line_interp.set_ydata(self.Vac_x_interp)
 
         self.ax_line.relim()
         self.ax_line.autoscale_view()

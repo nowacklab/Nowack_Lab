@@ -17,7 +17,7 @@ class Scanline(Measurement):
     Vac_y = np.nan
     C = np.nan
 
-    def __init__(self, instruments={}, start=(-100,-100), end=(100,100), plane=None, scanheight=0, inp_dc=0, inp_cap=1, inp_acx=None, inp_acy=None, scan_rate=120, return_to_zero=True):
+    def __init__(self, instruments={}, start=(-100,-100), end=(100,100), plane=None, scanheight=15, inp_dc=0, inp_cap=1, inp_acx=2, inp_acy=3, scan_rate=120, return_to_zero=True):
         super().__init__('line')
 
         self.inp_dc = 'ai%s' %inp_dc
@@ -70,11 +70,11 @@ class Scanline(Measurement):
         ## Start and end points
         Vstart = {'x': self.start[0],
                 'y': self.start[1],
-                'z': self.plane.plane(self.start[0],self.start[1])
+                'z': self.plane.plane(self.start[0],self.start[1]) - self.scanheight
                 }
         Vend = {'x': self.end[0],
                 'y': self.end[1],
-                'z': self.plane.plane(self.end[0],self.end[1])
+                'z': self.plane.plane(self.end[0],self.end[1]) - self.scanheight
                 }
 
         ## Explicitly go to first point of scan
