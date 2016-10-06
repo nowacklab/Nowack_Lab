@@ -77,7 +77,7 @@ def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='', 
 
     ## Create the image
     im = ax.imshow(
-                zm.T, # need to transpose the array if use 'ij' indexing in meshgrid!
+                zm, # not transpose for xy indexing!!
                 cmap=cmap,
                 interpolation=interpolation,
                 origin='lower',
@@ -107,7 +107,7 @@ def update2D(im, z, center_at_zero=False):
     zm = np.ma.masked_where(np.isnan(z), z)
 
     ## Set the new image
-    im.set_array(zm.T) # need to transpose the array if use 'ij' indexing in meshgrid!
+    im.set_array(zm) # no transpose if xy indexing!!
 
     ## Fix aspect ratio
     aspect(im.axes, 1, absolute=False) # equal aspect ratio

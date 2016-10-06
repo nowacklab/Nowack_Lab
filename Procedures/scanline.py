@@ -55,6 +55,7 @@ class Scanline(Measurement):
                           "Vdc": self.Vdc,
                           "Vac_x": self.Vac_x,
                           "Vac_y": self.Vac_y,
+                          "output_data": self.output_data,
                           "lockin_squid": self.lockin_squid,
                           "lockin_cap": self.lockin_cap,
                           "atto": self.atto,
@@ -120,32 +121,33 @@ class Scanline(Measurement):
         Set up all plots.
         '''
         self.fig = plt.figure(figsize=(8,5))
+        label = r'$\sim\mu\mathrm{m} (|V_{\text{piezo}}|*%.2f)$' %conversions.Vpiezo_to_micron
 
         ## DC magnetometry
         self.ax_squid = self.fig.add_subplot(221)
-        self.ax_squid.plot(self.Vout, self.Vdc, '-b')
-        self.ax_squid.set_xlabel('$\sqrt{\Delta V_x^2+\Delta V_y^2}$')
+        self.ax_squid.plot(self.Vout*conversions.Vpiezo_to_micron, self.Vdc, '-b')
+        self.ax_squid.set_xlabel(label)
         self.ax_squid.set_ylabel('DC V %s' %self.inp_dc)
         self.ax_squid.set_title(self.filename)
 
         ## AC in-phase
         self.ax_squid = self.fig.add_subplot(223)
-        self.ax_squid.plot(self.Vout, self.Vac_x, '-b')
-        self.ax_squid.set_xlabel('$\sqrt{\Delta V_x^2+\Delta V_y^2}$')
+        self.ax_squid.plot(self.Vout*conversions.Vpiezo_to_micron, self.Vac_x, '-b')
+        self.ax_squid.set_xlabel(label)
         self.ax_squid.set_ylabel('AC Vx')
         self.ax_squid.set_title(self.filename)
 
         ## AC out-of-phase
         self.ax_squid = self.fig.add_subplot(224)
-        self.ax_squid.plot(self.Vout, self.Vac_y, '-b')
-        self.ax_squid.set_xlabel('$\sqrt{\Delta V_x^2+\Delta V_y^2}$')
+        self.ax_squid.plot(self.Vout*conversions.Vpiezo_to_micron, self.Vac_y, '-b')
+        self.ax_squid.set_xlabel(label)
         self.ax_squid.set_ylabel('AC Vy')
         self.ax_squid.set_title(self.filename)
 
         ## Capacitance
         self.ax_squid = self.fig.add_subplot(222)
-        self.ax_squid.plot(self.Vout, self.C, '-b')
-        self.ax_squid.set_xlabel('$\sqrt{\Delta V_x^2+\Delta V_y^2}$')
+        self.ax_squid.plot(self.Vout*conversions.Vpiezo_to_micron, self.C, '-b')
+        self.ax_squid.set_xlabel(label)
         self.ax_squid.set_ylabel('C (fF)')
         self.ax_squid.set_title(self.filename)
 

@@ -136,8 +136,8 @@ def reject_outliers_plane(z, m=2):
     '''
     Reject outliers from 2D data that lies mainly on a plane.
     '''
-    x = np.array(range(z.shape[0]))
-    y = np.array(range(z.shape[1]))
+    x = np.array(range(z.shape[1])) # xy indexing!!!
+    y = np.array(range(z.shape[0]))
     X, Y = np.meshgrid(x,y)
 
     a,b,c = fit_plane(X,Y,z)

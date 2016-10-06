@@ -22,8 +22,12 @@ class Scanplane(Measurement):
 
     V_piezo_full = np.array([])
     V_squid_full = np.array([])
+    Vac_x_full = np.array([])
+    Vac_y_full = np.array([])
     V_piezo_interp = np.array([])
     V_squid_interp = np.array([])
+    Vac_x_interp = np.array([])
+    Vac_y_interp = np.array([])
 
     end_time = ''
 
@@ -60,7 +64,7 @@ class Scanplane(Measurement):
         self.x = np.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
         self.y = np.linspace(center[1]-span[1]/2, center[1]+span[1]/2, numpts[1])
 
-        self.X, self.Y = np.meshgrid(self.x, self.y, indexing='ij') # indexing ij follows matrix indexing convention
+        self.X, self.Y = np.meshgrid(self.x, self.y)
         try:
             self.Z = self.plane.plane(self.X, self.Y) - self.scanheight
         except:
@@ -114,9 +118,9 @@ class Scanplane(Measurement):
 
         ## Loop over Y values if fast_axis is x, X values if fast_axis is y
         if fast_axis == 'x':
-            num_lines = int(self.X.shape[1]) # loop over Y
+            num_lines = int(self.X.shape[0]) # loop over Y
         elif fast_axis == 'y':
-            num_lines = int(self.X.shape[0]) # loop over X
+            num_lines = int(self.X.shape[1]) # loop over X
         else:
             raise Exception('Specify x or y as fast axis!')
 
@@ -138,11 +142,11 @@ class Scanplane(Measurement):
 
             ## Starting and ending piezo voltages for the line
             if fast_axis == 'x':
-                Vstart = {'x': self.X[k,i], 'y': self.Y[k,i], 'z': self.Z[k,i]} # for forward, starts at 0,i; backward: -1, i
-                Vend = {'x': self.X[-(k+1),i], 'y': self.Y[-(k+1),i], 'z': self.Z[-(k+1),i]} # for forward, ends at -1,i; backward: 0, i
+                Vstart = {'x': self.X[i,k], 'y': self.Y[i,k], 'z': self.Z[i,k]} # for forward, starts at 0,i; backward: -1, i
+                Vend = {'x': self.X[i,-(k+1)], 'y': self.Y[i,-(k+1)], 'z': self.Z[i,-(k+1)]} # for forward, ends at -1,i; backward: 0, i
             elif fast_axis == 'y':
-                Vstart = {'x': self.X[i,k], 'y': self.Y[i,k], 'z': self.Z[i,k]} # for forward, starts at i,0; backward: i,-1
-                Vend = {'x': self.X[i,-(k+1)], 'y': self.Y[i,-(k+1)], 'z': self.Z[i,-(k+1)]} # for forward, ends at i,-1; backward: i,0
+                Vstart = {'x': self.X[k,i], 'y': self.Y[k,i], 'z': self.Z[k,i]} # for forward, starts at i,0; backward: i,-1
+                Vend = {'x': self.X[-(k+1),i], 'y': self.Y[-(k+1),i], 'z': self.Z[-(k+1),i]} # for forward, ends at i,-1; backward: i,0
 
             ## Explicitly go to first point of scan
             self.piezos.sweep(self.piezos.V, Vstart)
@@ -182,9 +186,9 @@ class Scanplane(Measurement):
             ## Interpolate to the number of lines
             self.V_piezo_full = output_data[fast_axis] # actual voltages swept in x or y direction
             if fast_axis == 'x':
-                self.V_piezo_interp = self.X[:,i]
+                self.V_piezo_interp = self.X[i,:]
             elif fast_axis == 'y':
-                self.V_piezo_interp = self.Y[i,:]
+                self.V_piezo_interp = self.Y[:,i]
 
 
             # Store this line's signals for Vdc, Vac x/y, and Cap
@@ -215,15 +219,15 @@ class Scanplane(Measurement):
 
             # store these in the 2D arrays
             if fast_axis == 'x':
-                self.V[:,i] = self.V_squid_interp # changes from actual output data to give desired number of points
-                self.Vac_x[:,i] = self.Vac_x_interp
-                self.Vac_y[:,i] = self.Vac_y_interp
-                self.C[:,i] = self.C_interp
-            elif fast_axis == 'y':
                 self.V[i,:] = self.V_squid_interp # changes from actual output data to give desired number of points
                 self.Vac_x[i,:] = self.Vac_x_interp
                 self.Vac_y[i,:] = self.Vac_y_interp
                 self.C[i,:] = self.C_interp
+            elif fast_axis == 'y':
+                self.V[:,i] = self.V_squid_interp # changes from actual output data to give desired number of points
+                self.Vac_x[:,i] = self.Vac_x_interp
+                self.Vac_y[:,i] = self.Vac_y_interp
+                self.C[:,i] = self.C_interp
 
             self.save_line(i, Vstart)
 
@@ -261,55 +265,56 @@ class Scanplane(Measurement):
         Set up all plots.
         '''
         self.fig = plt.figure(figsize=(11,11))
+        label = '$\sim\mu\mathrm{m} (V_{piezo}*%.2f)$' %conversions.Vpiezo_to_micron
 
         ## DC magnetometry
         self.ax_dc = self.fig.add_subplot(321)
         self.im_dc = plot_mpl.plot2D(self.ax_dc,
-                                        self.X,
-                                        self.Y,
+                                        self.X*conversions.Vpiezo_to_micron,
+                                        self.Y*conversions.Vpiezo_to_micron,
                                         self.V,
                                         title = self.filename,
-                                        xlabel = r'$X (V_{piezo})$',
-                                        ylabel = r'$Y (V_{piezo})$',
+                                        xlabel = label,
+                                        ylabel = label,
                                         clabel = 'DC V %s' %self.inp_dc
                                     )
 
         ## AC x
         self.ax_ac_x = self.fig.add_subplot(323)
         self.im_ac_x = plot_mpl.plot2D(self.ax_ac_x,
-                                        self.X,
-                                        self.Y,
+                                        self.X*conversions.Vpiezo_to_micron,
+                                        self.Y*conversions.Vpiezo_to_micron,
                                         self.Vac_x,
                                         cmap='cubehelix',
                                         title = self.filename,
-                                        xlabel = r'$X (V_{piezo})$',
-                                        ylabel = r'$Y (V_{piezo})$',
+                                        xlabel = label,
+                                        ylabel = label,
                                         clabel = 'AC X V'
                                     )
 
         ## AC y
         self.ax_ac_y = self.fig.add_subplot(324)
         self.im_ac_y = plot_mpl.plot2D(self.ax_ac_y,
-                                        self.X,
-                                        self.Y,
+                                        self.X*conversions.Vpiezo_to_micron,
+                                        self.Y*conversions.Vpiezo_to_micron,
                                         self.Vac_y,
                                         cmap='cubehelix',
                                         title = self.filename,
-                                        xlabel = r'$X (V_{piezo})$',
-                                        ylabel = r'$Y (V_{piezo})$',
+                                        xlabel = label,
+                                        ylabel = label,
                                         clabel = 'AC Y V'
                                     )
 
         ## Capacitance
         self.ax_cap = self.fig.add_subplot(322)
         self.im_cap = plot_mpl.plot2D(self.ax_cap,
-                                    self.X,
-                                    self.Y,
+                                    self.X*conversions.Vpiezo_to_micron,
+                                    self.Y*conversions.Vpiezo_to_micron,
                                     self.C,
                                     cmap='afmhot',
                                     title = self.filename,
-                                    xlabel = r'$X (V_{piezo})$',
-                                    ylabel = r'$Y (V_{piezo})$',
+                                        xlabel = label,
+                                        ylabel = label,
                                     clabel = 'Cap fF %s' %self.inp_cap
                                 )
 
@@ -330,9 +335,9 @@ class Scanplane(Measurement):
 
     def plot_line(self):
         self.line_full.set_xdata(self.V_piezo_full)
-        self.line_full.set_ydata(self.Vac_x_full)
+        self.line_full.set_ydata(self.Vac_x_full*conversions.Vpiezo_to_micron)
         self.line_interp.set_xdata(self.V_piezo_interp)
-        self.line_interp.set_ydata(self.Vac_x_interp)
+        self.line_interp.set_ydata(self.Vac_x_interp*conversions.Vpiezo_to_micron)
 
         self.ax_line.relim()
         self.ax_line.autoscale_view()

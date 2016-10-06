@@ -223,7 +223,7 @@ class Planefit(Measurement):
         return f(x,y)
 
 
-    def update_c(self):
+    def update_c(self, start=None):
         '''
         Does a single touchdown to find the plane again (at Vx=Vy=0).
         Do this after moving the attocubes.
@@ -232,7 +232,7 @@ class Planefit(Measurement):
 
         old_c = self.c
         td = touchdown.Touchdown(self.instruments, self.cap_input, Vz_max = self.Vz_max)
-        self.c = td.do()
+        self.c = td.do(start=start)
         for x in [-self.piezos.x.Vmax, self.piezos.x.Vmax]:
             for y in [-self.piezos.y.Vmax, self.piezos.y.Vmax]:
                 z_maxormin = self.plane(x,y)

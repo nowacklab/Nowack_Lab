@@ -213,7 +213,7 @@ class NIDAQ():
 
     def zero(self):
         for chan in self._daq.get_AO_channels():
-            self.sweep(getattr(self, chan), 0, sample_rate=100000, numsteps=100000)
+            self.sweep({chan: getattr(self, chan)}, {chan: 0}, sample_rate=100000, numsteps=100000)
         print('Zeroed DAQ outputs.')
         log('Zeroed DAQ outputs.')
 
