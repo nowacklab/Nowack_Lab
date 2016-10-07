@@ -91,8 +91,12 @@ def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='', 
 
     aspect(ax, 1, absolute=False) # equal aspect ratio based on data scales
 
-    ## Set number of ticks
-    ax.locator_params(nbins=5)
+    ## Set number of ticks to 5
+    start, end = ax.get_xlim()
+    ax.xaxis.set_ticks(np.linspace(start, end, 5))
+
+    start, end = ax.get_ylim()
+    ax.yaxis.set_ticks(np.linspace(start, end, 5))
 
     return im
 
