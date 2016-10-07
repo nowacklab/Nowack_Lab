@@ -251,10 +251,10 @@ class Scanplane(Measurement):
             self.im_dc # see if this exists
         except:
             self.setup_plots()
-        plot_mpl.update2D(self.im_dc, self.V)
+        plot_mpl.update2D(self.im_dc, self.V*conversions.Vsquid_to_phi0)
         plot_mpl.update2D(self.im_cap, self.C)
-        plot_mpl.update2D(self.im_ac_x, self.Vac_x)
-        plot_mpl.update2D(self.im_ac_y, self.Vac_y)
+        plot_mpl.update2D(self.im_ac_x, self.Vac_x*conversions.Vsquid_to_phi0)
+        plot_mpl.update2D(self.im_ac_y, self.Vac_y*conversions.Vsquid_to_phi0)
         self.plot_line()
 
         self.fig.canvas.draw()
@@ -272,11 +272,11 @@ class Scanplane(Measurement):
         self.im_dc = plot_mpl.plot2D(self.ax_dc,
                                         self.X*conversions.Vpiezo_to_micron,
                                         self.Y*conversions.Vpiezo_to_micron,
-                                        self.V,
+                                        self.V*conversions.Vsquid_to_phi0,
                                         title = self.filename,
                                         xlabel = label,
                                         ylabel = label,
-                                        clabel = 'DC V %s' %self.inp_dc
+                                        clabel = r'DC $\Phi_0$'
                                     )
 
         ## AC x
@@ -284,12 +284,12 @@ class Scanplane(Measurement):
         self.im_ac_x = plot_mpl.plot2D(self.ax_ac_x,
                                         self.X*conversions.Vpiezo_to_micron,
                                         self.Y*conversions.Vpiezo_to_micron,
-                                        self.Vac_x,
+                                        self.Vac_x*conversions.Vsquid_to_phi0,
                                         cmap='cubehelix',
                                         title = self.filename,
                                         xlabel = label,
                                         ylabel = label,
-                                        clabel = 'AC X V'
+                                        clabel = r'AC X $\Phi_0$'
                                     )
 
         ## AC y
@@ -297,12 +297,12 @@ class Scanplane(Measurement):
         self.im_ac_y = plot_mpl.plot2D(self.ax_ac_y,
                                         self.X*conversions.Vpiezo_to_micron,
                                         self.Y*conversions.Vpiezo_to_micron,
-                                        self.Vac_y,
+                                        self.Vac_y*conversions.Vsquid_to_phi0,
                                         cmap='cubehelix',
                                         title = self.filename,
                                         xlabel = label,
                                         ylabel = label,
-                                        clabel = 'AC Y V'
+                                        clabel = r'AC Y $\Phi_0$'
                                     )
 
         ## Capacitance
@@ -334,10 +334,10 @@ class Scanplane(Measurement):
 
 
     def plot_line(self):
-        self.line_full.set_xdata(self.V_piezo_full)
-        self.line_full.set_ydata(self.Vac_x_full*conversions.Vpiezo_to_micron)
-        self.line_interp.set_xdata(self.V_piezo_interp)
-        self.line_interp.set_ydata(self.Vac_x_interp*conversions.Vpiezo_to_micron)
+        self.line_full.set_xdata(self.V_piezo_full*conversions.Vpiezo_to_micron)
+        self.line_full.set_ydata(self.Vac_x_full*conversions.Vsquid_to_phi0)
+        self.line_interp.set_xdata(self.V_piezo_interp*conversions.Vpiezo_to_micron)
+        self.line_interp.set_ydata(self.Vac_x_interp*conversions.Vsquid_to_phi0)
 
         self.ax_line.relim()
         self.ax_line.autoscale_view()

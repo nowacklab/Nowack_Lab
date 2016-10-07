@@ -46,16 +46,10 @@ class Touchdown(Measurement):
             self.atto.z.freq = 200
             self.configure_lockin(cap_input)
 
-        if planescan:
-            self.z_piezo_step = 4 #may be able to go to 4
-        else:
-            self.z_piezo_step = 1 # for update_c, etc. Do a really slow scan.
+        self.z_piezo_step = 4
 
         self.Vz_max = Vz_max
-        self.numsteps = int(2*self.Vz_max/self.z_piezo_step)
-        self.V = np.linspace(-self.Vz_max, self.Vz_max, self.numsteps)
-        self.C = np.array([np.nan]*self.numsteps) # Capacitance (fF)
-        self.rs = np.array([np.nan]*self.numsteps) # correlation coefficients of each fit
+        self._init_arrays()
 
         if self.Vz_max is None and instruments:
             self.Vz_max = self.piezos.z.Vmax
@@ -70,10 +64,17 @@ class Touchdown(Measurement):
                           "daq": self.daq,
                           "montana": self.montana,
                           "V": self.V,
-                          "C": self.C
+                          "C": self.C,
+                          "C0": self.C0
                       })
         return self.save_dict
 
+
+    def _init_arrays(self):
+        self.numsteps = int(2*self.Vz_max/self.z_piezo_step)
+        self.V = np.linspace(-self.Vz_max, self.Vz_max, self.numsteps)
+        self.C = np.array([np.nan]*self.numsteps) # Capacitance (fF)
+        self.rs = np.array([np.nan]*self.numsteps) # correlation coefficients of each fit
 
     def check_balance(self, V_unbalanced=2e-6):
         '''
@@ -144,6 +145,10 @@ class Touchdown(Measurement):
             ## Determine where to start sweeping
             if slow_scan:
                 start = Vtd-40 # once it finds touchdown, will try again slower
+                self.z_piezo_step = 1
+                self._init_arrays()
+                self.setup_plot()
+
             if start is not None:
                 self.piezos.z.V = start
             else:
@@ -212,11 +217,10 @@ class Touchdown(Measurement):
                             u = 0.65 # percentages of the total voltage range to aim touchdown to be within
                             l = 0.35
                         else:
-                            u = 0.75 # touchdown is at a higher voltage for a not-slow scan
+                            u = 0.85 # touchdown is at a higher voltage for a not-slow scan
                             l = 0.45
                         if Vtd > u*self.Vz_max or Vtd < l*self.Vz_max:
                             self.touchdown = False
-                            slow_scan = False
                             start = -self.Vz_max # because we don't know where the td will be
                             self.title = 'Found touchdown, centering near %i Vpiezo' %int(self.Vz_max/2)
                             self.plot()
@@ -225,6 +229,11 @@ class Touchdown(Measurement):
                             self.lines_data['C_app'] = []
                             self.lines_data['V_td'] = []
                             self.lines_data['C_td'] = []
+                            if slow_scan:
+                                slow_scan = False
+                                self.z_piezo_step = 4
+                                self._init_arrays()
+                                self.setup_plot()
 
                     break # stop approaching
 
@@ -346,6 +355,7 @@ class Touchdown(Measurement):
 
 
     def setup_plot(self):
+        display.clear_output(wait=True)
         self.fig, self.ax = plt.subplots()
         line = self.ax.plot(self.V, self.C, 'k.')
         self.line = line[0]

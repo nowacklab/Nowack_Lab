@@ -133,6 +133,8 @@ class Planefit(Measurement):
 
                 self.Z[i,j] = td.do() # Do the touchdown, starting 200 V below the location of the surface at the center of the plane. Hopefully planes are not more tilted than this.
 
+                self.piezos.V = 0 # return to zero between points
+
         if edges_only:
             self.Z = np.ma.masked_array(self.Z, mask) # to prepare it for lstsq
 
@@ -195,7 +197,11 @@ class Planefit(Measurement):
 
         Zfit = self.plane(X,Y)
         ax.plot_surface(X,Y,Zfit,alpha=0.2, color = [0,1,0])
-        plt.xlabel('x')
+
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        ax.set_zlabel('z')
+
         plt.title(self.filename,fontsize=15)
 
 
@@ -223,23 +229,26 @@ class Planefit(Measurement):
         return f(x,y)
 
 
-    def update_c(self, start=None):
+    def update_c(self, Vx=0, Vy=0, start=None):
         '''
-        Does a single touchdown to find the plane again (at Vx=Vy=0).
+        Does a single touchdown to find the plane again (at a given (Vx, Vy) point).
         Do this after moving the attocubes.
         '''
         super().__init__('plane')
 
         old_c = self.c
+        self.piezos.V = {'x': Vx, 'y': Vy, 'z': 0}
         td = touchdown.Touchdown(self.instruments, self.cap_input, Vz_max = self.Vz_max)
-        self.c = td.do(start=start)
+        center_z_value = td.do(start=start)
+        self.c = center_z_value - self.a*Vx - self.b*Vy
+
         for x in [-self.piezos.x.Vmax, self.piezos.x.Vmax]:
             for y in [-self.piezos.y.Vmax, self.piezos.y.Vmax]:
                 z_maxormin = self.plane(x,y)
                 if z_maxormin > self.piezos.z.Vmax or z_maxormin < 0:
                     self.c = old_c
                     raise Exception('Plane now extends outside range of piezos! Move the attocubes and try again.')
-        self.Z -= (old_c-self.c) # for example, if c decrased, then we want to subtract a positive number from the plane
+        self.Z -= (old_c-self.c) # for example, if c decreased, then we want to subtract a positive number from the plane
         self.save(savefig=False)
 
 
