@@ -265,13 +265,13 @@ class Scanplane(Measurement):
         Set up all plots.
         '''
         self.fig = plt.figure(figsize=(11,11))
-        label = '$\sim\mu\mathrm{m} (V_{piezo}*%.2f)$' %conversions.Vpiezo_to_micron
+        label = '$V_{piezo}$ | $\sim\mu\mathrm{m}$'
 
         ## DC magnetometry
         self.ax_dc = self.fig.add_subplot(321)
         self.im_dc = plot_mpl.plot2D(self.ax_dc,
-                                        self.X*conversions.Vpiezo_to_micron,
-                                        self.Y*conversions.Vpiezo_to_micron,
+                                        self.X,
+                                        self.Y,
                                         self.V*conversions.Vsquid_to_phi0,
                                         title = self.filename,
                                         xlabel = label,
@@ -282,8 +282,8 @@ class Scanplane(Measurement):
         ## AC x
         self.ax_ac_x = self.fig.add_subplot(323)
         self.im_ac_x = plot_mpl.plot2D(self.ax_ac_x,
-                                        self.X*conversions.Vpiezo_to_micron,
-                                        self.Y*conversions.Vpiezo_to_micron,
+                                        self.X,
+                                        self.Y,
                                         self.Vac_x*conversions.Vsquid_to_phi0,
                                         cmap='cubehelix',
                                         title = self.filename,
@@ -295,8 +295,8 @@ class Scanplane(Measurement):
         ## AC y
         self.ax_ac_y = self.fig.add_subplot(324)
         self.im_ac_y = plot_mpl.plot2D(self.ax_ac_y,
-                                        self.X*conversions.Vpiezo_to_micron,
-                                        self.Y*conversions.Vpiezo_to_micron,
+                                        self.X,
+                                        self.Y,
                                         self.Vac_y*conversions.Vsquid_to_phi0,
                                         cmap='cubehelix',
                                         title = self.filename,
@@ -308,8 +308,8 @@ class Scanplane(Measurement):
         ## Capacitance
         self.ax_cap = self.fig.add_subplot(322)
         self.im_cap = plot_mpl.plot2D(self.ax_cap,
-                                    self.X*conversions.Vpiezo_to_micron,
-                                    self.Y*conversions.Vpiezo_to_micron,
+                                    self.X,
+                                    self.Y,
                                     self.C,
                                     cmap='afmhot',
                                     title = self.filename,
@@ -317,6 +317,11 @@ class Scanplane(Measurement):
                                         ylabel = label,
                                     clabel = 'Cap fF %s' %self.inp_cap
                                 )
+
+        for ax in [self.ax_dc, self.ax_ac_x, self.ax_ac_y, self.ax_cap]:
+            ax.set_xticklabels(['%i|%i' %(x, x*conversions.Vpiezo_to_micron) for x in ax.get_xticks()])
+            ax.set_yticklabels(['%i|%i' %(y, y*conversions.Vpiezo_to_micron) for y in ax.get_yticks()])
+
 
         ## "Last full scan" plot
         self.ax_line = self.fig.add_subplot(313)

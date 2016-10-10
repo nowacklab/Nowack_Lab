@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import math
 
 def aspect(ax, ratio, absolute=True):
     '''
@@ -91,12 +92,12 @@ def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='', 
 
     aspect(ax, 1, absolute=False) # equal aspect ratio based on data scales
 
-    ## Set number of ticks to 5
-    start, end = ax.get_xlim()
-    ax.xaxis.set_ticks(np.linspace(start, end, 5))
+    ## Round ticks to the nearest integer, and only have three ticks per axis
+    xticks = [math.ceil(x.min()), int((x.min()+x.max())/2), math.floor(x.max())]
+    yticks = [math.ceil(y.min()), int((y.min()+y.max())/2), math.floor(y.max())]
 
-    start, end = ax.get_ylim()
-    ax.yaxis.set_ticks(np.linspace(start, end, 5))
+    ax.set_xticks(xticks)
+    ax.set_yticks(yticks)
 
     return im
 
