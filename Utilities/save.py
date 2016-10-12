@@ -8,7 +8,6 @@ import h5py
 class Measurement:
     instrument_list = []
 
-
     def __init__(self, append=None):
         self._save_dict = {} # this is a dictionary where key = name of thing you want to appear in JSON, value = name of variable you want to save.
         self.timestamp = ''
@@ -49,7 +48,7 @@ class Measurement:
 
 
     @staticmethod
-    def fromjson(json_file, unwanted_keys = [], decompress=True):
+    def fromjson(json_file, unwanted_keys = []):
         '''
         Loads an object from JSON.
         '''
@@ -63,27 +62,35 @@ class Measurement:
         obj_string = json.dumps(obj_dict)
         obj = jsp.decode(obj_string)
 
-        if decompress:
-            obj._decompress() # undo compression
-
         return obj
 
 
     @classmethod
-    def load(cls, json_file, instruments={}, unwanted_keys=[]):
+    def load(cls, filename, instruments={}, unwanted_keys=[]):
         '''
-        Basic load method. Calls fromjson, not loading instruments, then loads instruments.
+        Basic load method. Calls fromjson, not loading instruments, then loads from HDF5, then loads instruments.
         Overwrite this for each subclass if necessary.
         Pass in an array of the names of things you don't want to load.
         By default, we won't load any instruments, but you can pass in an instruments dictionary to load them.
         '''
         unwanted_keys += cls.instrument_list
-        obj = Measurement.fromjson(json_file, unwanted_keys)
+        obj = Measurement.fromjson(filename+'.json', unwanted_keys)
+        obj.load_hdf5(filename+'.h5')
         obj.load_instruments(instruments)
 
-        append = json_file[json_file.rfind('_')+1:json_file.rfind('.')] # extracts the appended string
+        append = filename[filename.rfind('_')+1:] # extracts the appended string
         Measurement.__init__(obj, append) # to create save_dict
         return obj
+
+
+    def load_hdf5(self, filename, unwanted_keys = []):
+        '''
+        Loads data from HDF5 files.
+        '''
+        with h5py.File(filename, 'r') as f:
+            for key in f.keys():
+                if key not in unwanted_keys:
+                    setattr(self, key, f[key][:]) # converts to numpy array
 
 
     def load_instruments(self, instruments={}):
@@ -110,11 +117,11 @@ class Measurement:
             self.filename += '_' + append
 
 
-    def save(self):
+    def save(self, filename=None):
         '''
         Basic save method. Just calls tojson. Overwrite this for each subclass.
         '''
-        self._save()
+        self._save(filename=filename)
 
 
     def _save(self, path = '.', filename=None, compress=True):
