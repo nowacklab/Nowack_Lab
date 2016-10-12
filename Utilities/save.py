@@ -3,29 +3,30 @@ import json, os, pickle, bz2, jsonpickle as jsp, numpy as np
 from datetime import datetime
 jspnp.register_handlers()
 from copy import copy
-
+import h5py
 
 class Measurement:
     instrument_list = []
 
+
     def __init__(self, append=None):
-        self.save_dict = {}
-        self._replacement = '\\\\\\r'
+        self._save_dict = {} # this is a dictionary where key = name of thing you want to appear in JSON, value = name of variable you want to save.
         self.timestamp = ''
 
         self.make_timestamp_and_filename(append)
         Measurement.__getstate__(self) # to create the save_dict without using overridden subclass getstate
+
 
     def __getstate__(self):
         '''
         Returns a dictionary of everything we want to save to JSON.
         In a subclass, you must call this method and then update self.save_dict.
         '''
-        self.save_dict.update({'_replacement': self._replacement,
-                        'timestamp': self.timestamp,
-                        'filename': self.filename
+        self._save_dict.update({
+            'timestamp': 'timestamp',
+            'filename': 'filename'
         })
-        return self.save_dict
+        return {key: getattr(self, value) for key, value in self._save_dict.items() if type(getattr(self, value)) is not np.ndarray}
 
 
     def __setstate__(self, state):
@@ -37,76 +38,14 @@ class Measurement:
         self.__dict__.update(state)
 
 
-    def _compress(self, d = None):
+    def add_to_save(self, name, alias=None):
         '''
-        Compresses variables in the given dictionary.
-        By default, uses self.__dict__.
-        Right now, just numpy arrays are compressed.
+        Adds a variable to the save dictionary.
+        Give its name as a string, and give an alias if you would like it saved with a different string descriptor.
         '''
-        if d is None:
-            d = self.__dict__
-
-        for key in list(d.keys()):
-            if type(d[key]) is np.ndarray:
-                if np.array_equiv(d[key], self._decompress_numpy(self._compress_numpy(d[key]))): # try compressing and decompressing to see if it works
-                    d[key] = self._compress_numpy(d[key])
-                else:
-                    print('Could not compress and decompress %s.%s!' %(self.__class__.__name__, key))
-            elif type(d[key]) is dict:
-                self._compress(d[key])
-
-
-    def _compress_numpy(self, array):
-        '''
-        Compresses a numpy array before saving to json
-        First pickles, and then compresses with bz2.
-        After that, it replaces all carriage returns \r to \\\\\\r,
-        a safe string that will not appear in a bytes object.
-        If for some reason it does, we tack on more \\!
-        '''
-        array = pickle.dumps(array)
-        array = bz2.compress(array)
-
-        ### OKAY DUMB STUFF AHEAD, YOU'VE BEEN WARNED
-        # We need to convert carriage returns to something safe
-        # or else JSON will throw them away!
-        self._replacement = '\\\\\\r' # Something that will not be in a bytes
-        while not array.find(self._replacement.encode('utf-8')): # In case it is...
-            self._replacement = '\\' + self._replacement # ...add more \\!!
-        array = array.replace(b'\r', self._replacement.encode('utf-8'))
-        return array
-
-
-    def _decompress(self, d=None):
-        '''
-        Decompresses variables in the given dictionary.
-        By default, uses self.__dict__.
-        Right now, just numpy arrays are decompressed.
-        '''
-        if d is None:
-            d = self.__dict__
-
-        for key in list(d.keys()):
-            if type(d[key]) is bytes:
-                try:
-                    d[key] = self._decompress_numpy(d[key])
-                except:
-                    print('Decompression failed for %s.%s!' %(self.__class__.__name__, key))
-            elif type(d[key]) is dict:
-                self._decompress(d[key])
-
-
-    def _decompress_numpy(self, array):
-        '''
-        decompresses a numpy array loaded from json.
-        First undoes carriage returns BS, then bz2 compression, then unpickles.
-        '''
-
-        array = array.replace(self._replacement.encode('utf-8'), b'\r') #_replacement should exist
-
-        array = bz2.decompress(array)
-        array = pickle.loads(array)
-        return array
+        if alias is None:
+            alias = name
+        self._save_dict.update({alias: name})
 
 
     @staticmethod
@@ -175,17 +114,14 @@ class Measurement:
         '''
         Basic save method. Just calls tojson. Overwrite this for each subclass.
         '''
-        self.tojson()
+        self._save()
 
 
-    def tojson(self, path = '.', filename=None, compress=True):
+    def _save(self, path = '.', filename=None, compress=True):
         '''
-        Saves an object to JSON. Specify a custom filename,
-        or use the `filename` variable under that object.
+        Saves data. numpy arrays are saved to one file as hdf5,
+        everything else is saved to JSON
         '''
-        if compress:
-            self._compress() # compress the object
-
         if filename is None:
             try:
                 filename = self.filename # see if this exists
@@ -198,19 +134,50 @@ class Measurement:
 
         filename = os.path.join(path, filename)
 
-        inp='y'
-        if os.path.exists(filename+'.json'):
-            inp = input('File %s already exists! Overwrite? (y/n)' %filename)
-        if inp not in ('y','Y'):
-            print('File not saved!')
+        if compress:
+            ## Figure out what to save as JSON vs HDF5 - only looks one level deep for now.
+            json_dict = {}
+            hdf5_dict = {}
+            for key, value in self._save_dict.items(): # key = name we want to save with, value = actual name of variable
+                if type(getattr(self,value)) is np.ndarray: # checks if this variable is a numpy array
+                    hdf5_dict[key] = value # Numpy arrays will get converted to hdf5
+                else:
+                    json_dict[key] = value # everything else gets saved to JSON
         else:
+            json_dict = self._save_dict
+
+        self.tojson(json_dict, filename)
+        self.tohdf5(hdf5_dict, filename)
+
+
+    def tohdf5(self, hdf5_dict, filename):
+        with h5py.File(filename+'.h5', 'w') as f:
+            for key, value in hdf5_dict.items():
+                dset = f.create_dataset(key, data=getattr(self, value),
+                    compression = 'gzip', compression_opts=9
+                )
+
+
+    def tojson(self, json_dict, filename):
+        '''
+        Saves an object to JSON. Specify a custom filename,
+        or use the `filename` variable under that object.
+        '''
+        if not exists(filename+'.json'):
             obj_string = jsp.encode(self)
             obj_dict = json.loads(obj_string)
             with open(filename+'.json', 'w', encoding='utf-8') as f:
                 json.dump(obj_dict, f, sort_keys=True, indent=4)
 
-        if compress:
-            self._decompress() # so we can still play with numpy arrays
+
+def exists(filename):
+    inp='y'
+    if os.path.exists(filename+'.json'):
+        inp = input('File %s already exists! Overwrite? (y/n)' %(filename+'.json'))
+    if inp not in ('y','Y'):
+        print('File not saved!')
+        return True
+    return False
 
 
 def get_cooldown_data_path():
