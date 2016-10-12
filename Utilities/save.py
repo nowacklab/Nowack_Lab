@@ -48,7 +48,10 @@ class Measurement:
 
         for key in list(d.keys()):
             if type(d[key]) is np.ndarray:
-                d[key] = self._compress_numpy(d[key])
+                if np.array_equiv(d[key], self._decompress_numpy(self._compress_numpy(d[key]))): # try compressing and decompressing to see if it works
+                    d[key] = self._compress_numpy(d[key])
+                else:
+                    print('Could not compress and decompress %s.%s!' %(self.__class__.__name__, key))
             elif type(d[key]) is dict:
                 self._compress(d[key])
 
@@ -76,7 +79,7 @@ class Measurement:
 
     def _decompress(self, d=None):
         '''
-        Deompresses variables in the given dictionary.
+        Decompresses variables in the given dictionary.
         By default, uses self.__dict__.
         Right now, just numpy arrays are decompressed.
         '''
@@ -88,7 +91,7 @@ class Measurement:
                 try:
                     d[key] = self._decompress_numpy(d[key])
                 except:
-                    pass
+                    print('Decompression failed for %s.%s!' %(self.__class__.__name__, key))
             elif type(d[key]) is dict:
                 self._decompress(d[key])
 
@@ -154,7 +157,6 @@ class Measurement:
                 setattr(self, instrument, instruments[instrument])
             else:
                 setattr(self, instrument, None)
-                print('%s not loaded!\n' %instrument)
 
 
     def make_timestamp_and_filename(self, append=None):
