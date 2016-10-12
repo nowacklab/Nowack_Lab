@@ -319,8 +319,8 @@ class Scanplane(Measurement):
                                 )
 
         for ax in [self.ax_dc, self.ax_ac_x, self.ax_ac_y, self.ax_cap]:
-            ax.set_xticklabels(['%i|%i' %(x, x*conversions.Vpiezo_to_micron) for x in ax.get_xticks()])
-            ax.set_yticklabels(['%i|%i' %(y, y*conversions.Vpiezo_to_micron) for y in ax.get_yticks()])
+            ax.set_xticklabels(['%i | %i' %(x, x*conversions.Vpiezo_to_micron) for x in ax.get_xticks()])
+            ax.set_yticklabels(['%i | %i' %(y, y*conversions.Vpiezo_to_micron) for y in ax.get_yticks()])
 
 
         ## "Last full scan" plot
