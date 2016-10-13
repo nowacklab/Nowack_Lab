@@ -88,7 +88,7 @@ class PFL102:
         self.updateDigitalControl()
 
     def __getstate__(self):
-        self.save_dict = {"Array bias": self._A_bias,
+        self._save_dict = {"Array bias": self._A_bias,
                           "Array flux": self._A_flux,
                           "SQUID bias": self._S_bias,
                           "SQUID flux": self._S_flux,
@@ -103,7 +103,7 @@ class PFL102:
                           "channel": self.channel,
                           "resetIntegrator": self.resetIntegrator
                       }
-        return self.save_dict
+        return self._save_dict
 
     def __setstate__(self, state):
         state['_A_bias'] = state.pop('Array bias')

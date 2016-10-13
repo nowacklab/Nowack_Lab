@@ -41,14 +41,14 @@ class Piezos():
             self.zero()
 
     def __getstate__(self):
-        self.save_dict = {"x": self.x,
+        self._save_dict = {"x": self.x,
                             "y": self.y,
                             "z": self.z,
                             "daq": self._daq,
                             "max sweep rate": self._max_sweep_rate,
                             "max step size": self._max_step_size
                             }
-        return self.save_dict
+        return self._save_dict
 
 
     def __setstate__(self, state):
@@ -303,7 +303,7 @@ class Piezo():
         self.max_step_size = max_step_size
 
     def __getstate__(self):
-        self.save_dict = {"chan_out": self.chan_out,
+        self._save_dict = {"chan_out": self.chan_out,
                             "label": self.label,
                             "gain": self.gain,
                             "Vmax": self.Vmax,
@@ -312,7 +312,7 @@ class Piezo():
                             "max sweep rate": self.max_sweep_rate,
                             "sweep step size": self.max_step_size
                         }
-        return self.save_dict
+        return self._save_dict
 
 
     def __setstate__(self, state):

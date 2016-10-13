@@ -46,7 +46,7 @@ class SR830():
 
 
     def __getstate__(self):
-        self.save_dict = {"sensitivity": self.sensitivity,
+        self._save_dict = {"sensitivity": self.sensitivity,
                           "frequency": self.frequency,
                           "amplitude": self.amplitude,
                           "time_constant": self.time_constant,
@@ -58,7 +58,7 @@ class SR830():
                           "Y": self.Y,
                           "R": self.R,
                           "theta": self.theta}
-        return self.save_dict
+        return self._save_dict
 
 
     def __setstate__(self, state):
