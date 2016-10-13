@@ -30,7 +30,7 @@ class NIDAQ():
         self._output_range = output_range
 
         ## Set properties for reading input channels
-        ## Read from these by daq.ao# (#=0-31)
+        ## Read from these by daq.ai# (#=0-31)
         for chan in self._daq.get_AI_channels():
             setattr(NIDAQ,chan,property(fget=eval('lambda self: self.get_chan(\'%s\')' %chan)))
 
