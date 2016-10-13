@@ -3,7 +3,7 @@ import json, os, pickle, bz2, jsonpickle as jsp, numpy as np
 from datetime import datetime
 jspnp.register_handlers()
 from copy import copy
-import h5py
+import h5py, glob
 
 class Measurement:
     instrument_list = []
@@ -23,7 +23,8 @@ class Measurement:
         '''
         self._save_dict.update({
             'timestamp': 'timestamp',
-            'filename': 'filename'
+            'filename': 'filename',
+            'save dict': '_save_dict'
         })
         return {key: getattr(self, value) for key, value in self._save_dict.items() if type(getattr(self, value)) is not np.ndarray}
 
@@ -33,7 +34,13 @@ class Measurement:
         Default method for loading from JSON.
         `state` is a dictionary.
         '''
+        setattr(self, '_save_dict', state['save dict'])
 
+        for k in list(state.keys()):
+            try:
+                state[self._save_dict[k]] = state.pop(k) # replace formatted keys with variable names
+            except:
+                print('Couldn\'t load %s' %k)
         self.__dict__.update(state)
 
 
@@ -48,7 +55,7 @@ class Measurement:
 
 
     @staticmethod
-    def fromjson(json_file, unwanted_keys = []):
+    def _fromjson(json_file, unwanted_keys = []):
         '''
         Loads an object from JSON.
         '''
@@ -66,24 +73,35 @@ class Measurement:
 
 
     @classmethod
-    def load(cls, filename, instruments={}, unwanted_keys=[]):
+    def load(cls, filename=None, instruments={}, unwanted_keys=[]):
         '''
-        Basic load method. Calls fromjson, not loading instruments, then loads from HDF5, then loads instruments.
+        Basic load method. Calls _fromjson, not loading instruments, then loads from HDF5, then loads instruments.
         Overwrite this for each subclass if necessary.
         Pass in an array of the names of things you don't want to load.
         By default, we won't load any instruments, but you can pass in an instruments dictionary to load them.
         '''
+        if filename is None: # finds the last saved object
+            try:
+                filename =  max(glob.iglob(os.path.join(get_todays_data_path(),'*_%s.json' %cls._append)),
+                                        key=os.path.getctime)
+            except: # we must have taken one during the previous day's work
+                folders = list(glob.iglob(os.path.join(get_todays_data_path(),'..','*')))
+                # -2 should be the previous day (-1 is today)
+                filename =  max(glob.iglob(os.path.join(folders[-2],'*_%s.json' %cls._append)),
+                                        key=os.path.getctime)
+            filename = filename.rpartition('.')[0] #remove extension
+
         unwanted_keys += cls.instrument_list
-        obj = Measurement.fromjson(filename+'.json', unwanted_keys)
-        obj.load_hdf5(filename+'.h5')
-        obj.load_instruments(instruments)
+        obj = Measurement._fromjson(filename+'.json', unwanted_keys)
+        obj._load_hdf5(filename+'.h5')
+        obj._load_instruments(instruments)
 
         append = filename[filename.rfind('_')+1:] # extracts the appended string
         Measurement.__init__(obj, append) # to create save_dict
         return obj
 
 
-    def load_hdf5(self, filename, unwanted_keys = []):
+    def _load_hdf5(self, filename, unwanted_keys = []):
         '''
         Loads data from HDF5 files.
         '''
@@ -93,7 +111,7 @@ class Measurement:
                     setattr(self, key, f[key][:]) # converts to numpy array
 
 
-    def load_instruments(self, instruments={}):
+    def _load_instruments(self, instruments={}):
         '''
         Loads instruments from a dictionary.
         Specify instruments needed using self.instrument_list.
@@ -117,11 +135,11 @@ class Measurement:
             self.filename += '_' + append
 
 
-    def save(self, filename=None):
+    def save(self, path= '.', filename=None):
         '''
-        Basic save method. Just calls tojson. Overwrite this for each subclass.
+        Basic save method. Just calls _save. Overwrite this for each subclass.
         '''
-        self._save(filename=filename)
+        self._save(path, filename)
 
 
     def _save(self, path = '.', filename=None, compress=True):
@@ -153,19 +171,18 @@ class Measurement:
         else:
             json_dict = self._save_dict
 
-        self.tojson(json_dict, filename)
-        self.tohdf5(hdf5_dict, filename)
+        self._save_json(json_dict, filename)
+        self._save_hdf5(hdf5_dict, filename)
 
 
-    def tohdf5(self, hdf5_dict, filename):
+    def _save_hdf5(self, hdf5_dict, filename):
         with h5py.File(filename+'.h5', 'w') as f:
             for key, value in hdf5_dict.items():
                 dset = f.create_dataset(key, data=getattr(self, value),
-                    compression = 'gzip', compression_opts=9
-                )
+                    compression = 'gzip', compression_opts=9)
 
 
-    def tojson(self, json_dict, filename):
+    def _save_json(self, json_dict, filename):
         '''
         Saves an object to JSON. Specify a custom filename,
         or use the `filename` variable under that object.

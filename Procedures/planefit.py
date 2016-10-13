@@ -20,11 +20,12 @@ class Planefit(Measurement):
     a = np.nan
     b = np.nan
     c = np.nan
+    _append = 'plane'
 
     def __init__(self, instruments={}, cap_input=None, span=[400,400], center=[0,0], numpts=[4,4], Vz_max = None):
-        super().__init__('plane')
+        super().__init__(self._append)
 
-        self.load_instruments(instruments)
+        self._load_instruments(instruments)
         self.instruments = instruments
 
         self.span = span
@@ -47,24 +48,23 @@ class Planefit(Measurement):
         self.X, self.Y = np.meshgrid(self.x, self.y)
         self.Z = np.nan*self.X # makes array of nans same size as grid
 
-    def __getstate__(self):
-        super().__getstate__()
-        self.save_dict.update({"timestamp": self.timestamp,
-                          "a": self.a,
-                          "b": self.b,
-                          "c": self.c,
-                          "span": self.span,
-                          "center": self.center,
-                          "numpts": self.numpts,
-                          "piezos": self.piezos,
-                          "montana": self.montana,
-                          "cap_input": self.cap_input,
-                          "Vz_max": self.Vz_max,
-                          "X": self.X,
-                          "Y": self.Y,
-                          "Z": self.Z
-                      })
-        return self.save_dict
+        self._save_dict.update({
+            'timestamp': 'timestamp',
+            'a': 'a',
+            'b': 'b',
+            'c': 'c',
+            'span': 'span',
+            'center': 'center',
+            'numpts': 'numpts',
+            'piezos': 'piezos',
+            'montana': 'montana',
+            'cap input': 'cap_input',
+            'max Vz': 'Vz_max',
+            'X': 'X',
+            'Y': 'Y',
+            'Z': 'Z'
+        })
+
 
     def calculate_plane(self, no_outliers=True):
         '''
@@ -212,7 +212,7 @@ class Planefit(Measurement):
         '''
         logging.log('Plane saved. a=%.4f, b=%.4f, c=%.4f' %(self.a, self.b, self.c))
 
-        self.tojson(get_todays_data_path(), self.filename)
+        self._save(get_todays_data_path(), self.filename)
 
         if savefig:
             self.plot()
@@ -250,33 +250,3 @@ class Planefit(Measurement):
                     raise Exception('Plane now extends outside range of piezos! Move the attocubes and try again.')
         self.Z -= (old_c-self.c) # for example, if c decreased, then we want to subtract a positive number from the plane
         self.save(savefig=False)
-
-
-if __name__ == '__main__':
-    """ just testing fitting algorithm - pretty sure this is way out of date"""
-    import random
-    from mpl_toolkits.mplot3d import Axes3D
-
-    def gauss(X, a):
-        random.seed(random.random())
-        r = [(random.random()+1/2+x) for x in X]
-        return np.exp(-a*(r-X)**2)
-
-    xx, yy = np.meshgrid(np.linspace(0,10,10), np.linspace(0,10,10))
-    X = xx.flatten()
-    Y = yy.flatten()
-
-    Z = X + 2*Y + 3
-
-    Z = Z*gauss(Z,1)
-
-    planefit = Planefit(X, Y, Z)
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-
-    ax.scatter(X, Y, Z)
-
-    zz = planefit.plane(xx,yy)
-    ax.plot_surface(xx, yy, zz, alpha=0.2, color=[0,1,0])
-    plt.show()

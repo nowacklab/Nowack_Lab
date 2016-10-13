@@ -1,5 +1,5 @@
 import numpy as np
-from . import planefit
+from .planefit import Planefit
 import time, os
 from datetime import datetime
 import matplotlib.pyplot as plt
@@ -16,23 +16,25 @@ class Scanline(Measurement):
     Vac_x = np.nan
     Vac_y = np.nan
     C = np.nan
+    output_data = np.nan
+    _append = 'line'
 
     def __init__(self, instruments={}, start=(-100,-100), end=(100,100), plane=None, scanheight=15, inp_dc=0, inp_cap=1, inp_acx=2, inp_acy=3, scan_rate=120, return_to_zero=True):
-        super().__init__('line')
+        super().__init__(self._append)
 
         self.inp_dc = 'ai%s' %inp_dc
         self.inp_acx = 'ai%s' %inp_acx
         self.inp_acy = 'ai%s' %inp_acy
         self.inp_cap = 'ai%s' %inp_cap
 
-        self.load_instruments(instruments)
+        self._load_instruments(instruments)
 
         self.start = start
         self.end = end
         self.return_to_zero = return_to_zero
 
         if not plane:
-            plane = planefit.Planefit()
+            plane = Planefit()
         self.plane = plane
 
         if scanheight < 0:
@@ -42,26 +44,26 @@ class Scanline(Measurement):
         self.scanheight = scanheight
         self.scan_rate = scan_rate
 
-
-    def __getstate__(self):
-        self.save_dict.update({"timestamp": self.timestamp,
-                          "piezos": self.piezos,
-                          "montana": self.montana,
-                          "squidarray": self.squidarray,
-                          "preamp":self.preamp,
-                          "start": self.start,
-                          "end": self.end,
-                          "scan_rate": self.scan_rate,
-                          "Vdc": self.Vdc,
-                          "Vac_x": self.Vac_x,
-                          "Vac_y": self.Vac_y,
-                          "output_data": self.output_data,
-                          "lockin_squid": self.lockin_squid,
-                          "lockin_cap": self.lockin_cap,
-                          "atto": self.atto,
-                          "Vout": self.Vout
-                      })
-        return self.save_dict
+        self._save_dict.update({
+            'timestamp': 'timestamp',
+            'piezos': 'piezos',
+            'Montana': 'montana',
+            'squid array': 'squidarray',
+            'preamp': 'preamp',
+            'start': 'start',
+            'end': 'end',
+            'scan rate':'scan_rate',
+            'DC voltage': 'Vdc',
+            'AC X voltage': 'Vac_x',
+            'AC Y voltage': 'Vac_y',
+            'output data': 'output_data',
+            'squid lockin': 'lockin_squid',
+            'capacitance lockin': 'lockin_cap',
+            'attocubes': 'atto',
+            'Vout': 'Vout',
+            'plane': 'plane',
+            'C': 'C'
+        })
 
 
     def do(self):
@@ -157,15 +159,11 @@ class Scanline(Measurement):
 
     def save(self, savefig=True):
         '''
-        Saves the scanline object to json.
+        Saves the scanline object.
         Also saves the figure as a pdf, if wanted.
         '''
 
-        self.tojson(get_todays_data_path(), self.filename)
+        self._save(get_todays_data_path(), self.filename)
 
-        if savefig:
+        if savefig and hasattr(self, 'fig'):
             self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
-
-
-if __name__ == '__main__':
-    'hey'
