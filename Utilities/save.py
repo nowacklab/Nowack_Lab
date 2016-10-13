@@ -54,28 +54,10 @@ class Measurement:
         self._save_dict.update({alias: name})
 
 
-    @staticmethod
-    def _fromjson(json_file, unwanted_keys = []):
-        '''
-        Loads an object from JSON.
-        '''
-        with open(json_file, encoding='utf-8') as f:
-            obj_dict = json.load(f)
-        for key in unwanted_keys: # get rid of keys you don't want to load
-            try:
-                obj_dict['py/state'].pop(key)
-            except:
-                pass # if we accidentally give a key that's not there
-        obj_string = json.dumps(obj_dict)
-        obj = jsp.decode(obj_string)
-
-        return obj
-
-
     @classmethod
     def load(cls, filename=None, instruments={}, unwanted_keys=[]):
         '''
-        Basic load method. Calls _fromjson, not loading instruments, then loads from HDF5, then loads instruments.
+        Basic load method. Calls _load_json, not loading instruments, then loads from HDF5, then loads instruments.
         Overwrite this for each subclass if necessary.
         Pass in an array of the names of things you don't want to load.
         By default, we won't load any instruments, but you can pass in an instruments dictionary to load them.
@@ -92,12 +74,10 @@ class Measurement:
             filename = filename.rpartition('.')[0] #remove extension
 
         unwanted_keys += cls.instrument_list
-        obj = Measurement._fromjson(filename+'.json', unwanted_keys)
+        obj = Measurement._load_json(filename+'.json', unwanted_keys)
         obj._load_hdf5(filename+'.h5')
         obj._load_instruments(instruments)
 
-        append = filename[filename.rfind('_')+1:] # extracts the appended string
-        Measurement.__init__(obj, append) # to create save_dict
         return obj
 
 
@@ -108,7 +88,7 @@ class Measurement:
         with h5py.File(filename, 'r') as f:
             for key in f.keys():
                 if key not in unwanted_keys:
-                    setattr(self, key, f[key][:]) # converts to numpy array
+                    setattr(self, self._save_dict[key], f[key][:]) # converts to numpy array. Must convert back to right keys using _save_dict
 
 
     def _load_instruments(self, instruments={}):
@@ -121,6 +101,24 @@ class Measurement:
                 setattr(self, instrument, instruments[instrument])
             else:
                 setattr(self, instrument, None)
+
+
+    @staticmethod
+    def _load_json(json_file, unwanted_keys = []):
+        '''
+        Loads an object from JSON.
+        '''
+        with open(json_file, encoding='utf-8') as f:
+            obj_dict = json.load(f)
+        for key in unwanted_keys: # get rid of keys you don't want to load
+            try:
+                obj_dict['py/state'].pop(key)
+            except:
+                pass # if we accidentally give a key that's not there
+        obj_string = json.dumps(obj_dict)
+        obj = jsp.decode(obj_string)
+
+        return obj
 
 
     def make_timestamp_and_filename(self, append=None):
