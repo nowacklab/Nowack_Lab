@@ -121,13 +121,13 @@ class Scanline(Measurement):
         Set up all plots.
         '''
         self.fig = plt.figure(figsize=(8,5))
-        label = r'$\sim\mu\mathrm{m} (|V_{\text{piezo}}|*%.2f)$' %conversions.Vpiezo_to_micron
+        label = r'$\sim\mu\mathrm{m} (|V_{piezo}|*%.2f)$' %conversions.Vpiezo_to_micron
 
         ## DC magnetometry
         self.ax_squid = self.fig.add_subplot(221)
         self.ax_squid.plot(self.Vout*conversions.Vpiezo_to_micron, self.Vdc*conversions.Vsquid_to_phi0, '-b')
         self.ax_squid.set_xlabel(label)
-        self.ax_squid.set_ylabel('DC $\Phi_0$' %self.inp_dc)
+        self.ax_squid.set_ylabel('DC $\Phi_0$')
         self.ax_squid.set_title(self.filename)
 
         ## AC in-phase
