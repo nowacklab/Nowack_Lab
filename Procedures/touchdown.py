@@ -58,20 +58,7 @@ class Touchdown(Measurement):
 
         self._init_arrays()
 
-
         self.planescan = planescan
-
-        self._save_dict.update({
-            'timestamp': 'timestamp',
-            'capacitance lockin': 'lockin_cap',
-            'attocubes': 'atto',
-            'piezos': 'piezos',
-            'daq': 'daq',
-            'Montana': 'montana',
-            'V': 'V',
-            'C': 'C',
-            'C0': 'C0',
-        })
 
 
     def _init_arrays(self):

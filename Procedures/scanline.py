@@ -44,27 +44,6 @@ class Scanline(Measurement):
         self.scanheight = scanheight
         self.scan_rate = scan_rate
 
-        self._save_dict.update({
-            'timestamp': 'timestamp',
-            'piezos': 'piezos',
-            'Montana': 'montana',
-            'squid array': 'squidarray',
-            'preamp': 'preamp',
-            'start': 'start',
-            'end': 'end',
-            'scan rate':'scan_rate',
-            'DC voltage': 'Vdc',
-            'AC X voltage': 'Vac_x',
-            'AC Y voltage': 'Vac_y',
-            'output data': 'output_data',
-            'squid lockin': 'lockin_squid',
-            'capacitance lockin': 'lockin_cap',
-            'attocubes': 'atto',
-            'Vout': 'Vout',
-            'plane': 'plane',
-            'C': 'C'
-        })
-
 
     def do(self):
         tstart = time.time()

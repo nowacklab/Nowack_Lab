@@ -31,17 +31,6 @@ class Heightsweep(Measurement):
         self.inp_dc = 'ai%s' %inp_dc
         self.scan_rate = scan_rate
 
-        self._save_dict.update({
-            'timestamp': 'timestamp',
-            'piezos': 'piezos',
-            'x': 'x',
-            'y': 'y',
-            'plane': 'plane',
-            'input AC x': 'inp_acx',
-            'input AC y': 'inp_acy',
-            'input DC': 'inp_dc',
-            'scan rate': 'scan_rate'
-          })
 
     def do(self):
 

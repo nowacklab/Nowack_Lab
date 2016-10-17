@@ -9,24 +9,28 @@ class Measurement:
     instrument_list = []
 
     def __init__(self, append=None):
-        self._save_dict = {} # this is a dictionary where key = name of thing you want to appear in JSON, value = name of variable you want to save.
         self.timestamp = ''
 
         self.make_timestamp_and_filename(append)
-        Measurement.__getstate__(self) # to create the save_dict without using overridden subclass getstate
 
 
     def __getstate__(self):
         '''
         Returns a dictionary of everything we want to save to JSON.
-        In a subclass, you must call this method and then update self.save_dict.
+        This excludes numpy arrays which are saved to HDF5
         '''
-        self._save_dict.update({
-            'timestamp': 'timestamp',
-            'filename': 'filename',
-            'save dict': '_save_dict'
-        })
-        return {key: getattr(self, value) for key, value in self._save_dict.items() if type(getattr(self, value)) is not np.ndarray}
+        variables = list(self.__dict__.keys())
+
+        ## If in the future, we want to blacklist some variables.
+        # for var in self._blacklist:
+        #     variables.remove(var)
+
+        ## Don't save numpy arrays to JSON
+        for var in variables.copy(): # copy so we don't change size of array during iteration
+            if type(getattr(self, var)) is np.ndarray:
+                variables.remove(var)
+
+        return {var: getattr(self, var) for var in variables}
 
 
     def __setstate__(self, state):
@@ -34,24 +38,7 @@ class Measurement:
         Default method for loading from JSON.
         `state` is a dictionary.
         '''
-        setattr(self, '_save_dict', state['save dict'])
-
-        for k in list(state.keys()):
-            try:
-                state[self._save_dict[k]] = state.pop(k) # replace formatted keys with variable names
-            except:
-                print('Couldn\'t load %s' %k)
         self.__dict__.update(state)
-
-
-    def add_to_save(self, name, alias=None):
-        '''
-        Adds a variable to the save dictionary.
-        Give its name as a string, and give an alias if you would like it saved with a different string descriptor.
-        '''
-        if alias is None:
-            alias = name
-        self._save_dict.update({alias: name})
 
 
     @classmethod
@@ -62,7 +49,7 @@ class Measurement:
         Pass in an array of the names of things you don't want to load.
         By default, we won't load any instruments, but you can pass in an instruments dictionary to load them.
         '''
-        if filename is None: # finds the last saved object
+        if filename is None: # tries to find the last saved object; not guaranteed to work
             try:
                 filename =  max(glob.iglob(os.path.join(get_todays_data_path(),'*_%s.json' %cls._append)),
                                         key=os.path.getctime)
@@ -88,7 +75,7 @@ class Measurement:
         with h5py.File(filename, 'r') as f:
             for key in f.keys():
                 if key not in unwanted_keys:
-                    setattr(self, self._save_dict[key], f[key][:]) # converts to numpy array. Must convert back to right keys using _save_dict
+                    setattr(self, key, f[key][:]) # converts to numpy array.
 
 
     def _load_instruments(self, instruments={}):
@@ -140,7 +127,7 @@ class Measurement:
         self._save(path, filename)
 
 
-    def _save(self, path = '.', filename=None, compress=True):
+    def _save(self, path = '.', filename=None):
         '''
         Saves data. numpy arrays are saved to one file as hdf5,
         everything else is saved to JSON
@@ -157,33 +144,41 @@ class Measurement:
 
         filename = os.path.join(path, filename)
 
-        if compress:
-            ## Figure out what to save as JSON vs HDF5 - only looks one level deep for now.
-            json_dict = {}
-            hdf5_dict = {}
-            for key, value in self._save_dict.items(): # key = name we want to save with, value = actual name of variable
-                if type(getattr(self,value)) is np.ndarray: # checks if this variable is a numpy array
-                    hdf5_dict[key] = value # Numpy arrays will get converted to hdf5
-                else:
-                    json_dict[key] = value # everything else gets saved to JSON
-        else:
-            json_dict = self._save_dict
+        # if compress:
+        #     ## Figure out what to save as JSON vs HDF5 - only looks one level deep for now.
+        #     json_dict = {}
+        #     hdf5_dict = {}
+        #     for key, value in self.__dict__.items(): # key = name we want to save with, value = actual name of variable
+        #         if type(getattr(self,value)) is np.ndarray: # checks if this variable is a numpy array
+        #             hdf5_dict[key] = value # Numpy arrays will get converted to hdf5
+        #         else:
+        #             json_dict[key] = value # everything else gets saved to JSON
+        # else:
+        #     json_dict = self.__dict__
 
-        self._save_json(json_dict, filename)
-        self._save_hdf5(hdf5_dict, filename)
+        self._save_json(filename)
+        self._save_hdf5(filename)
 
 
-    def _save_hdf5(self, hdf5_dict, filename):
+    def _save_hdf5(self, filename):
+        '''
+        Save numpy arrays to h5py.
+        '''
         with h5py.File(filename+'.h5', 'w') as f:
-            for key, value in hdf5_dict.items():
-                dset = f.create_dataset(key, data=getattr(self, value),
-                    compression = 'gzip', compression_opts=9)
+            for key, value in self.__dict__.items():
+                if type(value) is np.ndarray:
+                    d = f.create_dataset(key, value.shape,
+                        compression = 'gzip', compression_opts=9
+                        )
+                    d.set_fill_value = np.nan
+                    d[...] = value
 
 
-    def _save_json(self, json_dict, filename):
+    def _save_json(self, filename):
         '''
         Saves an object to JSON. Specify a custom filename,
         or use the `filename` variable under that object.
+        Through __getstate__, ignores any numpy arrays when saving.
         '''
         if not exists(filename+'.json'):
             obj_string = jsp.encode(self)

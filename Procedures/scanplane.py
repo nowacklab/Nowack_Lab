@@ -77,29 +77,6 @@ class Scanplane(Measurement):
         self.C = np.full(self.X.shape, np.nan)
 
 
-        self._save_dict.update({
-            'timestamp': 'timestamp',
-            'end time': 'end_time',
-            'piezos': 'piezos',
-            'Montana': 'montana',
-            'squid array': 'squidarray',
-            'preamp': 'preamp',
-            'scan rate':'scan_rate',
-            'AC X voltage': 'Vac_x',
-            'AC Y voltage': 'Vac_y',
-            'squid lockin': 'lockin_squid',
-            'capacitance lockin': 'lockin_cap',
-            'attocubes': 'atto',
-            'V': 'V',
-            'C': 'C',
-            'plane': 'plane',
-            'span': 'span',
-            'center': 'center',
-            'X': 'X',
-            'Y': 'Y'
-        })
-
-
     def do(self, fast_axis = 'x', linear=True): # linear True = sweep in lines, False sweep over plane surface
         ## Start time and temperature
         tstart = time.time()

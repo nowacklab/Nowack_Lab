@@ -36,16 +36,6 @@ class Mod2D(Measurement):
 
         display.clear_output()
 
-        self._save_dict.update({
-            'timestamp': 'timestamp',
-            'IV': 'IV',
-            'Imod span': 'Imodspan',
-            'Imod step': 'Imodstep',
-            'V': 'V',
-            'notes': 'notes',
-            'Imod': 'Imod'
-            })
-
 
     def calc_ramp(self):
         self.numpts = int(self.Imodspan/self.Imodstep)

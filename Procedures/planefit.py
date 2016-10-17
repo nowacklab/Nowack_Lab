@@ -48,23 +48,6 @@ class Planefit(Measurement):
         self.X, self.Y = np.meshgrid(self.x, self.y)
         self.Z = np.nan*self.X # makes array of nans same size as grid
 
-        self._save_dict.update({
-            'timestamp': 'timestamp',
-            'a': 'a',
-            'b': 'b',
-            'c': 'c',
-            'span': 'span',
-            'center': 'center',
-            'numpts': 'numpts',
-            'piezos': 'piezos',
-            'montana': 'montana',
-            'cap input': 'cap_input',
-            'max Vz': 'Vz_max',
-            'X': 'X',
-            'Y': 'Y',
-            'Z': 'Z'
-        })
-
 
     def calculate_plane(self, no_outliers=True):
         '''
@@ -156,18 +139,6 @@ class Planefit(Measurement):
         If no json_file specified, will load the last plane taken.
         Useful if you lose the object while scanning.
         '''
-        if json_file is None:
-            # finds the newest plane saved as json
-            try:
-                json_file =  max(glob.iglob(os.path.join(get_todays_data_path(),'*_plane.json')),
-                                        key=os.path.getctime)
-            except: # we must have taken one during the previous day's work
-                folders = list(glob.iglob(os.path.join(get_todays_data_path(),'..','*')))
-                # -2 should be the previous day (-1 is today)
-                json_file =  max(glob.iglob(os.path.join(folders[-2],'*_plane.json')),
-                                        key=os.path.getctime)
-
-        unwanted_keys += cls.instrument_list
         obj = super(Planefit, cls).load(json_file, instruments, unwanted_keys)
         obj.instruments = instruments
 
@@ -186,7 +157,7 @@ class Planefit(Measurement):
 
     def plot(self):
         from mpl_toolkits.mplot3d import Axes3D
-        fig = plt.figure()
+        self.fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
 
         X = self.X
@@ -214,9 +185,8 @@ class Planefit(Measurement):
 
         self._save(get_todays_data_path(), self.filename)
 
-        if savefig:
-            self.plot()
-            plt.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
+        if savefig and hasattr(self, fig):
+            self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
 
 
     def surface(self, x, y):

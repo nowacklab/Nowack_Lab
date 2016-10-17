@@ -71,20 +71,6 @@ class SquidIV(Measurement):
 
         display.clear_output()
 
-        self._save_dict.update({
-            'timestamp': 'timestamp',
-            'Rbias': 'Rbias',
-            'Rbias_mod': 'Rbias_mod',
-            'Imod': 'Imod',
-            'Irampspan': 'Irampspan',
-            'Irampstep': 'Irampstep',
-            'V': 'V',
-            'I': 'I',
-            'rate': 'rate',
-            'preamp': 'preamp',
-            'notes': 'notes'
-        })
-
 
     def calc_ramp(self):
         self.numpts = int(self.Irampspan/self.Irampstep)

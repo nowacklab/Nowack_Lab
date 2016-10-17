@@ -29,19 +29,6 @@ class DaqSpectrum(Measurement):
         for arg in ['measure_time','measure_freq','averages']:
             setattr(self, arg, eval(arg))
 
-        self._save_dict.update({
-            'timestamp': 'timestamp',
-            'V': 'V',
-            't': 't',
-            'average PSD': 'psdAve',
-            'averages': 'averages',
-            'measure time': 'measure_time',
-            'measure freq': 'measure_freq',
-            'notes': 'notes',
-            'daq': 'daq',
-            'preamp': 'preamp',
-        })
-
 
     def do(self):
         self.setup_preamp()
