@@ -51,7 +51,7 @@ def plotline(ax, x, y, z):
     pass
 
 
-def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='', ylabel='', clabel='', fontsize=20):
+def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='', ylabel='', clabel='', fontsize=20, equal_aspect=True):
     '''
     Plots a 2D heatmap on axes ax using plt.imshow.
     x,y must be a meshgrid with 'ij' indexing. (list functionality to come?)
@@ -90,7 +90,8 @@ def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='', 
     cb.formatter.set_powerlimits((-2,2)) # only two decimal places!
     cb.set_label(clabel, fontsize=20)
 
-    aspect(ax, 1, absolute=False) # equal aspect ratio based on data scales
+    if equal_aspect:
+        aspect(ax, 1, absolute=False) # equal aspect ratio based on data scales
 
     ## Round ticks to the nearest integer, and only have three ticks per axis
     xticks = [math.ceil(x.min()), int((x.min()+x.max())/2), math.floor(x.max())]
@@ -101,7 +102,7 @@ def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='', 
 
     return im
 
-def update2D(im, z, center_at_zero=False):
+def update2D(im, z, center_at_zero=False, equal_aspect=True):
     '''
     Update image data of a 2D plot.
     Pass in the image returned by plot2D.
@@ -115,7 +116,8 @@ def update2D(im, z, center_at_zero=False):
     im.set_array(zm) # no transpose if xy indexing!!
 
     ## Fix aspect ratio
-    aspect(im.axes, 1, absolute=False) # equal aspect ratio
+    if equal_aspect:
+        aspect(im.axes, 1, absolute=False) # equal aspect ratio
 
     ## Adjust colorbar limits accordingly
     if not center_at_zero:
