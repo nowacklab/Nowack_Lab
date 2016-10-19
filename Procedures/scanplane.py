@@ -252,7 +252,7 @@ class Scanplane(Measurement):
                                         title = self.filename,
                                         xlabel = label,
                                         ylabel = label,
-                                        clabel = r'DC $\Phi_0$'
+                                        clabel = r'DC $\phi_0$'
                                     )
 
         ## AC x
@@ -265,7 +265,7 @@ class Scanplane(Measurement):
                                         title = self.filename,
                                         xlabel = label,
                                         ylabel = label,
-                                        clabel = r'AC X $\Phi_0$'
+                                        clabel = r'AC X $\phi_0$'
                                     )
 
         ## AC y
@@ -278,7 +278,7 @@ class Scanplane(Measurement):
                                         title = self.filename,
                                         xlabel = label,
                                         ylabel = label,
-                                        clabel = r'AC Y $\Phi_0$'
+                                        clabel = r'AC Y $\phi_0$'
                                     )
 
         ## Capacitance

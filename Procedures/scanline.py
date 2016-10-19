@@ -108,21 +108,21 @@ class Scanline(Measurement):
         self.ax_squid = self.fig.add_subplot(221)
         self.ax_squid.plot(self.Vout*conversions.Vpiezo_to_micron, self.Vdc*conversions.Vsquid_to_phi0, '-b')
         self.ax_squid.set_xlabel(label)
-        self.ax_squid.set_ylabel('DC $\Phi_0$')
+        self.ax_squid.set_ylabel('DC $\phi_0$')
         self.ax_squid.set_title(self.filename)
 
         ## AC in-phase
         self.ax_squid = self.fig.add_subplot(223)
         self.ax_squid.plot(self.Vout*conversions.Vpiezo_to_micron, self.Vac_x*conversions.Vsquid_to_phi0, '-b')
         self.ax_squid.set_xlabel(label)
-        self.ax_squid.set_ylabel('AC X $\Phi_0$')
+        self.ax_squid.set_ylabel('AC X $\phi_0$')
         self.ax_squid.set_title(self.filename)
 
         ## AC out-of-phase
         self.ax_squid = self.fig.add_subplot(224)
         self.ax_squid.plot(self.Vout*conversions.Vpiezo_to_micron, self.Vac_y*conversions.Vsquid_to_phi0, '-b')
         self.ax_squid.set_xlabel(label)
-        self.ax_squid.set_ylabel('AC Y $\Phi_0$')
+        self.ax_squid.set_ylabel('AC Y $\phi_0$')
         self.ax_squid.set_title(self.filename)
 
         ## Capacitance

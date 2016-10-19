@@ -9,7 +9,6 @@ from . import squidIV
 from ..Utilities.plotting import plot_mpl
 from ..Utilities.save import Measurement, get_todays_data_path
 
-
 class Mod2D(Measurement):
     notes = ''
     _append = 'mod2D'
@@ -48,20 +47,19 @@ class Mod2D(Measurement):
         self.IV.V = self.IV.V*0
 
         self.param_prompt() # Check parameters
-        self.setup_plot()
 
         for i in range(len(self.Imod)):
             self.IV.Imod = self.Imod[i]
             self.IV.do_IV()
+            self.plot()
             self.axIV.clear()
             self.IV.plot(self.axIV)
             self.V[:][i] = self.IV.V
-            self.plot()
             self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
         self.IV.daq.zero() # zero everything
 
         self.notes = input('Notes for this mod2D (q to quit without saving): ')
-        if inp != 'q':
+        if self.notes != 'q':
             self.save()
 
     def param_prompt(self):
@@ -99,9 +97,7 @@ class Mod2D(Measurement):
         '''
         Plot the 2D mod image
         '''
-        try:
-            self.im # see if this exists
-        except:
+        if not hasattr(self, 'im'):
             self.setup_plot()
         plot_mpl.update2D(self.im, self.V)
 
@@ -124,7 +120,6 @@ class Mod2D(Measurement):
         '''
         self.fig, (self.axIV, self.ax2D) = plt.subplots(2,1,figsize=(7,7),gridspec_kw = {'height_ratios':[1, 3]})
         self.fig.suptitle(self.filename+'\n'+self.notes)
-
         ## Set up 2D plot
         self.im = plot_mpl.plot2D(self.ax2D,
                                 self.IV.I*1e6,

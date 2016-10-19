@@ -180,9 +180,11 @@ class SR830():
 
     def auto_gain(self):
         self.write('AGAN')
+        time.sleep(5) # let it finish
 
     def auto_phase(self):
         self.write('APHS')
+        time.sleep(5) # let it finish
 
     def dc_coupling(self):
         self.write('ICPL1')
