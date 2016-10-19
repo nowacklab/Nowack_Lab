@@ -42,9 +42,3 @@ package_path = os.path.join(os.getcwd(),'Utilities','custom.js')
 notebook_path = os.path.join(site_packages, 'notebook', 'static', 'custom', 'custom.js')
 
 shutil.copyfile(package_path, notebook_path)
-
-## Add startup script to automate imports
-package_path = os.path.join(os.getcwd(),'Utilities','startup.py')
-ipython_path = os.path.join(home, '.ipython', 'profile_default', 'startup', 'startup.py')
-
-shutil.copyfile(package_path, ipython_path)
