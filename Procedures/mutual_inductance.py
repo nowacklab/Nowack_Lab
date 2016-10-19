@@ -11,7 +11,7 @@ class MutualInductance(Measurement):
         super().__init__('mut_ind')
         self.load_instruments(instruments)
         self.Rmeas = Rmeas
-        self.amps = np.linspace(.5, 5, numamps)
+        self.amps = np.linspace(.1e-3, 1e-3, numamps)*Rmeas # 100 uA to 1 mA
         self.freqs = np.logspace(np.log10(100), np.log10(20000), numfreqs) # 10 Hz to 20 kHz
         self.V = np.full((len(self.freqs), len(self.amps)), np.nan)
         self.I = np.full((len(self.freqs), len(self.amps)), np.nan)
