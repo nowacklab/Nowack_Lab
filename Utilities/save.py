@@ -3,29 +3,34 @@ import json, os, pickle, bz2, jsonpickle as jsp, numpy as np
 from datetime import datetime
 jspnp.register_handlers()
 from copy import copy
-
+import h5py, glob
 
 class Measurement:
     instrument_list = []
 
     def __init__(self, append=None):
-        self.save_dict = {}
-        self._replacement = '\\\\\\r'
         self.timestamp = ''
 
         self.make_timestamp_and_filename(append)
-        Measurement.__getstate__(self) # to create the save_dict without using overridden subclass getstate
+
 
     def __getstate__(self):
         '''
         Returns a dictionary of everything we want to save to JSON.
-        In a subclass, you must call this method and then update self.save_dict.
+        This excludes numpy arrays which are saved to HDF5
         '''
-        self.save_dict.update({'_replacement': self._replacement,
-                        'timestamp': self.timestamp,
-                        'filename': self.filename
-        })
-        return self.save_dict
+        variables = list(self.__dict__.keys())
+
+        ## If in the future, we want to blacklist some variables.
+        # for var in self._blacklist:
+        #     variables.remove(var)
+
+        ## Don't save numpy arrays to JSON
+        for var in variables.copy(): # copy so we don't change size of array during iteration
+            if type(getattr(self, var)) is np.ndarray:
+                variables.remove(var)
+
+        return {var: getattr(self, var) for var in variables}
 
 
     def __setstate__(self, state):
@@ -33,84 +38,60 @@ class Measurement:
         Default method for loading from JSON.
         `state` is a dictionary.
         '''
-
         self.__dict__.update(state)
 
 
-    def _compress(self, d = None):
+    @classmethod
+    def load(cls, filename=None, instruments={}, unwanted_keys=[]):
         '''
-        Compresses variables in the given dictionary.
-        By default, uses self.__dict__.
-        Right now, just numpy arrays are compressed.
+        Basic load method. Calls _load_json, not loading instruments, then loads from HDF5, then loads instruments.
+        Overwrite this for each subclass if necessary.
+        Pass in an array of the names of things you don't want to load.
+        By default, we won't load any instruments, but you can pass in an instruments dictionary to load them.
         '''
-        if d is None:
-            d = self.__dict__
+        if filename is None: # tries to find the last saved object; not guaranteed to work
+            try:
+                filename =  max(glob.iglob(os.path.join(get_todays_data_path(),'*_%s.json' %cls._append)),
+                                        key=os.path.getctime)
+            except: # we must have taken one during the previous day's work
+                folders = list(glob.iglob(os.path.join(get_todays_data_path(),'..','*')))
+                # -2 should be the previous day (-1 is today)
+                filename =  max(glob.iglob(os.path.join(folders[-2],'*_%s.json' %cls._append)),
+                                        key=os.path.getctime)
+            filename = filename.rpartition('.')[0] #remove extension
 
-        for key in list(d.keys()):
-            if type(d[key]) is np.ndarray:
-                if np.array_equiv(d[key], self._decompress_numpy(self._compress_numpy(d[key]))): # try compressing and decompressing to see if it works
-                    d[key] = self._compress_numpy(d[key])
-                else:
-                    print('Could not compress and decompress %s.%s!' %(self.__class__.__name__, key))
-            elif type(d[key]) is dict:
-                self._compress(d[key])
+        unwanted_keys += cls.instrument_list
+        obj = Measurement._load_json(filename+'.json', unwanted_keys)
+        obj._load_hdf5(filename+'.h5')
+        obj._load_instruments(instruments)
+
+        return obj
 
 
-    def _compress_numpy(self, array):
+    def _load_hdf5(self, filename, unwanted_keys = []):
         '''
-        Compresses a numpy array before saving to json
-        First pickles, and then compresses with bz2.
-        After that, it replaces all carriage returns \r to \\\\\\r,
-        a safe string that will not appear in a bytes object.
-        If for some reason it does, we tack on more \\!
+        Loads data from HDF5 files.
         '''
-        array = pickle.dumps(array)
-        array = bz2.compress(array)
-
-        ### OKAY DUMB STUFF AHEAD, YOU'VE BEEN WARNED
-        # We need to convert carriage returns to something safe
-        # or else JSON will throw them away!
-        self._replacement = '\\\\\\r' # Something that will not be in a bytes
-        while not array.find(self._replacement.encode('utf-8')): # In case it is...
-            self._replacement = '\\' + self._replacement # ...add more \\!!
-        array = array.replace(b'\r', self._replacement.encode('utf-8'))
-        return array
+        with h5py.File(filename, 'r') as f:
+            for key in f.keys():
+                if key not in unwanted_keys:
+                    setattr(self, key, f[key][:]) # converts to numpy array.
 
 
-    def _decompress(self, d=None):
+    def _load_instruments(self, instruments={}):
         '''
-        Decompresses variables in the given dictionary.
-        By default, uses self.__dict__.
-        Right now, just numpy arrays are decompressed.
+        Loads instruments from a dictionary.
+        Specify instruments needed using self.instrument_list.
         '''
-        if d is None:
-            d = self.__dict__
-
-        for key in list(d.keys()):
-            if type(d[key]) is bytes:
-                try:
-                    d[key] = self._decompress_numpy(d[key])
-                except:
-                    print('Decompression failed for %s.%s!' %(self.__class__.__name__, key))
-            elif type(d[key]) is dict:
-                self._decompress(d[key])
-
-
-    def _decompress_numpy(self, array):
-        '''
-        decompresses a numpy array loaded from json.
-        First undoes carriage returns BS, then bz2 compression, then unpickles.
-        '''
-
-        array = array.replace(self._replacement.encode('utf-8'), b'\r') #_replacement should exist
-
-        array = bz2.decompress(array)
-        array = pickle.loads(array)
-        return array
+        for instrument in self.instrument_list:
+            if instrument in instruments:
+                setattr(self, instrument, instruments[instrument])
+            else:
+                setattr(self, instrument, None)
 
 
     @staticmethod
-    def fromjson(json_file, unwanted_keys = [], decompress=True):
+    def _load_json(json_file, unwanted_keys = []):
         '''
         Loads an object from JSON.
         '''
@@ -124,39 +105,7 @@ class Measurement:
         obj_string = json.dumps(obj_dict)
         obj = jsp.decode(obj_string)
 
-        if decompress:
-            obj._decompress() # undo compression
-
         return obj
-
-
-    @classmethod
-    def load(cls, json_file, instruments={}, unwanted_keys=[]):
-        '''
-        Basic load method. Calls fromjson, not loading instruments, then loads instruments.
-        Overwrite this for each subclass if necessary.
-        Pass in an array of the names of things you don't want to load.
-        By default, we won't load any instruments, but you can pass in an instruments dictionary to load them.
-        '''
-        unwanted_keys += cls.instrument_list
-        obj = Measurement.fromjson(json_file, unwanted_keys)
-        obj.load_instruments(instruments)
-
-        append = json_file[json_file.rfind('_')+1:json_file.rfind('.')] # extracts the appended string
-        Measurement.__init__(obj, append) # to create save_dict
-        return obj
-
-
-    def load_instruments(self, instruments={}):
-        '''
-        Loads instruments from a dictionary.
-        Specify instruments needed using self.instrument_list.
-        '''
-        for instrument in self.instrument_list:
-            if instrument in instruments:
-                setattr(self, instrument, instruments[instrument])
-            else:
-                setattr(self, instrument, None)
 
 
     def make_timestamp_and_filename(self, append=None):
@@ -171,21 +120,18 @@ class Measurement:
             self.filename += '_' + append
 
 
-    def save(self):
+    def save(self, path= '.', filename=None):
         '''
-        Basic save method. Just calls tojson. Overwrite this for each subclass.
+        Basic save method. Just calls _save. Overwrite this for each subclass.
         '''
-        self.tojson()
+        self._save(path, filename)
 
 
-    def tojson(self, path = '.', filename=None, compress=True):
+    def _save(self, path = '.', filename=None):
         '''
-        Saves an object to JSON. Specify a custom filename,
-        or use the `filename` variable under that object.
+        Saves data. numpy arrays are saved to one file as hdf5,
+        everything else is saved to JSON
         '''
-        if compress:
-            self._compress() # compress the object
-
         if filename is None:
             try:
                 filename = self.filename # see if this exists
@@ -198,19 +144,57 @@ class Measurement:
 
         filename = os.path.join(path, filename)
 
-        inp='y'
-        if os.path.exists(filename+'.json'):
-            inp = input('File %s already exists! Overwrite? (y/n)' %filename)
-        if inp not in ('y','Y'):
-            print('File not saved!')
-        else:
+        # if compress:
+        #     ## Figure out what to save as JSON vs HDF5 - only looks one level deep for now.
+        #     json_dict = {}
+        #     hdf5_dict = {}
+        #     for key, value in self.__dict__.items(): # key = name we want to save with, value = actual name of variable
+        #         if type(getattr(self,value)) is np.ndarray: # checks if this variable is a numpy array
+        #             hdf5_dict[key] = value # Numpy arrays will get converted to hdf5
+        #         else:
+        #             json_dict[key] = value # everything else gets saved to JSON
+        # else:
+        #     json_dict = self.__dict__
+
+        self._save_json(filename)
+        self._save_hdf5(filename)
+
+
+    def _save_hdf5(self, filename):
+        '''
+        Save numpy arrays to h5py.
+        '''
+        with h5py.File(filename+'.h5', 'w') as f:
+            for key, value in self.__dict__.items():
+                if type(value) is np.ndarray:
+                    d = f.create_dataset(key, value.shape,
+                        compression = 'gzip', compression_opts=9
+                        )
+                    d.set_fill_value = np.nan
+                    d[...] = value
+
+
+    def _save_json(self, filename):
+        '''
+        Saves an object to JSON. Specify a custom filename,
+        or use the `filename` variable under that object.
+        Through __getstate__, ignores any numpy arrays when saving.
+        '''
+        if not exists(filename+'.json'):
             obj_string = jsp.encode(self)
             obj_dict = json.loads(obj_string)
             with open(filename+'.json', 'w', encoding='utf-8') as f:
                 json.dump(obj_dict, f, sort_keys=True, indent=4)
 
-        if compress:
-            self._decompress() # so we can still play with numpy arrays
+
+def exists(filename):
+    inp='y'
+    if os.path.exists(filename+'.json'):
+        inp = input('File %s already exists! Overwrite? (y/n)' %(filename+'.json'))
+    if inp not in ('y','Y'):
+        print('File not saved!')
+        return True
+    return False
 
 
 def get_cooldown_data_path():

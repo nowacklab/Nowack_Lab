@@ -43,12 +43,12 @@ class ANC350():
         del self.anc
 
     def __getstate__(self):
-        self.save_dict = {
+        self._save_dict = {
             'x attocube': self.x,
             'y attocube': self.y,
             'z attocube': self.z
         }
-        return self.save_dict
+        return self._save_dict
 
 
     def __setstate__(self, state):
@@ -88,7 +88,7 @@ class Positioner():
 
 
     def __getstate__(self):
-        self.save_dict = {
+        self._save_dict = {
             'stepping voltage': self.V,
             'stepping frequency': self.freq,
             'capacitance': self._C,
@@ -99,7 +99,7 @@ class Positioner():
             'num': self.num,
             'label': self.label
         }
-        return self.save_dict
+        return self._save_dict
 
 
     def __setstate__(self, state):

@@ -20,11 +20,12 @@ class Planefit(Measurement):
     a = np.nan
     b = np.nan
     c = np.nan
+    _append = 'plane'
 
     def __init__(self, instruments={}, cap_input=None, span=[400,400], center=[0,0], numpts=[4,4], Vz_max = None):
-        super().__init__('plane')
+        super().__init__(self._append)
 
-        self.load_instruments(instruments)
+        self._load_instruments(instruments)
         self.instruments = instruments
 
         self.span = span
@@ -47,24 +48,6 @@ class Planefit(Measurement):
         self.X, self.Y = np.meshgrid(self.x, self.y)
         self.Z = np.nan*self.X # makes array of nans same size as grid
 
-    def __getstate__(self):
-        super().__getstate__()
-        self.save_dict.update({"timestamp": self.timestamp,
-                          "a": self.a,
-                          "b": self.b,
-                          "c": self.c,
-                          "span": self.span,
-                          "center": self.center,
-                          "numpts": self.numpts,
-                          "piezos": self.piezos,
-                          "montana": self.montana,
-                          "cap_input": self.cap_input,
-                          "Vz_max": self.Vz_max,
-                          "X": self.X,
-                          "Y": self.Y,
-                          "Z": self.Z
-                      })
-        return self.save_dict
 
     def calculate_plane(self, no_outliers=True):
         '''
@@ -156,18 +139,6 @@ class Planefit(Measurement):
         If no json_file specified, will load the last plane taken.
         Useful if you lose the object while scanning.
         '''
-        if json_file is None:
-            # finds the newest plane saved as json
-            try:
-                json_file =  max(glob.iglob(os.path.join(get_todays_data_path(),'*_plane.json')),
-                                        key=os.path.getctime)
-            except: # we must have taken one during the previous day's work
-                folders = list(glob.iglob(os.path.join(get_todays_data_path(),'..','*')))
-                # -2 should be the previous day (-1 is today)
-                json_file =  max(glob.iglob(os.path.join(folders[-2],'*_plane.json')),
-                                        key=os.path.getctime)
-
-        unwanted_keys += cls.instrument_list
         obj = super(Planefit, cls).load(json_file, instruments, unwanted_keys)
         obj.instruments = instruments
 
@@ -186,7 +157,7 @@ class Planefit(Measurement):
 
     def plot(self):
         from mpl_toolkits.mplot3d import Axes3D
-        fig = plt.figure()
+        self.fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
 
         X = self.X
@@ -212,11 +183,10 @@ class Planefit(Measurement):
         '''
         logging.log('Plane saved. a=%.4f, b=%.4f, c=%.4f' %(self.a, self.b, self.c))
 
-        self.tojson(get_todays_data_path(), self.filename)
+        self._save(get_todays_data_path(), self.filename)
 
-        if savefig:
-            self.plot()
-            plt.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
+        if savefig and hasattr(self, fig):
+            self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
 
 
     def surface(self, x, y):
@@ -250,33 +220,3 @@ class Planefit(Measurement):
                     raise Exception('Plane now extends outside range of piezos! Move the attocubes and try again.')
         self.Z -= (old_c-self.c) # for example, if c decreased, then we want to subtract a positive number from the plane
         self.save(savefig=False)
-
-
-if __name__ == '__main__':
-    """ just testing fitting algorithm - pretty sure this is way out of date"""
-    import random
-    from mpl_toolkits.mplot3d import Axes3D
-
-    def gauss(X, a):
-        random.seed(random.random())
-        r = [(random.random()+1/2+x) for x in X]
-        return np.exp(-a*(r-X)**2)
-
-    xx, yy = np.meshgrid(np.linspace(0,10,10), np.linspace(0,10,10))
-    X = xx.flatten()
-    Y = yy.flatten()
-
-    Z = X + 2*Y + 3
-
-    Z = Z*gauss(Z,1)
-
-    planefit = Planefit(X, Y, Z)
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-
-    ax.scatter(X, Y, Z)
-
-    zz = planefit.plane(xx,yy)
-    ax.plot_surface(xx, yy, zz, alpha=0.2, color=[0,1,0])
-    plt.show()

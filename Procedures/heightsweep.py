@@ -14,11 +14,12 @@ class Heightsweep(Measurement):
     Vacx = np.nan
     Vacy = np.nan
     Vdc = np.nan
+    _append = 'heightsweep'
 
     def __init__(self, instruments = {}, x=0, y=0, z0=0, plane=None, inp_acx = 0, inp_acy=1, inp_dc = 2, scan_rate=120):
-        super().__init__('heightsweep')
+        super().__init__(self._append)
 
-        self.load_instruments(instruments)
+        self._load_instruments(instruments)
 
         self.x = x
         self.y = y
@@ -31,20 +32,6 @@ class Heightsweep(Measurement):
         self.inp_dc = 'ai%s' %inp_dc
         self.scan_rate = scan_rate
 
-    def __getstate__(self):
-        self.save_dict.update({"timestamp": self.timestamp,
-                          "piezos": self.piezos,
-                          "montana": self.montana,
-                          "x": self.x,
-                          "y": self.y,
-                          "z0": self.z0,
-                          "plane": self.plane,
-                          "inp_acx": self.inp_acx,
-                          "inp_acy": self.inp_acy,
-                          "inp_dc": self.inp_dc,
-                          "scan_rate": self.scan_rate
-                      })
-        return self.save_dict
 
     def do(self):
 
@@ -96,11 +83,11 @@ class Heightsweep(Measurement):
 
     def save(self, savefig=True):
         '''
-        Saves the heightsweep object to json.
+        Saves the heightsweep object.
         Also saves the figure as pdf, if wanted.
         '''
 
-        self.tojson(get_todays_data_path(), self.filename)
+        self._save(get_todays_data_path(), self.filename)
 
-        if savefig:
+        if savefig and hasattr(self, 'fig'):
             self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf')+'.pdf', bbox_inches='tight')

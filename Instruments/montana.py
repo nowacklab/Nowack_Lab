@@ -11,7 +11,7 @@ import time
 class Montana():
     _temperature = {}
     cryo = None
-    def __init__(self, ip='192.168.69.101', port=7773):
+    def __init__(self, ip='192.168.100.237', port=7773):
         directory_of_this_module = os.path.dirname(os.path.realpath(__file__))
         sys.path.append(directory_of_this_module) # so CryostationComm is discoverable
 
@@ -30,9 +30,9 @@ class Montana():
 
 
     def __getstate__(self):
-        self.save_dict = {"temperature": self._temperature,
+        self._save_dict = {"temperature": self._temperature,
                           "stability": self._temperature_stability}
-        return self.save_dict
+        return self._save_dict
 
 
     def __setstate__(self, state):

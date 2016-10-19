@@ -18,6 +18,7 @@ class Touchdown(Measurement):
     C = np.array([])
     V = np.array([])
     rs = np.array([])
+    C0 = 0
 
     lines_data = dict(
         V_app = np.array([]),
@@ -33,14 +34,14 @@ class Touchdown(Measurement):
     attoshift = 40 # move 20 um if no touchdown detected
     Vz_max = 400
     start_offset = 0
+    _append = 'td'
 
     def __init__(self, instruments={}, cap_input=None, planescan=False, Vz_max = None):
-        append = 'td'
         if planescan:
-            append += '_planescan'
-        super().__init__(append)
+            self._append += '_planescan'
+        super().__init__(self._append)
 
-        self.load_instruments(instruments)
+        self._load_instruments(instruments)
 
         if instruments:
             self.atto.z.freq = 200
@@ -49,25 +50,15 @@ class Touchdown(Measurement):
         self.z_piezo_step = 4
 
         self.Vz_max = Vz_max
-        self._init_arrays()
 
         if self.Vz_max is None and instruments:
             self.Vz_max = self.piezos.z.Vmax
+        else:
+            self.Vz_max = 200 # just for the sake of having something
+
+        self._init_arrays()
 
         self.planescan = planescan
-
-    def __getstate__(self):
-        self.save_dict.update({"timestamp": self.timestamp,
-                          "lockin_cap": self.lockin_cap,
-                          "atto": self.atto,
-                          "piezos": self.piezos,
-                          "daq": self.daq,
-                          "montana": self.montana,
-                          "V": self.V,
-                          "C": self.C,
-                          "C0": self.C0
-                      })
-        return self.save_dict
 
 
     def _init_arrays(self):
@@ -341,16 +332,16 @@ class Touchdown(Measurement):
 
     def save(self, savefig=True):
         '''
-        Saves the touchdown object to json.
+        Saves the touchdown object.
         Also saves the figure as a pdf, if wanted.
         '''
 
         path = os.path.join(get_todays_data_path(), 'extras')
         if not os.path.exists(path):
             os.makedirs(path)
-        self.tojson(path, self.filename)
+        self._save(path, self.filename)
 
-        if savefig:
+        if savefig and hasattr(self, 'fig'):
             self.fig.savefig(os.path.join(path, self.filename+'.pdf'), bbox_inches='tight')
 
 

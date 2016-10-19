@@ -18,32 +18,17 @@ class DaqSpectrum(Measurement):
     t = 1
     psdAve = 1
     notes = ''
+    _append = 'spectrum'
 
-    def __init__(self, instruments={}, input_chan=None, measure_time=0.5, measure_freq=256000, averages=30):
-        super().__init__('spectrum')
+    def __init__(self, instruments={}, input_chan=0, measure_time=0.5, measure_freq=256000, averages=30):
+        super().__init__(self._append)
 
-        self.load_instruments(instruments)
+        self._load_instruments(instruments)
 
         self.input_chan = 'ai%i' %input_chan
         for arg in ['measure_time','measure_freq','averages']:
             setattr(self, arg, eval(arg))
 
-
-    def __getstate__(self):
-        self.save_dict.update({"timestamp": self.timestamp,
-                          "V": self.V,
-                          "t": self.t,
-                          "f": self.f,
-                          "psdAve": self.psdAve,
-                          "averages": self.averages,
-                          "measure_time": self.measure_time,
-                          "measure_freq": self.measure_freq,
-                          "averages": self.averages,
-                          "notes": self.notes,
-                          "daq": self.daq,
-                          "preamp": self.preamp
-                      })
-        return self.save_dict
 
     def do(self):
         self.setup_preamp()
@@ -119,13 +104,13 @@ class DaqSpectrum(Measurement):
 
     def save(self, savefig=True):
         '''
-        Saves the daqspectrum object to json.
+        Saves the daqspectrum object.
         Also saves the figures as pdfs, if wanted.
         '''
 
-        self.tojson(get_todays_data_path(), self.filename)
+        self._save(get_todays_data_path(), self.filename)
 
-        if savefig:
+        if savefig and hasattr(self, 'fig_loglog'):
             self.fig_loglog.savefig(os.path.join(get_todays_data_path(), self.filename)+'_loglog.pdf')
             self.fig_semilog.savefig(os.path.join(get_todays_data_path(), self.filename)+'_semilog.pdf')
 

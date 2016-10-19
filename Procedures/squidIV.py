@@ -20,13 +20,14 @@ class SquidIV(Measurement):
     V = np.array([])
     I = np.array([])
     notes = ''
+    _append = 'IV'
 
     def __init__(self, instruments={}, squidout=None, squidin=None, currentin=None, modout=None, rate=90):
         '''
         Example: SquidIV({'daq': daq, 'preamp': preamp}, 0, 0, None, 90)
         To make an empty object, then just call SquidIV(). You can do this if you want to plot previously collected data.
         '''
-        super().__init__('IV')
+        super().__init__(self._append)
 
         self.squidout = 'ao%s' %squidout
         self.squidin = 'ai%s' %squidin
@@ -37,7 +38,7 @@ class SquidIV(Measurement):
 
         self.two_preamps = False
 
-        self.load_instruments(instruments)
+        self._load_instruments(instruments)
 
         if self.preamp_I is not None:
             self.two_preamps = True
@@ -70,32 +71,12 @@ class SquidIV(Measurement):
 
         display.clear_output()
 
-    def __getstate__(self):
-        self.save_dict = {"timestamp": self.timestamp,
-                          "Rbias": self.Rbias,
-                          "Rbias_mod": self.Rbias_mod,
-                          "Imod": self.Imod,
-                          "Irampspan": self.Irampspan,
-                          "Irampstep": self.Irampstep,
-                          "V": self.V,
-                          "I": self.I,
-                          "rate": self.rate,
-                          "preamp gain": self.preamp.gain,
-                          "preamp filter": self.preamp.filter,
-                          "notes": self.notes}
-        return self.save_dict
-
-
-    def __setstate__(self, state):
-        self.preamp.gain = state.pop('preamp gain')
-        self.preamp.filter = state.pop('preamp filter')
-        self.__dict__.update(state)
-
 
     def calc_ramp(self):
         self.numpts = int(self.Irampspan/self.Irampstep)
         Ibias = np.linspace(self.Irampcenter-self.Irampspan/2, self.Irampcenter+self.Irampspan/2, self.numpts) # Desired current ramp
         self.Vbias = Ibias*(self.Rbias+self.Rcold+self.Rmeas) # SQUID bias voltage
+
 
     def do(self):
         self.param_prompt() # Check parameters
@@ -185,13 +166,13 @@ class SquidIV(Measurement):
 
     def save(self, savefig=True):
         '''
-        Saves the squidIV object to json.
+        Saves the squidIV object.
         Also saves the figure as a pdf, if wanted.
         '''
 
-        self.tojson(get_todays_data_path(), self.filename)
+        self._save(get_todays_data_path(), self.filename)
 
-        if savefig:
+        if savefig and hasattr(self,'fig'):
             self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'))
 
     def setup_plot(self):

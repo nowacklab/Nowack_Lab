@@ -44,18 +44,18 @@ class NIDAQ():
 
 
     def __getstate__(self):
-        self.save_dict = {}
+        self._save_dict = {}
         for chan in self._daq.get_AI_channels():
-            self.save_dict[chan] = getattr(self, chan)
+            self._save_dict[chan] = getattr(self, chan)
         for chan in self._daq.get_AO_channels():
-            self.save_dict[chan] = getattr(self, chan)
-        self.save_dict.update({
+            self._save_dict[chan] = getattr(self, chan)
+        self._save_dict.update({
             'device name': self._dev_name,
             'input range': self._input_range,
             'output range': self._output_range
         })
 
-        return self.save_dict
+        return self._save_dict
 
 
     def __setstate__(self, state):

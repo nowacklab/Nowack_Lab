@@ -30,6 +30,7 @@ class Scanplane(Measurement):
     Vac_y_interp = np.array([])
 
     end_time = ''
+    _append = 'scan'
 
     def __init__(self, instruments={}, span=[800,800],
                         center=[0,0], numpts=[20,20], plane=None,
@@ -37,14 +38,14 @@ class Scanplane(Measurement):
                         inp_acx=2, inp_acy=3,
                         scan_rate=120, raster=False):
 
-        super().__init__('scan')
+        super().__init__(self._append)
 
         self.inp_dc = 'ai%s' %inp_dc
         self.inp_acx = 'ai%s' %inp_acx
         self.inp_acy = 'ai%s' %inp_acy
         self.inp_cap = 'ai%s' %inp_cap
 
-        self.load_instruments(instruments)
+        self._load_instruments(instruments)
 
         self.scan_rate = scan_rate
         self.raster = raster
@@ -74,31 +75,6 @@ class Scanplane(Measurement):
         self.Vac_x = np.full(self.X.shape, np.nan)
         self.Vac_y = np.full(self.X.shape, np.nan)
         self.C = np.full(self.X.shape, np.nan)
-
-
-    def __getstate__(self):
-        self.save_dict.update({"timestamp": self.timestamp,
-                          "end_time": self.end_time,
-                          "piezos": self.piezos,
-                          "scan_rate": self.scan_rate,
-                          "montana": self.montana,
-                          "squidarray": self.squidarray,
-                          "V": self.V,
-                          "Vac_x": self.Vac_x,
-                          "Vac_y": self.Vac_y,
-                          "C": self.C,
-                          "plane": self.plane,
-                          "span": self.span,
-                          "center": self.center,
-                          "numpts": self.numpts,
-                          "preamp": self.preamp,
-                          "lockin_squid": self.lockin_squid,
-                          "lockin_cap": self.lockin_cap,
-                          "atto": self.atto,
-                          "X": self.X,
-                          "Y": self.Y
-                      })
-        return self.save_dict
 
 
     def do(self, fast_axis = 'x', linear=True): # linear True = sweep in lines, False sweep over plane surface
@@ -352,13 +328,13 @@ class Scanplane(Measurement):
 
     def save(self, savefig=True):
         '''
-        Saves the scanplane object to json.
+        Saves the scanplane object.
         Also saves the figure as a pdf, if wanted.
         '''
 
-        self.tojson(get_todays_data_path(), self.filename)
+        self._save(get_todays_data_path(), self.filename)
 
-        if savefig:
+        if savefig and hasattr(self, 'fig'):
             self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
 
 
@@ -376,26 +352,21 @@ class Scanplane(Measurement):
 
 
 class Line(Measurement):
+    _append = 'scan_line'
     def __init__(self):
-        super().__init__('scan_line')
+        super().__init__(self._append)
 
-    def __getstate__(self):
-        self.save_dict.update({
-                            "idx": self.idx,
-                            "Vstart": self.Vstart,
-                            "V_squid_full": self.V_squid_full,
-                            "V_piezo_full": self.V_piezo_full,
-                            "scan_filename": self.scan_filename
-                      })
-        return self.save_dict
+        self._save_dict.update({
+            'idx': 'idx',
+            'Vstart': 'Vstart',
+            'full V squid': 'V_squid_full',
+            'full V piezo': 'V_piezo_full',
+            'filename of the scan': 'scan_filename'
+        })
 
     def save(self):
         path = os.path.join(get_todays_data_path(), 'extras')
         if not os.path.exists(path):
             os.makedirs(path)
 
-        self.tojson(path, self.filename)
-
-
-if __name__ == '__main__':
-    'hey'
+        self._save(path, self.filename)

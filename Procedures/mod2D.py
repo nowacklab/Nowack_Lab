@@ -11,13 +11,14 @@ from ..Utilities.save import Measurement, get_todays_data_path
 
 class Mod2D(Measurement):
     notes = ''
+    _append = 'mod2D'
     def __init__(self, instruments={}, squidout=None, squidin=None, modout=None, rate=900):
         '''
         Example: Mod2D({'daq': daq, 'preamp': preamp}, 'ao0','ai0','ao1', rate=900).
         To make an empty object, then just call Mod2D().
         You can do this if you want to plot previously collected data.
         '''
-        super().__init__('mod2D')
+        super().__init__(self._append)
 
         self.IV = squidIV.SquidIV(instruments, squidout, squidin, modout, rate=rate)
 
@@ -33,17 +34,6 @@ class Mod2D(Measurement):
         self.calc_ramp()
 
         display.clear_output()
-
-    def __getstate__(self):
-        self.save_dict.update({"timestamp": self.timestamp,
-                              "IV": self.IV,
-                              "Imodspan": self.Imodspan,
-                              "Imodstep": self.Imodstep,
-                              "V": self.V,
-                              "notes": self.notes,
-                              "Imod": self.Imod
-                          })
-        return self.save_dict
 
 
     def calc_ramp(self):
@@ -114,13 +104,13 @@ class Mod2D(Measurement):
 
     def save(self, savefig=True):
         '''
-        Saves the mod2d object to json.
+        Saves the mod2d object.
         Also saves the figure as a pdf, if wanted.
         '''
 
-        self.tojson(get_todays_data_path(), self.filename)
+        self._save(get_todays_data_path(), self.filename)
 
-        if savefig:
+        if savefig and hasattr(self, 'fig'):
             self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
 
 
