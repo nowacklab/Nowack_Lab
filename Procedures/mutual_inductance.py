@@ -9,23 +9,12 @@ class MutualInductance(Measurement):
 
     def __init__(self, instruments = {}, Rmeas=3172, numamps=10, numfreqs=10):
         super().__init__('mut_ind')
-        self.load_instruments(instruments)
+        self._load_instruments(instruments)
         self.Rmeas = Rmeas
         self.amps = np.linspace(.1e-3, 1e-3, numamps)*Rmeas # 100 uA to 1 mA
         self.freqs = np.logspace(np.log10(100), np.log10(20000), numfreqs) # 10 Hz to 20 kHz
         self.V = np.full((len(self.freqs), len(self.amps)), np.nan)
         self.I = np.full((len(self.freqs), len(self.amps)), np.nan)
-
-
-    def __getstate__(self):
-        self.save_dict.update({"V": self.V,
-                              "I": self.I,
-                              "amps": self.amps,
-                              "freqs": self.freqs,
-                              "Rmeas": self.Rmeas,
-                              "squidarray": self.squidarray
-                          })
-        return self.save_dict
 
 
     def do(self):
@@ -61,7 +50,7 @@ class MutualInductance(Measurement):
 
 
     def save(self, savefig=True):
-        self.tojson(get_todays_data_path(), self.filename)
+        self._save(get_todays_data_path(), self.filename)
 
         if savefig and hasattr(self, 'fig'):
             self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
