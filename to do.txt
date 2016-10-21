@@ -2,6 +2,14 @@ Maybe take 4-5 points at a time for touchdown?
 
 Allow for sig_in_ac_x = None
 
+- Bokeh
+    - To figure out:
+        - Latex labels (at least subscripts?)
+            - In development
+        - Push the colorscale reset button programatically
+        - Trusted notebooks between computers
+        - Keep updated plots saved
+
 
 Fix attocube communication bug - delete object?
 
