@@ -3,7 +3,7 @@ import json, os, pickle, bz2, jsonpickle as jsp, numpy as np
 from datetime import datetime
 jspnp.register_handlers()
 from copy import copy
-import h5py, glob
+import h5py, glob, matplotlib
 
 class Measurement:
     instrument_list = []
@@ -27,7 +27,7 @@ class Measurement:
 
         ## Don't save numpy arrays to JSON
         for var in variables.copy(): # copy so we don't change size of array during iteration
-            if type(getattr(self, var)) is np.ndarray:
+            if type(getattr(self, var)) in [np.ndarray,  matplotlib.axes.Subplot, matplotlib.figure.Figure, matplotlib.image.AxesImage]:
                 variables.remove(var)
 
         return {var: getattr(self, var) for var in variables}
@@ -158,6 +158,11 @@ class Measurement:
 
         self._save_json(filename)
         self._save_hdf5(filename)
+
+        try:
+            Measurement.load(filename)
+        except:
+            raise Exception('Reloading failed, ut object was saved!')
 
 
     def _save_hdf5(self, filename):
