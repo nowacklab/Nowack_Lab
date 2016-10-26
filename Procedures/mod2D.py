@@ -20,7 +20,7 @@ class Mod2D(Measurement):
         '''
         super().__init__(self._append)
 
-        self.IV = squidIV.SquidIV(instruments, squidout, squidin, modout, rate=rate)
+        self.IV = squidIV.SquidIV(instruments, squidout=squidout, squidin=squidin, modout=modout, rate=rate)
 
         self.IV.Rbias = 2e3 # Ohm # 1k cold bias resistors on the SQUID testing PCB
         self.IV.Rbias_mod = 2e3 # Ohm # 1k cold bias resistors on the SQUID testing PCB
@@ -53,7 +53,8 @@ class Mod2D(Measurement):
             self.IV.do_IV()
             self.plot()
             self.axIV.clear()
-            self.IV.plot(self.axIV)
+            self.axIV2.clear()
+            self.IV.plot(self.axIV, self.axIV2)
             self.V[:][i] = self.IV.V
             self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
         self.IV.daq.zero() # zero everything
@@ -99,7 +100,8 @@ class Mod2D(Measurement):
         '''
         if not hasattr(self, 'im'):
             self.setup_plot()
-        plot_mpl.update2D(self.im, self.V)
+        plot_mpl.update2D(self.im, self.V, equal_aspect=False)
+        plot_mpl.aspect(self.ax2D, 1)
 
 
     def save(self, savefig=True):
@@ -119,6 +121,7 @@ class Mod2D(Measurement):
         Set up the figure. 2D mod image and last IV trace.
         '''
         self.fig, (self.axIV, self.ax2D) = plt.subplots(2,1,figsize=(7,7),gridspec_kw = {'height_ratios':[1, 3]})
+        self.axIV2 = self.axIV.twinx() # for dV/dI
         self.fig.suptitle(self.filename+'\n'+self.notes)
         ## Set up 2D plot
         self.im = plot_mpl.plot2D(self.ax2D,
@@ -128,5 +131,6 @@ class Mod2D(Measurement):
                                 xlabel=r'$I_{\rm{bias}} = V_{\rm{bias}}/R_{\rm{bias}}$ ($\mu \rm A$)',
                                 ylabel = r'$I_{\rm{mod}} = V_{\rm{mod}}/R_{\rm{mod}}$ ($\mu \rm A$)',
                                 clabel = r'$V_{\rm{squid}}$ $(\rm V)$',
-                                fontsize=20
+                                fontsize=20,
+                                equal_aspect=False
                             )

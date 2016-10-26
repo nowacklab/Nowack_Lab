@@ -7,11 +7,11 @@ from ..Utilities.plotting import plot_mpl
 class MutualInductance(Measurement):
     instrument_list = ['squidarray','lockin_squid', 'lockin_I']
 
-    def __init__(self, instruments = {}, Rmeas=3172, numamps=10, numfreqs=10):
+    def __init__(self, instruments = {}, Rmeas=3172, Istart=5e-6, Iend=30e-6, numamps=10, numfreqs=10):
         super().__init__('mut_ind')
         self._load_instruments(instruments)
         self.Rmeas = Rmeas
-        self.amps = np.linspace(.1e-3, 1e-3, numamps)*Rmeas # 100 uA to 1 mA
+        self.amps = np.linspace(Istart, Iend, numamps)*Rmeas
         self.freqs = np.logspace(np.log10(100), np.log10(20000), numfreqs) # 10 Hz to 20 kHz
         self.V = np.full((len(self.freqs), len(self.amps)), np.nan)
         self.I = np.full((len(self.freqs), len(self.amps)), np.nan)
@@ -46,6 +46,7 @@ class MutualInductance(Measurement):
             self.ax_vs_freq.plot(self.freqs, self.V[:,j]*conversions.Vsquid_to_phi0/self.I[:,j], '.')
 
         plot_mpl.update2D(self.im, self.V*conversions.Vsquid_to_phi0/self.I, equal_aspect=False)
+        plot_mpl.aspect(self.ax_2D, 3)
         self.fig.canvas.draw()
 
 
@@ -67,4 +68,4 @@ class MutualInductance(Measurement):
         self.ax_vs_freq.set_ylabel('Mutual Inductance ($\phi_0$/A)')
 
         self.ax_2D = self.fig.add_subplot(122)
-        self.im = plot_mpl.plot2D(self.ax_2D, self.amps, self.freqs/1000, self.V*conversions.Vsquid_to_phi0/self.I, ylabel='Frequency (kHz)', xlabel='Amplitude (V)', clabel = 'Mutual inductance ($\phi_0$/A)', equal_aspect=False)
+        self.im = plot_mpl.plot2D(self.ax_2D, self.amps*1000, self.freqs/1000, self.V*conversions.Vsquid_to_phi0/self.I, ylabel='Frequency (kHz)', xlabel='Amplitude (mV)', clabel = 'Mutual inductance ($\phi_0$/A)', equal_aspect=False)

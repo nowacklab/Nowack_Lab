@@ -56,11 +56,9 @@ class SquidIV(Measurement):
 
         self.rate = rate # Hz # measurement rate of the daq
 
-        self.Rcold = 2e3+14 # Ohm # 1k cold bias resistors on the SQUID testing PCB & also 14 Ohm resistor in squid testing box
-        self.Rbias = 0
+        self.Rbias = 2000
         self.Rmeas = 0 # Ohm # determined by squid testing box
-        self.Rbias_mod = 1e3 # Ohm # Inside SQUID testing box
-        self.Rcold_mod = 2e3 # Ohm # 1k cold bias resistors on the SQUID testing PCB
+        self.Rbias_mod = 2e3 # Ohm # Inside SQUID testing box
         self.Imod = 0 # A # constant mod current
 
         self.Irampcenter = 0
@@ -75,7 +73,7 @@ class SquidIV(Measurement):
     def calc_ramp(self):
         self.numpts = int(self.Irampspan/self.Irampstep)
         Ibias = np.linspace(self.Irampcenter-self.Irampspan/2, self.Irampcenter+self.Irampspan/2, self.numpts) # Desired current ramp
-        self.Vbias = Ibias*(self.Rbias+self.Rcold+self.Rmeas) # SQUID bias voltage
+        self.Vbias = Ibias*(self.Rbias+self.Rmeas) # SQUID bias voltage
 
 
     def do(self):
@@ -101,7 +99,7 @@ class SquidIV(Measurement):
     def do_IV(self):
         """ Wrote this for mod2D so it doesn't plot """
         if self.modout != None:
-            setattr(self.daq, self.modout, self.Imod*(self.Rbias_mod+self.Rcold_mod)) # Set mod current
+            setattr(self.daq, self.modout, self.Imod*self.Rbias_mod) # Set mod current
 
         # Collect data
         in_chans = [self.squidin, self.currentin]
@@ -115,7 +113,7 @@ class SquidIV(Measurement):
         if self.two_preamps:
             self.I = np.array(received[self.currentin])/self.preamp_I.gain/self.Rmeas # Measure current from series resistor
         else:
-            self.I = self.Vbias/(self.Rbias + self.Rcold + self.Rmeas) # estimate current by assuming Rbias >> Rsquid
+            self.I = self.Vbias/(self.Rbias + self.Rmeas) # estimate current by assuming Rbias >> Rsquid
 
     def param_prompt(self):
         """ Check and confirm values of parameters """
@@ -148,11 +146,12 @@ class SquidIV(Measurement):
                 display.clear_output()
                 print('Invalid command\n')
 
-    def plot(self, ax=None):
+    def plot(self, ax=None, ax2=None):
         if ax == None:
             if not hasattr(self, 'ax'):
                 self.setup_plot()
             ax = self.ax
+            ax2 = ax.twinx()
 
         ax.plot(self.I*1e6, self.V, 'k-')
         ax.set_title(self.filename+'\n'+self.notes) # NEED DESCRIPTIVE TITLE
@@ -162,6 +161,14 @@ class SquidIV(Measurement):
             ax.set_xlabel(r'$I_{\rm{bias}} = V_{\rm{bias}}/R_{\rm{bias}}$ ($\mu \rm A$)', fontsize=20)
         ax.set_ylabel(r'$V_{\rm{squid}}$ (V)', fontsize=20)
         ax.ticklabel_format(style='sci', axis='y', scilimits=(-3,3))
+
+        ## To plot dVdI
+        dx = np.diff(self.I)[0]*3 # all differences are the same, so take the 0th. Made this 3 times larger to accentuate peaks
+        dvdi = np.gradient(self.V, dx)
+        ax2.plot(self.I*1e6, dvdi, 'r-')
+        ax2.set_ylabel(r'$dV_{squid}/dI_{bias}$ (Ohm)', fontsize=20, color='r')
+        for tl in ax2.get_yticklabels():
+            tl.set_color('r')
         return ax
 
     def save(self, savefig=True):
