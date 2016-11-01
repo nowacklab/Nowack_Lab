@@ -42,3 +42,11 @@ package_path = os.path.join(os.getcwd(),'Utilities','custom.js')
 notebook_path = os.path.join(site_packages, 'notebook', 'static', 'custom', 'custom.js')
 
 shutil.copyfile(package_path, notebook_path)
+
+## Clean up startup if exists.
+ipython_path = os.path.join(home, '.ipython', 'profile_default', 'startup', 'startup.py')
+
+try:
+    os.remove(ipython_path)
+except:
+    pass
