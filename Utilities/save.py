@@ -162,7 +162,7 @@ class Measurement:
         try:
             Measurement.load(filename)
         except:
-            raise Exception('Reloading failed, ut object was saved!')
+            raise Exception('Reloading failed, but object was saved!')
 
 
     def _save_hdf5(self, filename):
