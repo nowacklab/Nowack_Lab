@@ -158,7 +158,7 @@ class Planefit(Measurement):
     def plot(self):
         from mpl_toolkits.mplot3d import Axes3D
         self.fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
+        ax = self.fig.add_subplot(111, projection='3d')
 
         X = self.X
         Y = self.Y

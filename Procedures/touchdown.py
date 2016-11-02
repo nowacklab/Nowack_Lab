@@ -9,7 +9,7 @@ from ..Instruments import nidaq, preamp, montana
 from ..Utilities.save import Measurement, get_todays_data_path
 from ..Utilities import conversions, logging
 
-_Z_PIEZO_STEP = 1
+_Z_PIEZO_STEP = 4
 
 class Touchdown(Measurement):
     instrument_list = ['lockin_cap','atto','piezos','daq','montana']
@@ -31,7 +31,7 @@ class Touchdown(Measurement):
     title = ''
 
     numsteps = 100
-    numfit = 4       # number of points to fit line to while collecting data
+    numfit = 5       # number of points to fit line to while collecting data
     attoshift = 40 # move 20 um if no touchdown detected
     Vz_max = 400
     start_offset = 0
@@ -52,10 +52,11 @@ class Touchdown(Measurement):
 
         self.Vz_max = Vz_max
 
-        if self.Vz_max is None and instruments:
-            self.Vz_max = self.piezos.z.Vmax
-        else:
-            self.Vz_max = 200 # just for the sake of having something
+        if Vz_max is None:
+            if instruments:
+                self.Vz_max = self.piezos.z.Vmax
+            else:
+                self.Vz_max = 200 # just for the sake of having something
 
         self._init_arrays()
 
@@ -94,8 +95,8 @@ class Touchdown(Measurement):
         if i > self.numfit + self.start_offset:
             m,b,r,_,_ = linregress(self.V[i-self.numfit:i], self.C[i-self.numfit:i])
             self.rs[i] = r # assigns correlation coefficient for the last data point
-            for j in range(2):
-                if self.rs[i-j] < corr_coeff_thresh: #if any of the last two fits are bad...
+            for j in range(3):
+                if self.rs[i-j] < corr_coeff_thresh: #if any of the last three fits are bad...
                     return False # no touchdown
                 self.good_r_index = i-j # where good correlation starts
             if self.C[i] != np.nanmax(self.C):

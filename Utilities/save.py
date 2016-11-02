@@ -27,7 +27,7 @@ class Measurement:
 
         for var in variables.copy(): # copy so we don't change size of array during iteration
             ## Don't save numpy arrays to JSON
-            if type(getattr(self, var)) is [np.ndarray]:
+            if type(getattr(self, var)) is np.ndarray:
                 variables.remove(var)
 
             ## Don't save matplotlib objects to JSON
