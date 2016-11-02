@@ -9,6 +9,7 @@ from ..Instruments import nidaq, preamp, montana
 from ..Utilities.save import Measurement, get_todays_data_path
 from ..Utilities import conversions, logging
 
+_Z_PIEZO_STEP = 1
 
 class Touchdown(Measurement):
     instrument_list = ['lockin_cap','atto','piezos','daq','montana']
@@ -30,7 +31,7 @@ class Touchdown(Measurement):
     title = ''
 
     numsteps = 100
-    numfit = 5       # number of points to fit line to while collecting data
+    numfit = 4       # number of points to fit line to while collecting data
     attoshift = 40 # move 20 um if no touchdown detected
     Vz_max = 400
     start_offset = 0
@@ -47,7 +48,7 @@ class Touchdown(Measurement):
             self.atto.z.freq = 200
             self.configure_lockin(cap_input)
 
-        self.z_piezo_step = 4
+        self.z_piezo_step = _Z_PIEZO_STEP
 
         self.Vz_max = Vz_max
 
@@ -82,7 +83,7 @@ class Touchdown(Measurement):
             if inp == 'q':
                 raise Exception('quit by user')
 
-    def check_touchdown(self, corr_coeff_thresh=0.95):
+    def check_touchdown(self, corr_coeff_thresh=0.9):
         '''
         Checks for touchdown.
         Fits a line including the last five data points taken.
@@ -93,8 +94,8 @@ class Touchdown(Measurement):
         if i > self.numfit + self.start_offset:
             m,b,r,_,_ = linregress(self.V[i-self.numfit:i], self.C[i-self.numfit:i])
             self.rs[i] = r # assigns correlation coefficient for the last data point
-            for j in range(3):
-                if self.rs[i-j] < 0.97: #if any of the last three fits are bad...
+            for j in range(2):
+                if self.rs[i-j] < corr_coeff_thresh: #if any of the last two fits are bad...
                     return False # no touchdown
                 self.good_r_index = i-j # where good correlation starts
             if self.C[i] != np.nanmax(self.C):
@@ -225,7 +226,7 @@ class Touchdown(Measurement):
                             self.lines_data['C_td'] = []
                             if slow_scan:
                                 slow_scan = False
-                                self.z_piezo_step = 4
+                                self.z_piezo_step = _Z_PIEZO_STEP
                                 self._init_arrays()
                                 self.setup_plot()
 
@@ -238,6 +239,7 @@ class Touchdown(Measurement):
                 if not self.touchdown:
                     self.piezos.z.V = -self.Vz_max # before moving attos, make sure we're far away from the sample!
                     start = -self.Vz_max # we should start here next time
+                    self.check_balance() # make sure we didn't crash
                     self.atto.z.move(self.attoshift)
                     time.sleep(2) # was getting weird capacitance values immediately after moving; wait a bit
                     while getattr(self.daq, self.lockin_cap.ch1_daq_input) > 10: # overloading

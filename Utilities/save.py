@@ -25,10 +25,19 @@ class Measurement:
         # for var in self._blacklist:
         #     variables.remove(var)
 
-        ## Don't save numpy arrays to JSON
         for var in variables.copy(): # copy so we don't change size of array during iteration
-            if type(getattr(self, var)) in [np.ndarray,  matplotlib.axes.Subplot, matplotlib.figure.Figure, matplotlib.image.AxesImage]:
+            ## Don't save numpy arrays to JSON
+            if type(getattr(self, var)) is [np.ndarray]:
                 variables.remove(var)
+
+            ## Don't save matplotlib objects to JSON
+            try:
+                m = getattr(self,var).__module__
+                m = m[:m.find('.')] # will strip out "matplotlib"
+                if m == 'matplotlib':
+                    variables.remove(var)
+            except:
+                pass # built-in types won't have __module__
 
         return {var: getattr(self, var) for var in variables}
 
