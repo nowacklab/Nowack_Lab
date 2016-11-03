@@ -58,6 +58,7 @@ class Measurement:
         Pass in an array of the names of things you don't want to load.
         By default, we won't load any instruments, but you can pass in an instruments dictionary to load them.
         '''
+
         if filename is None: # tries to find the last saved object; not guaranteed to work
             try:
                 filename =  max(glob.iglob(os.path.join(get_todays_data_path(),'*_%s.json' %cls._append)),

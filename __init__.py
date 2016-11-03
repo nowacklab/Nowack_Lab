@@ -23,6 +23,7 @@ get_ipython().magic('matplotlib notebook')
 ## Because I don't know how to do this otherwise, importing all functions and modules that we want in the namespace.
 from Nowack_Lab.Utilities import utilities, save, logging, conversions, anim
 from Nowack_Lab.Utilities.plotting import plot_mpl
+from Nowack_Lab.Utilities.save import Measurement
 from Nowack_Lab.Procedures.daqspectrum import DaqSpectrum
 from Nowack_Lab.Procedures.heightsweep import Heightsweep
 from Nowack_Lab.Procedures.mod2D import Mod2D
@@ -34,6 +35,7 @@ from Nowack_Lab.Procedures.scanplane import Scanplane
 from Nowack_Lab.Procedures.squidIV import SquidIV
 from Nowack_Lab.Procedures.touchdown import Touchdown
 from Nowack_Lab.Instruments.attocube import Attocube
+from Nowack_Lab.Instruments.keithley import Keithley2400
 from Nowack_Lab.Instruments.montana import Montana
 from Nowack_Lab.Instruments.nidaq import NIDAQ
 from Nowack_Lab.Instruments.piezos import Piezos
