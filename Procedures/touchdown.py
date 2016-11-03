@@ -9,6 +9,7 @@ from ..Instruments import nidaq, preamp, montana
 from ..Utilities.save import Measurement, get_todays_data_path
 from ..Utilities import conversions, logging
 
+_Z_PIEZO_STEP = 4
 
 class Touchdown(Measurement):
     instrument_list = ['lockin_cap','atto','piezos','daq','montana']
@@ -47,14 +48,15 @@ class Touchdown(Measurement):
             self.atto.z.freq = 200
             self.configure_lockin(cap_input)
 
-        self.z_piezo_step = 4
+        self.z_piezo_step = _Z_PIEZO_STEP
 
         self.Vz_max = Vz_max
 
-        if self.Vz_max is None and instruments:
-            self.Vz_max = self.piezos.z.Vmax
-        else:
-            self.Vz_max = 200 # just for the sake of having something
+        if Vz_max is None:
+            if instruments:
+                self.Vz_max = self.piezos.z.Vmax
+            else:
+                self.Vz_max = 200 # just for the sake of having something
 
         self._init_arrays()
 
@@ -82,7 +84,7 @@ class Touchdown(Measurement):
             if inp == 'q':
                 raise Exception('quit by user')
 
-    def check_touchdown(self, corr_coeff_thresh=0.95):
+    def check_touchdown(self, corr_coeff_thresh=0.9):
         '''
         Checks for touchdown.
         Fits a line including the last five data points taken.
@@ -94,7 +96,7 @@ class Touchdown(Measurement):
             m,b,r,_,_ = linregress(self.V[i-self.numfit:i], self.C[i-self.numfit:i])
             self.rs[i] = r # assigns correlation coefficient for the last data point
             for j in range(3):
-                if self.rs[i-j] < 0.97: #if any of the last three fits are bad...
+                if self.rs[i-j] < corr_coeff_thresh: #if any of the last three fits are bad...
                     return False # no touchdown
                 self.good_r_index = i-j # where good correlation starts
             if self.C[i] != np.nanmax(self.C):
@@ -198,6 +200,9 @@ class Touchdown(Measurement):
 
                 if self.touchdown:
                     Vtd = self.get_touchdown_voltage()
+                    if Vtd == -1: # added 11/1/2016 to try to handle exceptions in calculating td voltage
+                        self.touchdown = False
+                        continue
                     self.title = 'Touchdown detected at %.2f V!' %Vtd
                     logging.log(self.title)
                     self.plot()
@@ -222,7 +227,7 @@ class Touchdown(Measurement):
                             self.lines_data['C_td'] = []
                             if slow_scan:
                                 slow_scan = False
-                                self.z_piezo_step = 4
+                                self.z_piezo_step = _Z_PIEZO_STEP
                                 self._init_arrays()
                                 self.setup_plot()
 
@@ -235,6 +240,7 @@ class Touchdown(Measurement):
                 if not self.touchdown:
                     self.piezos.z.V = -self.Vz_max # before moving attos, make sure we're far away from the sample!
                     start = -self.Vz_max # we should start here next time
+                    self.check_balance() # make sure we didn't crash
                     self.atto.z.move(self.attoshift)
                     time.sleep(2) # was getting weird capacitance values immediately after moving; wait a bit
                     while getattr(self.daq, self.lockin_cap.ch1_daq_input) > 10: # overloading
@@ -266,51 +272,57 @@ class Touchdown(Measurement):
         Considers minimizing slope in determining good approach fit.
         Returns the intersection of these two lines.
         '''
-        i3 = np.where(np.isnan(self.C))[0][0] # finds the location of the first nan (i.e. the last point taken)
-        V = self.V[:i3]
-        C = self.C[:i3]
+        try:
+            i3 = np.where(np.isnan(self.C))[0][0] # finds the location of the first nan (i.e. the last point taken)
+            V = self.V[:i3]
+            C = self.C[:i3]
 
-        ## How many lines to try to fit
-        N2 = len(C)+1-5 # last number is minimum number of points to fit
-        r2 = np.array([np.nan]*N2) # correlation coefficients go here
+            ## How many lines to try to fit
+            N2 = len(C)+1-5 # last number is minimum number of points to fit
+            r2 = np.array([np.nan]*N2) # correlation coefficients go here
 
-        ## Loop over fits of the touchdown curve
-        start = 1
-        for i in range(start, N2):
-            _, _, r2[i], _, _ = linregress(V[i:], C[i:])
+            ## Loop over fits of the touchdown curve
+            start = 1
+            for i in range(start, N2):
+                _, _, r2[i], _, _ = linregress(V[i:], C[i:])
 
-        ## find touchdown index and perform final fit
-        i = np.nanargmax(r2)-2 # this is where touchdown probably is, gave it a couple of extra points; it always seemed to need them
+            ## find touchdown index and perform final fit
+            i = np.nanargmax(r2)-2 # this is where touchdown probably is, gave it a couple of extra points; it always seemed to need them
 
-        ## Figure out how many lines to try to fit for approach curve
-        N1 = i+1-3 # last number is minimum number of points to fit for the approach curve
-        r1 = np.array([np.nan]*N1) # correlation coefficients go here
-        m1 = np.array([np.nan]*N1) # slopes go here
+            ## Figure out how many lines to try to fit for approach curve
+            N1 = i+1-3 # last number is minimum number of points to fit for the approach curve
+            r1 = np.array([np.nan]*N1) # correlation coefficients go here
+            m1 = np.array([np.nan]*N1) # slopes go here
 
-        ## Approach curve
-        k = i-3 # fit the approach curve ending this 2 points away from the touchdown curve
-        N1 = N1-3 # must adjust N1 by this same amount
-        for j in range(start, N1):
-            m1[j], b1, r1[j], _, _ = linregress(V[j:k], C[j:k])
+            ## Approach curve
+            k = i-3 # fit the approach curve ending this 2 points away from the touchdown curve
+            N1 = N1-3 # must adjust N1 by this same amount
+            for j in range(start, N1):
+                m1[j], b1, r1[j], _, _ = linregress(V[j:k], C[j:k])
 
-        ## Determine best approach curve
-        minimize_this = (1-r1)*1 + abs(m1)*100 # Two weight factors: how much we care that it's a good fit, how much we care that the slope is near zero.
-        j = np.nanargmin(minimize_this)
+            ## Determine best approach curve
+            minimize_this = (1-r1)*1 + abs(m1)*100 # Two weight factors: how much we care that it's a good fit, how much we care that the slope is near zero.
+            j = np.nanargmin(minimize_this)
 
-        ## Recalculate slopes and intercepts
-        m2, b2, r2, _, _ = linregress(V[i:], C[i:])
-        m1, b1, r1, _, _ = linregress(V[j:k], C[j:k])
+            ## Recalculate slopes and intercepts
+            m2, b2, r2, _, _ = linregress(V[i:], C[i:])
+            m1, b1, r1, _, _ = linregress(V[j:k], C[j:k])
 
-        self.lines_data['V_app'] = V[j:k]
-        self.lines_data['C_app'] = m1*V[j:k] + b1
-        self.lines_data['V_td'] = V[i:]
-        self.lines_data['C_td'] = m2*V[i:] + b2
+            self.lines_data['V_app'] = V[j:k]
+            self.lines_data['C_app'] = m1*V[j:k] + b1
+            self.lines_data['V_td'] = V[i:]
+            self.lines_data['C_td'] = m2*V[i:] + b2
 
-        Vtd = -(b2 - b1)/(m2 - m1) # intersection point of two lines
+            Vtd = -(b2 - b1)/(m2 - m1) # intersection point of two lines
 
-        self.title = '%s\nTouchdown at %.2f V' %(self.filename, Vtd)
+            self.title = '%s\nTouchdown at %.2f V' %(self.filename, Vtd)
 
-        return Vtd
+            return Vtd
+        except Exception as e:
+            print('Error getting touchdown voltage. Continuing...')
+            print('Exception details: ', e)
+            time.sleep(3)
+            return -1
 
 
     def plot(self):

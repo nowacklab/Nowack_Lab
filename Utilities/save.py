@@ -25,10 +25,19 @@ class Measurement:
         # for var in self._blacklist:
         #     variables.remove(var)
 
-        ## Don't save numpy arrays to JSON
         for var in variables.copy(): # copy so we don't change size of array during iteration
-            if type(getattr(self, var)) in [np.ndarray,  matplotlib.axes.Subplot, matplotlib.figure.Figure, matplotlib.image.AxesImage]:
+            ## Don't save numpy arrays to JSON
+            if type(getattr(self, var)) is np.ndarray:
                 variables.remove(var)
+
+            ## Don't save matplotlib objects to JSON
+            try:
+                m = getattr(self,var).__module__
+                m = m[:m.find('.')] # will strip out "matplotlib"
+                if m == 'matplotlib':
+                    variables.remove(var)
+            except:
+                pass # built-in types won't have __module__
 
         return {var: getattr(self, var) for var in variables}
 
@@ -49,6 +58,7 @@ class Measurement:
         Pass in an array of the names of things you don't want to load.
         By default, we won't load any instruments, but you can pass in an instruments dictionary to load them.
         '''
+
         if filename is None: # tries to find the last saved object; not guaranteed to work
             try:
                 filename =  max(glob.iglob(os.path.join(get_todays_data_path(),'*_%s.json' %cls._append)),
@@ -167,7 +177,7 @@ class Measurement:
         try:
             Measurement.load(filename)
         except:
-            raise Exception('Reloading failed, ut object was saved!')
+            raise Exception('Reloading failed, but object was saved!')
 
 
     def _save_hdf5(self, filename):
