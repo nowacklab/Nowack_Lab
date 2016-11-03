@@ -283,7 +283,6 @@ class Channel():
         name = channel name (ai# or ao#)
         '''
         self._daq = daq
-        self._num = int(''.join(c for c in name if c.isdigit())) # strips the channel number
         self.label = name # default label
         self._name = name # channel name ('ao#' or 'ai#'). Should not change.
 
@@ -292,7 +291,6 @@ class Channel():
         self._save_dict = {}
         self._save_dict.update({
             'V': self._V,
-            'num': self._num,
             'label': self.label,
             'name': self._name
         })
@@ -310,7 +308,7 @@ class InputChannel(Channel):
 
     @property
     def V(self):
-        self._V = getattr(self._daq,'ai%i' %self._num).read().magnitude
+        self._V = getattr(self._daq, self._name).read().magnitude
         return self._V
 
 
@@ -320,13 +318,13 @@ class OutputChannel(Channel):
 
     @property
     def V(self):
-        self._V = getattr(self._daq,'ao%i' %self._num).read().magnitude
+        self._V = getattr(self._daq, self._name).read().magnitude
         return self._V
 
     @V.setter
     def V(self, value):
         self._V = value
-        getattr(self._daq, 'ao%i' %self._num).write('%sV' %value) # V is for pint units used in Instrumental package
+        getattr(self._daq,  self._name).write('%sV' %value) # V is for pint units used in Instrumental package
 
 
 if __name__ == '__main__':
