@@ -92,17 +92,13 @@ class Touchdown(Measurement):
         corr_coeff_thresh, returns True. Otherwise, we have not touched down.
         '''
         i = np.where(~np.isnan(self.C))[0][-1] # index of last data point taken
-        if i > self.numfit + self.start_offset:
-            m,b,r,_,_ = linregress(self.V[i-self.numfit:i], self.C[i-self.numfit:i])
-            self.rs[i] = r # assigns correlation coefficient for the last data point
-            for j in range(3):
-                if self.rs[i-j] < corr_coeff_thresh: #if any of the last three fits are bad...
-                    return False # no touchdown
-                self.good_r_index = i-j # where good correlation starts
-            if self.C[i] != np.nanmax(self.C):
-                return False #the last point taken should be the maximum
-            return True
-        return False
+        if i > self.numfit + self.start_offset: # if we've taken enough points
+            if self.C[i-self.numfit] > 3: # if the capacitance has been high enough (above 3 fF)
+                for j in range(i-self.numfit, i):
+                    if self.C[j+1] - self.C[j] < 0: # check to see if the last numfit points are increasing
+                        return False # if not increasing, then no touchdown
+                return True # if the for loop passed, then touchdown
+        return False # if we haven't taken enough points
 
 
     def configure_lockin(self, cap_input=None):
