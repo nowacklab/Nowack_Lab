@@ -107,11 +107,16 @@ class Measurement:
         '''
         with open(json_file, encoding='utf-8') as f:
             obj_dict = json.load(f)
-        for key in unwanted_keys: # get rid of keys you don't want to load
-            try:
-                obj_dict['py/state'].pop(key)
-            except:
-                pass # if we accidentally give a key that's not there
+
+        def walk(d):
+            for key in list(d.keys()): # convert to list because dictionary changes size
+                if key in unwanted_keys: # get rid of keys you don't want to load
+                    d[key] = None
+                elif type(d[key]) is dict:
+                    walk(d[key])
+
+        walk(obj_dict)
+
         obj_string = json.dumps(obj_dict)
         obj = jsp.decode(obj_string)
 
