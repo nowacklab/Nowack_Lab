@@ -5,13 +5,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time, os
 from datetime import datetime
-from . import squidIV
+from .squidIV import SquidIV
 from ..Utilities.plotting import plot_mpl
 from ..Utilities.save import Measurement, get_todays_data_path
 
 class Mod2D(Measurement):
     notes = ''
     _append = 'mod2D'
+    instrument_list = SquidIV.instrument_list
+
     def __init__(self, instruments={}, squidout=None, squidin=None, modout=None, rate=900):
         '''
         Example: Mod2D({'daq': daq, 'preamp': preamp}, 'ao0','ai0','ao1', rate=900).
@@ -20,7 +22,7 @@ class Mod2D(Measurement):
         '''
         super().__init__(self._append)
 
-        self.IV = squidIV.SquidIV(instruments, squidout=squidout, squidin=squidin, modout=modout, rate=rate)
+        self.IV = SquidIV(instruments, squidout=squidout, squidin=squidin, modout=modout, rate=rate)
 
         self.IV.Rbias = 2e3 # Ohm # 1k cold bias resistors on the SQUID testing PCB
         self.IV.Rbias_mod = 2e3 # Ohm # 1k cold bias resistors on the SQUID testing PCB
@@ -31,6 +33,7 @@ class Mod2D(Measurement):
         self.Imodstep = 4e-6
 
         self.IV.calc_ramp()
+        self.Isquid = self.IV.I
         self.calc_ramp()
 
         display.clear_output()
@@ -63,6 +66,7 @@ class Mod2D(Measurement):
         if self.notes != 'q':
             self.save()
 
+
     def param_prompt(self):
         """ Check and confirm values of parameters """
         correct = False
@@ -94,6 +98,7 @@ class Mod2D(Measurement):
                 display.clear_output()
                 print('Invalid command\n')
 
+
     def plot(self):
         '''
         Plot the 2D mod image
@@ -122,10 +127,10 @@ class Mod2D(Measurement):
         '''
         self.fig, (self.axIV, self.ax2D) = plt.subplots(2,1,figsize=(7,7),gridspec_kw = {'height_ratios':[1, 3]})
         self.axIV2 = self.axIV.twinx() # for dV/dI
-        self.fig.suptitle(self.filename+'\n'+self.notes)
+        self.axIV.set_title(self.filename+'\n'+self.notes)
         ## Set up 2D plot
         self.im = plot_mpl.plot2D(self.ax2D,
-                                self.IV.I*1e6,
+                                self.Isquid*1e6,
                                 self.Imod*1e6,
                                 self.V,
                                 xlabel=r'$I_{\rm{bias}} = V_{\rm{bias}}/R_{\rm{bias}}$ ($\mu \rm A$)',

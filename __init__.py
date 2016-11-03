@@ -10,7 +10,7 @@ import sys, os
 
 ## For interactive matplotlib plots
 from IPython import get_ipython
-get_ipython().magic('matplotlib notebook')
+# get_ipython().magic('matplotlib notebook')
 del get_ipython # don't need this in the namespace
 ''', silent=True)
 
