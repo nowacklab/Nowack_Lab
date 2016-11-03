@@ -21,7 +21,6 @@ class NIDAQ():
     does not import/inherit anything from squidpy.
     Uses package Instrumental from Mabuchi lab at Stanford
     '''
-    inputs = {}
 
     def __init__(self, zero=False, dev_name='Dev1', input_range=10, output_range=10):
         self._daq  = ni.NIDAQ(dev_name, input_range, output_range)
@@ -216,6 +215,43 @@ class NIDAQ():
             self.sweep({chan: getattr(self, chan)}, {chan: 0}, sample_rate=100000, numsteps=100000)
         print('Zeroed DAQ outputs.')
         log('Zeroed DAQ outputs.')
+
+
+class Channel():
+    _V = 0
+    def __init__(self, daq, number, label):
+        '''
+        daq = NIDAQ from Instrumental library
+        number = number of the channel
+        label = label you want to give to the channel
+        '''
+        self._daq = daq
+        self._num = number
+        self.label = label
+
+class InputChannel(Channel):
+    def __init__(self, daq, number, label):
+        super().__init__(daq, number, label)
+
+    @property
+    def V(self):
+        self._V = getattr(self._daq,'ai%i' %self._num).read().magnitude
+        return self._V
+
+
+class OutputChannel(Channel):
+    def __init__(self, daq, number, label):
+        super().__init__(daq, number, label)
+
+    @property
+    def V(self):
+        self._V = getattr(self._daq,'ao%i' %self._num).read().magnitude
+        return self._V
+
+    @V.setter
+    def V(self, value):
+        self._V = value
+        getattr(self._daq, 'ao%i' %self._num).write('%sV' %value) # V is for pint units used in Instrumental package
 
 
 if __name__ == '__main__':
