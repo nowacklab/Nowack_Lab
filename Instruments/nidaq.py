@@ -44,7 +44,7 @@ class NIDAQ():
     def __getstate__(self):
         self._save_dict = {}
         for chan in self._ins + self._outs:
-            self._save_dict[chan] = getattr(self, chan)
+            self._save_dict[chan] = getattr(self, chan).V
         self._save_dict.update({
             'device name': self._dev_name,
             'input range': self._input_range,
@@ -91,7 +91,7 @@ class NIDAQ():
         This is written as a property in case you decide to manually change the label of a channel.
         '''
         self._inputs = {}
-        for label, name in self.input_names:
+        for label, name in self.input_names.items():
             self._inputs[label] = getattr(self, name)
         return self._inputs
 
@@ -125,7 +125,7 @@ class NIDAQ():
             daq.outputs['x'].V = 1
         '''
         self._outputs = {}
-        for label, name in self.output_names:
+        for label, name in self.output_names.items():
             self._outputs[label] = getattr(self, name)
         return self._outputs
 
@@ -211,17 +211,17 @@ class NIDAQ():
         ## Convert to real channel names
         output_labels = list(data.keys())
         for label in output_labels:
-            if label not in self.output_names:
+            if label in self.output_names: # this means we've labeled it something other than the channel name
                 data[self.output_names[label]] = data.pop(label) # replaces custom label with real channel name
 
-        input_labels = chan_in
+        input_labels = chan_in.copy()
         for label in input_labels:
-            if label not in self.input_names:
+            if label in self.input_names: # this means we've used a custom label
                 chan_in.remove(label)
                 chan_in.append(self.input_names[label])
 
         ## prepare a NIDAQ Task
-        taskargs = tuple([getattr(self._daq, ch) for ch in data.keys() + chan_in])
+        taskargs = tuple([getattr(self._daq, ch) for ch in list(data.keys()) + chan_in])
         task = ni.Task(*taskargs)
         some_data = next(iter(data.values())) # All data must be equal length, so just choose one.
         task.set_timing(n_samples = len(some_data), fsamp='%fHz' %sample_rate)
@@ -237,7 +237,7 @@ class NIDAQ():
         ## the nowacklab branch of Instrumental is modified so that channels
         ## are ordered, and in this case it's the lowest numbered channel.
         # First we find the input channel numbers as ints, then find the min.
-        ch_nums = [int(''.join(x for x in y if x.isdigit())) for y in input_channels_strings]
+        ch_nums = [int(''.join(x for x in y if x.isdigit())) for y in chan_in]
         min_chan = 'ai%i' %min(ch_nums)
 
         for chan, value in received.items():
@@ -245,7 +245,7 @@ class NIDAQ():
                 received[chan] = np.delete(value, 0) #removes first data point, which is wrong
             else:
                 received[chan] = np.delete(value,-1) #removes last data point, a duplicate
-            if chan not in input_labels:
+            if chan not in input_labels and chan is not 't':
                 received[getattr(self, chan).label] = received.pop(chan) # change back to the given channel labels if different from the real channel names
 
         return received
@@ -270,7 +270,7 @@ class NIDAQ():
 
     def zero(self):
         for chan in self.outputs.values(): # loop over output channel objects
-            self.sweep({chan.name: chan.V}, {chan.name: 0}, sample_rate=100000, numsteps=100000)
+            self.sweep({chan.label: chan.V}, {chan.label: 0}, sample_rate=100000, numsteps=100000)
         print('Zeroed DAQ outputs.')
         logging.log('Zeroed DAQ outputs.')
 
@@ -298,6 +298,11 @@ class Channel():
         })
 
         return self._save_dict
+
+
+    def __repr__(self):
+        return str(self.__class__.__name__) + '; name: '+ self._name+'; label: ' + self.label + '; V = %.3f' %self.V
+
 
 class InputChannel(Channel):
     def __init__(self, daq, name):
