@@ -277,6 +277,7 @@ class NIDAQ():
 
 class Channel():
     _V = 0
+    _conversion = 1 # build in conversion factor?
     def __init__(self, daq, name):
         '''
         daq = NIDAQ from Instrumental library

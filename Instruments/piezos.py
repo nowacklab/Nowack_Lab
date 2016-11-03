@@ -7,6 +7,7 @@ class Piezos():
     Signal sent to NIDAQ goes through Nanonis HVA4 High Voltage Amplifier.
     Sweeps between voltages smoothly.
     '''
+    _chan_labels = ['x','y','z'] # the labels that we should label the channels in the daq object
     _piezos = ['x','y','z']
     _gain = [40, 40, 40]
     _Vmax = [400, 400, 400] # maximum allowed total voltage across piezo
@@ -18,19 +19,21 @@ class Piezos():
                         # 0.0025 V is approximately the resolution of the daq, so it doesn't make sense to go much slower than that.
                         # 0.2 is a nice number
 
-    def __init__(self, daq=None, chan_out = [0,1,2], zero = False):
+    def __init__(self, daq=None, zero = False):
         '''
-        e.g. pz = piezos.Piezos(daq=daq, chan_out = [0,1,2], zero = True)
+        e.g. pz = piezos.Piezos(daq=daq, zero = True)
             daq: the nidaq.NIDAQ() object
-            chan_out: output channels of daq for each positioner (just the number, ao#) [x,y,z]
             zero: whether to zero the daq or not
         '''
         self._daq = daq
         if daq is None:
             print('Daq not loaded... piezos will not work until you give them a daq!')
+        for ch in self._chan_labels:
+            if ch not in daq.outputs:
+                raise Exception('Need to set daq output labels! Need a %s' %ch)
 
         for (i,p) in enumerate(self._piezos):
-            setattr(self, p, Piezo(self._daq, chan_out[i], label=p,
+            setattr(self, p, Piezo(self._daq, label=p,
                                     gain = self._gain[i], Vmax=self._Vmax[i],
                                     bipolar = self._bipolar[i],
                                 max_sweep_rate = self._max_sweep_rate,
@@ -156,8 +159,8 @@ class Piezos():
 
         ## Convert keys to the channel names that the daq expects
         for k in list(Vstart.keys()): # need this a list so that new keys aren't iterated over
-            Vstart[getattr(self,k).chan_out] = Vstart.pop(k) # changes key to daq output channel name
-            Vend[getattr(self,k).chan_out] = Vend.pop(k)
+            Vstart[getattr(self,k).label] = Vstart.pop(k) # changes key to daq output channel name
+            Vend[getattr(self,k).label] = Vend.pop(k)
 
         ## If for some reason you give extra keys, get rid of them.
         all_keys = list(set(Vstart) & set(Vend))
@@ -175,15 +178,15 @@ class Piezos():
         ## Go back to piezo keys
         for k in self._piezos:
             try:
-                output_data[k] = output_data.pop(getattr(self,k).chan_out)
+                output_data[k] = output_data.pop(getattr(self,k).label)
             except:
                 pass
             try:
-                Vend[k] = Vend.pop(getattr(self,k).chan_out) # need to convert Vend back for later
+                Vend[k] = Vend.pop(getattr(self,k).label) # need to convert Vend back for later
             except: # in case one or more keys is not used
                 pass
             try:
-                self._V.pop(getattr(self,k).chan_out) # was keeping daq keys for some reason
+                self._V.pop(getattr(self,k).label) # was keeping daq keys for some reason
             except:
                 pass
         ## reapply gain
@@ -260,7 +263,7 @@ class Piezos():
 
         ## Convert keys to the channel names that the daq expects
         for k in list(voltages.keys()): # need this a list so that new keys aren't iterated over
-            voltages[getattr(self,k).chan_out] = voltages.pop(k) # changes key to daq output channel name
+            voltages[getattr(self,k).label] = voltages.pop(k) # changes key to daq output channel name
 
         received = self._daq.send_receive(voltages, chan_in = chan_in,
                                 sample_rate=meas_rate)
@@ -268,11 +271,11 @@ class Piezos():
         ## Go back to piezo keys
         for k in self._piezos:
             try:
-                voltages[k] = voltages.pop(getattr(self,k).chan_out)
+                voltages[k] = voltages.pop(getattr(self,k).label)
             except:
                 pass
             try:
-                self._V.pop(getattr(self,k).chan_out) # was keeping daq keys for some reason
+                self._V.pop(getattr(self,k).label) # was keeping daq keys for some reason
             except:
                 pass
 
@@ -291,9 +294,8 @@ class Piezos():
 
 class Piezo():
     _V = None
-    def __init__(self, daq, chan_out, label=None, gain=15, Vmax=200, bipolar=2, max_sweep_rate=180, max_step_size=.2):
+    def __init__(self, daq, label=None, gain=15, Vmax=200, bipolar=2, max_sweep_rate=180, max_step_size=.2):
         self._daq = daq
-        self.chan_out = 'ao%i' %chan_out
         self.label = label
         self.gain = gain
         self.Vmax = Vmax
@@ -303,8 +305,7 @@ class Piezo():
         self.max_step_size = max_step_size
 
     def __getstate__(self):
-        self._save_dict = {"chan_out": self.chan_out,
-                            "label": self.label,
+        self._save_dict = { "label": self.label,
                             "gain": self.gain,
                             "Vmax": self.Vmax,
                             "bipolar multiplier": self.bipolar,
@@ -329,7 +330,7 @@ class Piezo():
         Voltage property. Set or read piezo voltage
         '''
         try:
-            self._V = getattr(self._daq, self.chan_out)*self.gain*self.bipolar # convert daq volts to piezo volts
+            self._V = self._daq.outputs[self.label].V*self.gain*self.bipolar # convert daq volts to piezo volts
         except:
             print('Couldn\'t communicate with daq! Current %s piezo voltage unknown!' %self.label)
         return self._V
@@ -413,14 +414,14 @@ class Piezo():
         Vstart = self.remove_gain(Vstart)
         Vend = self.remove_gain(Vend)
 
-        output_data, received = self._daq.sweep({self.chan_out: Vstart},
-                                            {self.chan_out: Vend},
+        output_data, received = self._daq.sweep({self.label: Vstart},
+                                            {self.label: Vend},
                                             chan_in = chan_in,
                                             sample_rate=meas_rate,
                                             numsteps=numsteps
                                         )
 
-        output_data = output_data[self.chan_out]
+        output_data = output_data[self.label]
         ## reapply gain
         output_data = self.apply_gain(output_data)
 
