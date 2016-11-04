@@ -9,7 +9,8 @@ from ..Instruments import nidaq, preamp, montana
 from ..Utilities.save import Measurement, get_todays_data_path
 from ..Utilities import conversions, logging
 
-_Z_PIEZO_STEP = 4
+_Z_PIEZO_STEP = 4 # V piezo
+_CAPACITANCE_THRESHOLD = 1 # fF
 
 class Touchdown(Measurement):
     instrument_list = ['lockin_cap','atto','piezos','daq','montana']
@@ -93,7 +94,7 @@ class Touchdown(Measurement):
         '''
         i = np.where(~np.isnan(self.C))[0][-1] # index of last data point taken
         if i > self.numfit + self.start_offset: # if we've taken enough points
-            if self.C[i-self.numfit] > 3: # if the capacitance has been high enough (above 3 fF)
+            if self.C[i-self.numfit] > _CAPACITANCE_THRESHOLD: # if the capacitance has been high enough (above 3 fF)
                 for j in range(i-self.numfit, i):
                     if self.C[j+1] - self.C[j] < 0: # check to see if the last numfit points are increasing
                         return False # if not increasing, then no touchdown
@@ -206,7 +207,7 @@ class Touchdown(Measurement):
                     if not self.planescan: # Don't want to move attos during planescan
                         ## Check if touchdown near center of z piezo +V range
                         if slow_scan:
-                            u = 0.65 # percentages of the total voltage range to aim touchdown to be within
+                            u = 0.55 # percentages of the total voltage range to aim touchdown to be within
                             l = 0.35
                         else:
                             u = 0.85 # touchdown is at a higher voltage for a not-slow scan

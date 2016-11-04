@@ -68,7 +68,7 @@ class Planefit(Measurement):
         Do the planefit.
         set edges_only to true, and will only do the outermost points of the plane.
         '''
-        if not self.cap_input:
+        if self.cap_input is None:
             raise Exception('Cap_input not set!')
 
         self.piezos.x.check_lim(self.X)
@@ -185,7 +185,7 @@ class Planefit(Measurement):
 
         self._save(get_todays_data_path(), self.filename)
 
-        if savefig and hasattr(self, fig):
+        if savefig and hasattr(self, 'fig'):
             self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
 
 

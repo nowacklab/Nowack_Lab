@@ -356,14 +356,6 @@ class Line(Measurement):
     def __init__(self):
         super().__init__(self._append)
 
-        self._save_dict.update({
-            'idx': 'idx',
-            'Vstart': 'Vstart',
-            'full V squid': 'V_squid_full',
-            'full V piezo': 'V_piezo_full',
-            'filename of the scan': 'scan_filename'
-        })
-
     def save(self):
         path = os.path.join(get_todays_data_path(), 'extras')
         if not os.path.exists(path):
