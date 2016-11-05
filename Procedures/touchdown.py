@@ -12,6 +12,7 @@ from ..Utilities import conversions, logging
 _Z_PIEZO_STEP = 4
 
 class Touchdown(Measurement):
+    _chan_labels = ['cap']
     instrument_list = ['lockin_cap','atto','piezos','daq','montana']
 
     Vtd = None
@@ -37,7 +38,7 @@ class Touchdown(Measurement):
     start_offset = 0
     _append = 'td'
 
-    def __init__(self, instruments={}, cap_input=None, planescan=False, Vz_max = None):
+    def __init__(self, instruments={}, planescan=False, Vz_max = None):
         if planescan:
             self._append += '_planescan'
         super().__init__(self._append)
@@ -46,7 +47,7 @@ class Touchdown(Measurement):
 
         if instruments:
             self.atto.z.freq = 200
-            self.configure_lockin(cap_input)
+            self.configure_lockin()
 
         self.z_piezo_step = _Z_PIEZO_STEP
 
@@ -76,7 +77,7 @@ class Touchdown(Measurement):
         By default, this is heuristically 2 uV.
         '''
         # Read daq voltage and conver to real lockin voltage
-        Vcap = getattr(self.daq, self.lockin_cap.ch1_daq_input)
+        Vcap = self.daq.inputs['cap'].V
         Vcap = self.lockin_cap.convert_output(Vcap)
 
         if Vcap > V_unbalanced:
@@ -101,11 +102,10 @@ class Touchdown(Measurement):
         return False # if we haven't taken enough points
 
 
-    def configure_lockin(self, cap_input=None):
+    def configure_lockin(self):
         '''
         Set up lockin_cap amplifier for a touchdown.
         '''
-        self.lockin_cap.ch1_daq_input = 'ai%s' %cap_input
         self.lockin_cap.amplitude = 1
         self.lockin_cap.frequency = 24989 # prime number ^_^
         self.lockin_cap.set_out(1, 'R') # Possibly X is better?
@@ -175,7 +175,7 @@ class Touchdown(Measurement):
                 ## Get capacitance
                 if self.C0 == None:
                     time.sleep(2) # wait for stabilization, was getting weird first values
-                Vcap = getattr(self.daq, self.lockin_cap.ch1_daq_input) # Read the voltage from the daq
+                Vcap = self.daq.inputs['cap'].V # Read the voltage from the daq
                 Vcap = self.lockin_cap.convert_output(Vcap) # convert to a lockin voltage
                 Cap = Vcap*conversions.V_to_C # convert to true capacitance (fF)
                 if self.C0 == None:
@@ -239,7 +239,7 @@ class Touchdown(Measurement):
                     self.check_balance() # make sure we didn't crash
                     self.atto.z.move(self.attoshift)
                     time.sleep(2) # was getting weird capacitance values immediately after moving; wait a bit
-                    while getattr(self.daq, self.lockin_cap.ch1_daq_input) > 10: # overloading
+                    while self.daq.inputs['cap'].V > 10: # overloading
                         self.atto.z.move(-self.attoshift/2) # we probably moved too far
                         time.sleep(2)
 

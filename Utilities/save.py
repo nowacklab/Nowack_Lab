@@ -6,6 +6,7 @@ from copy import copy
 import h5py, glob, matplotlib
 
 class Measurement:
+    _chan_labels = [] # DAQ channel labels expected by this class
     instrument_list = []
 
     def __init__(self, append=None):
@@ -96,8 +97,13 @@ class Measurement:
         for instrument in self.instrument_list:
             if instrument in instruments:
                 setattr(self, instrument, instruments[instrument])
+            elif 'daq' in instruments:
+                for ch in self._chan_labels:
+                    if ch not in self.daq.outputs and ch not in self.daq.inputs:
+                        raise Exception('Need to set daq channel labels! Need a %s' %ch)
             else:
                 setattr(self, instrument, None)
+
 
 
     @staticmethod

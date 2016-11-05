@@ -10,11 +10,12 @@ from ..Utilities.plotting import plot_mpl
 from ..Utilities.save import Measurement, get_todays_data_path
 
 class Mod2D(Measurement):
+    _chan_labels = ['squid out','squid in','mod out']
     notes = ''
     _append = 'mod2D'
     instrument_list = SquidIV.instrument_list
 
-    def __init__(self, instruments={}, squidout=None, squidin=None, modout=None, rate=900):
+    def __init__(self, instruments={}, rate=900):
         '''
         Example: Mod2D({'daq': daq, 'preamp': preamp}, 'ao0','ai0','ao1', rate=900).
         To make an empty object, then just call Mod2D().
@@ -22,7 +23,7 @@ class Mod2D(Measurement):
         '''
         super().__init__(self._append)
 
-        self.IV = SquidIV(instruments, squidout=squidout, squidin=squidin, modout=modout, rate=rate)
+        self.IV = SquidIV(instruments, rate=rate)
 
         self.IV.Rbias = 2e3 # Ohm # 1k cold bias resistors on the SQUID testing PCB
         self.IV.Rbias_mod = 2e3 # Ohm # 1k cold bias resistors on the SQUID testing PCB

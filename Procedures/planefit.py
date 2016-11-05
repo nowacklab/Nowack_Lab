@@ -15,6 +15,7 @@ class Planefit(Measurement):
     '''
     For fitting to the plane of the sample. Will do a series of touchdowns in a grid of size specified by numpts. Vz_max sets the maximum voltage the Z piezo will reach. If None, will use the absolute max safe voltage set in the Piezos class.
     '''
+    _chan_labels = ['daq']
     instrument_list = ['piezos','montana']
 
     a = np.nan
@@ -22,7 +23,7 @@ class Planefit(Measurement):
     c = np.nan
     _append = 'plane'
 
-    def __init__(self, instruments={}, cap_input=None, span=[400,400], center=[0,0], numpts=[4,4], Vz_max = None):
+    def __init__(self, instruments={}, span=[400,400], center=[0,0], numpts=[4,4], Vz_max = None):
         super().__init__(self._append)
 
         self._load_instruments(instruments)
@@ -39,8 +40,6 @@ class Planefit(Measurement):
                 self.Vz_max = None # Will reach here if dummy piezos are used, unfortunately.
         else:
             self.Vz_max = Vz_max
-
-        self.cap_input = cap_input
 
         self.x = np.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
         self.y = np.linspace(center[1]-span[1]/2, center[1]+span[1]/2, numpts[1])
@@ -68,8 +67,6 @@ class Planefit(Measurement):
         Do the planefit.
         set edges_only to true, and will only do the outermost points of the plane.
         '''
-        if not self.cap_input:
-            raise Exception('Cap_input not set!')
 
         self.piezos.x.check_lim(self.X)
         self.piezos.y.check_lim(self.Y) # make sure we won't scan outside X, Y piezo ranges!
@@ -78,7 +75,7 @@ class Planefit(Measurement):
         print('Sweeping z piezo down...')
         self.piezos.V = {'x': self.center[0], 'y':self.center[1], 'z':-self.Vz_max}
         print('...done.')
-        td = touchdown.Touchdown(self.instruments, self.cap_input, Vz_max = self.Vz_max)
+        td = touchdown.Touchdown(self.instruments, Vz_max = self.Vz_max)
         center_z_value = td.do() # Will do initial touchdown at center of plane to (1) find the plane (2) make touchdown voltage near center of piezo's positive voltage range
 
         check_td = input('Does the initial touchdown look good? Enter \'q\' to abort.')
@@ -111,7 +108,7 @@ class Planefit(Measurement):
                 self.piezos.V = {'x':self.X[i,j], 'y':self.Y[i,j], 'z': 0}
                 logging.log('Done moving to (%.2f, %.2f).' %(self.X[i,j], self.Y[i,j]))
 
-                td = touchdown.Touchdown(self.instruments, self.cap_input, Vz_max = self.Vz_max, planescan=True) # new touchdown at this point
+                td = touchdown.Touchdown(self.instruments, Vz_max = self.Vz_max, planescan=True) # new touchdown at this point
                 td.title = '(%i, %i). TD# %i' %(i,j, counter)
 
                 self.Z[i,j] = td.do() # Do the touchdown, starting 200 V below the location of the surface at the center of the plane. Hopefully planes are not more tilted than this.
@@ -141,9 +138,6 @@ class Planefit(Measurement):
         '''
         obj = super(Planefit, cls).load(json_file, instruments, unwanted_keys)
         obj.instruments = instruments
-
-        if obj.cap_input is None:
-            print('cap_input not loaded! Set this manually!!!')
 
         return obj
 
@@ -208,7 +202,7 @@ class Planefit(Measurement):
 
         old_c = self.c
         self.piezos.V = {'x': Vx, 'y': Vy, 'z': 0}
-        td = touchdown.Touchdown(self.instruments, self.cap_input, Vz_max = self.Vz_max)
+        td = touchdown.Touchdown(self.instruments, Vz_max = self.Vz_max)
         center_z_value = td.do(start=start)
         self.c = center_z_value - self.a*Vx - self.b*Vy
 

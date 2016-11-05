@@ -7,7 +7,7 @@ class Piezos():
     Signal sent to NIDAQ goes through Nanonis HVA4 High Voltage Amplifier.
     Sweeps between voltages smoothly.
     '''
-    _chan_labels = ['x','y','z'] # the labels that we should label the channels in the daq object
+    _chan_labels = ['x','y','z'] # DAQ channel labels expected by this class
     _piezos = ['x','y','z']
     _gain = [40, 40, 40]
     _Vmax = [400, 400, 400] # maximum allowed total voltage across piezo
@@ -29,8 +29,8 @@ class Piezos():
         if daq is None:
             print('Daq not loaded... piezos will not work until you give them a daq!')
         for ch in self._chan_labels:
-            if ch not in daq.outputs:
-                raise Exception('Need to set daq output labels! Need a %s' %ch)
+            if ch not in daq.outputs or ch not in daq.inputs:
+                raise Exception('Need to set daq channel labels! Need a %s' %ch)
 
         for (i,p) in enumerate(self._piezos):
             setattr(self, p, Piezo(self._daq, label=p,

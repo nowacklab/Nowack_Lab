@@ -15,6 +15,7 @@ from ..Utilities.save import Measurement, get_todays_data_path
 
 
 class SquidIV(Measurement):
+    _chan_labels = ['squid out', 'mod out', 'squid in', 'current in']
     instrument_list = ['daq','preamp','montana','preamp_I']
 
     V = np.array([])
@@ -22,19 +23,12 @@ class SquidIV(Measurement):
     notes = ''
     _append = 'IV'
 
-    def __init__(self, instruments={}, squidout=None, squidin=None, currentin=None, modout=None, rate=90):
+    def __init__(self, instruments={}, rate=90):
         '''
         Example: SquidIV({'daq': daq, 'preamp': preamp}, 0, 0, None, 90)
         To make an empty object, then just call SquidIV(). You can do this if you want to plot previously collected data.
         '''
         super().__init__(self._append)
-
-        self.squidout = 'ao%s' %squidout
-        self.squidin = 'ai%s' %squidin
-        if currentin is None:
-            currentin=23 # monitor a real channel!
-        self.currentin = 'ai%s' %currentin # for the two-preamp setup
-        self.modout = 'ao%s' %modout
 
         self.two_preamps = False
 
@@ -98,20 +92,19 @@ class SquidIV(Measurement):
 
     def do_IV(self):
         """ Wrote this for mod2D so it doesn't plot """
-        if self.modout != None:
-            setattr(self.daq, self.modout, self.Imod*self.Rbias_mod) # Set mod current
+        self.daq.outputs['mod out'] = self.Imod*self.Rbias_mod # Set mod current
 
         # Collect data
-        in_chans = [self.squidin, self.currentin]
-        output_data, received = self.daq.sweep({self.squidout: self.Vbias[0]},
-                                               {self.squidout: self.Vbias[-1]},
+        in_chans = ['squid in','current in']
+        output_data, received = self.daq.sweep({'squid out': self.Vbias[0]},
+                                               {'squid out': self.Vbias[-1]},
                                                chan_in=in_chans,
                                                sample_rate=self.rate,
                                                numsteps=self.numpts
                                            )
-        self.V = np.array(received[self.squidin])/self.preamp.gain
+        self.V = np.array(received['squid in'])/self.preamp.gain
         if self.two_preamps:
-            self.I = np.array(received[self.currentin])/self.preamp_I.gain/self.Rmeas # Measure current from series resistor
+            self.I = np.array(received['current in'])/self.preamp_I.gain/self.Rmeas # Measure current from series resistor
         else:
             self.I = self.Vbias/(self.Rbias + self.Rmeas) # estimate current by assuming Rbias >> Rsquid
 
