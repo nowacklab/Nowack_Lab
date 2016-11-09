@@ -18,8 +18,6 @@ class SR830():
         if type(gpib_address) is int:
             gpib_address = 'GPIB::%02i::INSTR' %gpib_address
         self.gpib_address = gpib_address
-        self.ch1_daq_input = None
-        self.ch2_daq_input = None
 
         self.time_constant_options = {
                 "10 us": 0,
@@ -52,8 +50,6 @@ class SR830():
                           "time_constant": self.time_constant,
                           "reserve": self.reserve,
                           "gpib_address": self.gpib_address,
-                          "ch1_daq_input": self.ch1_daq_input,
-                          "ch2_daq_input": self.ch2_daq_input,
                           "X": self.X,
                           "Y": self.Y,
                           "R": self.R,

@@ -13,12 +13,10 @@ from ..Utilities.save import Measurement, get_todays_data_path
 from ..Utilities import conversions
 
 class Scanplane(Measurement):
+    _chan_labels = ['dc','cap','ac x','ac y'] # DAQ channel labels expected by this class
     instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto','daq']
+
     ## Put things here necessary to have when reloading object
-    inp_dc = None
-    inp_acx = None
-    inp_acy = None
-    inp_cap = None
 
     V_piezo_full = np.array([])
     V_squid_full = np.array([])
@@ -34,16 +32,9 @@ class Scanplane(Measurement):
 
     def __init__(self, instruments={}, span=[800,800],
                         center=[0,0], numpts=[20,20], plane=None,
-                        scanheight=15, inp_dc=0, inp_cap=1,
-                        inp_acx=2, inp_acy=3,
-                        scan_rate=120, raster=False):
+                        scanheight=15, scan_rate=120, raster=False):
 
         super().__init__(self._append)
-
-        self.inp_dc = 'ai%s' %inp_dc
-        self.inp_acx = 'ai%s' %inp_acx
-        self.inp_acy = 'ai%s' %inp_acy
-        self.inp_cap = 'ai%s' %inp_cap
 
         self._load_instruments(instruments)
 
@@ -104,7 +95,7 @@ class Scanplane(Measurement):
         C0s = []
         for i in range(5):
             time.sleep(0.5)
-            C0s.append(self.lockin_cap.convert_output(getattr(self.daq, self.inp_cap))*conversions.V_to_C)
+            C0s.append(self.lockin_cap.convert_output(self.daq.inputs['cap'].V) * conversions.V_to_C)
         C0 = np.mean(C0s)
 
         for i in range(num_lines): # loop over every line
@@ -130,12 +121,11 @@ class Scanplane(Measurement):
             time.sleep(3)
 
             ## Do the sweep
-            in_chans = [self.inp_dc, self.inp_acx, self.inp_acy, self.inp_cap]
-
             if linear:
-                output_data, received = self.piezos.sweep(Vstart, Vend, chan_in = in_chans,
-                                        sweep_rate=self.scan_rate
-                                    ) # sweep over X
+                output_data, received = self.piezos.sweep(Vstart, Vend,
+                                            chan_in = self._chan_labels,
+                                            sweep_rate=self.scan_rate
+                                        ) # sweep over X
             else:
                 x = np.linspace(Vstart['x'], Vend['x']) # 50 points should be good for giving this to piezos.sweep_surface
                 y = np.linspace(Vstart['y'], Vend['y'])
@@ -145,7 +135,7 @@ class Scanplane(Measurement):
                     Z = self.plane.surface(x,y)[i,:]
                 output_data = {'x': x, 'y':y, 'z': Z}
                 output_data, received = self.piezos.sweep_surface(output_data,
-                                                        chan_in = in_chans,
+                                                        chan_in = self._chan_labels,
                                                         sweep_rate = self.scan_rate
                                                     )
 
@@ -169,15 +159,15 @@ class Scanplane(Measurement):
 
             # Store this line's signals for Vdc, Vac x/y, and Cap
             # Convert from DAQ volts to lockin volts where applicable
-            self.V_squid_full = received[self.inp_dc]
+            self.V_squid_full = received['dc']
 
-            Vac_x_full = received[self.inp_acx]
+            Vac_x_full = received['ac x']
             self.Vac_x_full = self.lockin_squid.convert_output(Vac_x_full)
 
-            Vac_y_full = received[self.inp_acy]
+            Vac_y_full = received['ac y']
             self.Vac_y_full = self.lockin_squid.convert_output(Vac_y_full)
 
-            Vcap = received[self.inp_cap]
+            Vcap = received['cap']
             Vcap = self.lockin_cap.convert_output(Vcap) # convert to a lockin voltage
             self.C_full = Vcap*conversions.V_to_C - C0 # convert to capacitance (fF)
 
@@ -291,7 +281,7 @@ class Scanplane(Measurement):
                                     title = self.filename,
                                         xlabel = label,
                                         ylabel = label,
-                                    clabel = 'Cap fF %s' %self.inp_cap
+                                    clabel = 'Cap (fF)'
                                 )
 
         for ax in [self.ax_dc, self.ax_ac_x, self.ax_ac_y, self.ax_cap]:

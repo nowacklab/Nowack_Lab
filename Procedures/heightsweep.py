@@ -8,6 +8,7 @@ from ..Utilities.save import Measurement, get_todays_data_path
 
 
 class Heightsweep(Measurement):
+    _chan_labels = ['dc','ac x','ac y']
     instrument_list = ['piezos','montana','squidarray']
 
     z = np.nan
@@ -16,7 +17,7 @@ class Heightsweep(Measurement):
     Vdc = np.nan
     _append = 'heightsweep'
 
-    def __init__(self, instruments = {}, x=0, y=0, z0=0, plane=None, inp_acx = 0, inp_acy=1, inp_dc = 2, scan_rate=120):
+    def __init__(self, instruments = {}, x=0, y=0, z0=0, plane=None, scan_rate=120):
         super().__init__(self._append)
 
         self._load_instruments(instruments)
@@ -27,9 +28,6 @@ class Heightsweep(Measurement):
         # if plane is None:
         #     plane = planefit.Planefit()
         self.plane = plane
-        self.inp_acx = 'ai%s' %inp_acx
-        self.inp_acy = 'ai%s' %inp_acy
-        self.inp_dc = 'ai%s' %inp_dc
         self.scan_rate = scan_rate
 
 
@@ -45,16 +43,13 @@ class Heightsweep(Measurement):
         time.sleep(10) # wait at the surface
 
         output_data, received = self.piezos.sweep(Vstart, Vend,
-                                        chan_in = [self.inp_acx,
-                                                    self.inp_acy,
-                                                    self.inp_dc
-                                                ],
+                                        chan_in = self._chan_labels,
                                         sweep_rate = self.scan_rate)
 
         self.z = self.plane.plane(self.x, self.y)-np.array(output_data['z'])-self.z0
-        self.Vacx = received[self.inp_acx]
-        self.Vacy = received[self.inp_acy]
-        self.Vdc = received[self.inp_dc]
+        self.Vacx = received['ac x']
+        self.Vacy = received['ac y']
+        self.Vdc = received['dc']
 
         self.piezos.zero()
 

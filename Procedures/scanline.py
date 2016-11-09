@@ -9,6 +9,7 @@ from ..Utilities.save import Measurement, get_todays_data_path
 
 
 class Scanline(Measurement):
+    _chan_labels = ['dc','cap','ac x','ac y']
     instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto']
 
     Vout = np.nan
@@ -19,13 +20,8 @@ class Scanline(Measurement):
     output_data = np.nan
     _append = 'line'
 
-    def __init__(self, instruments={}, start=(-100,-100), end=(100,100), plane=None, scanheight=15, inp_dc=0, inp_cap=1, inp_acx=2, inp_acy=3, scan_rate=120, return_to_zero=True):
+    def __init__(self, instruments={}, start=(-100,-100), end=(100,100), plane=None, scanheight=15, scan_rate=120, return_to_zero=True):
         super().__init__(self._append)
-
-        self.inp_dc = 'ai%s' %inp_dc
-        self.inp_acx = 'ai%s' %inp_acx
-        self.inp_acy = 'ai%s' %inp_acy
-        self.inp_cap = 'ai%s' %inp_cap
 
         self._load_instruments(instruments)
 
@@ -65,7 +61,7 @@ class Scanline(Measurement):
         # time.sleep(3)
 
         ## Do the sweep
-        in_chans = [self.inp_dc, self.inp_acx, self.inp_acy, self.inp_cap]
+        in_chans = self._chan_labels
         self.output_data, received = self.piezos.sweep(Vstart, Vend, chan_in=in_chans, sweep_rate=self.scan_rate) # sweep over Y
 
         dist_between_points = np.sqrt((self.output_data['x'][0]-self.output_data['x'][-1])**2+(self.output_data['y'][0]-self.output_data['y'][-1])**2)
@@ -73,16 +69,16 @@ class Scanline(Measurement):
 
         # Store this line's signals for Vdc, Vac x/y, and Cap
         # Convert from DAQ volts to lockin volts
-        Vdc = received[self.inp_dc]
+        Vdc = received['dc']
         self.Vdc = self.lockin_squid.convert_output(Vdc)
 
-        Vac_x = received[self.inp_acx]
+        Vac_x = received['ac x']
         self.Vac_x = self.lockin_squid.convert_output(Vac_x)
 
-        Vac_y = received[self.inp_acy]
+        Vac_y = received['ac y']
         self.Vac_y = self.lockin_squid.convert_output(Vac_y)
 
-        Vcap = received[self.inp_cap]
+        Vcap = received['cap']
         Vcap = self.lockin_cap.convert_output(Vcap) # convert to a lockin voltage
         self.C = Vcap*conversions.V_to_C # convert to capacitance (fF)
 

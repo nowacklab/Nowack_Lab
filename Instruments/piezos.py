@@ -7,7 +7,7 @@ class Piezos():
     Signal sent to NIDAQ goes through Nanonis HVA4 High Voltage Amplifier.
     Sweeps between voltages smoothly.
     '''
-    _chan_labels = ['x','y','z'] # the labels that we should label the channels in the daq object
+    _chan_labels = ['x','y','z'] # DAQ channel labels expected by this class
     _piezos = ['x','y','z']
     _gain = [40, 40, 40]
     _Vmax = [400, 400, 400] # maximum allowed total voltage across piezo
@@ -29,8 +29,8 @@ class Piezos():
         if daq is None:
             print('Daq not loaded... piezos will not work until you give them a daq!')
         for ch in self._chan_labels:
-            if ch not in daq.outputs:
-                raise Exception('Need to set daq output labels! Need a %s' %ch)
+            if ch not in daq.outputs or ch not in daq.inputs:
+                raise Exception('Need to set daq channel labels! Need a %s' %ch)
 
         for (i,p) in enumerate(self._piezos):
             setattr(self, p, Piezo(self._daq, label=p,
@@ -157,10 +157,10 @@ class Piezos():
             getattr(self,k).check_lim(Vend[k])
             Vend[k] = getattr(self,k).remove_gain(Vend[k])
 
-        ## Convert keys to the channel names that the daq expects
-        for k in list(Vstart.keys()): # need this a list so that new keys aren't iterated over
-            Vstart[getattr(self,k).label] = Vstart.pop(k) # changes key to daq output channel name
-            Vend[getattr(self,k).label] = Vend.pop(k)
+        # ## Convert keys to the channel names that the daq expects
+        # for k in list(Vstart.keys()): # need this a list so that new keys aren't iterated over
+        #     Vstart[getattr(self,k).label] = Vstart.pop(k) # changes key to daq output channel name
+        #     Vend[getattr(self,k).label] = Vend.pop(k)
 
         ## If for some reason you give extra keys, get rid of them.
         all_keys = list(set(Vstart) & set(Vend))
@@ -175,20 +175,21 @@ class Piezos():
                                 sample_rate=meas_rate, numsteps=numsteps
                             )
 
-        ## Go back to piezo keys
-        for k in self._piezos:
-            try:
-                output_data[k] = output_data.pop(getattr(self,k).label)
-            except:
-                pass
-            try:
-                Vend[k] = Vend.pop(getattr(self,k).label) # need to convert Vend back for later
-            except: # in case one or more keys is not used
-                pass
-            try:
-                self._V.pop(getattr(self,k).label) # was keeping daq keys for some reason
-            except:
-                pass
+        # ## Go back to piezo keys
+        # for k in self._piezos:
+        #     try:
+        #         output_data[k] = output_data.pop(getattr(self,k).label)
+        #     except:
+        #         pass
+        #     try:
+        #         Vend[k] = Vend.pop(getattr(self,k).label) # need to convert Vend back for later
+        #     except: # in case one or more keys is not used
+        #         pass
+        #     try:
+        #         self._V.pop(getattr(self,k).label) # was keeping daq keys for some reason
+        #     except:
+        #         pass
+
         ## reapply gain
         for k in output_data.keys():
             output_data[k] = getattr(self,k).apply_gain(output_data[k])

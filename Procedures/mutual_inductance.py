@@ -5,7 +5,7 @@ from ..Utilities.plotting import plot_mpl
 
 
 class MutualInductance(Measurement):
-    instrument_list = ['squidarray','lockin_squid', 'lockin_I']
+    instrument_list = ['squidarray', 'lockin_squid', 'lockin_I']
 
     def __init__(self, instruments = {}, Rmeas=3172, Istart=5e-6, Iend=30e-6, numamps=10, numfreqs=10):
         super().__init__('mut_ind')

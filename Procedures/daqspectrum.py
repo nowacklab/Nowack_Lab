@@ -9,8 +9,8 @@ import re
 from ..Instruments import nidaq, preamp
 from ..Utilities.save import Measurement, get_todays_data_path
 
-
 class DaqSpectrum(Measurement):
+    _chan_labels = ['dc'] # DAQ channel labels expected by this class
     instrument_list = ['daq','preamp']
     ## So plotting will work with no data
     f = 1
@@ -20,12 +20,11 @@ class DaqSpectrum(Measurement):
     notes = ''
     _append = 'spectrum'
 
-    def __init__(self, instruments={}, input_chan=0, measure_time=0.5, measure_freq=256000, averages=30):
+    def __init__(self, instruments={}, measure_time=0.5, measure_freq=256000, averages=30):
         super().__init__(self._append)
 
         self._load_instruments(instruments)
 
-        self.input_chan = 'ai%i' %input_chan
         for arg in ['measure_time','measure_freq','averages']:
             setattr(self, arg, eval(arg))
 
@@ -37,10 +36,10 @@ class DaqSpectrum(Measurement):
         psdAve = np.zeros(Nfft)
 
         for i in range(self.averages):
-            received = self.daq.monitor(self.input_chan, self.measure_time,
+            received = self.daq.monitor('DC', self.measure_time,
                                         sample_rate=self.measure_freq
                                     )
-            self.V = received[self.input_chan] #extract data from the required channel
+            self.V = received['DC'] #extract data from the required channel
             self.t = received['t']
             self.f, psd = signal.periodogram(self.V, self.measure_freq, 'blackmanharris')
             psdAve = psdAve + psd
