@@ -12,7 +12,7 @@ except:
     print('PyDAQmx not imported!')
 import time
 from copy import copy
-from ..Utilities.logging import log
+from ..Utilities import logging
 
 class NIDAQ():
     '''
@@ -28,15 +28,14 @@ class NIDAQ():
         self._input_range = input_range
         self._output_range = output_range
 
-        ## Set properties for reading input channels
-        ## Read from these by daq.ai# (#=0-31)
-        for chan in self._daq.get_AI_channels():
-            setattr(NIDAQ,chan,property(fget=eval('lambda self: self.get_chan(\'%s\')' %chan)))
+        self._ins = self._daq.get_AI_channels()
+        self._outs = self._daq.get_AO_channels()
 
-        ## Set properties for reading and writing output channels
-        for chan in self._daq.get_AO_channels():
-            setattr(self, '_%s' %chan, None)# privately store value
-            setattr(NIDAQ,chan,property(fset=eval('lambda self, value: self.set_chan(\'%s\',value)' %chan), fget=eval('lambda self: self.get_chan(\'%s\')' %chan)))
+        for chan in self._ins:
+            setattr(self, chan, InputChannel(self._daq, name=chan))
+
+        for chan in self._outs:
+            setattr(self, chan, OutputChannel(self._daq, name=chan))
 
         if zero:
             self.zero()
@@ -44,10 +43,8 @@ class NIDAQ():
 
     def __getstate__(self):
         self._save_dict = {}
-        for chan in self._daq.get_AI_channels():
-            self._save_dict[chan] = getattr(self, chan)
-        for chan in self._daq.get_AO_channels():
-            self._save_dict[chan] = getattr(self, chan)
+        for chan in self._ins + self._outs:
+            self._save_dict[chan] = getattr(self, chan).V
         self._save_dict.update({
             'device name': self._dev_name,
             'input range': self._input_range,
@@ -80,31 +77,78 @@ class NIDAQ():
         Returns a dictionary of all channel voltages.
         '''
         voltages = {}
-        for chan in self._daq.get_AO_channels() + self._daq.get_AI_channels():
-            voltages[chan] =  getattr(self, chan)
+        for chan in self._ins + self._outs:
+            voltages[chan] =  getattr(self, chan).V
         return voltages
 
 
-    def get_chan(self, chan):
+    @property
+    def inputs(self):
         '''
-        Read the current value of an input or output channel.
-        Normally you don't have to use this; __init__ sets up properties for
-        daq.ai# and daq.ao# so you can read them like that.
+        Makes a dictionary with keys = input channel labels, values = input channel objects
+        To get the voltage of a channel by using the label, you would do something like:
+            daq.inputs['squid'].V
+        This is written as a property in case you decide to manually change the label of a channel.
         '''
-        return getattr(self._daq,chan).read().magnitude
+        self._inputs = {}
+        for label, name in self.input_names.items():
+            self._inputs[label] = getattr(self, name)
+        return self._inputs
 
 
-    def set_chan(self, chan, data):
+    @inputs.setter
+    def inputs(self, d):
         '''
-        Set an output channel voltage. Normally you don't have to use this;
-        __init__ sets up properties for daq.ao# so you can do (e.g.):
-        daq.ao# = 3
+        Set a bunch of input channel labels at once. d is a dictionary with keys = input channel labels, values = input channel real names
+        e.g. {'squid': 'ai0'}
         '''
-        setattr(self, '_%s' %chan, data)
-        if np.isscalar(data):
-            getattr(self._daq,chan).write(
-                '%sV' %data
-            ) #Dunno why the V is there, maybe because of units in Instrumental?
+        for label, name in d.items():
+            getattr(self, name).label = label
+
+
+    @property
+    def input_names(self):
+        '''
+        Returns a dictionary mapping input channel labels (keys) to the real channel names (values).
+        '''
+        self._input_names = {}
+        for chan in self._ins:
+            self._input_names[getattr(self, chan).label] = chan
+        return self._input_names
+
+
+    @property
+    def outputs(self):
+        '''
+        Makes a dictionary with keys = output channel labels, values = output channel objects
+        To set the voltage of a channel by using the label, you would do something like:
+            daq.outputs['x'].V = 1
+        '''
+        self._outputs = {}
+        for label, name in self.output_names.items():
+            self._outputs[label] = getattr(self, name)
+        return self._outputs
+
+
+    @outputs.setter
+    def outputs(self, d):
+        '''
+        Set a bunch of output channel labels at once. d is a dictionary with keys = output channel labels, values = output channel real names
+        e.g. {'piezo x': 'ao0'}
+        '''
+        for label, name in d.items():
+            getattr(self, name).label = label
+
+
+    @property
+    def output_names(self):
+        '''
+        Returns a dictionary mapping output channel labels (keys) to the real channel names (values).
+        '''
+        self._output_names = {}
+        for chan in self._outs:
+            self._output_names[getattr(self, chan).label] = chan
+        return self._output_names
 
 
     def monitor(self, chan_in, duration, sample_rate=100):
@@ -118,7 +162,7 @@ class NIDAQ():
         ## Prepare "data" for the Task. We'll just send the current value of ao0
         ## and tell the DAQ to output that value of ao0 for every data point.
         numsteps = int(duration*sample_rate)
-        current_ao0 = self.ao0
+        current_ao0 = self.ao0.V
         data = {'ao0': np.array([current_ao0]*numsteps)}
 
         received = self.send_receive(data, chan_in=chan_in, sample_rate=sample_rate)
@@ -129,10 +173,10 @@ class NIDAQ():
     def send_receive(self, data, chan_in=None, sample_rate=100):
         '''
         Send data to daq outputs and receive data on input channels.
-        Data should be a dictionary with keys
-        "ao#", and values can be float, list, or np.ndarray.
+        Data should be a dictionary with keys that are output channel labels or names
+        and values can be float, list, or np.ndarray.
         Arrays should be equally sized for all output channels.
-        chan_in is a list of all input channels you wish to monitor.
+        chan_in is a list of all input channel labels or names you wish to monitor.
         '''
         ## Make everything a numpy array
         data = data.copy() # so we don't modify original data
@@ -160,12 +204,24 @@ class NIDAQ():
 
         ## Make sure there's at least one input channel (or DAQmx complains)
         if chan_in is None:
-            chan_in = ['ai23']
+            chan_in = ['ai23'] # just a random channel
         elif np.isscalar(chan_in):
             chan_in = [chan_in]
 
+        ## Convert to real channel names
+        output_labels = list(data.keys())
+        for label in output_labels:
+            if label in self.output_names: # this means we've labeled it something other than the channel name
+                data[self.output_names[label]] = data.pop(label) # replaces custom label with real channel name
+
+        input_labels = chan_in.copy()
+        for label in input_labels:
+            if label in self.input_names: # this means we've used a custom label
+                chan_in.remove(label)
+                chan_in.append(self.input_names[label])
+
         ## prepare a NIDAQ Task
-        taskargs = tuple([getattr(self._daq, ch) for ch in list(data.keys())+chan_in])
+        taskargs = tuple([getattr(self._daq, ch) for ch in list(data.keys()) + chan_in])
         task = ni.Task(*taskargs)
         some_data = next(iter(data.values())) # All data must be equal length, so just choose one.
         task.set_timing(n_samples = len(some_data), fsamp='%fHz' %sample_rate)
@@ -189,6 +245,8 @@ class NIDAQ():
                 received[chan] = np.delete(value, 0) #removes first data point, which is wrong
             else:
                 received[chan] = np.delete(value,-1) #removes last data point, a duplicate
+            if chan not in input_labels and chan is not 't':
+                received[getattr(self, chan).label] = received.pop(chan) # change back to the given channel labels if different from the real channel names
 
         return received
 
@@ -196,8 +254,8 @@ class NIDAQ():
     def sweep(self, Vstart, Vend, chan_in=None, sample_rate=100, numsteps=1000):
         '''
         Sweeps between voltages specified in Vstart and Vend, dictionaries with
-        output channels as keys. (e.g. Vstart={'ao1':3, 'ao2':4})
-        Specify the input channels you want to monitor.
+        output channel labels or names as keys. (e.g. Vstart={'ao1':3, 'piezo z':4})
+        Specify the input channels you want to monitor by passing in input channel labels or names.
         Returns (output voltage dictionary, input voltage dictionary)
         '''
 
@@ -211,50 +269,69 @@ class NIDAQ():
 
 
     def zero(self):
-        for chan in self._daq.get_AO_channels():
-            self.sweep({chan: getattr(self, chan)}, {chan: 0}, sample_rate=100000, numsteps=100000)
+        for chan in self.outputs.values(): # loop over output channel objects
+            self.sweep({chan.label: chan.V}, {chan.label: 0}, sample_rate=100000, numsteps=100000)
         print('Zeroed DAQ outputs.')
-        log('Zeroed DAQ outputs.')
+        logging.log('Zeroed DAQ outputs.')
 
 
 class Channel():
     _V = 0
-    def __init__(self, daq, number, label):
+    _conversion = 1 # build in conversion factor?
+    def __init__(self, daq, name):
         '''
         daq = NIDAQ from Instrumental library
-        number = number of the channel
-        label = label you want to give to the channel
+        name = channel name (ai# or ao#)
         '''
         self._daq = daq
-        self._num = number
-        self.label = label
+        self.label = name # default label
+        self._name = name # channel name ('ao#' or 'ai#'). Should not change.
+
+
+    def __getstate__(self):
+        self._save_dict = {}
+        self._save_dict.update({
+            'V': self._V,
+            'label': self.label,
+            'name': self._name
+        })
+
+        return self._save_dict
+
+
+    def __repr__(self):
+        return str(self.__class__.__name__) + '; name: '+ self._name+'; label: ' + self.label + '; V = %.3f' %self.V
+
 
 class InputChannel(Channel):
-    def __init__(self, daq, number, label):
-        super().__init__(daq, number, label)
+    def __init__(self, daq, name):
+        super().__init__(daq, name)
 
     @property
     def V(self):
-        self._V = getattr(self._daq,'ai%i' %self._num).read().magnitude
+        self._V = getattr(self._daq, self._name).read().magnitude
         return self._V
 
 
 class OutputChannel(Channel):
-    def __init__(self, daq, number, label):
-        super().__init__(daq, number, label)
+    def __init__(self, daq, name):
+        super().__init__(daq, name)
 
     @property
     def V(self):
-        self._V = getattr(self._daq,'ao%i' %self._num).read().magnitude
+        self._V = getattr(self._daq, self._name).read().magnitude
         return self._V
 
     @V.setter
     def V(self, value):
         self._V = value
-        getattr(self._daq, 'ao%i' %self._num).write('%sV' %value) # V is for pint units used in Instrumental package
+        getattr(self._daq,  self._name).write('%sV' %value) # V is for pint units used in Instrumental package
 
 
 if __name__ == '__main__':
+    '''
+    Out of date 11/3/2016
+    '''
     nidaq = NIDAQ()
 
     out_data = []
