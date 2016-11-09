@@ -68,17 +68,17 @@ class Heightsweep(Measurement):
 
         self.ax_dc = self.fig.add_subplot(311)
         self.ax_dc.set_xlabel(r'$V_z^{samp} - V_z (V)$')
-        self.ax_dc.set_title('%s\nDC Magnetometry (V) at (%f,%f)' %(self.filename, self.x, self.y))
+        self.ax_dc.set_title('%s\nDC Magnetometry (V) at (%.2f,%.2f)' %(self.filename, self.x, self.y))
         self.ax_dc.plot(self.z, self.Vdc, '.k', markersize=6, alpha=0.5)
 
         self.ax_ac_x = self.fig.add_subplot(312)
         self.ax_ac_x.set_xlabel(r'$V_z^{samp} - V_z (V)$')
-        self.ax_ac_x.set_title('%s\nX component AC Response (V) at (%f,%f)' %(self.filename, self.x, self.y))
+        self.ax_ac_x.set_title('%s\nX component AC Response (V) at (%.2f,%.2f)' %(self.filename, self.x, self.y))
         self.ax_ac_x.plot(self.z, self.Vacx, '.k', markersize=6)
 
         self.ax_ac_y = self.fig.add_subplot(313)
         self.ax_ac_y.set_xlabel(r'$V_z^{samp} - V_z (V)$')
-        self.ax_ac_y.set_title('%s\nY component AC Response (V) at (%f,%f)' %(self.filename, self.x, self.y))
+        self.ax_ac_y.set_title('%s\nY component AC Response (V) at (%.2f,%.2f)' %(self.filename, self.x, self.y))
         self.ax_ac_y.plot(self.z, self.Vacy, '.k', markersize=6)
 
     def save(self, savefig=True):

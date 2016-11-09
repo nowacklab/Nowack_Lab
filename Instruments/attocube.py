@@ -40,7 +40,10 @@ class ANC350():
 
 
     def __del__(self):
-        del self.anc
+        try:
+            del self.anc
+        except:
+            pass
 
     def __getstate__(self):
         self._save_dict = {
