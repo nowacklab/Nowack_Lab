@@ -136,6 +136,7 @@ class Planefit(Measurement):
         If no json_file specified, will load the last plane taken.
         Useful if you lose the object while scanning.
         '''
+        unwanted_keys.append('preamp')
         obj = super(Planefit, cls).load(json_file, instruments, unwanted_keys)
         obj.instruments = instruments
 

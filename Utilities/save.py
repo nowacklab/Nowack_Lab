@@ -71,7 +71,8 @@ class Measurement:
                                         key=os.path.getctime)
             filename = filename.rpartition('.')[0] #remove extension
 
-        unwanted_keys += cls.instrument_list
+        unwanted_keys += cls.instrument_list # don't load instruments
+
         obj = Measurement._load_json(filename+'.json', unwanted_keys)
         obj._load_hdf5(filename+'.h5')
         obj._load_instruments(instruments)
