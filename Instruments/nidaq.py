@@ -178,6 +178,8 @@ class NIDAQ():
         Arrays should be equally sized for all output channels.
         chan_in is a list of all input channel labels or names you wish to monitor.
         '''
+
+
         ## Make everything a numpy array
         data = data.copy() # so we don't modify original data
         for key, value in data.items():
@@ -207,6 +209,9 @@ class NIDAQ():
             chan_in = ['ai23'] # just a random channel
         elif np.isscalar(chan_in):
             chan_in = [chan_in]
+
+        ## Need to copy chan_in to ensure names don't change!
+        chan_in = chan_in.copy()
 
         ## Convert to real channel names
         output_labels = list(data.keys())
@@ -245,6 +250,7 @@ class NIDAQ():
                 received[chan] = np.delete(value, 0) #removes first data point, which is wrong
             else:
                 received[chan] = np.delete(value,-1) #removes last data point, a duplicate
+        for chan, value in received.items():
             if chan not in input_labels and chan is not 't':
                 received[getattr(self, chan).label] = received.pop(chan) # change back to the given channel labels if different from the real channel names
 

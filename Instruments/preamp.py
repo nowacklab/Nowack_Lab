@@ -1,9 +1,11 @@
-import visa
-import numpy as np
+import visa, time, numpy as np
 
 COARSE_GAIN = [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000]
 FINE_GAIN = [1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0]
 ALL_GAINS = []
+for cg in COARSE_GAIN:
+    for fg in FINE_GAIN:
+        ALL_GAINS.append(int(cg*fg))
 FILTER = [0, 0.03, 0.1, 0.3, 1, 3, 10, 30, 100, 300, 1000, 3000, 10000, 30000, 100000, 300000]
 
 class SR5113():
@@ -16,10 +18,6 @@ class SR5113():
         '''
         self.port = port
         self._first_connect = True
-
-        for cg in COARSE_GAIN:
-            for fg in FINE_GAIN:
-                ALL_GAINS.append(int(cg*fg))
 
         self._gain = self.gain
         self._filter = self.filter
@@ -163,22 +161,30 @@ class SR5113():
     def time_const(self, tensec):
         self.write('TC%i' %(tensec)) # 0 = 1s, 1 = 10s
 
-    def write(self, cmd, read=False):
+    def write(self, cmd, read=False, repeat=True):
         '''
         Will write commands to SR5113 preamp via serial port. If expect a value back, then set read=True. Figured this out by trial and error. First read command reads back the command sent, last read command will be empty (*\n). Middle command will contain response.
         e.g. preamp.write('ID', True)
         '''
-        self.connect()
+        try:
+            self.connect()
 
-        self.inst.write(cmd+'\r')
-        self.inst.read()
-        if read:
-            response = self.inst.read()
-        self.inst.read()
-        if read:
-            return response.rstrip() #rstrip gets rid of \n
+            self.inst.write(cmd+'\r')
+            self.inst.read()
+            if read:
+                response = self.inst.read()
+            self.inst.read()
+            if read:
+                return response.rstrip() #rstrip gets rid of \n
 
-        self.close()
+            time.sleep(0.1)
+
+            self.close()
+        except Exception as e:
+            if repeat:
+                self.write(cmd, read, repeat=False) # sometimes it doesn't communicate properly, maybe this will fix?
+            else:
+                raise Exception(e)
 
 if __name__ == '__main__':
     preamp = SR5113()

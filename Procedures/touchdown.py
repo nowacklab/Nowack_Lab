@@ -10,6 +10,7 @@ from ..Utilities.save import Measurement, get_todays_data_path
 from ..Utilities import conversions, logging
 
 _Z_PIEZO_STEP = 4 # V piezo
+_Z_PIEZO_STEP_SLOW = 4 # V piezo
 _CAPACITANCE_THRESHOLD = 1 # fF
 
 class Touchdown(Measurement):
@@ -135,7 +136,7 @@ class Touchdown(Measurement):
             ## Determine where to start sweeping
             if slow_scan:
                 start = Vtd-40 # once it finds touchdown, will try again slower
-                self.z_piezo_step = 1
+                self.z_piezo_step = _Z_PIEZO_STEP_SLOW
                 self._init_arrays()
                 self.setup_plot()
 

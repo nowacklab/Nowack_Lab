@@ -29,7 +29,7 @@ class Piezos():
         if daq is None:
             print('Daq not loaded... piezos will not work until you give them a daq!')
         for ch in self._chan_labels:
-            if ch not in daq.outputs or ch not in daq.inputs:
+            if ch not in daq.outputs and ch not in daq.inputs:
                 raise Exception('Need to set daq channel labels! Need a %s' %ch)
 
         for (i,p) in enumerate(self._piezos):

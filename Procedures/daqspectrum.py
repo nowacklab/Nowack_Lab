@@ -36,10 +36,10 @@ class DaqSpectrum(Measurement):
         psdAve = np.zeros(Nfft)
 
         for i in range(self.averages):
-            received = self.daq.monitor('DC', self.measure_time,
+            received = self.daq.monitor('dc', self.measure_time,
                                         sample_rate=self.measure_freq
                                     )
-            self.V = received['DC'] #extract data from the required channel
+            self.V = received['dc'] #extract data from the required channel
             self.t = received['t']
             self.f, psd = signal.periodogram(self.V, self.measure_freq, 'blackmanharris')
             psdAve = psdAve + psd
