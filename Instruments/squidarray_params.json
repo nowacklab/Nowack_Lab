@@ -8,7 +8,7 @@
         "Integrator capacitor": "1.5nF",
         "Preamp voltage offset": 0.3,
         "SQUID bias": 220.0,
-        "SQUID flux": 43.0,
+        "SQUID flux": 42.5,
         "SQUID locked": true,
         "Test input": "S_flux",
         "Test signal": "Auto",

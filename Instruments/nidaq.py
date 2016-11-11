@@ -155,6 +155,7 @@ class NIDAQ():
         '''
         Monitor any number of channels for a given duration, sampling at sample_rate.
         Default 100 Hz sample rate.
+        Returns a dictionary of received data from each channel, including time.
         '''
         if np.isscalar(chan_in):
             chan_in = [chan_in]

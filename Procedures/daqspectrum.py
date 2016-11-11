@@ -17,7 +17,6 @@ class DaqSpectrum(Measurement):
     V = 1
     t = 1
     psdAve = 1
-    notes = ''
     _append = 'spectrum'
 
     def __init__(self, instruments={}, measure_time=0.5, measure_freq=256000, averages=30):
@@ -47,8 +46,6 @@ class DaqSpectrum(Measurement):
         psdAve = psdAve / self.averages # normalize by the number of averages
         self.psdAve = np.sqrt(psdAve) # spectrum in V/sqrt(Hz)
 
-        self.notes = input('Notes for this spectrum: ')
-
         self.setup_plots()
         self.plot_loglog()
         self.plot_semilog()
@@ -70,6 +67,8 @@ class DaqSpectrum(Measurement):
         Generate a log-log plot of spectrum. If there is a known calibration between RMS voltage noise and flux noise, the plot is generated in units of flux quanta. Use daqspectrum.load to get all the data before calling plotLog
 
         calibration should be in units of Phi_o/V
+
+        THIS MAY NOT WORK ANYMORE
         '''
         self.load(fname)
         fig, ax = plt.subplots(figsize=(5,5))
@@ -127,7 +126,6 @@ class DaqSpectrum(Measurement):
             #apply a timestamp to the plot
             ax.annotate(self.timestamp, xy=(0.02,.98), xycoords='axes fraction', fontsize=10,
             ha='left', va = 'top', family='monospace')
-            ax.set_title(self.notes)
 
 
     def setup_preamp(self):
