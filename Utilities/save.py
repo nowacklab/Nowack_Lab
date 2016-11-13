@@ -142,6 +142,14 @@ class Measurement:
             self.filename += '_' + append
 
 
+    def plot(self):
+        '''
+        Update all plots.
+        '''
+        if not hasattr(self, 'fig'):
+            self.setup_plots()
+
+
     def save(self, path= '.', filename=None):
         '''
         Basic save method. Just calls _save. Overwrite this for each subclass.
@@ -212,6 +220,13 @@ class Measurement:
             obj_dict = json.loads(obj_string)
             with open(filename+'.json', 'w', encoding='utf-8') as f:
                 json.dump(obj_dict, f, sort_keys=True, indent=4)
+
+
+    def setup_plots(self):
+        '''
+        Set up all plots.
+        '''
+        self.fig, self.ax = plt.subplots() # example: just one figure
 
 
 def exists(filename):

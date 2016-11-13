@@ -59,22 +59,12 @@ class Heightsweep(Measurement):
 
 
     def plot(self):
-        self.fig = plt.figure()
+        super().plot()
 
-        self.ax_dc = self.fig.add_subplot(311)
-        self.ax_dc.set_xlabel(r'$V_z^{samp} - V_z (V)$')
-        self.ax_dc.set_title('%s\nDC Magnetometry (V) at (%.2f,%.2f)' %(self.filename, self.x, self.y))
-        self.ax_dc.plot(self.z, self.Vdc, '.k', markersize=6, alpha=0.5)
+        self.ax['dc'].plot(self.z, self.Vdc, '.k', markersize=6, alpha=0.5)
+        self.ax['ac x'].plot(self.z, self.Vacx, '.k', markersize=6)
+        self.ax['ac y'].plot(self.z, self.Vacy, '.k', markersize=6)
 
-        self.ax_ac_x = self.fig.add_subplot(312)
-        self.ax_ac_x.set_xlabel(r'$V_z^{samp} - V_z (V)$')
-        self.ax_ac_x.set_title('%s\nX component AC Response (V) at (%.2f,%.2f)' %(self.filename, self.x, self.y))
-        self.ax_ac_x.plot(self.z, self.Vacx, '.k', markersize=6)
-
-        self.ax_ac_y = self.fig.add_subplot(313)
-        self.ax_ac_y.set_xlabel(r'$V_z^{samp} - V_z (V)$')
-        self.ax_ac_y.set_title('%s\nY component AC Response (V) at (%.2f,%.2f)' %(self.filename, self.x, self.y))
-        self.ax_ac_y.plot(self.z, self.Vacy, '.k', markersize=6)
 
     def save(self, savefig=True):
         '''
@@ -86,3 +76,15 @@ class Heightsweep(Measurement):
 
         if savefig and hasattr(self, 'fig'):
             self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf')+'.pdf', bbox_inches='tight')
+
+    def setup_plots(self):
+        self.fig = plt.figure()
+        self.ax = {}
+
+        self.ax['dc'] = self.fig.add_subplot(311)
+        self.ax['ac x'] = self.fig.add_subplot(312)
+        self.ax['ac y'] = self.fig.add_subplot(313)
+
+        for label, ax in self.ax.items():
+            ax.set_xlabel(r'$V_z^{samp} - V_z (V)$')
+            ax.set_title('%s\n%s (V) at (%.2f, %.2f)' %(self.filename, label, self.x, self.y))

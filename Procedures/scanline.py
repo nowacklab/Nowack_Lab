@@ -97,38 +97,13 @@ class Scanline(Measurement):
         '''
         Set up all plots.
         '''
-        self.fig = plt.figure(figsize=(8,5))
-        label = r'$\sim\mu\mathrm{m} (|V_{piezo}|*%.2f)$' %conversions.Vpiezo_to_micron
+        super().plot()
 
-        ## DC magnetometry
-        self.ax_squid = self.fig.add_subplot(221)
-        self.ax_squid.plot(self.Vout*conversions.Vpiezo_to_micron, self.Vdc*conversions.Vsquid_to_phi0, '-b')
-        self.ax_squid.set_xlabel(label)
-        self.ax_squid.set_ylabel('DC $\phi_0$')
-        self.ax_squid.set_title(self.filename)
+        self.ax['dc'].plot(self.Vout*conversions.Vpiezo_to_micron, self.Vdc*conversions.Vsquid_to_phi0, '-b')
+        self.ax['ac x'].plot(self.Vout*conversions.Vpiezo_to_micron, self.Vac_x*conversions.Vsquid_to_phi0, '-b')
+        self.ax['ac y'].plot(self.Vout*conversions.Vpiezo_to_micron, self.Vac_y*conversions.Vsquid_to_phi0, '-b')
+        self.ax['cap'].plot(self.Vout*conversions.Vpiezo_to_micron, self.C, '-b')
 
-        ## AC in-phase
-        self.ax_squid = self.fig.add_subplot(223)
-        self.ax_squid.plot(self.Vout*conversions.Vpiezo_to_micron, self.Vac_x*conversions.Vsquid_to_phi0, '-b')
-        self.ax_squid.set_xlabel(label)
-        self.ax_squid.set_ylabel('AC X $\phi_0$')
-        self.ax_squid.set_title(self.filename)
-
-        ## AC out-of-phase
-        self.ax_squid = self.fig.add_subplot(224)
-        self.ax_squid.plot(self.Vout*conversions.Vpiezo_to_micron, self.Vac_y*conversions.Vsquid_to_phi0, '-b')
-        self.ax_squid.set_xlabel(label)
-        self.ax_squid.set_ylabel('AC Y $\phi_0$')
-        self.ax_squid.set_title(self.filename)
-
-        ## Capacitance
-        self.ax_squid = self.fig.add_subplot(222)
-        self.ax_squid.plot(self.Vout*conversions.Vpiezo_to_micron, self.C, '-b')
-        self.ax_squid.set_xlabel(label)
-        self.ax_squid.set_ylabel('C (fF)')
-        self.ax_squid.set_title(self.filename)
-
-        ## Draw everything in the notebook
         self.fig.canvas.draw()
 
 
@@ -142,3 +117,19 @@ class Scanline(Measurement):
 
         if savefig and hasattr(self, 'fig'):
             self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
+
+
+    def setup_plots(self):
+        self.fig = plt.figure(figsize=(8,5))
+
+        self.ax['dc'] = self.fig.add_subplot(221)
+        self.ax['ac x'] = self.fig.add_subplot(223)
+        self.ax['ac y'] = self.fig.add_subplot(224)
+        self.ax['cap'] = self.fig.add_subplot(222)
+
+        for label, ax in self.ax.items():
+            ax.set_xlabel(r'$\sim\mu\mathrm{m} (|V_{piezo}|*%.2f)$'
+                                %conversions.Vpiezo_to_micron
+                    )
+            ax.set_ylabel('%s ($\phi_0$)' %label)
+            ax.set_title(self.filename)

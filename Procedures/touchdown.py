@@ -138,7 +138,7 @@ class Touchdown(Measurement):
                 start = Vtd-40 # once it finds touchdown, will try again slower
                 self.z_piezo_step = _Z_PIEZO_STEP_SLOW
                 self._init_arrays()
-                self.setup_plot()
+                self.setup_plots()
 
             if start is not None:
                 self.piezos.z.V = start
@@ -227,7 +227,7 @@ class Touchdown(Measurement):
                                 slow_scan = False
                                 self.z_piezo_step = _Z_PIEZO_STEP
                                 self._init_arrays()
-                                self.setup_plot()
+                                self.setup_plots()
 
                     break # stop approaching
 
@@ -324,9 +324,6 @@ class Touchdown(Measurement):
 
 
     def plot(self):
-        if not hasattr(self, 'fig'):# see if this exists in the namespace
-            self.setup_plot()
-
         self.line.set_ydata(self.C) #updates plot with new capacitance values
         self.ax.set_ylim(-1, max(np.nanmax(self.C), 10))
 
@@ -355,7 +352,7 @@ class Touchdown(Measurement):
             self.fig.savefig(os.path.join(path, self.filename+'.pdf'), bbox_inches='tight')
 
 
-    def setup_plot(self):
+    def setup_plots(self):
         display.clear_output(wait=True)
         self.fig, self.ax = plt.subplots()
         line = self.ax.plot(self.V, self.C, 'k.')
