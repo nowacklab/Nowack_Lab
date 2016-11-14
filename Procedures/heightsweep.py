@@ -17,7 +17,7 @@ class Heightsweep(Measurement):
     Vdc = np.nan
     _append = 'heightsweep'
 
-    def __init__(self, instruments = {}, x=0, y=0, z0=0, plane=None, scan_rate=120):
+    def __init__(self, instruments = {}, plane=None, x=0, y=0, z0=0, scan_rate=120):
         super().__init__(self._append)
 
         self._load_instruments(instruments)

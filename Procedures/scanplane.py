@@ -25,8 +25,8 @@ class Scanplane(Measurement):
     end_time = ''
     _append = 'scan'
 
-    def __init__(self, instruments={}, span=[800,800],
-                        center=[0,0], numpts=[20,20], plane=None,
+    def __init__(self, instruments={}, plane=None, span=[800,800],
+                        center=[0,0], numpts=[20,20],
                         scanheight=15, scan_rate=120, raster=False):
 
         super().__init__(self._append)
