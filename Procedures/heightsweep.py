@@ -5,7 +5,7 @@ from ..Instruments import piezos, nidaq, montana
 import time, os
 from datetime import datetime
 from ..Utilities.save import Measurement, get_todays_data_path
-
+from ..Utilities import conversions
 
 class Heightsweep(Measurement):
     _chan_labels = ['dc','ac x','ac y']
@@ -17,7 +17,9 @@ class Heightsweep(Measurement):
     }
     instrument_list = ['piezos','montana','squidarray']
 
-    V = {}
+    V = {
+        chan: np.nan for chan in _chan_labels + ['piezo']
+    }
 
 
     def __init__(self, instruments = {}, plane=None, x=0, y=0, z0=0, scan_rate=120):

@@ -25,9 +25,11 @@ class Scanplane(Measurement):
 
     ## Put things here necessary to have when reloading object
 
-    V = {}
-    Vfull = {}
-    Vinterp = {}
+    V = {
+        chan: np.nan for chan in _chan_labels + ['piezo']
+    }
+    Vfull = V.copy()
+    Vinterp = V.copy()
 
     end_time = ''
 
