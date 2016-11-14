@@ -5,6 +5,21 @@ jspnp.register_handlers()
 from copy import copy
 import h5py, glob, matplotlib
 
+'''
+How saving and loading works:
+1) Walks through object's __dict__, subdictionaries, and subobjects, picks out
+numpy arrays, and saves them in a hirearchy in HDF5. Dictionaries are
+represented as groups in HDF5, and objects are also represented as groups, but
+with a ! preceding the name. This is parsed when loading.
+2) All numpy arrays and matplotlib objects in the dictionary hierarchy are set
+to None, and the object is saved to JSON.
+3) The saved object is immediately reloaded to see if everything went well.
+3a) First, the JSON file is loaded to set up the dictionary hierarchy.
+3b) Second, we walk through the HDF5 file (identifying objects and dictionaries
+as necessary) and populate the numpy arrays.
+'''
+
+
 class Measurement:
     _chan_labels = [] # DAQ channel labels expected by this class
     instrument_list = []
@@ -20,27 +35,29 @@ class Measurement:
         Returns a dictionary of everything we want to save to JSON.
         This excludes numpy arrays which are saved to HDF5
         '''
-        variables = list(self.__dict__.keys())
+        def walk(d):
+            variables = list(d.keys()) # list of all the variables in the dictionary
 
-        ## If in the future, we want to blacklist some variables.
-        # for var in self._blacklist:
-        #     variables.remove(var)
+            for var in variables: # copy so we don't change size of array during iteration
+                ## Don't save numpy arrays to JSON
+                if type(d[var]) is np.ndarray:
+                    d[var] = None
 
-        for var in variables.copy(): # copy so we don't change size of array during iteration
-            ## Don't save numpy arrays to JSON
-            if type(getattr(self, var)) is np.ndarray:
-                variables.remove(var)
+                ## Don't save matplotlib objects to JSON
+                try:
+                    m = d[var].__module__
+                    m = m[:m.find('.')] # will strip out "matplotlib"
+                    if m == 'matplotlib':
+                        d[var] = None
+                except:
+                    pass # built-in types won't have __module__
 
-            ## Don't save matplotlib objects to JSON
-            try:
-                m = getattr(self,var).__module__
-                m = m[:m.find('.')] # will strip out "matplotlib"
-                if m == 'matplotlib':
-                    variables.remove(var)
-            except:
-                pass # built-in types won't have __module__
+                if type(d[var]) is dict:
+                    d[var] = walk(d[var]) # This unfortunately erases the dictionary...
 
-        return {var: getattr(self, var) for var in variables}
+            return d # only return ones that are the right type.
+
+        return walk(self.__dict__)
 
 
     def __setstate__(self, state):
@@ -82,12 +99,23 @@ class Measurement:
 
     def _load_hdf5(self, filename, unwanted_keys = []):
         '''
-        Loads data from HDF5 files.
+        Loads data from HDF5 files. Will walk through the HDF5 file and populate
+        the object's dictionary and subdictionaries (already loaded by JSON)
         '''
         with h5py.File(filename, 'r') as f:
-            for key in f.keys():
-                if key not in unwanted_keys:
-                    setattr(self, key, f[key][:]) # converts to numpy array.
+            def walk(d, f):
+                for key in f.keys():
+                    if key not in unwanted_keys:
+                        if f.get(key, getclass=True) is h5py._hl.group.Group: # this means it's either a dictionary or object
+                            if key[0] == '!': # it's an object
+                                walk(d[key[1:]].__dict__, f[key]) # [:1] strips the !; this walks through the subobject
+                            else: # it's a dictionary
+                                walk(d[key], f[key]) # walk through the subdictionary
+                        else:
+                            d[key] = f[key][:] # we've arrived at a dataset
+                return d
+
+            walk(self.__dict__, f) # start walkin'
 
 
     def _load_instruments(self, instruments={}):
@@ -174,39 +202,41 @@ class Measurement:
 
         filename = os.path.join(path, filename)
 
-        # if compress:
-        #     ## Figure out what to save as JSON vs HDF5 - only looks one level deep for now.
-        #     json_dict = {}
-        #     hdf5_dict = {}
-        #     for key, value in self.__dict__.items(): # key = name we want to save with, value = actual name of variable
-        #         if type(getattr(self,value)) is np.ndarray: # checks if this variable is a numpy array
-        #             hdf5_dict[key] = value # Numpy arrays will get converted to hdf5
-        #         else:
-        #             json_dict[key] = value # everything else gets saved to JSON
-        # else:
-        #     json_dict = self.__dict__
-
-        self._save_json(filename)
         self._save_hdf5(filename)
+        self._save_json(filename)
 
         try:
-            Measurement.load(filename)
+            self.__dict__.update(self.load(filename).__dict__)
         except:
             raise Exception('Reloading failed, but object was saved!')
 
 
     def _save_hdf5(self, filename):
         '''
-        Save numpy arrays to h5py.
+        Save numpy arrays to h5py. Walks through the object's dictionary
+        and any subdictionaries and subobjects, picks out numpy arrays,
+        and saves them in the hierarchical HDF5 format.
+
+        A subobject is designated by a ! at the beginning of the varaible name.
         '''
+
         with h5py.File(filename+'.h5', 'w') as f:
-            for key, value in self.__dict__.items():
-                if type(value) is np.ndarray:
-                    d = f.create_dataset(key, value.shape,
-                        compression = 'gzip', compression_opts=9
-                        )
-                    d.set_fill_value = np.nan
-                    d[...] = value
+            def walk(d, group): # walk through a dictionary
+                for key, value in d.items():
+                    if type(value) is np.ndarray: # found a numpy array
+                        d = group.create_dataset(key, value.shape,
+                            compression = 'gzip', compression_opts=9
+                        ) # save the numpy array as a dataset
+                        d.set_fill_value = np.nan
+                        d[...] = value # fill it with data
+                    elif type(value) is dict: # found a dictionary
+                        new_group = group.create_group(key) # make a group with the dictionary name
+                        walk(value, new_group) # walk through the dictionary
+                    elif hasattr(value, '__dict__'): # found an object of some sort
+                        new_group = group.create_group('!'+key) # make a group with !(object name)
+                        walk(value.__dict__, new_group) # walk through the object dictionary
+
+            walk(self.__dict__, f)
 
 
     def _save_json(self, filename):
