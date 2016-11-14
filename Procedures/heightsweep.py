@@ -24,8 +24,6 @@ class Heightsweep(Measurement):
         self.x = x
         self.y = y
         self.z0 = z0
-        # if plane is None:
-        #     plane = planefit.Planefit()
         self.plane = plane
         self.scan_rate = scan_rate
 

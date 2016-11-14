@@ -18,10 +18,9 @@ class Scanline(Measurement):
     Vac_y = np.nan
     C = np.nan
     output_data = np.nan
-    _append = 'line'
 
     def __init__(self, instruments={}, plane=None, start=(-100,-100), end=(100,100), scanheight=15, scan_rate=120, return_to_zero=True):
-        super().__init__(self._append)
+        super().__init__()
 
         self._load_instruments(instruments)
 
@@ -29,8 +28,6 @@ class Scanline(Measurement):
         self.end = end
         self.return_to_zero = return_to_zero
 
-        if not plane:
-            plane = Planefit()
         self.plane = plane
 
         if scanheight < 0:

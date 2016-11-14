@@ -37,8 +37,6 @@ class Scanplane(Measurement):
         self.span = span
         self.center = center
         self.numpts = numpts
-        if not plane:
-            plane = planefit.Planefit()
         self.plane = plane
 
         if scanheight < 0:
