@@ -9,12 +9,16 @@ from ..Utilities.save import Measurement, get_todays_data_path
 
 class Heightsweep(Measurement):
     _chan_labels = ['dc','ac x','ac y']
+    _conversions = {
+        'dc': conversions.Vsquid_to_phi0,
+        'ac x': conversions.Vsquid_to_phi0,
+        'ac y': conversions.Vsquid_to_phi0,
+        'z': conversions.Vpiezo_to_attomicron
+    }
     instrument_list = ['piezos','montana','squidarray']
 
-    z = np.nan
-    Vacx = np.nan
-    Vacy = np.nan
-    Vdc = np.nan
+    V = {}
+
 
     def __init__(self, instruments = {}, plane=None, x=0, y=0, z0=0, scan_rate=120):
         super().__init__()
@@ -43,10 +47,9 @@ class Heightsweep(Measurement):
                                         chan_in = self._chan_labels,
                                         sweep_rate = self.scan_rate)
 
-        self.z = self.plane.plane(self.x, self.y)-np.array(output_data['z'])-self.z0
-        self.Vacx = received['ac x']
-        self.Vacy = received['ac y']
-        self.Vdc = received['dc']
+        for chan in self._chan_labels:
+            self.V[chan] = received[chan]
+        self.V['z'] = self.plane.plane(self.x, self.y)-np.array(output_data['z'])-self.z0
 
         self.piezos.zero()
 
@@ -58,9 +61,8 @@ class Heightsweep(Measurement):
     def plot(self):
         super().plot()
 
-        self.ax['dc'].plot(self.z, self.Vdc, '.k', markersize=6, alpha=0.5)
-        self.ax['ac x'].plot(self.z, self.Vacx, '.k', markersize=6)
-        self.ax['ac y'].plot(self.z, self.Vacy, '.k', markersize=6)
+        for chan in self._chan_labels:
+            self.ax[chan].plot(self.V['z'], self.V[chan]*self._conversions[chan], '.k', markersize=6, alpha=0.5)
 
 
     def save(self, savefig=True):

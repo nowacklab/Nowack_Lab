@@ -14,6 +14,13 @@ from ..Utilities import conversions
 
 class Scanplane(Measurement):
     _chan_labels = ['dc','cap','ac x','ac y'] # DAQ channel labels expected by this class
+    _conversions = {
+        'dc': conversions.Vsquid_to_phi0,
+        'cap': conversions.V_to_C,
+        'ac x': conversions.Vsquid_to_phi0,
+        'ac y': conversions.Vsquid_to_phi0,
+        'piezo': conversions.Vpiezo_to_micron
+    }
     instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto','daq']
 
     ## Put things here necessary to have when reloading object
@@ -58,7 +65,7 @@ class Scanplane(Measurement):
             self.V[chan] = np.full(self.X.shape, np.nan) #initialize arrays
 
 
-    def do(self, fast_axis = 'x', linear=True): # linear True = sweep in lines, False sweep over plane surface
+    def do(self, fast_axis = 'x', surface=False): # surface False = sweep in lines, True sweep over plane surface
         ## Start time and temperature
         tstart = time.time()
         #temporarily commented out so we can scan witout internet on montana
@@ -111,7 +118,7 @@ class Scanplane(Measurement):
             time.sleep(3)
 
             ## Do the sweep
-            if linear:
+            if not surface:
                 output_data, received = self.piezos.sweep(Vstart, Vend,
                                             chan_in = self._chan_labels,
                                             sweep_rate=self.scan_rate
@@ -154,7 +161,7 @@ class Scanplane(Measurement):
 
             for chan in ['ac x', 'ac y']:
                 self.Vfull[chan] = self.lockin_squid.convert_output(self.Vfull[chan])
-            self.Vfull['cap'] -= Vcap_offset
+            self.Vfull['cap'] = self.lockin_cap.convert_output(self.Vfull['cap']) - Vcap_offset
 
             # Interpolate the data and store in the 2D arrays
             if fast_axis == 'x': # self.V[chan][i, :]
@@ -187,10 +194,9 @@ class Scanplane(Measurement):
         '''
         super().plot()
 
-        plot_mpl.update2D(self.im_dc, self.V*conversions.Vsquid_to_phi0)
-        plot_mpl.update2D(self.im_cap, self.C)
-        plot_mpl.update2D(self.im_ac_x, self.Vac_x*conversions.Vsquid_to_phi0)
-        plot_mpl.update2D(self.im_ac_y, self.Vac_y*conversions.Vsquid_to_phi0)
+        for i, chan in enumerate(self._chan_labels):
+            plot-mpl.update2D(self.im[chan], self.V[chan]*self._conversions[chan])
+
         self.plot_line()
 
         self.fig.canvas.draw()
@@ -214,14 +220,14 @@ class Scanplane(Measurement):
             self.im[chan] = plot_mpl.plot2D(self.ax[chan],
                                             self.X,
                                             self.Y,
-                                            self.V[chan]*conversions.Vsquid_to_phi0,
+                                            self.V[chan],
                                             cmap = cmaps[i],
                                             title = self.filename,
                                             xlabel = '$V_{piezo}$ | $\sim\mu\mathrm{m}$',
                                             ylabel = '$V_{piezo}$ | $\sim\mu\mathrm{m}$',
                                             clabel = r'%s ($\phi_0$)' %chan
                                         )
-        self.ax['cap'].clabel = 'cap (V)' # not phi0's!
+        self.im['cap'].colorbar.set_label('cap (C)') # not phi0's!
 
         for ax in self.ax.values():
             ax.set_xticklabels(['%i | %i' %(x, x*conversions.Vpiezo_to_micron) for x in ax.get_xticks()])
@@ -245,11 +251,11 @@ class Scanplane(Measurement):
         self.fig.canvas.draw()
 
 
-    def plot_line(self):
-        self.line_full.set_xdata(self.Vfull['piezo']*conversions.Vpiezo_to_micron)
-        self.line_full.set_ydata(self.Vfull['ac x']*conversions.Vsquid_to_phi0)
-        self.line_interp.set_xdata(self.Vinterp['piezo']*conversions.Vpiezo_to_micron)
-        self.line_interp.set_ydata(self.Vinterp['ac x']*conversions.Vsquid_to_phi0)
+    def plot_line(self, chan = 'ac x'):
+        self.line_full.set_xdata(self.Vfull['piezo']*self._conversions['piezo'])
+        self.line_full.set_ydata(self.Vfull[chan]*self._conversions[chan])
+        self.line_interp.set_xdata(self.Vinterp['piezo']*self._conversions['piezo'])
+        self.line_interp.set_ydata(self.Vfull[chan]*self._conversions[chan])
 
         self.ax['line'].relim()
         self.ax['line'].autoscale_view()
