@@ -24,10 +24,10 @@ class Measurement:
     _chan_labels = [] # DAQ channel labels expected by this class
     instrument_list = []
 
-    def __init__(self, append=None):
+    def __init__(self):
         self.timestamp = ''
 
-        self.make_timestamp_and_filename(append)
+        self.make_timestamp_and_filename()
 
 
     def __getstate__(self):
@@ -79,12 +79,12 @@ class Measurement:
 
         if filename is None: # tries to find the last saved object; not guaranteed to work
             try:
-                filename =  max(glob.iglob(os.path.join(get_todays_data_path(),'*_%s.json' %cls._append)),
+                filename =  max(glob.iglob(os.path.join(get_todays_data_path(),'*_%s.json' %cls.__name__)),
                                         key=os.path.getctime)
             except: # we must have taken one during the previous day's work
                 folders = list(glob.iglob(os.path.join(get_todays_data_path(),'..','*')))
                 # -2 should be the previous day (-1 is today)
-                filename =  max(glob.iglob(os.path.join(folders[-2],'*_%s.json' %cls._append)),
+                filename =  max(glob.iglob(os.path.join(folders[-2],'*_%s.json' %cls.__name__)),
                                         key=os.path.getctime)
             filename = filename.rpartition('.')[0] #remove extension
 
@@ -158,16 +158,14 @@ class Measurement:
         return obj
 
 
-    def make_timestamp_and_filename(self, append=None):
+    def make_timestamp_and_filename(self):
         '''
         Makes a timestamp and filename from the current time.
-        Use `append` to tack on something at the end of the filename.
         '''
         now = datetime.now()
         self.timestamp = now.strftime("%Y-%m-%d %I:%M:%S %p")
         self.filename = now.strftime('%Y-%m-%d_%H%M%S')
-        if append:
-            self.filename += '_' + append
+        self.filename += '_' + self.__class__.__name__
 
 
     def plot(self):

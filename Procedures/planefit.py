@@ -21,10 +21,9 @@ class Planefit(Measurement):
     a = np.nan
     b = np.nan
     c = np.nan
-    _append = 'plane'
 
     def __init__(self, instruments={}, span=[400,400], center=[0,0], numpts=[4,4], Vz_max = None):
-        super().__init__(self._append)
+        super().__init__()
 
         self._load_instruments(instruments)
         self.instruments = instruments

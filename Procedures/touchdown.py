@@ -38,12 +38,9 @@ class Touchdown(Measurement):
     attoshift = 40 # move 20 um if no touchdown detected
     Vz_max = 400
     start_offset = 0
-    _append = 'td'
 
     def __init__(self, instruments={}, planescan=False, Vz_max = None):
-        if planescan:
-            self._append += '_planescan'
-        super().__init__(self._append)
+        super().__init__()
 
         self._load_instruments(instruments)
 

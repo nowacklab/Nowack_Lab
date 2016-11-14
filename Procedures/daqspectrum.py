@@ -17,10 +17,9 @@ class DaqSpectrum(Measurement):
     V = 1
     t = 1
     psdAve = 1
-    _append = 'spectrum'
 
     def __init__(self, instruments={}, measure_time=0.5, measure_freq=256000, averages=30):
-        super().__init__(self._append)
+        super().__init__()
 
         self._load_instruments(instruments)
 

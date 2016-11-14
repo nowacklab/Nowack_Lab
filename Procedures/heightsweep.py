@@ -15,10 +15,9 @@ class Heightsweep(Measurement):
     Vacx = np.nan
     Vacy = np.nan
     Vdc = np.nan
-    _append = 'heightsweep'
 
     def __init__(self, instruments = {}, plane=None, x=0, y=0, z0=0, scan_rate=120):
-        super().__init__(self._append)
+        super().__init__()
 
         self._load_instruments(instruments)
 

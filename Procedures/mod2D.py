@@ -12,7 +12,6 @@ from ..Utilities.save import Measurement, get_todays_data_path
 class Mod2D(Measurement):
     _chan_labels = ['squid out','squid in','mod out']
     notes = ''
-    _append = 'mod2D'
     instrument_list = SquidIV.instrument_list
 
     def __init__(self, instruments={}, rate=900):
@@ -21,7 +20,7 @@ class Mod2D(Measurement):
         To make an empty object, then just call Mod2D().
         You can do this if you want to plot previously collected data.
         '''
-        super().__init__(self._append)
+        super().__init__()
 
         self.IV = SquidIV(instruments, rate=rate)
 
