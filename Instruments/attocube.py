@@ -123,7 +123,10 @@ class Positioner(Instrument):
         '''
         time.sleep(0.1) # capacitance was locking up, maybe this helps?
         print('Measuring capacitance of positioner %s...' %self.label)
-        self._C = self.anc.measureCapacitance(self.num)
+        try:
+            self._C = self.anc.measureCapacitance(self.num)
+        except:
+            self._C = self.anc.measureCapacitance(self.num) # sometimes measuring capactiance seizes up...
         print('...done.')
         return self._C
 

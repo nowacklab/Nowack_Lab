@@ -3,7 +3,7 @@ from numpy.linalg import lstsq
 from . import navigation, planefit
 import time, os
 from datetime import datetime
-from scipy.interpolate import interp1d as interp
+from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 from IPython import display
 from numpy import ma
@@ -197,7 +197,7 @@ class Scanplane(Measurement):
         super().plot()
 
         for i, chan in enumerate(self._chan_labels):
-            plot-mpl.update2D(self.im[chan], self.V[chan]*self._conversions[chan])
+            plot_mpl.update2D(self.im[chan], self.V[chan]*self._conversions[chan])
 
         self.plot_line()
 
@@ -257,7 +257,7 @@ class Scanplane(Measurement):
         self.line_full.set_xdata(self.Vfull['piezo']*self._conversions['piezo'])
         self.line_full.set_ydata(self.Vfull[chan]*self._conversions[chan])
         self.line_interp.set_xdata(self.Vinterp['piezo']*self._conversions['piezo'])
-        self.line_interp.set_ydata(self.Vfull[chan]*self._conversions[chan])
+        self.line_interp.set_ydata(self.Vinterp[chan]*self._conversions[chan])
 
         self.ax['line'].relim()
         self.ax['line'].autoscale_view()

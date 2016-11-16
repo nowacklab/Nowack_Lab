@@ -24,6 +24,7 @@ as necessary) and populate the numpy arrays.
 class Measurement:
     _chan_labels = [] # DAQ channel labels expected by this class
     instrument_list = []
+    fig = None
 
     def __init__(self):
         self.timestamp = ''
@@ -174,7 +175,7 @@ class Measurement:
         '''
         Update all plots.
         '''
-        if not hasattr(self, 'fig'):
+        if self.fig is None:
             self.setup_plots()
 
 
