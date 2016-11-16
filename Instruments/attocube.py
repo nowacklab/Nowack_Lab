@@ -4,10 +4,11 @@ import time
 import telnetlib
 import re
 from pyanc350v4 import Positioner as ANC350Pos
+from .instrument import Instrument
 
 ''' *** Use the Attocube class, definition is at the bottom *** '''
 
-class ANC350():
+class ANC350(Instrument):
     '''
     For remote operation of the Attocubes with the ANC350.
     Control each attocube using the "Positioner" object created.
@@ -65,7 +66,7 @@ class ANC350():
         #     setattr(s, 'anc', self.anc) # give each positioner the ANC object
 
 
-class Positioner():
+class Positioner(Instrument):
     def __init__(self, anc, num, V_lim=70, pos_lim=20000, pos_tolerance=1, label=None):
         '''
         Creates an Attocube positioner object.
@@ -122,7 +123,10 @@ class Positioner():
         '''
         time.sleep(0.1) # capacitance was locking up, maybe this helps?
         print('Measuring capacitance of positioner %s...' %self.label)
-        self._C = self.anc.measureCapacitance(self.num)
+        try:
+            self._C = self.anc.measureCapacitance(self.num)
+        except:
+            self._C = self.anc.measureCapacitance(self.num) # sometimes measuring capactiance seizes up...
         print('...done.')
         return self._C
 
@@ -248,7 +252,7 @@ class Positioner():
         self.anc.saveParams()
 
 
-class ANC300(): #open loop controller, we don't use this anymore
+class ANC300(Instrument): #open loop controller, we don't use this anymore
     '''
     THIS CONTROLLER NOT USED AS OF ~August 2016
     For remote operation of the Attocubes. Order of axes is X, Y, Z (controllers 1,2,3 are in that order).
@@ -439,7 +443,7 @@ class ANC300(): #open loop controller, we don't use this anymore
 
 
 
-class ANC350_like300():
+class ANC350_like300(Instrument):
     '''
     THIS CLASS NOT USED AS OF August 2016
     For remote operation of the Attocubes with the ANC350. Adapted directly from ANC300. Order of axes is X, Y, Z (controllers 1,2,3 are in that order).

@@ -10,18 +10,21 @@ from ..Utilities.save import Measurement, get_todays_data_path
 
 class Scanline(Measurement):
     _chan_labels = ['dc','cap','ac x','ac y']
+    _conversions = {
+        'dc': conversions.Vsquid_to_phi0,
+        'cap': conversions.V_to_C,
+        'ac x': conversions.Vsquid_to_phi0,
+        'ac y': conversions.Vsquid_to_phi0,
+        'piezo': conversions.Vpiezo_to_micron
+    }
     instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto']
 
-    Vout = np.nan
-    Vdc = np.nan
-    Vac_x = np.nan
-    Vac_y = np.nan
-    C = np.nan
-    output_data = np.nan
-    _append = 'line'
+    V = {
+        chan: np.nan for chan in _chan_labels + ['piezo']
+    }
 
-    def __init__(self, instruments={}, start=(-100,-100), end=(100,100), plane=None, scanheight=15, scan_rate=120, return_to_zero=True):
-        super().__init__(self._append)
+    def __init__(self, instruments={}, plane=None, start=(-100,-100), end=(100,100), scanheight=15, scan_rate=120, return_to_zero=True):
+        super().__init__()
 
         self._load_instruments(instruments)
 
@@ -29,8 +32,6 @@ class Scanline(Measurement):
         self.end = end
         self.return_to_zero = return_to_zero
 
-        if not plane:
-            plane = Planefit()
         self.plane = plane
 
         if scanheight < 0:
@@ -62,26 +63,22 @@ class Scanline(Measurement):
 
         ## Do the sweep
         in_chans = self._chan_labels
-        self.output_data, received = self.piezos.sweep(Vstart, Vend, chan_in=in_chans, sweep_rate=self.scan_rate) # sweep over Y
+        output_data, received = self.piezos.sweep(Vstart, Vend, chan_in=in_chans, sweep_rate=self.scan_rate) # sweep over Y
 
-        dist_between_points = np.sqrt((self.output_data['x'][0]-self.output_data['x'][-1])**2+(self.output_data['y'][0]-self.output_data['y'][-1])**2)
-        self.Vout = np.linspace(0, dist_between_points, len(self.output_data['x'])) # plots vs 0 to whatever the maximum distance travelled was
+        for axis in ['x','y','z']:
+            self.V[axis] = output_data[axis]
+
+        dist_between_points = np.sqrt((self.V['x'][0]-self.V['x'][-1])**2+(self.V['y'][0]-self.V['y'][-1])**2)
+        self.Vout = np.linspace(0, dist_between_points, len(self.V['x'])) # plots vs 0 to whatever the maximum distance travelled was
 
         # Store this line's signals for Vdc, Vac x/y, and Cap
         # Convert from DAQ volts to lockin volts
-        Vdc = received['dc']
-        self.Vdc = self.lockin_squid.convert_output(Vdc)
+        for chan in self._chan_labels:
+            self.V[chan] = received[chan]
 
-        Vac_x = received['ac x']
-        self.Vac_x = self.lockin_squid.convert_output(Vac_x)
-
-        Vac_y = received['ac y']
-        self.Vac_y = self.lockin_squid.convert_output(Vac_y)
-
-        Vcap = received['cap']
-        Vcap = self.lockin_cap.convert_output(Vcap) # convert to a lockin voltage
-        self.C = Vcap*conversions.V_to_C # convert to capacitance (fF)
-
+        for chan in ['ac x','ac y']:
+            self.V[chan] = self.lockin_squid.convert_output(self.V[chan])
+        self.Vfull['cap'] = self.lockin_cap.convert_output(self.Vfull['cap'])
 
         self.plot()
 
@@ -97,38 +94,11 @@ class Scanline(Measurement):
         '''
         Set up all plots.
         '''
-        self.fig = plt.figure(figsize=(8,5))
-        label = r'$\sim\mu\mathrm{m} (|V_{piezo}|*%.2f)$' %conversions.Vpiezo_to_micron
+        super().plot()
 
-        ## DC magnetometry
-        self.ax_squid = self.fig.add_subplot(221)
-        self.ax_squid.plot(self.Vout*conversions.Vpiezo_to_micron, self.Vdc*conversions.Vsquid_to_phi0, '-b')
-        self.ax_squid.set_xlabel(label)
-        self.ax_squid.set_ylabel('DC $\phi_0$')
-        self.ax_squid.set_title(self.filename)
+        for chan in self._chan_labels:
+            self.ax['chan'].plot(self.Vout*self._conversions['piezo'], self.V[chan], '-b')
 
-        ## AC in-phase
-        self.ax_squid = self.fig.add_subplot(223)
-        self.ax_squid.plot(self.Vout*conversions.Vpiezo_to_micron, self.Vac_x*conversions.Vsquid_to_phi0, '-b')
-        self.ax_squid.set_xlabel(label)
-        self.ax_squid.set_ylabel('AC X $\phi_0$')
-        self.ax_squid.set_title(self.filename)
-
-        ## AC out-of-phase
-        self.ax_squid = self.fig.add_subplot(224)
-        self.ax_squid.plot(self.Vout*conversions.Vpiezo_to_micron, self.Vac_y*conversions.Vsquid_to_phi0, '-b')
-        self.ax_squid.set_xlabel(label)
-        self.ax_squid.set_ylabel('AC Y $\phi_0$')
-        self.ax_squid.set_title(self.filename)
-
-        ## Capacitance
-        self.ax_squid = self.fig.add_subplot(222)
-        self.ax_squid.plot(self.Vout*conversions.Vpiezo_to_micron, self.C, '-b')
-        self.ax_squid.set_xlabel(label)
-        self.ax_squid.set_ylabel('C (fF)')
-        self.ax_squid.set_title(self.filename)
-
-        ## Draw everything in the notebook
         self.fig.canvas.draw()
 
 
@@ -142,3 +112,20 @@ class Scanline(Measurement):
 
         if savefig and hasattr(self, 'fig'):
             self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
+
+
+    def setup_plots(self):
+        self.fig = plt.figure(figsize=(8,5))
+
+        self.ax['dc'] = self.fig.add_subplot(221)
+        self.ax['ac x'] = self.fig.add_subplot(223)
+        self.ax['ac y'] = self.fig.add_subplot(224)
+        self.ax['cap'] = self.fig.add_subplot(222)
+
+        for label, ax in self.ax.items():
+            ax.set_xlabel(r'$\sim\mu\mathrm{m} (|V_{piezo}|*%.2f)$'
+                                %conversions.Vpiezo_to_micron
+                    )
+            ax.set_ylabel('%s ($\phi_0$)' %label)
+            ax.set_title(self.filename)
+        self.ax['cap'].set_ylabel('cap (C)')

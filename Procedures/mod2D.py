@@ -12,7 +12,6 @@ from ..Utilities.save import Measurement, get_todays_data_path
 class Mod2D(Measurement):
     _chan_labels = ['squid out','squid in','mod out']
     notes = ''
-    _append = 'mod2D'
     instrument_list = SquidIV.instrument_list
 
     def __init__(self, instruments={}, rate=900):
@@ -21,7 +20,7 @@ class Mod2D(Measurement):
         To make an empty object, then just call Mod2D().
         You can do this if you want to plot previously collected data.
         '''
-        super().__init__(self._append)
+        super().__init__()
 
         self.IV = SquidIV(instruments, rate=rate)
 
@@ -56,9 +55,9 @@ class Mod2D(Measurement):
             self.IV.Imod = self.Imod[i]
             self.IV.do_IV()
             self.plot()
-            self.axIV.clear()
-            self.axIV2.clear()
-            self.IV.plot(self.axIV, self.axIV2)
+            self.ax['IV'].clear()
+            self.ax['IV2'].clear()
+            self.IV.plot(self.ax['IV'], self.ax['IV2'])
             self.V[:][i] = self.IV.V
             self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
         self.IV.daq.zero() # zero everything
@@ -104,10 +103,9 @@ class Mod2D(Measurement):
         '''
         Plot the 2D mod image
         '''
-        if not hasattr(self, 'im'):
-            self.setup_plot()
+        super().plot()
         plot_mpl.update2D(self.im, self.V, equal_aspect=False)
-        plot_mpl.aspect(self.ax2D, 1)
+        plot_mpl.aspect(self.ax['2D'], 1)
 
 
     def save(self, savefig=True):
@@ -122,15 +120,16 @@ class Mod2D(Measurement):
             self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
 
 
-    def setup_plot(self):
+    def setup_plots(self):
         '''
         Set up the figure. 2D mod image and last IV trace.
         '''
-        self.fig, (self.axIV, self.ax2D) = plt.subplots(2,1,figsize=(7,7),gridspec_kw = {'height_ratios':[1, 3]})
-        self.axIV2 = self.axIV.twinx() # for dV/dI
-        self.axIV.set_title(self.filename+'\n'+self.notes)
+        self.ax = {}
+        self.fig, (self.ax['IV'], self.ax['2D']) = plt.subplots(2,1,figsize=(7,7),gridspec_kw = {'height_ratios':[1, 3]})
+        self.ax['IV2'] = self.ax['IV'].twinx() # for dV/dI
+        self.ax['IV'].set_title(self.filename+'\n'+self.notes)
         ## Set up 2D plot
-        self.im = plot_mpl.plot2D(self.ax2D,
+        self.im = plot_mpl.plot2D(self.ax['2D'],
                                 self.Isquid*1e6,
                                 self.Imod*1e6,
                                 self.V,

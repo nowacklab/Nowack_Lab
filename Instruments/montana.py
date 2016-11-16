@@ -7,8 +7,9 @@ except:
     print('clr not imported')
 from tabulate import tabulate
 import time
+from .instrument import Instrument
 
-class Montana():
+class Montana(Instrument):
     _temperature = {}
     cryo = None
     def __init__(self, ip='192.168.100.237', port=7773):

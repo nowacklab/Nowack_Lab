@@ -5,28 +5,31 @@ from ..Instruments import piezos, nidaq, montana
 import time, os
 from datetime import datetime
 from ..Utilities.save import Measurement, get_todays_data_path
-
+from ..Utilities import conversions
 
 class Heightsweep(Measurement):
     _chan_labels = ['dc','ac x','ac y']
+    _conversions = {
+        'dc': conversions.Vsquid_to_phi0,
+        'ac x': conversions.Vsquid_to_phi0,
+        'ac y': conversions.Vsquid_to_phi0,
+        'z': conversions.Vpiezo_to_attomicron
+    }
     instrument_list = ['piezos','montana','squidarray']
 
-    z = np.nan
-    Vacx = np.nan
-    Vacy = np.nan
-    Vdc = np.nan
-    _append = 'heightsweep'
+    V = {
+        chan: np.nan for chan in _chan_labels + ['piezo']
+    }
 
-    def __init__(self, instruments = {}, x=0, y=0, z0=0, plane=None, scan_rate=120):
-        super().__init__(self._append)
+
+    def __init__(self, instruments = {}, plane=None, x=0, y=0, z0=0, scan_rate=120):
+        super().__init__()
 
         self._load_instruments(instruments)
 
         self.x = x
         self.y = y
         self.z0 = z0
-        # if plane is None:
-        #     plane = planefit.Planefit()
         self.plane = plane
         self.scan_rate = scan_rate
 
@@ -46,10 +49,9 @@ class Heightsweep(Measurement):
                                         chan_in = self._chan_labels,
                                         sweep_rate = self.scan_rate)
 
-        self.z = self.plane.plane(self.x, self.y)-np.array(output_data['z'])-self.z0
-        self.Vacx = received['ac x']
-        self.Vacy = received['ac y']
-        self.Vdc = received['dc']
+        for chan in self._chan_labels:
+            self.V[chan] = received[chan]
+        self.V['z'] = self.plane.plane(self.x, self.y)-np.array(output_data['z'])-self.z0
 
         self.piezos.zero()
 
@@ -59,22 +61,11 @@ class Heightsweep(Measurement):
 
 
     def plot(self):
-        self.fig = plt.figure()
+        super().plot()
 
-        self.ax_dc = self.fig.add_subplot(311)
-        self.ax_dc.set_xlabel(r'$V_z^{samp} - V_z (V)$')
-        self.ax_dc.set_title('%s\nDC Magnetometry (V) at (%.2f,%.2f)' %(self.filename, self.x, self.y))
-        self.ax_dc.plot(self.z, self.Vdc, '.k', markersize=6, alpha=0.5)
+        for chan in self._chan_labels:
+            self.ax[chan].plot(self.V['z'], self.V[chan]*self._conversions[chan], '.k', markersize=6, alpha=0.5)
 
-        self.ax_ac_x = self.fig.add_subplot(312)
-        self.ax_ac_x.set_xlabel(r'$V_z^{samp} - V_z (V)$')
-        self.ax_ac_x.set_title('%s\nX component AC Response (V) at (%.2f,%.2f)' %(self.filename, self.x, self.y))
-        self.ax_ac_x.plot(self.z, self.Vacx, '.k', markersize=6)
-
-        self.ax_ac_y = self.fig.add_subplot(313)
-        self.ax_ac_y.set_xlabel(r'$V_z^{samp} - V_z (V)$')
-        self.ax_ac_y.set_title('%s\nY component AC Response (V) at (%.2f,%.2f)' %(self.filename, self.x, self.y))
-        self.ax_ac_y.plot(self.z, self.Vacy, '.k', markersize=6)
 
     def save(self, savefig=True):
         '''
@@ -86,3 +77,15 @@ class Heightsweep(Measurement):
 
         if savefig and hasattr(self, 'fig'):
             self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf')+'.pdf', bbox_inches='tight')
+
+    def setup_plots(self):
+        self.fig = plt.figure()
+        self.ax = {}
+
+        self.ax['dc'] = self.fig.add_subplot(311)
+        self.ax['ac x'] = self.fig.add_subplot(312)
+        self.ax['ac y'] = self.fig.add_subplot(313)
+
+        for label, ax in self.ax.items():
+            ax.set_xlabel(r'$V_z^{samp} - V_z (V)$')
+            ax.set_title('%s\n%s (V) at (%.2f, %.2f)' %(self.filename, label, self.x, self.y))

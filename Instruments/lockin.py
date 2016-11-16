@@ -1,5 +1,6 @@
 import visa, atexit, time, numpy as np
 from tabulate import tabulate
+from .instrument import Instrument
 
 _time_constant_values = [10e-6, 30e-6, 100e-6, 300e-6, 1e-3, 3e-3, 10e-3, 30e-3, 100e-3, 300e-3, 1, 3, 10, 30, 100, 300, 1000, 3000, 10000, 30000]
 _sensitivity_options = [
@@ -10,7 +11,7 @@ _sensitivity_options = [
 _reserve_options = ['High Reserve', 'Normal', 'Low Noise']
 
 
-class SR830():
+class SR830(Instrument):
     '''
     Instrument driver for SR830, modified from Guen's squidpy driver
     '''

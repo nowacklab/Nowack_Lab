@@ -17,11 +17,10 @@ class DaqSpectrum(Measurement):
     V = 1
     t = 1
     psdAve = 1
-    _append = 'spectrum'
 
-    def __init__(self, instruments={}, measure_time=0.5, measure_freq=256000,
-                 averages=30):
-        super().__init__(self._append)
+    def __init__(self, instruments={}, measure_time=0.5, measure_freq=256000, averages=30):
+        super().__init__()
+
 
         self._load_instruments(instruments)
 
@@ -34,10 +33,7 @@ class DaqSpectrum(Measurement):
 
         self.psdAve = self.get_spectrum()
 
-        self.setup_plots()
-        self.plot_loglog()
-        self.plot_semilog()
-
+        self.plot()
         self.save()
 
 
@@ -56,16 +52,14 @@ class DaqSpectrum(Measurement):
             psdAve = psdAve + psd
 
         psdAve = psdAve / self.averages # normalize by the number of averages
+
         return np.sqrt(psdAve) # spectrum in V/sqrt(Hz)
 
 
     def plot(self):
-        try:
-            self.ax_loglog # see if this exists
-        except:
-            self.setup_plots()
-        self.plot_loglog()
-        self.plot_semilog()
+        super().plot()
+        self.ax['loglog'].loglog(self.f, self.psdAve)
+        self.ax['semilog'].semilogy(self.f, self.psdAve)
 
 
     def plotLog(self, fname, calibration=None):
@@ -98,14 +92,6 @@ class DaqSpectrum(Measurement):
         return figPathPng
 
 
-    def plot_loglog(self, calibration=None):
-        self.ax_loglog.loglog(self.f, self.psdAve)
-
-
-    def plot_semilog(self):
-        self.ax_semilog.semilogy(self.f, self.psdAve)
-
-
     def save(self, savefig=True):
         '''
         Saves the daqspectrum object.
@@ -114,24 +100,23 @@ class DaqSpectrum(Measurement):
 
         self._save(get_todays_data_path(), self.filename)
 
-        if savefig and hasattr(self, 'fig_loglog'):
-            self.fig_loglog.savefig(os.path.join(get_todays_data_path(), self.filename)+'_loglog.pdf')
-            self.fig_semilog.savefig(os.path.join(get_todays_data_path(), self.filename)+'_semilog.pdf')
+        if savefig and hasattr(self, 'fig'):
+            self.fig.savefig(os.path.join(get_todays_data_path(), self.filename)+'.pdf')
 
 
     def setup_plots(self):
-        self.fig_loglog = plt.figure(figsize=(6,6))
-        self.ax_loglog = self.fig_loglog.add_subplot(111)
+        self.fig = plt.figure(figsize=(12,6))
+        self.ax = {}
+        self.ax['loglog'] = self.fig.add_subplot(121)
+        self.ax['semilog'] = self.fig.add_subplot(122)
 
-        self.fig_semilog = plt.figure(figsize=(6,6))
-        self.ax_semilog = self.fig_semilog.add_subplot(111)
-
-        for ax in (self.ax_loglog, self.ax_semilog):
+        for ax in self.ax.values():
             ax.set_xlabel('Frequency (Hz)')
             ax.set_ylabel(r'Power Spectral Density ($\mathrm{V/\sqrt{Hz}}$)')
             #apply a timestamp to the plot
-            ax.annotate(self.timestamp, xy=(0.02,.98), xycoords='axes fraction', fontsize=10,
-            ha='left', va = 'top', family='monospace')
+            ax.annotate(self.timestamp, xy=(0.02,.98), xycoords='axes fraction',
+                fontsize=10, ha='left', va = 'top', family='monospace'
+            )
 
 
     def setup_preamp(self):

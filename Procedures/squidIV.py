@@ -21,14 +21,13 @@ class SquidIV(Measurement):
     V = np.array([])
     I = np.array([])
     notes = ''
-    _append = 'IV'
 
     def __init__(self, instruments={}, rate=90):
         '''
         Example: SquidIV({'daq': daq, 'preamp': preamp}, 0, 0, None, 90)
         To make an empty object, then just call SquidIV(). You can do this if you want to plot previously collected data.
         '''
-        super().__init__(self._append)
+        super().__init__()
 
         self.two_preamps = False
 
@@ -76,7 +75,7 @@ class SquidIV(Measurement):
         self.do_IV()
         self.daq.zero() # zero everything
 
-        self.setup_plot()
+        self.setup_plots()
         self.plot()
         self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
 
@@ -140,9 +139,8 @@ class SquidIV(Measurement):
                 print('Invalid command\n')
 
     def plot(self, ax=None, ax2=None):
-        if ax == None:
-            if not hasattr(self, 'ax'):
-                self.setup_plot()
+        if ax == None: # if plotting on Mod2D's axis
+            super().plot()
             ax = self.ax
             ax2 = ax.twinx()
 
@@ -164,6 +162,7 @@ class SquidIV(Measurement):
             tl.set_color('r')
         return ax
 
+
     def save(self, savefig=True):
         '''
         Saves the squidIV object.
@@ -175,5 +174,5 @@ class SquidIV(Measurement):
         if savefig and hasattr(self,'fig'):
             self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'))
 
-    def setup_plot(self):
+    def setup_plots(self):
         self.fig, self.ax = plt.subplots()

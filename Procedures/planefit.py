@@ -21,10 +21,9 @@ class Planefit(Measurement):
     a = np.nan
     b = np.nan
     c = np.nan
-    _append = 'plane'
 
     def __init__(self, instruments={}, span=[400,400], center=[0,0], numpts=[4,4], Vz_max = None):
-        super().__init__(self._append)
+        super().__init__()
 
         self._load_instruments(instruments)
         self.instruments = instruments
@@ -151,24 +150,12 @@ class Planefit(Measurement):
 
 
     def plot(self):
-        from mpl_toolkits.mplot3d import Axes3D
-        self.fig = plt.figure()
-        ax = self.fig.add_subplot(111, projection='3d')
+        super().plot()
 
-        X = self.X
-        Y = self.Y
-        Z = self.Z
+        ax.scatter(self.X, self.Y, self.Z)
 
-        ax.scatter(X, Y, Z)
-
-        Zfit = self.plane(X,Y)
-        ax.plot_surface(X,Y,Zfit,alpha=0.2, color = [0,1,0])
-
-        ax.set_xlabel('x')
-        ax.set_ylabel('y')
-        ax.set_zlabel('z')
-
-        plt.title(self.filename,fontsize=15)
+        Zfit = self.plane(self.X, self.Y)
+        self.ax.plot_surface(self.X, self.Y, Zfit,alpha=0.2, color = [0,1,0])
 
 
     def save(self, savefig=True):
@@ -182,6 +169,17 @@ class Planefit(Measurement):
 
         if savefig and hasattr(self, 'fig'):
             self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
+
+
+    def setup_plots(self):
+        from mpl_toolkits.mplot3d import Axes3D
+        self.fig = plt.figure()
+        self.ax = self.fig.add_subplot(111, projection='3d')
+
+        self.ax.set_xlabel('x')
+        self.ax.set_ylabel('y')
+        self.ax.set_zlabel('z')
+        plt.title(self.filename,fontsize=15)
 
 
     def surface(self, x, y):

@@ -1,4 +1,5 @@
 import visa, time, numpy as np
+from .instrument import Instrument
 
 COARSE_GAIN = [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000]
 FINE_GAIN = [1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0]
@@ -8,7 +9,7 @@ for cg in COARSE_GAIN:
         ALL_GAINS.append(int(cg*fg))
 FILTER = [0, 0.03, 0.1, 0.3, 1, 3, 10, 30, 100, 300, 1000, 3000, 10000, 30000, 100000, 300000]
 
-class SR5113():
+class SR5113(Instrument):
     _gain = None
     _filter = None
     def __init__(self, port='COM1'):
