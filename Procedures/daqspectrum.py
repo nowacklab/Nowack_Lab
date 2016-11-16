@@ -19,7 +19,8 @@ class DaqSpectrum(Measurement):
     psdAve = 1
     _append = 'spectrum'
 
-    def __init__(self, instruments={}, measure_time=0.5, measure_freq=256000, averages=30):
+    def __init__(self, instruments={}, measure_time=0.5, measure_freq=256000,
+                 averages=30):
         super().__init__(self._append)
 
         self._load_instruments(instruments)
@@ -31,6 +32,16 @@ class DaqSpectrum(Measurement):
     def do(self):
         self.setup_preamp()
 
+        self.psdAve = self.get_spectrum()
+
+        self.setup_plots()
+        self.plot_loglog()
+        self.plot_semilog()
+
+        self.save()
+
+
+    def get_spectrum(self):
         Nfft = int((self.measure_freq*self.measure_time / 2) + 1)
         psdAve = np.zeros(Nfft)
 
@@ -40,17 +51,12 @@ class DaqSpectrum(Measurement):
                                     )
             self.V = received['dc'] #extract data from the required channel
             self.t = received['t']
-            self.f, psd = signal.periodogram(self.V, self.measure_freq, 'blackmanharris')
+            self.f, psd = signal.periodogram(self.V, self.measure_freq,
+                                             'blackmanharris')
             psdAve = psdAve + psd
 
         psdAve = psdAve / self.averages # normalize by the number of averages
-        self.psdAve = np.sqrt(psdAve) # spectrum in V/sqrt(Hz)
-
-        self.setup_plots()
-        self.plot_loglog()
-        self.plot_semilog()
-
-        self.save()
+        return np.sqrt(psdAve) # spectrum in V/sqrt(Hz)
 
 
     def plot(self):

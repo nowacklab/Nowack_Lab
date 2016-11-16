@@ -27,7 +27,6 @@ class Scanplane(Measurement):
     Vac_x_interp = np.array([])
     Vac_y_interp = np.array([])
 
-    end_time = ''
     _append = 'scan'
 
     def __init__(self, instruments={}, span=[800,800],
@@ -53,10 +52,10 @@ class Scanplane(Measurement):
                 raise Exception('Terminated by user')
         self.scanheight = scanheight
 
-        self.x = np.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
-        self.y = np.linspace(center[1]-span[1]/2, center[1]+span[1]/2, numpts[1])
+        x = np.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
+        y = np.linspace(center[1]-span[1]/2, center[1]+span[1]/2, numpts[1])
 
-        self.X, self.Y = np.meshgrid(self.x, self.y)
+        self.X, self.Y = np.meshgrid(x, y)
         try:
             self.Z = self.plane.plane(self.X, self.Y) - self.scanheight
         except:
@@ -203,7 +202,6 @@ class Scanplane(Measurement):
         self.piezos.V = 0
         self.save()
 
-        self.end_time = datetime.now().strftime("%Y-%m-%d %I:%M:%S %p")
         tend = time.time()
         print('Scan took %f minutes' %((tend-tstart)/60))
         return

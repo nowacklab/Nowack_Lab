@@ -33,6 +33,7 @@ from Nowack_Lab.Procedures.navigation import move
 from Nowack_Lab.Procedures.planefit import Planefit
 from Nowack_Lab.Procedures.scanline import Scanline
 from Nowack_Lab.Procedures.scanplane import Scanplane
+from Nowack_Lab.Procedures.scanspectra import Scanspectra
 from Nowack_Lab.Procedures.squidIV import SquidIV
 from Nowack_Lab.Procedures.touchdown import Touchdown
 from Nowack_Lab.Instruments.attocube import Attocube
