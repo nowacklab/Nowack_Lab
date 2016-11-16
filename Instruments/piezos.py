@@ -1,7 +1,8 @@
 import numpy as np
 from ..Utilities.logging import log
+from .instrument import Instrument
 
-class Piezos():
+class Piezos(Instrument):
     '''
     Piezo benders on the scanner.
     Signal sent to NIDAQ goes through Nanonis HVA4 High Voltage Amplifier.
@@ -293,7 +294,7 @@ class Piezos():
         self.V = 0
 
 
-class Piezo():
+class Piezo(Instrument):
     _V = None
     def __init__(self, daq, label=None, gain=15, Vmax=200, bipolar=2, max_sweep_rate=180, max_step_size=.2):
         self._daq = daq

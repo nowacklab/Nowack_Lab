@@ -6,8 +6,9 @@ Possible to-do: make parameter values quantized to 12 bits to more accurately re
 
 import visa, time, atexit, inspect, os, json, jsonpickle as jsp
 from IPython.display import clear_output
+from .instrument import Instrument
 
-class PCI100:
+class PCI100(Instrument):
     def __init__(self, visaResource='COM3'):
         self._visaResource = visaResource
         atexit.register(self.close)
@@ -43,7 +44,7 @@ class PCI100:
         self.instrument.close()
         del(self.instrument) # do this for JSON
 
-class PFL102:
+class PFL102(Instrument):
     FeedbackResistors = {'1kOhm': 0x0002, '10kOhm': 0x0004, '100kOhm': 0x0000}
     IntegratorCapacitors = {'1.5nF': 0x0000, '15nF': 0x0100, '150nF': 0x0200}
     TestInputs = {'S_bias': 0x0010, 'A_bias': 0x0020, 'S_flux': 0x0040, 'A_flux': 0x0080}

@@ -3,7 +3,8 @@ import json, os, pickle, bz2, jsonpickle as jsp, numpy as np
 from datetime import datetime
 jspnp.register_handlers()
 from copy import copy
-import h5py, glob, matplotlib
+import h5py, glob, matplotlib, inspect
+import matplotlib.pyplot as plt
 
 '''
 How saving and loading works:
@@ -36,6 +37,7 @@ class Measurement:
         This excludes numpy arrays which are saved to HDF5
         '''
         def walk(d):
+            d = d.copy() # make sure we don't modify original dictionary
             variables = list(d.keys()) # list of all the variables in the dictionary
 
             for var in variables: # copy so we don't change size of array during iteration
@@ -204,7 +206,7 @@ class Measurement:
         self._save_json(filename)
 
         try:
-            self.__dict__.update(self.load(filename).__dict__)
+            self.load(filename)
         except:
             raise Exception('Reloading failed, but object was saved!')
 
@@ -231,8 +233,10 @@ class Measurement:
                         new_group = group.create_group(key) # make a group with the dictionary name
                         walk(value, new_group) # walk through the dictionary
                     elif hasattr(value, '__dict__'): # found an object of some sort
-                        new_group = group.create_group('!'+key) # make a group with !(object name)
-                        walk(value.__dict__, new_group) # walk through the object dictionary
+                        superclasses = [c.__name__ for c in inspect.getmro(value.__class__)] # gets all inherited classes
+                        if 'Measurement' in superclasses: # restrict saving Measurements.
+                            new_group = group.create_group('!'+key) # make a group with !(object name)
+                            walk(value.__dict__, new_group) # walk through the object dictionary
 
             walk(self.__dict__, f)
 

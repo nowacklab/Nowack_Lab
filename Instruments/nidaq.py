@@ -13,8 +13,9 @@ except:
 import time
 from copy import copy
 from ..Utilities import logging
+from .instrument import Instrument
 
-class NIDAQ():
+class NIDAQ(Instrument):
     '''
     For remote operation of the NI DAQ-6363.
     Slightly simplified version of Guen's squidpy driver;

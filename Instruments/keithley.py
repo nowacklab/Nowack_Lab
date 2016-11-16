@@ -1,6 +1,7 @@
 import visa
+from .instrument import Instrument
 
-class Keithley2400():
+class Keithley2400(Instrument):
     '''
     Instrument driver for Keithley 2400 Source Meter
     '''
