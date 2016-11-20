@@ -49,13 +49,6 @@ class MutualInductance(Measurement):
         self.fig.canvas.draw()
 
 
-    def save(self, savefig=True):
-        self._save(get_todays_data_path(), self.filename)
-
-        if savefig and hasattr(self, 'fig'):
-            self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
-
-
     def setup_plots(self):
         self.fig = plt.figure()
         self.ax['vs_amp'] = self.fig.add_subplot(221)

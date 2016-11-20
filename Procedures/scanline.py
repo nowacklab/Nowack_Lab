@@ -102,18 +102,6 @@ class Scanline(Measurement):
         self.fig.canvas.draw()
 
 
-    def save(self, savefig=True):
-        '''
-        Saves the scanline object.
-        Also saves the figure as a pdf, if wanted.
-        '''
-
-        self._save(get_todays_data_path(), self.filename)
-
-        if savefig and hasattr(self, 'fig'):
-            self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
-
-
     def setup_plots(self):
         self.fig = plt.figure(figsize=(8,5))
 

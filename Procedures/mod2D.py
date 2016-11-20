@@ -108,18 +108,6 @@ class Mod2D(Measurement):
         plot_mpl.aspect(self.ax['2D'], 1)
 
 
-    def save(self, savefig=True):
-        '''
-        Saves the mod2d object.
-        Also saves the figure as a pdf, if wanted.
-        '''
-
-        self._save(get_todays_data_path(), self.filename)
-
-        if savefig and hasattr(self, 'fig'):
-            self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
-
-
     def setup_plots(self):
         '''
         Set up the figure. 2D mod image and last IV trace.

@@ -262,18 +262,6 @@ class Scanplane(Measurement):
         plot_mpl.aspect(self.ax['line'], .3)
 
 
-    def save(self, savefig=True):
-        '''
-        Saves the scanplane object.
-        Also saves the figure as a pdf, if wanted.
-        '''
-
-        self._save(get_todays_data_path(), self.filename)
-
-        if savefig and hasattr(self, 'fig'):
-            self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
-
-
     def save_line(self, i, Vstart):
         '''
         Saves each line individually to JSON.

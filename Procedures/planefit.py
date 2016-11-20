@@ -165,10 +165,7 @@ class Planefit(Measurement):
         '''
         logging.log('Plane saved. a=%.4f, b=%.4f, c=%.4f' %(self.a, self.b, self.c))
 
-        self._save(get_todays_data_path(), self.filename)
-
-        if savefig and hasattr(self, 'fig'):
-            self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
+        self._save(self.filename, savefig)
 
 
     def setup_plots(self):

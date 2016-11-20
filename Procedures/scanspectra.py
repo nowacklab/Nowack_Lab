@@ -106,8 +106,6 @@ class Scanspectra(Measurement):
         del self.daqspectrum
         self.save()
 
-    def save(self):
-        self._save(get_todays_data_path(), self.filename)
 
     def setup_preamp(self):
         self.preamp.gain = 1

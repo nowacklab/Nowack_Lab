@@ -67,17 +67,6 @@ class Heightsweep(Measurement):
             self.ax[chan].plot(self.V['z'], self.V[chan]*self._conversions[chan], '.k', markersize=6, alpha=0.5)
 
 
-    def save(self, savefig=True):
-        '''
-        Saves the heightsweep object.
-        Also saves the figure as pdf, if wanted.
-        '''
-
-        self._save(get_todays_data_path(), self.filename)
-
-        if savefig and hasattr(self, 'fig'):
-            self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf')+'.pdf', bbox_inches='tight')
-
     def setup_plots(self):
         self.fig = plt.figure()
         self.ax = {}

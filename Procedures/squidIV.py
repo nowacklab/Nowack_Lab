@@ -163,16 +163,5 @@ class SquidIV(Measurement):
         return ax
 
 
-    def save(self, savefig=True):
-        '''
-        Saves the squidIV object.
-        Also saves the figure as a pdf, if wanted.
-        '''
-
-        self._save(get_todays_data_path(), self.filename)
-
-        if savefig and hasattr(self,'fig'):
-            self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'))
-
     def setup_plots(self):
         self.fig, self.ax = plt.subplots()

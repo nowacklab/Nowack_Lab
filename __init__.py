@@ -1,4 +1,5 @@
-import Nowack_Lab.Procedures, Nowack_Lab.Instruments, Nowack_Lab.Utilities
+import Nowack_Lab.Procedures, Nowack_Lab.Instruments, Nowack_Lab.Utilities, os
+from Nowack_Lab.Utilities.save import set_cooldown_data_path, get_data_server_path
 
 from matplotlib import rcParams
 rcParams.update({'figure.autolayout': True}) # will avoid axis labels getting cut off
@@ -6,6 +7,20 @@ rcParams.update({'figure.autolayout': True}) # will avoid axis labels getting cu
 # import warnings
 # warnings.filterwarnings("ignore") # This was to hide nanmin warnings, maybe not so good to have in general.
 
+## Set cooldown data path
+inp = input('New cooldown? y/(n): ')
+if inp in ('y', 'Y'):
+    while True:
+        inp2 = input('Enter description of cooldown: ')
+        if inp2.find(' ') != -1:
+            print('This is going to be a folder name. Please don\'t use spaces!')
+        else:
+            break
+    set_cooldown_data_path(inp2)
+
+## Check for remote data server connection
+if not os.path.exists(get_data_server_path()):
+    print('SAMBASHARE not connected. Could not find path %s.' %get_data_server_path())
 
 ## Importing commonly used packages
 from IPython import get_ipython, display

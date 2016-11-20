@@ -340,13 +340,8 @@ class Touchdown(Measurement):
         Also saves the figure as a pdf, if wanted.
         '''
 
-        path = os.path.join(get_todays_data_path(), 'extras')
-        if not os.path.exists(path):
-            os.makedirs(path)
-        self._save(path, self.filename)
-
-        if savefig and hasattr(self, 'fig'):
-            self.fig.savefig(os.path.join(path, self.filename+'.pdf'), bbox_inches='tight')
+        filename_in_extras = os.path.join(get_local_data_path(), get_todays_data_path(), 'extras', self.filename)
+        self._save(filename_in_extras, savefig)
 
 
     def setup_plots(self):
