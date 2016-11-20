@@ -92,18 +92,6 @@ class DaqSpectrum(Measurement):
         return figPathPng
 
 
-    def save(self, savefig=True):
-        '''
-        Saves the daqspectrum object.
-        Also saves the figures as pdfs, if wanted.
-        '''
-
-        self._save(get_todays_data_path(), self.filename)
-
-        if savefig and hasattr(self, 'fig'):
-            self.fig.savefig(os.path.join(get_todays_data_path(), self.filename)+'.pdf')
-
-
     def setup_plots(self):
         self.fig = plt.figure(figsize=(12,6))
         self.ax = {}
