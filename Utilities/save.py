@@ -238,28 +238,34 @@ class Measurement:
             self.fig.savefig(local_path+'.pdf', bbox_inches='tight')
 
         ## Save remotely
-        # First make a checksum
-        local_checksum_hdf = _md5(local_path+'.h5')
-        local_checksum_json = _md5(local_path+'.json')
+        try:
+            # First make a checksum
+            local_checksum_hdf = _md5(local_path+'.h5')
+            local_checksum_json = _md5(local_path+'.json')
 
-        # Make sure directories exist
-        remote_dir = os.path.split(remote_path)[0]
-        if not os.path.exists(remote_dir):
-            os.makedirs(remote_dir)
+            # Make sure directories exist
+            remote_dir = os.path.split(remote_path)[0]
+            if not os.path.exists(remote_dir):
+                os.makedirs(remote_dir)
 
-        # Copy the files
-        shutil.copyfile(local_path+'.h5', remote_path+'.h5')
-        shutil.copyfile(local_path+'.json', remote_path+'.json')
+            # Copy the files
+            shutil.copyfile(local_path+'.h5', remote_path+'.h5')
+            shutil.copyfile(local_path+'.json', remote_path+'.json')
 
-        # Make comparison checksums
-        remote_checksum_hdf = _md5(remote_path+'.h5')
-        remote_checksum_json = _md5(remote_path+'.json')
+            # Make comparison checksums
+            remote_checksum_hdf = _md5(remote_path+'.h5')
+            remote_checksum_json = _md5(remote_path+'.json')
 
-        # Check checksums
-        if local_checksum_hdf != remote_checksum_hdf:
-            print('HDF checksum failed! Cannot trust remote file %s' %(remote_path+'.h5'))
-        if local_checksum_json != remote_checksum_json:
-            print('JSON checksum failed! Cannot trust remote file %s' %(remote_path+'.json'))
+            # Check checksums
+            if local_checksum_hdf != remote_checksum_hdf:
+                print('HDF checksum failed! Cannot trust remote file %s' %(remote_path+'.h5'))
+            if local_checksum_json != remote_checksum_json:
+                print('JSON checksum failed! Cannot trust remote file %s' %(remote_path+'.json'))
+        except:
+            if not os.path.exists(get_data_server_path()):
+                print('SAMBASHARE not connected. Could not find path %s. Object saved locally but not remotely.' %get_data_server_path())
+            else:
+                print('Saving to data server failed! And I don\'t know why! :(')
 
         ## See if saving worked properly
         try:
