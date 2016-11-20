@@ -2,7 +2,7 @@ import Nowack_Lab.Procedures, Nowack_Lab.Instruments, Nowack_Lab.Utilities, os
 from Nowack_Lab.Utilities.save import set_cooldown_data_path, get_data_server_path
 
 from matplotlib import rcParams
-rcParams.update({'figure.autolayout': True}) # will avoid axis labels getting cut off
+rcParams.update({'figure.autolayout': False}) # If set to True, will autoformat layout and prevent axis labels from getting cut off.
 
 # import warnings
 # warnings.filterwarnings("ignore") # This was to hide nanmin warnings, maybe not so good to have in general.

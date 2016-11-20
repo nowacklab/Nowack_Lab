@@ -18,8 +18,9 @@ class SquidIV(Measurement):
     _chan_labels = ['squid out', 'mod out', 'squid in', 'current in']
     instrument_list = ['daq','preamp','montana','preamp_I']
 
-    V = np.array([])
-    I = np.array([])
+    V = np.array([np.nan]*2) # to make plotting happy with no real data
+    I = np.array([np.nan]*2)
+
     notes = ''
 
     def __init__(self, instruments={}, rate=90):
@@ -160,6 +161,8 @@ class SquidIV(Measurement):
         ax2.set_ylabel(r'$dV_{squid}/dI_{bias}$ (Ohm)', fontsize=20, color='r')
         for tl in ax2.get_yticklabels():
             tl.set_color('r')
+        if self.fig is not None:
+            self.fig.tight_layout()
         return ax
 
 

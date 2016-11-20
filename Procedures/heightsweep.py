@@ -18,7 +18,7 @@ class Heightsweep(Measurement):
     instrument_list = ['piezos','montana','squidarray']
 
     V = {
-        chan: np.nan for chan in _chan_labels + ['piezo']
+        chan: np.nan for chan in _chan_labels + ['piezo', 'z']
     }
 
 
@@ -69,6 +69,7 @@ class Heightsweep(Measurement):
 
     def setup_plots(self):
         self.fig = plt.figure()
+        self.fig.subplots_adjust(hspace=1.2)
         self.ax = {}
 
         self.ax['dc'] = self.fig.add_subplot(311)

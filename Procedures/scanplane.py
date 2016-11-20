@@ -197,8 +197,10 @@ class Scanplane(Measurement):
             plot_mpl.update2D(self.im[chan], self.V[chan]*self._conversions[chan])
 
         self.plot_line()
-
         self.fig.canvas.draw()
+
+        # ## Give the subplots some breathing room
+        # self.fig.subplots_adjust(wspace=.5, hspace=.5)
 
 
     def setup_plots(self):
@@ -206,6 +208,8 @@ class Scanplane(Measurement):
         Set up all plots.
         '''
         self.fig = plt.figure(figsize=(11,11))
+        ## Give the subplots some breathing room
+        self.fig.subplots_adjust(wspace=.5, hspace=.5)
         self.ax = {}
         self.im = {}
 

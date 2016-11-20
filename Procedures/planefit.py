@@ -152,7 +152,7 @@ class Planefit(Measurement):
     def plot(self):
         super().plot()
 
-        ax.scatter(self.X, self.Y, self.Z)
+        self.ax.scatter(self.X, self.Y, self.Z)
 
         Zfit = self.plane(self.X, self.Y)
         self.ax.plot_surface(self.X, self.Y, Zfit,alpha=0.2, color = [0,1,0])

@@ -46,11 +46,15 @@ class MutualInductance(Measurement):
 
         plot_mpl.update2D(self.im, self.V*conversions.Vsquid_to_phi0/self.I, equal_aspect=False)
         plot_mpl.aspect(self.ax['2D'], 3)
+
+        self.fig.tight_layout()
+        self.fig.subplots_adjust(wspace=.3, hspace=.3)
         self.fig.canvas.draw()
 
 
     def setup_plots(self):
         self.fig = plt.figure()
+        self.ax = {}
         self.ax['vs_amp'] = self.fig.add_subplot(221)
         self.ax['vs_amp'].set_xlabel('Amplitude (V)')
         self.ax['vs_amp'].set_ylabel('Mutual Inductance ($\phi_0$/A)')

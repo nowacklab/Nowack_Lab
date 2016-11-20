@@ -22,6 +22,7 @@ class Scanline(Measurement):
     V = {
         chan: np.nan for chan in _chan_labels + ['piezo']
     }
+    Vout = np.nan
 
     def __init__(self, instruments={}, plane=None, start=(-100,-100), end=(100,100), scanheight=15, scan_rate=120, return_to_zero=True):
         super().__init__()
@@ -97,13 +98,15 @@ class Scanline(Measurement):
         super().plot()
 
         for chan in self._chan_labels:
-            self.ax['chan'].plot(self.Vout*self._conversions['piezo'], self.V[chan], '-b')
+            self.ax[chan].plot(self.Vout*self._conversions['piezo'], self.V[chan], '-b')
 
+        self.fig.tight_layout()
         self.fig.canvas.draw()
 
 
     def setup_plots(self):
         self.fig = plt.figure(figsize=(8,5))
+        self.ax = {}
 
         self.ax['dc'] = self.fig.add_subplot(221)
         self.ax['ac x'] = self.fig.add_subplot(223)
