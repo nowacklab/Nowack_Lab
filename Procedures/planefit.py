@@ -125,6 +125,7 @@ class Planefit(Measurement):
         self.c = center_z_value - self.a*self.center[0] - self.b*self.center[1]
         self.Z -= (c_fit-self.c) # c was lowered by the correction, so we lower the plane.
 
+        self.plot()
         self.save()
 
 
@@ -152,7 +153,7 @@ class Planefit(Measurement):
     def plot(self):
         super().plot()
 
-        ax.scatter(self.X, self.Y, self.Z)
+        self.ax.scatter(self.X, self.Y, self.Z)
 
         Zfit = self.plane(self.X, self.Y)
         self.ax.plot_surface(self.X, self.Y, Zfit,alpha=0.2, color = [0,1,0])
@@ -167,7 +168,7 @@ class Planefit(Measurement):
 
         self._save(get_todays_data_path(), self.filename)
 
-        if savefig and hasattr(self, 'fig'):
+        if savefig and self.fig is not None:
             self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
 
 
@@ -197,7 +198,7 @@ class Planefit(Measurement):
         Does a single touchdown to find the plane again (at a given (Vx, Vy) point).
         Do this after moving the attocubes.
         '''
-        super().__init__('plane')
+        super().__init__()
 
         old_c = self.c
         self.piezos.V = {'x': Vx, 'y': Vy, 'z': 0}

@@ -86,10 +86,15 @@ class NIDAQ(Instrument):
     @property
     def inputs(self):
         '''
+        Getter:
         Makes a dictionary with keys = input channel labels, values = input channel objects
         To get the voltage of a channel by using the label, you would do something like:
             daq.inputs['squid'].V
         This is written as a property in case you decide to manually change the label of a channel.
+
+        Setter:
+        Set a bunch of input channel labels at once. d is a dictionary with keys = input channel labels, values = input channel real names
+        e.g. {'squid': 'ai0'}
         '''
         self._inputs = {}
         for label, name in self.input_names.items():
@@ -121,9 +126,14 @@ class NIDAQ(Instrument):
     @property
     def outputs(self):
         '''
+        Getter:
         Makes a dictionary with keys = output channel labels, values = output channel objects
         To set the voltage of a channel by using the label, you would do something like:
             daq.outputs['x'].V = 1
+
+        Setter:
+        Set a bunch of output channel labels at once. d is a dictionary with keys = output channel labels, values = output channel real names
+        e.g. {'piezo x': 'ao0'}
         '''
         self._outputs = {}
         for label, name in self.output_names.items():

@@ -17,18 +17,15 @@ class Scanspectra(Measurement):
     _chan_labels = ['dc','cap','ac x','ac y'] # DAQ channel labels expected by this class
     instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto','daq']
 
+    Vavg = {
+        chan: np.nan for chan in _chan_labels
+    }
     V = np.array([])
-    Vdc = np.array([])
-    Vac_x = np.array([])
-    Vac_y = np.array([])
-    Vcap = np.array([])
 
-    _append = 'scanspectra'
-
-    def __init__(self, instruments = {}, span=[800,800],
-                        center=[0,0], numpts=[20,20], plane=None,
-                        scanheight=15, monitor_time=1, sample_rate=10000, num_averages=1):
-        super().__init__(self._append)
+    def __init__(self, instruments = {}, plane = None, span=[800,800],
+                        center=[0,0], numpts=[20,20], scanheight=15,
+                        monitor_time=1, sample_rate=10000, num_averages=1):
+        super().__init__()
         self._load_instruments(instruments)
 
         self.monitor_time = monitor_time
@@ -64,8 +61,8 @@ class Scanspectra(Measurement):
         self.psd = np.full(shape, np.nan)
         self.f = np.full(shape[2], np.nan)
 
-        for v in ['Vdc', 'Vac_x', 'Vac_y', 'Vcap']:
-            setattr(self, v, np.full(self.X.shape, np.nan))
+        for chan in self._chan_labels:
+            self.Vavg[chan] = np.full(self.X.shape, np.nan) #initialize arrays
 
         self.daqspectrum = DaqSpectrum(instruments, monitor_time, sample_rate, num_averages) # object that handles taking spectra
 
@@ -97,10 +94,10 @@ class Scanspectra(Measurement):
                     self.f = self.daqspectrum.f
 
                 # just single data points, like a single scan
-                self.Vdc[i,j] = self.daqspectrum.V.mean()
-                self.Vac_x[i,j] = self.daq.inputs['ac x'].V
-                self.Vac_y[i,j] = self.daq.inputs['ac y'].V
-                self.Vcap[i,j] = self.daq.inputs['cap'].V
+                self.Vavg['dc'][i,j] = self.daqspectrum.V.mean()
+                for chan in self._chan_labels:
+                    if chan != 'dc':
+                        self.Vavg[chan][i,j] = self.daq.inputs[chan].V
 
         self.piezos.V = 0
         del self.daqspectrum

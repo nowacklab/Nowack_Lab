@@ -321,6 +321,7 @@ class Touchdown(Measurement):
 
 
     def plot(self):
+        super().plot()
         self.line.set_ydata(self.C) #updates plot with new capacitance values
         self.ax.set_ylim(-1, max(np.nanmax(self.C), 10))
 
