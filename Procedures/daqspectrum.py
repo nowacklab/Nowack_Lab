@@ -64,7 +64,10 @@ class DaqSpectrum(Measurement):
 
     def plotLog(self, fname, calibration=None):
         '''
-        Generate a log-log plot of spectrum. If there is a known calibration between RMS voltage noise and flux noise, the plot is generated in units of flux quanta. Use daqspectrum.load to get all the data before calling plotLog
+        Generate a log-log plot of spectrum. If there is a known calibration
+        between RMS voltage noise and flux noise, the plot is generated in units
+        of flux quanta. Use daqspectrum.load to get all the data before calling
+        plotLog.
 
         calibration should be in units of Phi_o/V
 

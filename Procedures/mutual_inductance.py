@@ -64,4 +64,8 @@ class MutualInductance(Measurement):
         self.ax['vs_freq'].set_ylabel('Mutual Inductance ($\phi_0$/A)')
 
         self.ax['2D'] = self.fig.add_subplot(122)
-        self.im = plot_mpl.plot2D(self.ax['2D'], self.amps*1000, self.freqs/1000, self.V*conversions.Vsquid_to_phi0/self.I, ylabel='Frequency (kHz)', xlabel='Amplitude (mV)', clabel = 'Mutual inductance ($\phi_0$/A)', equal_aspect=False)
+        self.im = plot_mpl.plot2D(self.ax['2D'], self.amps*1000, 
+            self.freqs/1000, self.V*conversions.Vsquid_to_phi0/self.I,
+            ylabel='Frequency (kHz)', xlabel='Amplitude (mV)',
+            clabel = 'Mutual inductance ($\phi_0$/A)', equal_aspect=False
+        )

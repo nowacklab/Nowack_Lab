@@ -343,8 +343,10 @@ def get_cooldown_data_path():
 def get_data_server_path():
     if platform.system() == 'Windows':
         return '//SAMBASHARE/labshare/data/'
-    elif platform.system() in ('Linux', 'Darwin'):
+    elif platform.system() == 'Darwin': # Mac
         return '/Volumes/labshare/data/'
+    elif platform.system() == 'Linux':
+        return '/mnt/labshare/data/'
     else:
         raise Exception('What OS are you using?!? O_O')
 
