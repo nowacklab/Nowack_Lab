@@ -34,10 +34,6 @@ from imp import reload
 from time import sleep
 import sys, os
 
-## For interactive matplotlib plots
-from IPython import get_ipython
-get_ipython().magic('matplotlib notebook')
-
 ## Because I don't know how to do this otherwise, importing all functions and modules that we want in the namespace.
 from Nowack_Lab.Utilities import utilities, save, logging, conversions, anim
 from Nowack_Lab.Utilities.plotting import plot_mpl
@@ -63,3 +59,19 @@ from Nowack_Lab.Instruments.squidarray import SquidArray
 from Nowack_Lab.Instruments.lockin import SR830
 
 ''');
+
+def in_ipynb():
+    try:
+        cfg = get_ipython().config
+        if cfg['IPKernelApp']['parent_appname'] == 'ipython-notebook':
+            return True
+        else:
+            return False
+    except NameError:
+        return False
+# Interactive notebook plots
+## For interactive matplotlib plots
+if in_ipynb():
+    ip.magic('matplotlib notebook') # matplotlib notebook....
+else:
+    ip.magic('matplotlib qt') # if not in a notebook

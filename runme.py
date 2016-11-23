@@ -8,6 +8,7 @@ packages = [
     'pydaqmx',
     'pyvisa',
     'setuptools',
+    'tornado',
     'https://github.com/nowacklab/PyANC350/tarball/master',
     'https://github.com/nowacklab/Instrumental/tarball/master'
 ]
