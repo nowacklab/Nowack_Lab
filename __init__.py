@@ -27,7 +27,7 @@ if not os.path.exists(get_data_server_path()):
 ## Importing commonly used packages
 from IPython import get_ipython, display
 ip = get_ipython()
-ip.kernel.do_execute('''
+ip.run_code('''
 import numpy as np
 import matplotlib.pyplot as plt
 from imp import reload
@@ -62,4 +62,4 @@ from Nowack_Lab.Instruments.preamp import SR5113
 from Nowack_Lab.Instruments.squidarray import SquidArray
 from Nowack_Lab.Instruments.lockin import SR830
 
-''', silent=True)
+''');
