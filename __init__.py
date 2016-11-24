@@ -20,9 +20,7 @@ if inp in ('y', 'Y'):
 
 ## Check for remote data server connection
 if not os.path.exists(get_data_server_path()):
-    print('SAMBASHARE not connected. Could not find path %s. If you want to \
-        change the expected path, modify the get_data_server_path function in \
-         Nowack_Lab/Utilities/save.py' %get_data_server_path())
+    print('''SAMBASHARE not connected. Could not find path %s. If you want to change the expected path, modify the get_data_server_path function in Nowack_Lab/Utilities/save.py''' %get_data_server_path())
 
 ## Importing commonly used packages
 from IPython import get_ipython, display
@@ -72,6 +70,6 @@ def in_ipynb():
 # Interactive notebook plots
 ## For interactive matplotlib plots
 if in_ipynb():
-    ip.magic('matplotlib notebook') # matplotlib notebook....
+    ip.magic('matplotlib qt') # matplotlib notebook....
 else:
     ip.magic('matplotlib qt') # if not in a notebook

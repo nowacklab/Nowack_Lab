@@ -97,7 +97,7 @@ class DaqSpectrum(Measurement):
 
     def setup_plots(self):
         self.fig = plt.figure(figsize=(12,6))
-        self.ax = {}
+        self.ax = AttrDict()
         self.ax['loglog'] = self.fig.add_subplot(121)
         self.ax['semilog'] = self.fig.add_subplot(122)
 

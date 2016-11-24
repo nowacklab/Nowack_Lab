@@ -88,7 +88,7 @@ def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='', 
     ## Make a colorbar
     cb = plt.colorbar(im, ax=ax)
     cb.formatter.set_powerlimits((-2,2)) # only two decimal places!
-    cb.set_label(clabel, fontsize=20)
+    cb.set_label(clabel, fontsize=12)
 
     if equal_aspect:
         aspect(ax, 1, absolute=False) # equal aspect ratio based on data scales

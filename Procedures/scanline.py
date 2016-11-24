@@ -10,18 +10,18 @@ from ..Utilities.save import Measurement, get_todays_data_path
 
 class Scanline(Measurement):
     _chan_labels = ['dc','cap','ac x','ac y']
-    _conversions = {
+    _conversions = AttrDict({
         'dc': conversions.Vsquid_to_phi0,
         'cap': conversions.V_to_C,
         'ac x': conversions.Vsquid_to_phi0,
         'ac y': conversions.Vsquid_to_phi0,
         'piezo': conversions.Vpiezo_to_micron
-    }
+    })
     instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto']
 
-    V = {
+    V = AttrDict({
         chan: np.nan for chan in _chan_labels + ['piezo']
-    }
+    })
     Vout = np.nan
 
     def __init__(self, instruments={}, plane=None, start=(-100,-100), end=(100,100), scanheight=15, scan_rate=120, return_to_zero=True):
@@ -106,7 +106,7 @@ class Scanline(Measurement):
 
     def setup_plots(self):
         self.fig = plt.figure(figsize=(8,5))
-        self.ax = {}
+        self.ax = AttrDict()
 
         self.ax['dc'] = self.fig.add_subplot(221)
         self.ax['ac x'] = self.fig.add_subplot(223)

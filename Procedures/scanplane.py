@@ -14,13 +14,13 @@ from ..Utilities import conversions
 
 class Scanplane(Measurement):
     _chan_labels = ['dc','cap','ac x','ac y'] # DAQ channel labels expected by this class
-    _conversions = {
+    _conversions = AttrDict({
         'dc': conversions.Vsquid_to_phi0,
         'cap': conversions.V_to_C,
         'ac x': conversions.Vsquid_to_phi0,
         'ac y': conversions.Vsquid_to_phi0,
         'piezo': conversions.Vpiezo_to_micron
-    }
+    })
     instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto','daq']
 
     ## Put things here necessary to have when reloading object
@@ -210,8 +210,8 @@ class Scanplane(Measurement):
         self.fig = plt.figure(figsize=(11,11))
         ## Give the subplots some breathing room
         self.fig.subplots_adjust(wspace=.5, hspace=.5)
-        self.ax = {}
-        self.im = {}
+        self.ax = AttrDict()
+        self.im = AttrDict()
 
         self.ax['dc'] = self.fig.add_subplot(321)
         self.ax['ac x'] = self.fig.add_subplot(323)
@@ -228,7 +228,8 @@ class Scanplane(Measurement):
                                             title = self.filename,
                                             xlabel = '$V_{piezo}$ | $\sim\mu\mathrm{m}$',
                                             ylabel = '$V_{piezo}$ | $\sim\mu\mathrm{m}$',
-                                            clabel = r'%s ($\phi_0$)' %chan
+                                            clabel = r'%s ($\phi_0$)' %chan,
+                                            fontsize=12
                                         )
         self.im['cap'].colorbar.set_label('cap (C)') # not phi0's!
 
@@ -274,7 +275,7 @@ class Scanplane(Measurement):
         line.scan_filename = self.filename
         line.idx = i
         line.Vstart = Vstart
-        line.Vfull = {}
+        line.Vfull = AttrDict()
         line.Vfull['dc'] = self.Vfull['dc']
         line.Vfull['piezo'] = self.Vfull['piezo']
         line.save()

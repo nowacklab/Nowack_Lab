@@ -112,7 +112,7 @@ class Mod2D(Measurement):
         '''
         Set up the figure. 2D mod image and last IV trace.
         '''
-        self.ax = {}
+        self.ax = AttrDict()
         self.fig, (self.ax['IV'], self.ax['2D']) = plt.subplots(2,1,figsize=(7,7),gridspec_kw = {'height_ratios':[1, 3]})
         self.ax['IV2'] = self.ax['IV'].twinx() # for dV/dI
         self.ax['IV'].set_title(self.filename+'\n'+self.notes)

@@ -9,17 +9,17 @@ from ..Utilities import conversions
 
 class Heightsweep(Measurement):
     _chan_labels = ['dc','ac x','ac y']
-    _conversions = {
+    _conversions = AttrDict({
         'dc': conversions.Vsquid_to_phi0,
         'ac x': conversions.Vsquid_to_phi0,
         'ac y': conversions.Vsquid_to_phi0,
         'z': conversions.Vpiezo_to_attomicron
-    }
+    })
     instrument_list = ['piezos','montana','squidarray']
 
-    V = {
+    V = AttrDict({
         chan: np.nan for chan in _chan_labels + ['piezo', 'z']
-    }
+    })
 
 
     def __init__(self, instruments = {}, plane=None, x=0, y=0, z0=0, scan_rate=120):
@@ -70,7 +70,7 @@ class Heightsweep(Measurement):
     def setup_plots(self):
         self.fig = plt.figure()
         self.fig.subplots_adjust(hspace=1.2)
-        self.ax = {}
+        self.ax = AttrDict({})
 
         self.ax['dc'] = self.fig.add_subplot(311)
         self.ax['ac x'] = self.fig.add_subplot(312)

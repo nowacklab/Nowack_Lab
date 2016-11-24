@@ -5,6 +5,7 @@ jspnp.register_handlers()
 from copy import copy
 import h5py, glob, matplotlib, inspect, platform, hashlib, shutil
 import matplotlib.pyplot as plt
+from . import utilities
 
 '''
 How saving and loading works:
@@ -55,7 +56,7 @@ class Measurement:
                 except:
                     pass # built-in types won't have __module__
 
-                if type(d[var]) is dict:
+                if 'dict' in utilities.get_superclasses(d[var]):
                     d[var] = walk(d[var]) # This unfortunately erases the dictionary...
 
             return d # only return ones that are the right type.
@@ -160,7 +161,7 @@ class Measurement:
             for key in list(d.keys()): # convert to list because dictionary changes size
                 if key in unwanted_keys: # get rid of keys you don't want to load
                     d[key] = None
-                elif type(d[key]) is dict:
+                elif 'dict' in utilities.get_superclasses(d[key]):
                     walk(d[key])
 
         walk(obj_dict)
@@ -292,12 +293,11 @@ class Measurement:
                         ) # save the numpy array as a dataset
                         d.set_fill_value = np.nan
                         d[...] = value # fill it with data
-                    elif type(value) is dict: # found a dictionary
+                    elif 'dict' in utilities.get_superclasses(value): # found a dictionary
                         new_group = group.create_group(key) # make a group with the dictionary name
                         walk(value, new_group) # walk through the dictionary
                     elif hasattr(value, '__dict__'): # found an object of some sort
-                        superclasses = [c.__name__ for c in inspect.getmro(value.__class__)] # gets all inherited classes
-                        if 'Measurement' in superclasses: # restrict saving Measurements.
+                        if 'Measurement' in utilities.get_superclasses(value): # restrict saving Measurements.
                             new_group = group.create_group('!'+key) # make a group with !(object name)
                             walk(value.__dict__, new_group) # walk through the object dictionary
 

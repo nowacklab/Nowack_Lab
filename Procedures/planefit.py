@@ -125,6 +125,7 @@ class Planefit(Measurement):
         self.c = center_z_value - self.a*self.center[0] - self.b*self.center[1]
         self.Z -= (c_fit-self.c) # c was lowered by the correction, so we lower the plane.
 
+        self.plot()
         self.save()
 
 
@@ -166,7 +167,7 @@ class Planefit(Measurement):
         logging.log('Plane saved. a=%.4f, b=%.4f, c=%.4f' %(self.a, self.b, self.c))
 
         self._save(self.filename, savefig)
-
+        
 
     def setup_plots(self):
         from mpl_toolkits.mplot3d import Axes3D
@@ -194,7 +195,7 @@ class Planefit(Measurement):
         Does a single touchdown to find the plane again (at a given (Vx, Vy) point).
         Do this after moving the attocubes.
         '''
-        super().__init__('plane')
+        super().__init__()
 
         old_c = self.c
         self.piezos.V = {'x': Vx, 'y': Vy, 'z': 0}

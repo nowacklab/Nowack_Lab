@@ -8,6 +8,7 @@ import numpy as np
 from ..Instruments import nidaq, preamp, montana
 from ..Utilities.save import Measurement, get_todays_data_path
 from ..Utilities import conversions, logging
+from ..Utilities.utilities import AttrDict
 
 _Z_PIEZO_STEP = 4 # V piezo
 _Z_PIEZO_STEP_SLOW = 4 # V piezo
@@ -24,7 +25,7 @@ class Touchdown(Measurement):
     rs = np.array([])
     C0 = 0
 
-    lines_data = dict(
+    lines_data = AttrDict(
         V_app = np.array([]),
         C_app = np.array([]),
         V_td = np.array([]),
@@ -151,7 +152,7 @@ class Touchdown(Measurement):
             self.C = np.array([np.nan]*self.numsteps)
             self.rs = np.array([np.nan]*self.numsteps)
             self.C0 = None # offset: will take on value of the first point
-            self.lines_data = dict(
+            self.lines_data = AttrDict(
                 V_app = np.array([]),
                 C_app = np.array([]),
                 V_td = np.array([]),
