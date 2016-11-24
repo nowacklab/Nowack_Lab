@@ -13,6 +13,8 @@ class AttrDict(dict):
         True
     This is useful in an interactive console so that you can easily see all
     attributes of a value of the dictionary by typing "d." and pressing tab.
+
+    Idea from http://stackoverflow.com/questions/4984647/accessing-dict-keys-like-an-attribute-in-python
     '''
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
