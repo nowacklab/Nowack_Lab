@@ -9,7 +9,7 @@ from ..Instruments import piezos, montana
 from IPython import display
 from ..Utilities.utilities import reject_outliers_plane, fit_plane
 from ..Utilities.save import Measurement, get_todays_data_path
-
+from ..Utilities.utilities import AttrDict
 
 class Planefit(Measurement):
     '''
@@ -167,7 +167,7 @@ class Planefit(Measurement):
         logging.log('Plane saved. a=%.4f, b=%.4f, c=%.4f' %(self.a, self.b, self.c))
 
         self._save(self.filename, savefig)
-        
+
 
     def setup_plots(self):
         from mpl_toolkits.mplot3d import Axes3D

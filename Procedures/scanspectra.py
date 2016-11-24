@@ -12,9 +12,10 @@ from ..Instruments import piezos, montana, squidarray
 from ..Utilities.save import Measurement, get_todays_data_path
 from ..Utilities import conversions
 from ..Procedures import DaqSpectrum
+from ..Utilities.utilities import AttrDict
 
 class Scanspectra(Measurement):
-    _chan_labels = ['dc','cap','ac x','ac y'] # DAQ channel labels expected by this class
+    _chan_labels = ['dc','cap','acx','acy'] # DAQ channel labels expected by this class
     instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto','daq']
 
     Vavg = AttrDict({

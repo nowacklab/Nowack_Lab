@@ -6,13 +6,14 @@ import time, os
 from datetime import datetime
 from ..Utilities.save import Measurement, get_todays_data_path
 from ..Utilities import conversions
+from ..Utilities.utilities import AttrDict
 
 class Heightsweep(Measurement):
-    _chan_labels = ['dc','ac x','ac y']
+    _chan_labels = ['dc','acx','acy']
     _conversions = AttrDict({
         'dc': conversions.Vsquid_to_phi0,
-        'ac x': conversions.Vsquid_to_phi0,
-        'ac y': conversions.Vsquid_to_phi0,
+        'acx': conversions.Vsquid_to_phi0,
+        'acy': conversions.Vsquid_to_phi0,
         'z': conversions.Vpiezo_to_attomicron
     })
     instrument_list = ['piezos','montana','squidarray']
@@ -73,8 +74,8 @@ class Heightsweep(Measurement):
         self.ax = AttrDict({})
 
         self.ax['dc'] = self.fig.add_subplot(311)
-        self.ax['ac x'] = self.fig.add_subplot(312)
-        self.ax['ac y'] = self.fig.add_subplot(313)
+        self.ax['acx'] = self.fig.add_subplot(312)
+        self.ax['acy'] = self.fig.add_subplot(313)
 
         for label, ax in self.ax.items():
             ax.set_xlabel(r'$V_z^{samp} - V_z (V)$')

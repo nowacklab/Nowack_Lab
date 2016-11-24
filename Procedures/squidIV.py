@@ -12,6 +12,7 @@ from datetime import datetime
 from ..Utilities import dummy
 from ..Instruments import nidaq, preamp, montana
 from ..Utilities.save import Measurement, get_todays_data_path
+from ..Utilities.utilities import AttrDict
 
 
 class SquidIV(Measurement):

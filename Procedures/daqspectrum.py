@@ -8,6 +8,7 @@ import os
 import re
 from ..Instruments import nidaq, preamp
 from ..Utilities.save import Measurement, get_todays_data_path
+from ..Utilities.utilities import AttrDict
 
 class DaqSpectrum(Measurement):
     _chan_labels = ['dc'] # DAQ channel labels expected by this class

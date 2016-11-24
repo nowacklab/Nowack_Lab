@@ -2,7 +2,7 @@ import time, os, numpy as np, matplotlib.pyplot as plt
 from ..Utilities import conversions
 from ..Utilities.save import Measurement, get_todays_data_path
 from ..Utilities.plotting import plot_mpl
-
+from ..Utilities.utilities import AttrDict
 
 class MutualInductance(Measurement):
     instrument_list = ['squidarray', 'lockin_squid', 'lockin_I']

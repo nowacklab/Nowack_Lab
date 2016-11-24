@@ -8,9 +8,10 @@ from datetime import datetime
 from .squidIV import SquidIV
 from ..Utilities.plotting import plot_mpl
 from ..Utilities.save import Measurement, get_todays_data_path
+from ..Utilities.utilities import AttrDict
 
 class Mod2D(Measurement):
-    _chan_labels = ['squid out','squid in','mod out']
+    _chan_labels = ['squidout','squidin','modout']
     notes = ''
     instrument_list = SquidIV.instrument_list
 

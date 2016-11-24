@@ -6,15 +6,16 @@ import matplotlib.pyplot as plt
 from ..Utilities import plotting, conversions
 from ..Instruments import piezos, nidaq, montana, squidarray
 from ..Utilities.save import Measurement, get_todays_data_path
+from ..Utilities.utilities import AttrDict
 
 
 class Scanline(Measurement):
-    _chan_labels = ['dc','cap','ac x','ac y']
+    _chan_labels = ['dc','cap','acx','acy']
     _conversions = AttrDict({
         'dc': conversions.Vsquid_to_phi0,
         'cap': conversions.V_to_C,
-        'ac x': conversions.Vsquid_to_phi0,
-        'ac y': conversions.Vsquid_to_phi0,
+        'acx': conversions.Vsquid_to_phi0,
+        'acy': conversions.Vsquid_to_phi0,
         'piezo': conversions.Vpiezo_to_micron
     })
     instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto']
@@ -77,7 +78,7 @@ class Scanline(Measurement):
         for chan in self._chan_labels:
             self.V[chan] = received[chan]
 
-        for chan in ['ac x','ac y']:
+        for chan in ['acx','acy']:
             self.V[chan] = self.lockin_squid.convert_output(self.V[chan])
         self.Vfull['cap'] = self.lockin_cap.convert_output(self.Vfull['cap'])
 
@@ -109,8 +110,8 @@ class Scanline(Measurement):
         self.ax = AttrDict()
 
         self.ax['dc'] = self.fig.add_subplot(221)
-        self.ax['ac x'] = self.fig.add_subplot(223)
-        self.ax['ac y'] = self.fig.add_subplot(224)
+        self.ax['acx'] = self.fig.add_subplot(223)
+        self.ax['acy'] = self.fig.add_subplot(224)
         self.ax['cap'] = self.fig.add_subplot(222)
 
         for label, ax in self.ax.items():
