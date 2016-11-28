@@ -3,8 +3,9 @@ import json, os, pickle, bz2, jsonpickle as jsp, numpy as np
 from datetime import datetime
 jspnp.register_handlers()
 from copy import copy
-import h5py, glob, matplotlib, inspect
+import h5py, glob, matplotlib, inspect, platform, hashlib, shutil
 import matplotlib.pyplot as plt
+from . import utilities
 
 '''
 How saving and loading works:
@@ -55,7 +56,7 @@ class Measurement:
                 except:
                     pass # built-in types won't have __module__
 
-                if type(d[var]) is dict:
+                if 'dict' in utilities.get_superclasses(d[var]):
                     d[var] = walk(d[var]) # This unfortunately erases the dictionary...
 
             return d # only return ones that are the right type.
@@ -89,7 +90,17 @@ class Measurement:
                 # -2 should be the previous day (-1 is today)
                 filename =  max(glob.iglob(os.path.join(folders[-2],'*_%s.json' %cls.__name__)),
                                         key=os.path.getctime)
-            filename = filename.rpartition('.')[0] #remove extension
+        elif os.path.dirname(filename) == '': # if no path specified
+            os.path.join(get_todays_data_path(), filename)
+
+        ## Remove file extensions is given.
+        ## This is done somewhat manually in case filename has periods in it for some reason.
+        if filename[-5:] == '.json': # ends in .json
+            filename = filename[:-5] # strip extension
+        elif filename[-3:] == '.h5': # ends in .h5
+            filename = filename[:-3] # strip extension
+        elif filename[-4:] == '.pdf': # ends in .pdf
+            filename = filename[:-4] # strip extension
 
         unwanted_keys += cls.instrument_list # don't load instruments
 
@@ -150,7 +161,7 @@ class Measurement:
             for key in list(d.keys()): # convert to list because dictionary changes size
                 if key in unwanted_keys: # get rid of keys you don't want to load
                     d[key] = None
-                elif type(d[key]) is dict:
+                elif 'dict' in utilities.get_superclasses(d[key]):
                     walk(d[key])
 
         walk(obj_dict)
@@ -179,35 +190,87 @@ class Measurement:
             self.setup_plots()
 
 
-    def save(self, path= '.', filename=None):
+    def save(self, filename=None, savefig=True):
         '''
         Basic save method. Just calls _save. Overwrite this for each subclass.
         '''
-        self._save(path, filename)
+        self._save(filename, savefig=True)
 
 
-    def _save(self, path = '.', filename=None):
+    def _save(self, filename=None, savefig=True):
         '''
         Saves data. numpy arrays are saved to one file as hdf5,
         everything else is saved to JSON
-        '''
-        if filename is None:
-            try:
-                filename = self.filename # see if this exists
-            except: # if you forgot to make a filename
-                filename = ''
+        Saved data stored locally but also copied to the data server.
+        If you specify no filename, one will be automatically generated based on
+        this object's filename and the object will be saved in this cooldown's data folder.
+        If you specify a filename with no preceding path, it will save
+        automatically to the correct folder for this cooldown with the custom filename.
+        Locally, saves to ~/data/; remotely, saves to /labshare/data/
+        If you specify a full path, the object will save to that path locally to labshare/data/other/(path)
 
-        if filename == '':
-            self.make_timestamp_and_filename()
+        In either case, da
+         in ~/data/ and labshare/data/.
+        '''
+
+        ## Saving to the cooldown-specified directory
+        if filename is None:
+            if not hasattr(self, 'filename'): # if you forgot to make a filename
+                self.make_timestamp_and_filename()
             filename = self.filename
 
-        filename = os.path.join(path, filename)
+        if os.path.dirname(filename) == '': # you specified a filename with no preceding path
+            local_path = os.path.join(get_local_data_path(), get_todays_data_path(), filename)
+            remote_path = os.path.join(get_data_server_path(), get_todays_data_path(), filename)
 
-        self._save_hdf5(filename)
-        self._save_json(filename)
+        ## Saving to a custom path
+        else: # you specified some sort of path
+            local_path = filename
+            remote_path = os.path.join(get_data_server_path(), *filename.replace('\\', '/').split('/')[1:]) # removes anything before the first slash. e.g. ~/data/stuff -> data/stuff
 
+        ## Save locally:
+        local_dir = os.path.split(local_path)[0]
+        if not os.path.exists(local_dir):
+            os.makedirs(local_dir)
+        self._save_hdf5(local_path)
+        self._save_json(local_path)
+
+        if savefig and self.fig is not None:
+            self.fig.savefig(local_path+'.pdf', bbox_inches='tight')
+
+        ## Save remotely
         try:
-            self.load(filename)
+            # First make a checksum
+            local_checksum_hdf = _md5(local_path+'.h5')
+            local_checksum_json = _md5(local_path+'.json')
+
+            # Make sure directories exist
+            remote_dir = os.path.split(remote_path)[0]
+            if not os.path.exists(remote_dir):
+                os.makedirs(remote_dir)
+
+            # Copy the files
+            shutil.copyfile(local_path+'.h5', remote_path+'.h5')
+            shutil.copyfile(local_path+'.json', remote_path+'.json')
+
+            # Make comparison checksums
+            remote_checksum_hdf = _md5(remote_path+'.h5')
+            remote_checksum_json = _md5(remote_path+'.json')
+
+            # Check checksums
+            if local_checksum_hdf != remote_checksum_hdf:
+                print('HDF checksum failed! Cannot trust remote file %s' %(remote_path+'.h5'))
+            if local_checksum_json != remote_checksum_json:
+                print('JSON checksum failed! Cannot trust remote file %s' %(remote_path+'.json'))
+        except:
+            if not os.path.exists(get_data_server_path()):
+                print('SAMBASHARE not connected. Could not find path %s. Object saved locally but not remotely.' %get_data_server_path())
+            else:
+                print('Saving to data server failed! And I don\'t know why! :(')
+
+        ## See if saving worked properly
+        try:
+            self.load(local_path)
         except:
             raise Exception('Reloading failed, but object was saved!')
 
@@ -230,12 +293,11 @@ class Measurement:
                         ) # save the numpy array as a dataset
                         d.set_fill_value = np.nan
                         d[...] = value # fill it with data
-                    elif type(value) is dict: # found a dictionary
+                    elif 'dict' in utilities.get_superclasses(value): # found a dictionary
                         new_group = group.create_group(key) # make a group with the dictionary name
                         walk(value, new_group) # walk through the dictionary
                     elif hasattr(value, '__dict__'): # found an object of some sort
-                        superclasses = [c.__name__ for c in inspect.getmro(value.__class__)] # gets all inherited classes
-                        if 'Measurement' in superclasses: # restrict saving Measurements.
+                        if 'Measurement' in utilities.get_superclasses(value): # restrict saving Measurements.
                             new_group = group.create_group('!'+key) # make a group with !(object name)
                             walk(value.__dict__, new_group) # walk through the object dictionary
 
@@ -275,8 +337,22 @@ def exists(filename):
 def get_cooldown_data_path():
     with open(os.path.join(os.path.dirname(__file__),'paths.json'),'r') as f:
         data = json.load(f)
-    path = os.path.join(os.path.expanduser('~'), *data['cooldown'])
-    return path
+    return os.path.join(*data['cooldown'])
+
+
+def get_data_server_path():
+    if platform.system() == 'Windows':
+        return '//SAMBASHARE/labshare/data/'
+    elif platform.system() == 'Darwin': # Mac
+        return '/Volumes/labshare/data/'
+    elif platform.system() == 'Linux':
+        return '/mnt/labshare/data/'
+    else:
+        raise Exception('What OS are you using?!? O_O')
+
+
+def get_local_data_path():
+    return os.path.join(os.path.expanduser('~'), 'data')
 
 
 def get_todays_data_path():
@@ -300,7 +376,7 @@ def set_cooldown_data_path(description=''):
     now = datetime.now()
     now_fmt = now.strftime('%Y-%m-%d')
 
-    filetuple = ('Dropbox (Nowack lab)', 'TeamData', 'Montana', 'cooldowns', now_fmt + '_' + description)
+    filetuple = ('montana', 'cooldowns', now_fmt + '_' + description)
 
     paths = {'cooldown': filetuple}
     with open(os.path.join(os.path.dirname(__file__),'paths.json'), 'w') as f:
@@ -311,3 +387,13 @@ def set_cooldown_data_path(description=''):
     filename = os.path.join(_home, os.path.join(*filetuple))
     if not os.path.exists(filename):
         os.makedirs(filename)
+
+def _md5(filename):
+    '''
+    Calculates an MD5 checksum for the given file
+    '''
+    hash_md5 = hashlib.md5()
+    with open(filename, 'rb') as f:
+        for chunk in iter(lambda: f.read(4096), b''):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()

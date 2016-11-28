@@ -4,6 +4,23 @@ For random utilities
 import json, numpy as np
 from numpy.linalg import lstsq
 
+class AttrDict(dict):
+    '''
+    Class that behaves exactly like a dict, except that you can access values as
+    if the keys were attributes of the dictionary class. For example:
+        >> d = AttrDict(a = 1, b = 2, c = 3)
+        >> d['a'] == d.a
+        True
+    This is useful in an interactive console so that you can easily see all
+    attributes of a value of the dictionary by typing "d." and pressing tab.
+
+    Idea from http://stackoverflow.com/questions/4984647/accessing-dict-keys-like-an-attribute-in-python
+    '''
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__dict__ = self
+
+
 def fit_plane(x,y,z):
     '''
     Calculates plane parameters a, b, and c for 2D data.
@@ -89,6 +106,13 @@ def get_browser_width():
       }
     }
     IPython.notebook.kernel.execute('width = '+getWidth())"""))
+
+
+def get_superclasses(obj):
+    '''
+    Get a tuple of names of all superclasses of an object.
+    '''
+    return [c.__name__ for c in obj.__class__.__mro__]
 
 
 def nanmin(data):

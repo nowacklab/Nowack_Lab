@@ -6,20 +6,21 @@ import time, os
 from datetime import datetime
 from ..Utilities.save import Measurement, get_todays_data_path
 from ..Utilities import conversions
+from ..Utilities.utilities import AttrDict
 
 class Heightsweep(Measurement):
-    _chan_labels = ['dc','ac x','ac y']
-    _conversions = {
+    _chan_labels = ['dc','acx','acy']
+    _conversions = AttrDict({
         'dc': conversions.Vsquid_to_phi0,
-        'ac x': conversions.Vsquid_to_phi0,
-        'ac y': conversions.Vsquid_to_phi0,
+        'acx': conversions.Vsquid_to_phi0,
+        'acy': conversions.Vsquid_to_phi0,
         'z': conversions.Vpiezo_to_attomicron
-    }
+    })
     instrument_list = ['piezos','montana','squidarray']
 
-    V = {
-        chan: np.nan for chan in _chan_labels + ['piezo']
-    }
+    V = AttrDict({
+        chan: np.nan for chan in _chan_labels + ['piezo', 'z']
+    })
 
 
     def __init__(self, instruments = {}, plane=None, x=0, y=0, z0=0, scan_rate=120):
@@ -67,24 +68,14 @@ class Heightsweep(Measurement):
             self.ax[chan].plot(self.V['z'], self.V[chan]*self._conversions[chan], '.k', markersize=6, alpha=0.5)
 
 
-    def save(self, savefig=True):
-        '''
-        Saves the heightsweep object.
-        Also saves the figure as pdf, if wanted.
-        '''
-
-        self._save(get_todays_data_path(), self.filename)
-
-        if savefig and hasattr(self, 'fig'):
-            self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf')+'.pdf', bbox_inches='tight')
-
     def setup_plots(self):
         self.fig = plt.figure()
-        self.ax = {}
+        self.fig.subplots_adjust(hspace=1.2)
+        self.ax = AttrDict({})
 
         self.ax['dc'] = self.fig.add_subplot(311)
-        self.ax['ac x'] = self.fig.add_subplot(312)
-        self.ax['ac y'] = self.fig.add_subplot(313)
+        self.ax['acx'] = self.fig.add_subplot(312)
+        self.ax['acy'] = self.fig.add_subplot(313)
 
         for label, ax in self.ax.items():
             ax.set_xlabel(r'$V_z^{samp} - V_z (V)$')

@@ -8,6 +8,7 @@ packages = [
     'pydaqmx',
     'pyvisa',
     'setuptools',
+    'tornado',
     'https://github.com/nowacklab/PyANC350/tarball/master',
     'https://github.com/nowacklab/Instrumental/tarball/master'
 ]
@@ -25,7 +26,6 @@ jupyter_path = os.path.join(home, '.jupyter', 'jupyter_notebook_config.py')
 shutil.copyfile(package_path, jupyter_path)
 
 ## Add github.pth file to enable "from Nowack_Lab import *"
-package_path = os.path.join(os.getcwd(),'Utilities','github.pth')
 anaconda_path = os.path.join(site_packages,'github.pth')
 
 with open(anaconda_path, 'w') as f:

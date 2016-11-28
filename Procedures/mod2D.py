@@ -8,9 +8,10 @@ from datetime import datetime
 from .squidIV import SquidIV
 from ..Utilities.plotting import plot_mpl
 from ..Utilities.save import Measurement, get_todays_data_path
+from ..Utilities.utilities import AttrDict
 
 class Mod2D(Measurement):
-    _chan_labels = ['squid out','squid in','mod out']
+    _chan_labels = ['squidout','squidin','modout']
     notes = ''
     instrument_list = SquidIV.instrument_list
 
@@ -108,23 +109,11 @@ class Mod2D(Measurement):
         plot_mpl.aspect(self.ax['2D'], 1)
 
 
-    def save(self, savefig=True):
-        '''
-        Saves the mod2d object.
-        Also saves the figure as a pdf, if wanted.
-        '''
-
-        self._save(get_todays_data_path(), self.filename)
-
-        if savefig and hasattr(self, 'fig'):
-            self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
-
-
     def setup_plots(self):
         '''
         Set up the figure. 2D mod image and last IV trace.
         '''
-        self.ax = {}
+        self.ax = AttrDict()
         self.fig, (self.ax['IV'], self.ax['2D']) = plt.subplots(2,1,figsize=(7,7),gridspec_kw = {'height_ratios':[1, 3]})
         self.ax['IV2'] = self.ax['IV'].twinx() # for dV/dI
         self.ax['IV'].set_title(self.filename+'\n'+self.notes)

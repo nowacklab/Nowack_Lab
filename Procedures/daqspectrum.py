@@ -8,6 +8,7 @@ import os
 import re
 from ..Instruments import nidaq, preamp
 from ..Utilities.save import Measurement, get_todays_data_path
+from ..Utilities.utilities import AttrDict
 
 class DaqSpectrum(Measurement):
     _chan_labels = ['dc'] # DAQ channel labels expected by this class
@@ -64,7 +65,10 @@ class DaqSpectrum(Measurement):
 
     def plotLog(self, fname, calibration=None):
         '''
-        Generate a log-log plot of spectrum. If there is a known calibration between RMS voltage noise and flux noise, the plot is generated in units of flux quanta. Use daqspectrum.load to get all the data before calling plotLog
+        Generate a log-log plot of spectrum. If there is a known calibration
+        between RMS voltage noise and flux noise, the plot is generated in units
+        of flux quanta. Use daqspectrum.load to get all the data before calling
+        plotLog.
 
         calibration should be in units of Phi_o/V
 
@@ -92,21 +96,9 @@ class DaqSpectrum(Measurement):
         return figPathPng
 
 
-    def save(self, savefig=True):
-        '''
-        Saves the daqspectrum object.
-        Also saves the figures as pdfs, if wanted.
-        '''
-
-        self._save(get_todays_data_path(), self.filename)
-
-        if savefig and hasattr(self, 'fig'):
-            self.fig.savefig(os.path.join(get_todays_data_path(), self.filename)+'.pdf')
-
-
     def setup_plots(self):
         self.fig = plt.figure(figsize=(12,6))
-        self.ax = {}
+        self.ax = AttrDict()
         self.ax['loglog'] = self.fig.add_subplot(121)
         self.ax['semilog'] = self.fig.add_subplot(122)
 

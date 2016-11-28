@@ -2,7 +2,7 @@ import time, os, numpy as np, matplotlib.pyplot as plt
 from ..Utilities import conversions
 from ..Utilities.save import Measurement, get_todays_data_path
 from ..Utilities.plotting import plot_mpl
-
+from ..Utilities.utilities import AttrDict
 
 class MutualInductance(Measurement):
     instrument_list = ['squidarray', 'lockin_squid', 'lockin_I']
@@ -46,18 +46,15 @@ class MutualInductance(Measurement):
 
         plot_mpl.update2D(self.im, self.V*conversions.Vsquid_to_phi0/self.I, equal_aspect=False)
         plot_mpl.aspect(self.ax['2D'], 3)
+
+        self.fig.tight_layout()
+        self.fig.subplots_adjust(wspace=.3, hspace=.3)
         self.fig.canvas.draw()
-
-
-    def save(self, savefig=True):
-        self._save(get_todays_data_path(), self.filename)
-
-        if savefig and hasattr(self, 'fig'):
-            self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
 
 
     def setup_plots(self):
         self.fig = plt.figure()
+        self.ax = AttrDict()
         self.ax['vs_amp'] = self.fig.add_subplot(221)
         self.ax['vs_amp'].set_xlabel('Amplitude (V)')
         self.ax['vs_amp'].set_ylabel('Mutual Inductance ($\phi_0$/A)')
@@ -67,4 +64,8 @@ class MutualInductance(Measurement):
         self.ax['vs_freq'].set_ylabel('Mutual Inductance ($\phi_0$/A)')
 
         self.ax['2D'] = self.fig.add_subplot(122)
-        self.im = plot_mpl.plot2D(self.ax['2D'], self.amps*1000, self.freqs/1000, self.V*conversions.Vsquid_to_phi0/self.I, ylabel='Frequency (kHz)', xlabel='Amplitude (mV)', clabel = 'Mutual inductance ($\phi_0$/A)', equal_aspect=False)
+        self.im = plot_mpl.plot2D(self.ax['2D'], self.amps*1000,
+            self.freqs/1000, self.V*conversions.Vsquid_to_phi0/self.I,
+            ylabel='Frequency (kHz)', xlabel='Amplitude (mV)',
+            clabel = 'Mutual inductance ($\phi_0$/A)', equal_aspect=False
+        )

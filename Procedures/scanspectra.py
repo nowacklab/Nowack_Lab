@@ -12,14 +12,16 @@ from ..Instruments import piezos, montana, squidarray
 from ..Utilities.save import Measurement, get_todays_data_path
 from ..Utilities import conversions
 from ..Procedures import DaqSpectrum
+from ..Utilities.utilities import AttrDict
 
 class Scanspectra(Measurement):
-    _chan_labels = ['dc','cap','ac x','ac y'] # DAQ channel labels expected by this class
+    _chan_labels = ['dc','cap','acx','acy'] # DAQ channel labels expected by this class
     instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto','daq']
 
-    Vavg = {
+    Vavg = AttrDict({
         chan: np.nan for chan in _chan_labels
-    }
+    })
+
     V = np.array([])
 
     def __init__(self, instruments = {}, plane = None, span=[800,800],
@@ -103,8 +105,6 @@ class Scanspectra(Measurement):
         del self.daqspectrum
         self.save()
 
-    def save(self):
-        self._save(get_todays_data_path(), self.filename)
 
     def setup_preamp(self):
         self.preamp.gain = 1

@@ -8,6 +8,7 @@ import numpy as np
 from ..Instruments import nidaq, preamp, montana
 from ..Utilities.save import Measurement, get_todays_data_path
 from ..Utilities import conversions, logging
+from ..Utilities.utilities import AttrDict
 
 _Z_PIEZO_STEP = 4 # V piezo
 _Z_PIEZO_STEP_SLOW = 4 # V piezo
@@ -24,7 +25,7 @@ class Touchdown(Measurement):
     rs = np.array([])
     C0 = 0
 
-    lines_data = dict(
+    lines_data = AttrDict(
         V_app = np.array([]),
         C_app = np.array([]),
         V_td = np.array([]),
@@ -151,7 +152,7 @@ class Touchdown(Measurement):
             self.C = np.array([np.nan]*self.numsteps)
             self.rs = np.array([np.nan]*self.numsteps)
             self.C0 = None # offset: will take on value of the first point
-            self.lines_data = dict(
+            self.lines_data = AttrDict(
                 V_app = np.array([]),
                 C_app = np.array([]),
                 V_td = np.array([]),
@@ -322,6 +323,7 @@ class Touchdown(Measurement):
 
     def plot(self):
         super().plot()
+
         self.line.set_ydata(self.C) #updates plot with new capacitance values
         self.ax.set_ylim(-1, max(np.nanmax(self.C), 10))
 
@@ -332,6 +334,8 @@ class Touchdown(Measurement):
         self.line_td.set_ydata(self.lines_data['C_td'])
 
         self.ax.set_title(self.title, fontsize=20)
+
+        self.fig.tight_layout()
         self.fig.canvas.draw()
 
 
@@ -341,13 +345,8 @@ class Touchdown(Measurement):
         Also saves the figure as a pdf, if wanted.
         '''
 
-        path = os.path.join(get_todays_data_path(), 'extras')
-        if not os.path.exists(path):
-            os.makedirs(path)
-        self._save(path, self.filename)
-
-        if savefig and hasattr(self, 'fig'):
-            self.fig.savefig(os.path.join(path, self.filename+'.pdf'), bbox_inches='tight')
+        filename_in_extras = os.path.join(get_local_data_path(), get_todays_data_path(), 'extras', self.filename)
+        self._save(filename_in_extras, savefig)
 
 
     def setup_plots(self):

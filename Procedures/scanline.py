@@ -6,22 +6,24 @@ import matplotlib.pyplot as plt
 from ..Utilities import plotting, conversions
 from ..Instruments import piezos, nidaq, montana, squidarray
 from ..Utilities.save import Measurement, get_todays_data_path
+from ..Utilities.utilities import AttrDict
 
 
 class Scanline(Measurement):
-    _chan_labels = ['dc','cap','ac x','ac y']
-    _conversions = {
+    _chan_labels = ['dc','cap','acx','acy']
+    _conversions = AttrDict({
         'dc': conversions.Vsquid_to_phi0,
         'cap': conversions.V_to_C,
-        'ac x': conversions.Vsquid_to_phi0,
-        'ac y': conversions.Vsquid_to_phi0,
+        'acx': conversions.Vsquid_to_phi0,
+        'acy': conversions.Vsquid_to_phi0,
         'piezo': conversions.Vpiezo_to_micron
-    }
+    })
     instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto']
 
-    V = {
+    V = AttrDict({
         chan: np.nan for chan in _chan_labels + ['piezo']
-    }
+    })
+    Vout = np.nan
 
     def __init__(self, instruments={}, plane=None, start=(-100,-100), end=(100,100), scanheight=15, scan_rate=120, return_to_zero=True):
         super().__init__()
@@ -76,7 +78,7 @@ class Scanline(Measurement):
         for chan in self._chan_labels:
             self.V[chan] = received[chan]
 
-        for chan in ['ac x','ac y']:
+        for chan in ['acx','acy']:
             self.V[chan] = self.lockin_squid.convert_output(self.V[chan])
         self.Vfull['cap'] = self.lockin_cap.convert_output(self.Vfull['cap'])
 
@@ -97,29 +99,19 @@ class Scanline(Measurement):
         super().plot()
 
         for chan in self._chan_labels:
-            self.ax['chan'].plot(self.Vout*self._conversions['piezo'], self.V[chan], '-b')
+            self.ax[chan].plot(self.Vout*self._conversions['piezo'], self.V[chan], '-b')
 
+        self.fig.tight_layout()
         self.fig.canvas.draw()
-
-
-    def save(self, savefig=True):
-        '''
-        Saves the scanline object.
-        Also saves the figure as a pdf, if wanted.
-        '''
-
-        self._save(get_todays_data_path(), self.filename)
-
-        if savefig and hasattr(self, 'fig'):
-            self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
 
 
     def setup_plots(self):
         self.fig = plt.figure(figsize=(8,5))
+        self.ax = AttrDict()
 
         self.ax['dc'] = self.fig.add_subplot(221)
-        self.ax['ac x'] = self.fig.add_subplot(223)
-        self.ax['ac y'] = self.fig.add_subplot(224)
+        self.ax['acx'] = self.fig.add_subplot(223)
+        self.ax['acy'] = self.fig.add_subplot(224)
         self.ax['cap'] = self.fig.add_subplot(222)
 
         for label, ax in self.ax.items():

@@ -11,25 +11,30 @@ from ..Utilities.plotting import plot_mpl
 from ..Instruments import piezos, montana, squidarray
 from ..Utilities.save import Measurement, get_todays_data_path
 from ..Utilities import conversions
+from ..Utilities.utilities import AttrDict
 
 class Scanplane(Measurement):
-    _chan_labels = ['dc','cap','ac x','ac y'] # DAQ channel labels expected by this class
-    _conversions = {
+    _chan_labels = ['dc','cap','acx','acy'] # DAQ channel labels expected by this class
+    _conversions = AttrDict({
         'dc': conversions.Vsquid_to_phi0,
         'cap': conversions.V_to_C,
-        'ac x': conversions.Vsquid_to_phi0,
-        'ac y': conversions.Vsquid_to_phi0,
+        'acx': conversions.Vsquid_to_phi0,
+        'acy': conversions.Vsquid_to_phi0,
         'piezo': conversions.Vpiezo_to_micron
-    }
+    })
     instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto','daq']
 
     ## Put things here necessary to have when reloading object
 
-    V = {
+    V = AttrDict({
         chan: np.nan for chan in _chan_labels + ['piezo']
-    }
-    Vfull = V.copy()
-    Vinterp = V.copy()
+    })
+    Vfull = AttrDict({
+        chan: np.nan for chan in _chan_labels + ['piezo']
+    })
+    Vinterp = AttrDict({
+        chan: np.nan for chan in _chan_labels + ['piezo']
+    })
 
     def __init__(self, instruments={}, plane=None, span=[800,800],
                         center=[0,0], numpts=[20,20],
@@ -159,7 +164,7 @@ class Scanplane(Measurement):
             for chan in self._chan_labels:
                 self.Vfull[chan] = received[chan]
 
-            for chan in ['ac x', 'ac y']:
+            for chan in ['acx', 'acy']:
                 self.Vfull[chan] = self.lockin_squid.convert_output(self.Vfull[chan])
             self.Vfull['cap'] = self.lockin_cap.convert_output(self.Vfull['cap']) - Vcap_offset
 
@@ -197,8 +202,10 @@ class Scanplane(Measurement):
             plot_mpl.update2D(self.im[chan], self.V[chan]*self._conversions[chan])
 
         self.plot_line()
-
         self.fig.canvas.draw()
+
+        # ## Give the subplots some breathing room
+        # self.fig.subplots_adjust(wspace=.5, hspace=.5)
 
 
     def setup_plots(self):
@@ -206,12 +213,14 @@ class Scanplane(Measurement):
         Set up all plots.
         '''
         self.fig = plt.figure(figsize=(11,11))
-        self.ax = {}
-        self.im = {}
+        ## Give the subplots some breathing room
+        self.fig.subplots_adjust(wspace=.5, hspace=.5)
+        self.ax = AttrDict()
+        self.im = AttrDict()
 
         self.ax['dc'] = self.fig.add_subplot(321)
-        self.ax['ac x'] = self.fig.add_subplot(323)
-        self.ax['ac y'] = self.fig.add_subplot(324)
+        self.ax['acx'] = self.fig.add_subplot(323)
+        self.ax['acy'] = self.fig.add_subplot(324)
         self.ax['cap'] = self.fig.add_subplot(322)
 
         cmaps = ['RdBu', 'cubehelix', 'cubehelix','afmhot']
@@ -224,7 +233,8 @@ class Scanplane(Measurement):
                                             title = self.filename,
                                             xlabel = '$V_{piezo}$ | $\sim\mu\mathrm{m}$',
                                             ylabel = '$V_{piezo}$ | $\sim\mu\mathrm{m}$',
-                                            clabel = r'%s ($\phi_0$)' %chan
+                                            clabel = r'%s ($\phi_0$)' %chan,
+                                            fontsize=12
                                         )
         self.im['cap'].colorbar.set_label('cap (C)') # not phi0's!
 
@@ -238,7 +248,7 @@ class Scanplane(Measurement):
         self.ax['line'].set_title(self.filename, fontsize=8)
         self.line_full = self.ax['line'].plot(self.Vfull['piezo'], self.Vfull['dc'], '-.k') # commas only take first element of array? ANyway, it works.
 
-        self.line_interp = self.ax['line'].plot(self.Vinterp['piezo'], self.Vinterp['ac x'], '.r', markersize=12)
+        self.line_interp = self.ax['line'].plot(self.Vinterp['piezo'], self.Vinterp['acx'], '.r', markersize=12)
 
         self.ax['line'].set_xlabel('Vpiezo (V)', fontsize=8)
         self.ax['line'].set_ylabel('Last V AC x line (V)', fontsize=8)
@@ -250,7 +260,7 @@ class Scanplane(Measurement):
         self.fig.canvas.draw()
 
 
-    def plot_line(self, chan = 'ac x'):
+    def plot_line(self, chan = 'acx'):
         self.line_full.set_xdata(self.Vfull['piezo']*self._conversions['piezo'])
         self.line_full.set_ydata(self.Vfull[chan]*self._conversions[chan])
         self.line_interp.set_xdata(self.Vinterp['piezo']*self._conversions['piezo'])
@@ -262,18 +272,6 @@ class Scanplane(Measurement):
         plot_mpl.aspect(self.ax['line'], .3)
 
 
-    def save(self, savefig=True):
-        '''
-        Saves the scanplane object.
-        Also saves the figure as a pdf, if wanted.
-        '''
-
-        self._save(get_todays_data_path(), self.filename)
-
-        if savefig and hasattr(self, 'fig'):
-            self.fig.savefig(os.path.join(get_todays_data_path(), self.filename+'.pdf'), bbox_inches='tight')
-
-
     def save_line(self, i, Vstart):
         '''
         Saves each line individually to JSON.
@@ -282,7 +280,7 @@ class Scanplane(Measurement):
         line.scan_filename = self.filename
         line.idx = i
         line.Vstart = Vstart
-        line.Vfull = {}
+        line.Vfull = AttrDict()
         line.Vfull['dc'] = self.Vfull['dc']
         line.Vfull['piezo'] = self.Vfull['piezo']
         line.save()
