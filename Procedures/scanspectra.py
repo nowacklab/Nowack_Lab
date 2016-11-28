@@ -21,6 +21,7 @@ class Scanspectra(Measurement):
     Vavg = AttrDict({
         chan: np.nan for chan in _chan_labels
     })
+
     V = np.array([])
 
     def __init__(self, instruments = {}, plane = None, span=[800,800],

@@ -204,7 +204,8 @@ class NIDAQ(Instrument):
             ## Make sure daq does not go out of range
             absmax = abs(value).max()
             if absmax > self._output_range:
-                raise Exception('%s is out of range for DAQ with output range %s!' %(absmax,self._output_range))
+                value = np.clip(value, -self._output_range, self._output_range)
+                print('%s is out of range for DAQ with output range %s! Set to max output.' %(absmax,self._output_range))
 
             ## Repeat the last data point.
             ## The DAQ for some reason gives data points late by 1. (see later)
