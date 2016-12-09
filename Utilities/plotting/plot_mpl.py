@@ -94,11 +94,14 @@ def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='', 
         aspect(ax, 1, absolute=False) # equal aspect ratio based on data scales
 
     ## Round ticks to the nearest integer, and only have three ticks per axis
-    xticks = [math.ceil(x.min()), int((x.min()+x.max())/2), math.floor(x.max())]
-    yticks = [math.ceil(y.min()), int((y.min()+y.max())/2), math.floor(y.max())]
+    try:
+        xticks = [math.ceil(x.min()), int((x.min()+x.max())/2), math.floor(x.max())]
+        yticks = [math.ceil(y.min()), int((y.min()+y.max())/2), math.floor(y.max())]
 
-    ax.set_xticks(xticks)
-    ax.set_yticks(yticks)
+        ax.set_xticks(xticks)
+        ax.set_yticks(yticks)
+    except:
+        pass # if x and y are nans, this will fail!
 
     return im
 
