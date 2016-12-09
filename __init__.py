@@ -59,17 +59,15 @@ from Nowack_Lab.Instruments.lockin import SR830
 ''');
 
 def in_ipynb():
-    try:
-        cfg = get_ipython().config
-        if cfg['IPKernelApp']['parent_appname'] == 'ipython-notebook':
-            return True
-        else:
-            return False
-    except NameError:
+    import sys
+    if 'ipykernel' in sys.modules:
+        return True
+    else:
         return False
+        
 # Interactive notebook plots
 ## For interactive matplotlib plots
 if in_ipynb():
-    ip.magic('matplotlib qt') # matplotlib notebook....
+    ip.magic('matplotlib notebook') # matplotlib notebook....
 else:
     ip.magic('matplotlib qt') # if not in a notebook

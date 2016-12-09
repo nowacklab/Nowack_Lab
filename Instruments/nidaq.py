@@ -22,6 +22,7 @@ class NIDAQ(Instrument):
     does not import/inherit anything from squidpy.
     Uses package Instrumental from Mabuchi lab at Stanford
     '''
+    _label = 'daq'
 
     def __init__(self, zero=False, dev_name='Dev1', input_range=10, output_range=10):
         self._daq  = ni.NIDAQ(dev_name, input_range, output_range)
@@ -106,9 +107,11 @@ class NIDAQ(Instrument):
     def inputs(self, d):
         '''
         Set a bunch of input channel labels at once. d is a dictionary with keys = input channel labels, values = input channel real names
-        e.g. {'squid': 'ai0'}
+        e.g. {'squid': 'ai0'} or {'squid': 0}
         '''
         for label, name in d.items():
+            if type(name) is int:
+                name = 'ai%i' %name
             getattr(self, name).label = label
 
 
@@ -145,9 +148,11 @@ class NIDAQ(Instrument):
     def outputs(self, d):
         '''
         Set a bunch of output channel labels at once. d is a dictionary with keys = output channel labels, values = output channel real names
-        e.g. {'piezo x': 'ao0'}
+        e.g. {'piezo x': 'ao0'} or {'piezo x': 0}
         '''
         for label, name in d.items():
+            if type(name) is int:
+                name = 'ao%i' %name
             getattr(self, name).label = label
 
 

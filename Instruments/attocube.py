@@ -20,6 +20,7 @@ class ANC350(Instrument):
          atto.x.move(100)
          atto.x.step(-100)
     '''
+    _label = 'atto'
     _stages = ['x','y','z'] # order of axis controllers
     _pos_lims = [20000, 20000, 20000] # um (temporary until LUT calibrated)
 

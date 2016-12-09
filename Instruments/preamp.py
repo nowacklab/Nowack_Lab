@@ -10,6 +10,7 @@ for cg in COARSE_GAIN:
 FILTER = [0, 0.03, 0.1, 0.3, 1, 3, 10, 30, 100, 300, 1000, 3000, 10000, 30000, 100000, 300000]
 
 class SR5113(Instrument):
+    _label = 'preamp'
     _gain = None
     _filter = None
     def __init__(self, port='COM1'):

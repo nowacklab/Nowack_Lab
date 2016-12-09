@@ -8,6 +8,7 @@ class Piezos(Instrument):
     Signal sent to NIDAQ goes through Nanonis HVA4 High Voltage Amplifier.
     Sweeps between voltages smoothly.
     '''
+    _label = 'piezos'
     _chan_labels = ['x','y','z'] # DAQ channel labels expected by this class
     _piezos = ['x','y','z']
     _gain = [40, 40, 40]

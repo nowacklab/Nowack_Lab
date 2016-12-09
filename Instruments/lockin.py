@@ -12,6 +12,7 @@ _reserve_options = ['High Reserve', 'Normal', 'Low Noise']
 
 
 class SR830(Instrument):
+    _label = 'lockin'
     '''
     Instrument driver for SR830, modified from Guen's squidpy driver
     '''

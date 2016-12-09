@@ -93,8 +93,7 @@ class SquidIV(Measurement):
 
     def do_IV(self):
         """ Wrote this for mod2D so it doesn't plot """
-        self.daq.outputs['mod out'] = self.Imod*self.Rbias_mod # Set mod current
-
+        self.daq.outputs['mod out'].V = self.Imod*self.Rbias_mod # Set mod current
         # Collect data
         in_chans = ['squid in','current in']
         output_data, received = self.daq.sweep({'squid out': self.Vbias[0]},

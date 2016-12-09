@@ -140,10 +140,10 @@ class Measurement:
         for instrument in self.instrument_list:
             if instrument in instruments:
                 setattr(self, instrument, instruments[instrument])
-            elif 'daq' in instruments:
-                for ch in self._chan_labels:
-                    if ch not in self.daq.outputs and ch not in self.daq.inputs:
-                        raise Exception('Need to set daq channel labels! Need a %s' %ch)
+                if instrument == 'daq':
+                    for ch in self._chan_labels:
+                        if ch not in self.daq.outputs and ch not in self.daq.inputs:
+                            raise Exception('Need to set daq channel labels! Need a %s' %ch)
             else:
                 setattr(self, instrument, None)
 

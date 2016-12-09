@@ -449,6 +449,7 @@ class PFL102(Instrument):
 
 
 class SquidArray(PFL102):
+    _label = 'squidarray'
     def __init__(self):
         super().__init__(1, PCI100())
 

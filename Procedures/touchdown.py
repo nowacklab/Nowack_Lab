@@ -6,9 +6,10 @@ import time, os
 import matplotlib.pyplot as plt
 import numpy as np
 from ..Instruments import nidaq, preamp, montana
-from ..Utilities.save import Measurement, get_todays_data_path
+from ..Utilities.save import Measurement, get_todays_data_path, get_local_data_path
 from ..Utilities import conversions, logging
 from ..Utilities.utilities import AttrDict
+
 
 _Z_PIEZO_STEP = 4 # V piezo
 _Z_PIEZO_STEP_SLOW = 4 # V piezo

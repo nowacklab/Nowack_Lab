@@ -2,6 +2,7 @@ import visa
 from .instrument import Instrument
 
 class Keithley2400(Instrument):
+    _label = 'keithley'
     '''
     Instrument driver for Keithley 2400 Source Meter
     '''

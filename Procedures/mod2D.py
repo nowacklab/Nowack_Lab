@@ -54,13 +54,14 @@ class Mod2D(Measurement):
 
         for i in range(len(self.Imod)):
             self.IV.Imod = self.Imod[i]
+
             self.IV.do_IV()
-            self.plot()
-            self.ax['IV'].clear()
-            self.ax['IV2'].clear()
-            self.IV.plot(self.ax['IV'], self.ax['IV2'])
+            #self.plot()
+            #self.ax['IV'].clear()
+            #self.ax['IV2'].clear()
+            #self.IV.plot(self.ax['IV'], self.ax['IV2'])
             self.V[:][i] = self.IV.V
-            self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
+            #self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
         self.IV.daq.zero() # zero everything
 
         self.notes = input('Notes for this mod2D (q to quit without saving): ')

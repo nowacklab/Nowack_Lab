@@ -10,6 +10,7 @@ import time
 from .instrument import Instrument
 
 class Montana(Instrument):
+    _label = 'montana'
     _temperature = {}
     cryo = None
     def __init__(self, ip='192.168.100.237', port=7773):
