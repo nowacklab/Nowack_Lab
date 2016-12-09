@@ -1,13 +1,11 @@
 from scipy import signal
 import matplotlib.pyplot as plt
 import numpy as np
-import datetime #probably dont need to import datetime and time
-import time
 from datetime import datetime
 import os
 import re
 from ..Instruments import nidaq, preamp
-from ..Utilities.save import Measurement, get_todays_data_path
+from ..Utilities.save import Measurement
 from ..Utilities.utilities import AttrDict
 
 class DaqSpectrum(Measurement):

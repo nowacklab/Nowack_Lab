@@ -1,5 +1,6 @@
-import Nowack_Lab.Procedures, Nowack_Lab.Instruments, Nowack_Lab.Utilities, os
-from Nowack_Lab.Utilities.save import set_cooldown_data_path, get_data_server_path
+# import Nowack_Lab.Procedures, Nowack_Lab.Instruments, Nowack_Lab.Utilities, os
+import os
+from Nowack_Lab.Utilities import save
 
 from matplotlib import rcParams
 rcParams.update({'figure.autolayout': False}) # If set to True, will autoformat layout and prevent axis labels from getting cut off.
@@ -7,19 +8,19 @@ rcParams.update({'figure.autolayout': False}) # If set to True, will autoformat 
 # import warnings
 # warnings.filterwarnings("ignore") # This was to hide nanmin warnings, maybe not so good to have in general.
 
-## Set cooldown data path
-inp = input('New cooldown? y/(n): ')
+## Set experiment data path
+inp = input('New experiment? y/(n): ')
 if inp in ('y', 'Y'):
     while True:
-        inp2 = input('Enter description of cooldown: ')
+        inp2 = input('Enter description of experiment: ')
         if inp2.find(' ') != -1:
             print('This is going to be a folder name. Please don\'t use spaces!')
         else:
             break
-    set_cooldown_data_path(inp2)
+    save.set_experiment_data_dir(inp2)
 
 ## Check for remote data server connection
-if not os.path.exists(get_data_server_path()):
+if not os.path.exists(save.get_data_server_path()):
     print('''SAMBASHARE not connected. Could not find path %s. If you want to change the expected path, modify the get_data_server_path function in Nowack_Lab/Utilities/save.py''' %get_data_server_path())
 
 ## Importing commonly used packages
@@ -64,7 +65,7 @@ def in_ipynb():
         return True
     else:
         return False
-        
+
 # Interactive notebook plots
 ## For interactive matplotlib plots
 if in_ipynb():

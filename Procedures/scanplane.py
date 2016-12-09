@@ -1,6 +1,5 @@
 import numpy as np
 from numpy.linalg import lstsq
-from . import navigation, planefit
 import time, os
 from datetime import datetime
 from scipy.interpolate import interp1d
@@ -9,7 +8,7 @@ from IPython import display
 from numpy import ma
 from ..Utilities.plotting import plot_mpl
 from ..Instruments import piezos, montana, squidarray
-from ..Utilities.save import Measurement, get_todays_data_path
+from ..Utilities.save import Measurement, get_todays_data_dir
 from ..Utilities import conversions
 from ..Utilities.utilities import AttrDict
 
@@ -291,8 +290,4 @@ class Line(Measurement):
         super().__init__()
 
     def save(self):
-        path = os.path.join(get_todays_data_path(), 'extras')
-        if not os.path.exists(path):
-            os.makedirs(path)
-
-        self._save(path, self.filename)
+        self._save(os.path.join('extras', self.filename))

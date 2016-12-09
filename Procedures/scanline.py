@@ -5,7 +5,7 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 from ..Utilities import plotting, conversions
 from ..Instruments import piezos, nidaq, montana, squidarray
-from ..Utilities.save import Measurement, get_todays_data_path
+from ..Utilities.save import Measurement
 from ..Utilities.utilities import AttrDict
 
 

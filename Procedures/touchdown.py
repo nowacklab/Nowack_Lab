@@ -6,7 +6,7 @@ import time, os
 import matplotlib.pyplot as plt
 import numpy as np
 from ..Instruments import nidaq, preamp, montana
-from ..Utilities.save import Measurement, get_todays_data_path, get_local_data_path
+from ..Utilities.save import Measurement, get_todays_data_dir, get_local_data_path
 from ..Utilities import conversions, logging
 from ..Utilities.utilities import AttrDict
 
@@ -346,7 +346,7 @@ class Touchdown(Measurement):
         Also saves the figure as a pdf, if wanted.
         '''
 
-        filename_in_extras = os.path.join(get_local_data_path(), get_todays_data_path(), 'extras', self.filename)
+        filename_in_extras = os.path.join(get_local_data_path(), get_todays_data_dir(), 'extras', self.filename)
         self._save(filename_in_extras, savefig)
 
 
