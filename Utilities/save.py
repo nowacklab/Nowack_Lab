@@ -346,15 +346,22 @@ def get_computer_name():
 
 def get_experiment_data_dir():
     '''
-    Finds the most recent (current) experiment data directory. (Not the full path)
+    Finds the most recently modified (current) experiment data directory. (Not the full path)
     '''
-    exp_dirs = []
-    for name in os.listdir(get_local_data_path()): # all experiment directories
-        if re.match(r'\d{4}-', name[:5]): # make sure directory starts with "20XX-"
-            exp_dirs.append(name)
 
-    exp_dirs.sort(key=lambda x: datetime.strptime(x[:10], '%Y-%m-%d')) # sort by date
-    return exp_dirs[-1] # this is the most recent
+    latest_subdir = max(glob.glob(os.path.join(get_local_data_path(), '*/')), key=os.path.getmtime)
+
+    return latest_subdir
+
+    ## If we're sure that there will only be one directory per date. Bad assumption.
+    # exp_dirs = []
+    # for name in os.listdir(get_local_data_path()): # all experiment directories
+    #     if re.match(r'\d{4}-', name[:5]): # make sure directory starts with "20XX-"
+    #         exp_dirs.append(name)
+
+    # exp_dirs.sort(key=lambda x: datetime.strptime(x[:10], '%Y-%m-%d')) # sort by date
+    #
+    # return exp_dirs[-1] # this is the most recent
 
 
 def get_data_server_path():
@@ -424,9 +431,12 @@ def set_experiment_data_dir(description=''):
     # Make local and remote directories:
     dirs = [get_local_data_path(), get_remote_data_path()]
     for d in dirs:
-        filename = os.path.join(d, now_fmt + '_' + description)
-        if not os.path.exists(filename):
-            os.makedirs(filename)
+        try:
+            filename = os.path.join(d, now_fmt + '_' + description)
+            if not os.path.exists(filename):
+                os.makedirs(filename)
+        except:
+            print('Error making directory %s' %d)
 
 
 def _md5(filename):

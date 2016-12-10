@@ -1,7 +1,7 @@
 '''
 For random utilities
 '''
-import json, numpy as np, os 
+import json, numpy as np, os
 from numpy.linalg import lstsq
 
 class AttrDict(dict):
@@ -102,7 +102,7 @@ def get_computer_name():
     '''
     Gets the computer's name. Should hopefully be unique!
     '''
-    return os.environ['COMPUTERNAME']
+    return os.uname()[1]
 
 
 def get_nb_kernel():
