@@ -26,9 +26,9 @@ class Scanplane(Measurement):
 
     ## Put things here necessary to have when reloading object
 
-    V = AttrDict({
-        chan: np.nan for chan in _chan_labels + ['piezo']
-    })
+    #V = AttrDict({
+    #    chan: np.nan for chan in _chan_labels + ['piezo']
+    #})
     Vfull = AttrDict({
         chan: np.nan for chan in _chan_labels + ['piezo']
     })
@@ -50,11 +50,12 @@ class Scanplane(Measurement):
         self.center = center
         self.numpts = numpts
         self.plane = plane
+        self.V = {}
 
-        if scanheight < 0:
-            inp = input('Scan height is negative, SQUID will ram into sample! Are you sure you want this? \'q\' to quit.')
-            if inp == 'q':
-                raise Exception('Terminated by user')
+        #if scanheight < 0:
+        #    inp = input('Scan height is negative, SQUID will ram into sample! Are you sure you want this? \'q\' to quit.')
+        #    if inp == 'q':
+        #        raise Exception('Terminated by user')
         self.scanheight = scanheight
 
         x = np.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
@@ -169,16 +170,22 @@ class Scanplane(Measurement):
             self.Vfull['cap'] = self.lockin_cap.convert_output(self.Vfull['cap']) - Vcap_offset
 
             # Interpolate the data and store in the 2D arrays
-            if fast_axis == 'x': # self.V[chan][i, :]
-                s1 = slice(i)
-                s2 = slice(None)
-            elif fast_axis == 'y': # [:, i]
-                s1 = slice(None)
-                s2 = slice(i)
+            #if fast_axis == 'x': # self.V[chan][i, :]
+            #    s1 = slice(i)
+            #    s2 = slice(None)
+            #elif fast_axis == 'y': # [:, i]
+            #    s1 = slice(None)
+            #    s2 = slice(i)
+            #for chan in self._chan_labels:
+            #    self.Vinterp[chan] = interp1d(self.Vfull['piezo'], self.Vfull[chan])(self.Vinterp['piezo'])
+            #    self.V[chan][s1,s2] = self.Vinterp[chan]
             for chan in self._chan_labels:
-                self.Vinterp[chan] = interp1d(self.Vfull['piezo'], self.Vfull[chan])(self.Vinterp['piezo'])
-                self.V[chan][s1,s2] = self.Vinterp[chan]
-
+                if fast_axis == 'x':
+                    self.Vinterp[chan] = interp1d(self.Vfull['piezo'], self.Vfull[chan])(self.Vinterp['piezo'])
+                    self.V[chan][i,:] = self.Vinterp[chan]
+                else:
+                    self.Vinterp[chan] = interp1d(self.Vfull['piezo'], self.Vfull[chan])(self.Vinterp['piezo'])
+                    self.V[chan][:,i] = self.Vinterp[chan]
             self.save_line(i, Vstart)
 
             self.plot()
@@ -239,8 +246,8 @@ class Scanplane(Measurement):
         self.im['cap'].colorbar.set_label('cap (C)') # not phi0's!
 
         for ax in self.ax.values():
-            ax.set_xticklabels(['%i | %i' %(x, x*conversions.Vpiezo_to_micron) for x in ax.get_xticks()])
-            ax.set_yticklabels(['%i | %i' %(y, y*conversions.Vpiezo_to_micron) for y in ax.get_yticks()])
+            ax.set_xticklabels(['%i' %(x) for x in ax.get_xticks()])
+            ax.set_yticklabels(['%i' %(y) for y in ax.get_yticks()])
 
 
         ## "Last full scan" plot

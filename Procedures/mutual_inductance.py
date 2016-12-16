@@ -70,6 +70,8 @@ class MutualInductance(Measurement):
             ylabel='Frequency (kHz)', xlabel='Amplitude (mV)',
             clabel = 'Mutual inductance ($\phi_0$/A)', equal_aspect=False
         )
+
+
 class ArraylessMI(Measurement):
     '''
     Map out the response of the SQUID in the mod current / field coil current
@@ -96,7 +98,7 @@ class ArraylessMI(Measurement):
 
         super().__init__()
         self._load_instruments(instruments)
-        self.s_bias = s_bias * 1e-6
+        self.s_bias = float(s_bias) * 1e-6
         self.r_bias_squid = r_bias_squid
         self.I_mod_i = I_mod_i * 1e-6
         self.I_mod_f = I_mod_f * 1e-6
