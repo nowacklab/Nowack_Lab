@@ -42,6 +42,9 @@ class Touchdown(Measurement):
     start_offset = 0
 
     def __init__(self, instruments={}, planescan=False, Vz_max = None):
+        '''
+        set planescan=True to disable attocubes during touchdown
+        '''
         super().__init__()
 
         self._load_instruments(instruments)
@@ -127,6 +130,7 @@ class Touchdown(Measurement):
 
         Vtd = None
         slow_scan = False
+        td_array = []
 
         ## Loop that does sweeps of z piezo
         ## Z atto is moved up between iterations
@@ -197,6 +201,8 @@ class Touchdown(Measurement):
 
                 if self.touchdown:
                     Vtd = self.get_touchdown_voltage()
+                    td_array.append([self.atto.z.pos, Vtd])
+                    print("Z attocube:" + str(self.atto.z.pos), "Touchdown Voltage:" + str(Vtd))
                     if Vtd == -1: # added 11/1/2016 to try to handle exceptions in calculating td voltage
                         self.touchdown = False
                         continue
@@ -217,7 +223,7 @@ class Touchdown(Measurement):
                             start = -self.Vz_max # because we don't know where the td will be
                             self.title = 'Found touchdown, centering near %i Vpiezo' %int(self.Vz_max/2)
                             self.plot()
-                            self.attoshift = (Vtd-self.Vz_max/2)*conversions.Vpiezo_to_attomicron
+                            self.attoshift = (Vtd-self.Vz_max/2)*conversions.Vz_to_um
                             self.lines_data['V_app'] = []
                             self.lines_data['C_app'] = []
                             self.lines_data['V_td'] = []
@@ -259,7 +265,6 @@ class Touchdown(Measurement):
         self.save()
 
         return Vtd
-
 
     def get_touchdown_voltage(self):
         '''

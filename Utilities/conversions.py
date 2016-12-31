@@ -2,8 +2,9 @@
 ## calibrated 20160423 by BTS, see ipython notebook dated that day
 V_to_C = 2530e3 # 2530 pF/V * (1e3 fF/pF)
 
-Vpiezo_to_attomicron = .05 # was .15, changed 11/9/2016 to lower for new scanner. Not sure what real calibration is. # atto micron/ V piezo for attocube's LUTs
-
-Vpiezo_to_micron = 1/3.5 # 2016-10-05, very rough; using 3.5 V/um from 9/21 cooldown without wings
+Vx_to_um = 1/3.5 # 2016-10-05, very rough; using 3.5 V/um from 9/21 cooldown without wings
+Vy_to_um = 1/3.5 # 2016-10-05, very rough; using 3.5 V/um from 9/21 cooldown without wings
+Vxy_to_um = 1/3.5 # implemented in scanline. This will be the assumption until we're sure calibrations differ substantially.
+Vz_to_um = .14 # based on "atto um"  atto micron/ V piezo for attocube's LUTs
 
 Vsquid_to_phi0 = 1/14.4 # 144 uA/Phi0 * 100 kOhm = 14.4 V/Phi0 on high sensitivity

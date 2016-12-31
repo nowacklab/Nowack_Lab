@@ -13,7 +13,7 @@ class Heightsweep(Measurement):
         'dc': conversions.Vsquid_to_phi0,
         'acx': conversions.Vsquid_to_phi0,
         'acy': conversions.Vsquid_to_phi0,
-        'z': conversions.Vpiezo_to_attomicron
+        'z': conversions.Vz_to_um
     })
     instrument_list = ['piezos','montana','squidarray']
 

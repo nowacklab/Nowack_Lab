@@ -19,21 +19,11 @@ class Scanplane(Measurement):
         'cap': conversions.V_to_C,
         'acx': conversions.Vsquid_to_phi0,
         'acy': conversions.Vsquid_to_phi0,
-        'piezo': conversions.Vpiezo_to_micron
+        'x': conversions.Vx_to_um,
+        'y': conversions.Vy_to_um
     })
     instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto','daq']
-
     ## Put things here necessary to have when reloading object
-
-    #V = AttrDict({
-    #    chan: np.nan for chan in _chan_labels + ['piezo']
-    #})
-    Vfull = AttrDict({
-        chan: np.nan for chan in _chan_labels + ['piezo']
-    })
-    Vinterp = AttrDict({
-        chan: np.nan for chan in _chan_labels + ['piezo']
-    })
 
     def __init__(self, instruments={}, plane=None, span=[800,800],
                         center=[0,0], numpts=[20,20],
@@ -49,7 +39,16 @@ class Scanplane(Measurement):
         self.center = center
         self.numpts = numpts
         self.plane = plane
-        self.V = {}
+
+        self.V = AttrDict({
+           chan: np.nan for chan in self._chan_labels + ['piezo']
+        })
+        self.Vfull = AttrDict({
+           chan: np.nan for chan in self._chan_labels + ['piezo']
+        })
+        self.Vinterp = AttrDict({
+           chan: np.nan for chan in self._chan_labels + ['piezo']
+        })
 
         #if scanheight < 0:
         #    inp = input('Scan height is negative, SQUID will ram into sample! Are you sure you want this? \'q\' to quit.')
@@ -69,8 +68,10 @@ class Scanplane(Measurement):
         for chan in self._chan_labels:
             self.V[chan] = np.full(self.X.shape, np.nan) #initialize arrays
 
+        self.fast_axis = 'x' # modified as a kwarg in self.do()
 
     def do(self, fast_axis = 'x', surface=False): # surface False = sweep in lines, True sweep over plane surface
+        self.fast_axis = fast_axis
         ## Start time and temperature
         tstart = time.time()
         #temporarily commented out so we can scan witout internet on montana
@@ -169,15 +170,6 @@ class Scanplane(Measurement):
             self.Vfull['cap'] = self.lockin_cap.convert_output(self.Vfull['cap']) - Vcap_offset
 
             # Interpolate the data and store in the 2D arrays
-            #if fast_axis == 'x': # self.V[chan][i, :]
-            #    s1 = slice(i)
-            #    s2 = slice(None)
-            #elif fast_axis == 'y': # [:, i]
-            #    s1 = slice(None)
-            #    s2 = slice(i)
-            #for chan in self._chan_labels:
-            #    self.Vinterp[chan] = interp1d(self.Vfull['piezo'], self.Vfull[chan])(self.Vinterp['piezo'])
-            #    self.V[chan][s1,s2] = self.Vinterp[chan]
             for chan in self._chan_labels:
                 if fast_axis == 'x':
                     self.Vinterp[chan] = interp1d(self.Vfull['piezo'], self.Vfull[chan])(self.Vinterp['piezo'])
@@ -256,7 +248,7 @@ class Scanplane(Measurement):
 
         self.line_interp = self.ax['line'].plot(self.Vinterp['piezo'], self.Vinterp['acx'], '.r', markersize=12)
 
-        self.ax['line'].set_xlabel('Vpiezo (V)', fontsize=8)
+        self.ax['line'].set_xlabel('Vpiezo %s (V)' %self.fast_axis, fontsize=8)
         self.ax['line'].set_ylabel('Last V AC x line (V)', fontsize=8)
 
         self.line_full = self.line_full[0] # it is given as an array
@@ -267,9 +259,9 @@ class Scanplane(Measurement):
 
 
     def plot_line(self, chan = 'acx'):
-        self.line_full.set_xdata(self.Vfull['piezo']*self._conversions['piezo'])
+        self.line_full.set_xdata(self.Vfull['piezo']*self._conversions[self.fast_axis])
         self.line_full.set_ydata(self.Vfull[chan]*self._conversions[chan])
-        self.line_interp.set_xdata(self.Vinterp['piezo']*self._conversions['piezo'])
+        self.line_interp.set_xdata(self.Vinterp['piezo']*self._conversions[self.fast_axis])
         self.line_interp.set_ydata(self.Vinterp[chan]*self._conversions[chan])
 
         self.ax['line'].relim()
