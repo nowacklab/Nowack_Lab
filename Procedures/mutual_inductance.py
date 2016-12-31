@@ -23,11 +23,11 @@ class MutualInductance(Measurement):
             self.lockin_squid.frequency = f
             for j, a in enumerate(self.amps):
                 self.lockin_squid.amplitude = a
-                time.sleep(1)
-                self.lockin_squid.auto_gain()
-                self.lockin_I.auto_gain()
+                time.sleep(3)
+                #self.lockin_squid.auto_gain()
+                #self.lockin_I.auto_gain()
                 self.squidarray.reset()
-                time.sleep(1)
+                time.sleep(3)
                 self.V[i,j] = self.lockin_squid.R
                 self.I[i,j] = self.lockin_I.R/self.Rmeas
                 self.plot()

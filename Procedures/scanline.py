@@ -16,7 +16,7 @@ class Scanline(Measurement):
         'cap': conversions.V_to_C,
         'acx': conversions.Vsquid_to_phi0,
         'acy': conversions.Vsquid_to_phi0,
-        'piezo': conversions.Vpiezo_to_micron
+        'piezo': conversions.Vxy_to_um
     })
     instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto']
 
