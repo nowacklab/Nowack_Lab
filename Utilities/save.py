@@ -297,7 +297,6 @@ class Measurement:
                         d.set_fill_value = np.nan
                         d[...] = value # fill it with data
                     elif 'dict' in utilities.get_superclasses(value): # found a dictionary
-                        print(key)
                         new_group = group.create_group(key) # make a group with the dictionary name
                         walk(value, new_group) # walk through the dictionary
                     elif hasattr(value, '__dict__'): # found an object of some sort
