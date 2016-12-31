@@ -120,11 +120,14 @@ class Measurement:
             def walk(d, f):
                 for key in f.keys():
                     if key not in unwanted_keys:
-                        if f.get(key, getclass=True) is h5py._hl.group.Group: # this means it's either a dictionary or object
+                        # check if it's a dictionary or object
+                        if f.get(key, getclass=True) is h5py._hl.group.Group:
                             if key[0] == '!': # it's an object
-                                walk(d[key[1:]].__dict__, f[key]) # [:1] strips the !; this walks through the subobject
+                                walk(d[key[1:]].__dict__, f[key])
+                                # [:1] strips the !; walks through the subobject
                             else: # it's a dictionary
-                                walk(d[key], f[key]) # walk through the subdictionary
+                            # walk through the subdictionary
+                                walk(d[key], f[key])
                         else:
                             d[key] = f[key][:] # we've arrived at a dataset
                 return d

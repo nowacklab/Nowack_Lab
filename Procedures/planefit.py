@@ -77,9 +77,9 @@ class Planefit(Measurement):
         td = Touchdown(self.instruments, Vz_max = self.Vz_max)
         center_z_value = td.do() # Will do initial touchdown at center of plane to (1) find the plane (2) make touchdown voltage near center of piezo's positive voltage range
 
-        check_td = input('Does the initial touchdown look good? Enter \'q\' to abort.')
-        if check_td == 'q':
-            raise Exception('Terminated by user')
+        #check_td = input('Does the initial touchdown look good? Enter \'q\' to abort.')
+        #if check_td == 'q':
+        #    raise Exception('Terminated by user')
 
         ## If only taking plane from edges, make masked array
         if edges_only:
