@@ -268,11 +268,11 @@ class Measurement:
                 print('HDF checksum failed! Cannot trust remote file %s' %(remote_path+'.h5'))
             if local_checksum_json != remote_checksum_json:
                 print('JSON checksum failed! Cannot trust remote file %s' %(remote_path+'.json'))
-        except:
+        except Exception as e:
             if not os.path.exists(get_data_server_path()):
                 print('SAMBASHARE not connected. Could not find path %s. Object saved locally but not remotely.' %get_data_server_path())
             else:
-                print('Saving to data server failed! And I don\'t know why! :(')
+                print('Saving to data server failed!\n\nException details: %s\n\nremote path: %s\nlocal path:%s' %(e, remote_path, local_path))
 
         ## See if saving worked properly
         try:
@@ -354,7 +354,7 @@ def get_experiment_data_dir():
 
     latest_subdir = max(glob.glob(os.path.join(get_local_data_path(), '*/')), key=os.path.getmtime)
 
-    return latest_subdir
+    return os.path.relpath(latest_subdir, get_local_data_path()) # strip just the directory name
 
     ## If we're sure that there will only be one directory per date. Bad assumption.
     # exp_dirs = []

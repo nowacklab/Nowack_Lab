@@ -102,7 +102,8 @@ def get_computer_name():
     '''
     Gets the computer's name. Should hopefully be unique!
     '''
-    return os.uname()[1]
+    import socket
+    return socket.gethostname()
 
 
 def get_nb_kernel():
