@@ -49,6 +49,8 @@ class SR830(Instrument):
         self._save_dict = {"sensitivity": self.sensitivity,
                           "frequency": self.frequency,
                           "amplitude": self.amplitude,
+                          'harmonic': self.harmonic,
+                          'phase': self.phase,
                           "time_constant": self.time_constant,
                           "reserve": self.reserve,
                           "gpib_address": self.gpib_address,
@@ -112,6 +114,39 @@ class SR830(Instrument):
     @frequency.setter
     def frequency(self, value):
         self.write('FREQ %s' %value)
+
+    @property
+    def harmonic(self):
+        '''
+        Get the detection harmonic
+        '''
+        self._harmonic = int(self.ask('HARM?'))
+        return self._harmonic
+
+    @harmonic.setter
+    def harmonic(self, value):
+        '''
+        Set the detection harmonic
+        '''
+        assert type(value) is int
+        self.write('HARM %i' %value)
+
+    @property
+    def phase(self):
+        '''
+        Get the reference phase shift (degrees)
+        '''
+        self._phase = int(self.ask('PHAS?'))
+        return self._phase
+
+    @phase.setter
+    def phase(self, value):
+        '''
+        Set the reference phase shift (degrees)
+        '''
+        phase = (phase + 180) % 360 - 180 # restrict from -180 to 180
+        self.write('PHAS %f' %value)
+
 
     @property
     def X(self):
