@@ -19,6 +19,8 @@ class Keithley2400(Instrument):
         self.gpib_address= gpib_address
         self._visa_handle = visa.ResourceManager().open_resource(self.gpib_address)
         self._visa_handle.read_termination = '\n'
+        self.write(':SENS:FUNC \"VOLT\"')
+        self.write(':SENS:FUNC \"CURR\"') # set up to sense voltage and current
 
 
     def __getstate__(self):
@@ -89,7 +91,6 @@ class Keithley2400(Instrument):
         '''
         if self.output == 'off':
             raise Exception('Need to turn output on to read current!')
-        self.write(':SENS:FUNC \"CURR\"')
         self.write(':FORM:ELEM CURR') # get current reading
         return float(self.ask(':READ?'))
 
@@ -166,7 +167,6 @@ class Keithley2400(Instrument):
         '''
         if self.output == 'off':
             raise Exception('Need to turn output on to read voltage!')
-        self.write(':SENS:FUNC \"VOLT\"')
         self.write(':FORM:ELEM VOLT') # get voltage reading
         return float(self.ask(':READ?'))
 
@@ -265,15 +265,16 @@ class Keithley2400(Instrument):
     def write(self, msg):
         self._visa_handle.write(msg)
 
-    def zero(self):
+    def zero_V(self, sweep_rate=0.1):
         '''
-        Ramp down voltage or current to zero.
+        Ramp down voltage to zero. Sweep rate in volts/second
         '''
-        VorI = getattr(self, self.source+'out')
-        V = np.linspace(VorI, 0., 100) # 100 steps
+        print('zeroing keithley voltage...')
+        numsteps = abs(self.Vout)/sweep_rate*10
+        V = np.linspace(self.Vout, 0., numsteps)
         for v in V:
-            setattr(self, self.source+'out',  v) # e.g. self.Vout = v
-            time.sleep(0.01)
+            self.Vout = v
+            time.sleep(0.1)
 
 class Keithley2400Old(Instrument):
     _label = 'keithley'
