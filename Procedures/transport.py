@@ -5,7 +5,7 @@ class RvsVg(Measurement):
     instrument_list = ['keithley', 'lockin_V', 'lockin_I']
     I_compliance = 1e-6 # 1 uA
 
-    def __init__(self, instruments = {}, Vmin = -10, Vmax = 10, Vstep=.05, delay=.1):
+    def __init__(self, instruments = {}, Vmin = -10, Vmax = 10, Vstep=.1, delay=1):
         super().__init__()
         self._load_instruments(instruments)
 
@@ -14,9 +14,9 @@ class RvsVg(Measurement):
         self.Vstep = Vstep
         self.delay = delay
 
-        Vup = np.arange(0, Vmax, Vstep)
-        Vdown = np.arange(Vmax, Vmin, -Vstep)
-        Vup2 = np.arange(Vmin, 0, Vstep)
+        Vup = np.linspace(0, Vmax, round(abs(Vmax)/Vstep), endpoint=False)
+        Vdown = np.linspace(Vmax, Vmin, round(abs(Vmax-Vmin)/Vstep), endpoint=False)
+        Vup2 = np.linspace(Vmin, 0, round(abs(Vmin)/Vstep), endpoint=False)
 
         self.Vg = np.concatenate((Vup, Vdown, Vup2))
 
@@ -34,12 +34,12 @@ class RvsVg(Measurement):
     def do(self):
         self.setup_plots()
 
-        self.keithley.output = 'on'
+#         self.keithley.output = 'on'
         for i, Vg in enumerate(self.Vg):
-            self.keithley.voltage = Vg
+            self.keithley.Vout = Vg
             time.sleep(self.delay)
 
-            self.Ig[i] = self.keithley.current
+            self.Ig[i] = self.keithley.I
             self.Vx[i] = self.lockin_V.X
             self.Vy[i] = self.lockin_V.Y
             self.Ix[i] = self.lockin_I.X
@@ -48,9 +48,9 @@ class RvsVg(Measurement):
 
             self.plot()
 
-        self.keithley.zero()
+        self.keithley.zero_V()
 #         self.keithley.current = 0
-        self.keithley.output = 'off'
+#         self.keithley.output = 'off'
         self.save()
 
     def plot(self):
@@ -62,16 +62,16 @@ class RvsVg(Measurement):
         self.fig.canvas.draw()
 
     def setup_keithley(self):
-        self.keithley.zero()
-        self.keithley.mode = 'voltage'
-        self.keithley.compliance_current = self.I_compliance
-        self.keithley.voltage_range = abs(self.Vg).max()
+        self.keithley.zero_V()
+        self.keithley.source = 'V'
+        self.keithley.I_compliance = self.I_compliance
+        self.keithley.Vout_range = abs(self.Vg).max()
 
     def setup_lockins(self):
         self.lockin_V.input_mode = 'A-B'
         self.lockin_I.input_mode = 'I (10^8)'
         self.lockin_V.reference = 'internal'
-        self.lockin_V.frequency = 11.123
+#         self.lockin_V.frequency = 53.01
         self.lockin_I.reference = 'external'
 
     def setup_plots(self):
@@ -83,3 +83,13 @@ class RvsVg(Measurement):
 
         line = self.ax.plot(self.Vg, self.R)
         self.line = line[0]
+
+    def Vg_to_n(self, t_ox = 300):
+        '''
+        Converts gate voltage to an approximate carrier density.
+        t_ox is the thickness of the oxide in nm. Default 300 nm.
+        '''
+        eps_SiO2 = 3.9
+        eps0 = 8.854187817e-12 #F/m
+        e = 1.60217662e-19 #coulombs
+        self.n = self.Vg*eps0*eps_SiO2/(t*1e-9*e)/100**2 # convert to cm^-2
