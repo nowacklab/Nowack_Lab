@@ -1,4 +1,4 @@
-import time, numpy as np
+import time, numpy as np, matplotlib.pyplot as plt
 from ..Utilities.save import Measurement
 
 class RvsVg(Measurement):

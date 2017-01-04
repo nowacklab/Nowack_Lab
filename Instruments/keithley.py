@@ -269,12 +269,13 @@ class Keithley2400(Instrument):
         '''
         Ramp down voltage to zero. Sweep rate in volts/second
         '''
-        print('zeroing keithley voltage...')
+        print('Zeroing Keithley voltage...')
         numsteps = abs(self.Vout)/sweep_rate*10
         V = np.linspace(self.Vout, 0., numsteps)
         for v in V:
             self.Vout = v
             time.sleep(0.1)
+        print('Done zeroing Keithley.')
 
 class Keithley2400Old(Instrument):
     _label = 'keithley'
