@@ -79,7 +79,7 @@ class Scanline(Measurement):
 
         for chan in ['acx','acy']:
             self.V[chan] = self.lockin_squid.convert_output(self.V[chan])
-        self.Vfull['cap'] = self.lockin_cap.convert_output(self.Vfull['cap'])
+        self.V['cap'] = self.lockin_cap.convert_output(self.V['cap'])
 
         self.plot()
 
@@ -115,7 +115,7 @@ class Scanline(Measurement):
 
         for label, ax in self.ax.items():
             ax.set_xlabel(r'$\sim\mu\mathrm{m} (|V_{piezo}|*%.2f)$'
-                                %conversions.Vpiezo_to_micron
+                                %self._conversions['piezo']
                     )
             ax.set_ylabel('%s ($\phi_0$)' %label)
             ax.set_title(self.filename)

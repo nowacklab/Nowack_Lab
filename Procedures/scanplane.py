@@ -221,7 +221,7 @@ class Scanplane(Measurement):
         self.ax['acy'] = self.fig.add_subplot(324)
         self.ax['cap'] = self.fig.add_subplot(322)
 
-        cmaps = ['RdBu', 'cubehelix', 'cubehelix','afmhot']
+        cmaps = ['RdBu', 'afmhot', 'cubehelix', 'cubehelix']
         for i, chan in enumerate(self._chan_labels):
             self.im[chan] = plot_mpl.plot2D(self.ax[chan],
                                             self.X,

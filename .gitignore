@@ -8,3 +8,4 @@ Utilities/.test.txt
 *.pyc
 Procedures/__pycache__/planefit.cpython-35.pyc
 *.pyc
+Instruments/squidarray_params.json

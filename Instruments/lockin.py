@@ -146,7 +146,7 @@ class SR830(Instrument):
         '''
         Get the reference phase shift (degrees)
         '''
-        self._phase = int(self.ask('PHAS?'))
+        self._phase = float(self.ask('PHAS?'))
         return self._phase
 
     @phase.setter
