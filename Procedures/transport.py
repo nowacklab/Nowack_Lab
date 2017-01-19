@@ -14,11 +14,14 @@ class RvsVg(Measurement):
         self.Vstep = Vstep
         self.delay = delay
 
-        Vup = np.linspace(0, Vmax, round(abs(Vmax)/Vstep), endpoint=False)
-        Vdown = np.linspace(Vmax, Vmin, round(abs(Vmax-Vmin)/Vstep), endpoint=False)
-        Vup2 = np.linspace(Vmin, 0, round(abs(Vmin)/Vstep), endpoint=False)
+        self.Vg = np.linspace(Vmin, Vmax, round(abs(Vmax-Vmin)/Vstep), endpoint=False)
 
-        self.Vg = np.concatenate((Vup, Vdown, Vup2))
+        ## Decided to not measure during sweeps to/from min/max
+        # Vup = np.linspace(0, Vmax, round(abs(Vmax)/Vstep), endpoint=False)
+        # Vdown = np.linspace(Vmax, Vmin, round(abs(Vmax-Vmin)/Vstep), endpoint=False)
+        # Vup2 = np.linspace(Vmin, 0, round(abs(Vmin)/Vstep), endpoint=False)
+
+        # self.Vg = np.concatenate((Vup, Vdown, Vup2))
 
         self.Ig = np.full(self.Vg.shape, np.nan)
         self.Vx = np.full(self.Vg.shape, np.nan)
@@ -34,7 +37,12 @@ class RvsVg(Measurement):
     def do(self):
         self.setup_plots()
 
-#         self.keithley.output = 'on'
+#         self.keithley.output = 'on' #NO! will cause a spike!
+
+        ## Sweep down to Vmin
+        self.keithley.sweep_V(0, self.Vmin, 1)
+
+        ## Do the measurement sweep
         for i, Vg in enumerate(self.Vg):
             self.keithley.Vout = Vg
             time.sleep(self.delay)
@@ -48,15 +56,21 @@ class RvsVg(Measurement):
 
             self.plot()
 
-        self.keithley.zero_V()
+        ## Sweep back to zero at 1V/s
+        self.keithley.zero_V(1)
 #         self.keithley.current = 0
 #         self.keithley.output = 'off'
         self.save()
 
     def plot(self):
         self.line.set_ydata(self.R)
+        self.lineIg.set_ydata(self.Ig*1e9)
+
         self.ax.relim()
         self.ax.autoscale_view(True,True,True)
+
+        self.axIg.relim()
+        self.axIg.autoscale_view(True,True,True)
 
         self.fig.tight_layout()
         self.fig.canvas.draw()
@@ -79,10 +93,16 @@ class RvsVg(Measurement):
         self.ax.set_xlabel('Vg (V)', fontsize=20)
         self.ax.set_ylabel('R (Ohm)', fontsize=20)
 
+        self.axIg = self.ax.twinx()
+        self.axIg.set_ylabel('Ig (nA)', fontsize=20, color='r')
+
 #         self.ax.set_xlim(min(self.Vg), max(self.Vg))
 
-        line = self.ax.plot(self.Vg, self.R)
+        line = self.ax.plot(self.Vg, self.R, 'k')
         self.line = line[0]
+
+        lineIg = self.axIg.plot(self.Vg, self.Ig*1e9, 'r')
+        self.lineIg = lineIg[0]
 
     def Vg_to_n(self, t_ox = 300):
         '''

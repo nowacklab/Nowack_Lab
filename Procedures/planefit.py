@@ -199,7 +199,7 @@ class Planefit(Measurement):
 
         old_c = self.c
         self.piezos.V = {'x': Vx, 'y': Vy, 'z': 0}
-        td = Touchdown(self.instruments, Vz_max = self.Vz_max)
+        td = Touchdown(self.instruments, Vz_max = self.Vz_max, planescan=True) # planefit=True prevents attocubes from moving
         center_z_value = td.do(start=start)
         self.c = center_z_value - self.a*Vx - self.b*Vy
 

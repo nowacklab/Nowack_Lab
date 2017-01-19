@@ -262,6 +262,18 @@ class Keithley2400(Instrument):
         self._visa_handle.close()
         del(self._visa_handle)
 
+    def sweep_V(self, Vstart, Vend, sweep_rate=0.1):
+        '''
+        Sweep voltage from Vstart to Vend at given rate in volts/second.
+        Do measurements done during the sweep.
+        '''
+        numsteps = abs(Vstart-Vend)/sweep_rate*10
+        V = np.linspace(Vstart, Vend, numsteps)
+        for v in V:
+            self.Vout = v
+            self.I # do a measurement to update the screen. This makes it slower than the desired sweep rate.
+            time.sleep(0.1)
+
     def write(self, msg):
         self._visa_handle.write(msg)
 
@@ -270,11 +282,7 @@ class Keithley2400(Instrument):
         Ramp down voltage to zero. Sweep rate in volts/second
         '''
         print('Zeroing Keithley voltage...')
-        numsteps = abs(self.Vout)/sweep_rate*10
-        V = np.linspace(self.Vout, 0., numsteps)
-        for v in V:
-            self.Vout = v
-            time.sleep(0.1)
+        self.sweep_V(self.Vout, 0, sweep_rate)
         print('Done zeroing Keithley.')
 
 class Keithley2400Old(Instrument):

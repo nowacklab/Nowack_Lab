@@ -175,15 +175,19 @@ class Image:
         pass
 
 
-    def invert_current(self, PSF, z=1.0):
+    def invert_current(self, PSF=None, z=1.0):
+        '''
+        Algorithm to do basic current inversion. If not given a PSF, will try to invert current without deconvoluting the PSF.
+        '''
         mu_0 = 4*np.pi*1e-7
 
         ## Get this image and the PSF ready
         self.pad() # default = double in size symmetrically and fade
 
-        PSF.pad_to_match(self) # pad the PSF to match this image
-        PSF.resample(self.data.shape)
-        PSF.center_max() # shift max to center
+        if PSF is not None:
+            PSF.pad_to_match(self) # pad the PSF to match this image
+            PSF.resample(self.data.shape)
+            PSF.center_max() # shift max to center
 
         ## FFT
         data_k = np.fft.fftshift( # shift so DC is in the center rather than in the corner
@@ -191,13 +195,16 @@ class Image:
                         self.data
                         )
                     )
-        PSF_k = np.fft.fftshift( # DC to center
-                    np.fft.fft2( # 2D fft
-                        np.fft.fftshift( # max to corner
-                            PSF.data
+        if PSF is not None:
+            PSF_k = np.fft.fftshift( # DC to center
+                        np.fft.fft2( # 2D fft
+                            np.fft.fftshift( # max to corner
+                                PSF.data
+                                    )
                                 )
                             )
-                        )
+        else:
+            PSF_k = 1
 
         kx = np.linspace(-np.pi/self.dx, np.pi/self.dx, self.Nx, endpoint=False)
         ky = np.linspace(-np.pi/self.dy, np.pi/self.dy, self.Ny, endpoint=False)
@@ -213,8 +220,9 @@ class Image:
         jx[K==0] = -2*1j*data_k[K==0]/mu_0
         jy[K==0] = 2*1j*data_k[K==0]/mu_0
 
-        jx[PSF_k==0] = 0
-        jy[PSF_k==0] = 0
+        if PSF is not None:
+            jx[PSF_k==0] = 0
+            jy[PSF_k==0] = 0
 
         ## Inverse Fourier transform
         jx = np.fft.ifft2(
@@ -276,7 +284,9 @@ class Image:
         self.ax = ax
         if ax is None:
             fig, self.ax = plt.subplots()
-        im = self.ax.imshow(getattr(self, var), cmap='hot', extent=(0,self.Lx, 0, self.Ly))
+        im = self.ax.imshow(getattr(self, var), cmap='cubehelix',
+                            extent=(0,self.Lx, 0, self.Ly), origin='lower'
+                        )
         plt.colorbar(im)
 
     def resample(self, num_pixels_new):
@@ -332,7 +342,12 @@ class Image:
         '''
         Crops a processed image symmetrically to the size of the original.
         '''
-        self.data = self.data[self.Nx/4:-self.Nx/4, self.Ny/4:-self.Ny/4]
+        self.data = self.data[round(self.Ny/4):round(-self.Ny/4), round(self.Nx/4):round(-self.Nx/4)]
+        try:
+            self.jx = self.jx[round(self.Ny/4):round(-self.Ny/4), round(self.Nx/4):round(-self.Nx/4)]
+            self.jy = self.jy[round(self.Ny/4):round(-self.Ny/4), round(self.Nx/4):round(-self.Nx/4)]
+        except:
+            'jx and jy not defined yet! Cannot unpad something that doesn\'t exist!'
 
 
 def match_PSF_to_image(PSF, image):

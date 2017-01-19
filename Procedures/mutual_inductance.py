@@ -26,10 +26,10 @@ class MutualInductance(Measurement):
                 time.sleep(3)
                 #self.lockin_squid.auto_gain()
                 #self.lockin_I.auto_gain()
-                self.squidarray.reset()
+                #self.squidarray.reset()
                 time.sleep(3)
-                self.V[i,j] = self.lockin_squid.R
-                self.I[i,j] = self.lockin_I.R/self.Rmeas
+                self.V[i,j] = self.lockin_squid.X
+                self.I[i,j] = self.lockin_I.X/self.Rmeas
                 self.plot()
         self.save()
 
