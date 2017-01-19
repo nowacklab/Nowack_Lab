@@ -10,17 +10,17 @@ import numpy as np
 import time, os
 from datetime import datetime
 from ..Utilities import dummy
-from ..Instruments import nidaq, preamp, montana
+from ..Instruments import nidaq, preamp
 from ..Utilities.save import Measurement
 from ..Utilities.utilities import AttrDict
 
 
 class SquidIV(Measurement):
-    _chan_labels = ['squid out', 'mod out', 'squid in', 'current in']
+    _chan_labels = ['squidout', 'modout', 'squidin', 'currentin']
     instrument_list = ['daq','preamp','montana','preamp_I']
 
-    V = np.array([np.nan]*2) # to make plotting happy with no real data
-    I = np.array([np.nan]*2)
+    V = np.array([0]*2) # to make plotting happy with no real data
+    I = np.array([0]*2)
 
     notes = ''
 
@@ -93,18 +93,18 @@ class SquidIV(Measurement):
 
     def do_IV(self):
         """ Wrote this for mod2D so it doesn't plot """
-        self.daq.outputs['mod out'].V = self.Imod*self.Rbias_mod # Set mod current
+        self.daq.outputs['modout'].V = self.Imod*self.Rbias_mod # Set mod current
         # Collect data
-        in_chans = ['squid in','current in']
-        output_data, received = self.daq.sweep({'squid out': self.Vbias[0]},
-                                               {'squid out': self.Vbias[-1]},
+        in_chans = ['squidin','currentin']
+        output_data, received = self.daq.sweep({'squidout': self.Vbias[0]},
+                                               {'squidout': self.Vbias[-1]},
                                                chan_in=in_chans,
                                                sample_rate=self.rate,
                                                numsteps=self.numpts
                                            )
-        self.V = np.array(received['squid in'])/self.preamp.gain
+        self.V = np.array(received['squidin'])/self.preamp.gain
         if self.two_preamps:
-            self.I = np.array(received['current in'])/self.preamp_I.gain/self.Rmeas # Measure current from series resistor
+            self.I = np.array(received['currentin'])/self.preamp_I.gain/self.Rmeas # Measure current from series resistor
         else:
             self.I = self.Vbias/(self.Rbias + self.Rmeas) # estimate current by assuming Rbias >> Rsquid
 
@@ -155,12 +155,14 @@ class SquidIV(Measurement):
         ax.ticklabel_format(style='sci', axis='y', scilimits=(-3,3))
 
         ## To plot dVdI
-        dx = np.diff(self.I)[0]*3 # all differences are the same, so take the 0th. Made this 3 times larger to accentuate peaks
-        dvdi = np.gradient(self.V, dx)
-        ax2.plot(self.I*1e6, dvdi, 'r-')
-        ax2.set_ylabel(r'$dV_{squid}/dI_{bias}$ (Ohm)', fontsize=20, color='r')
-        for tl in ax2.get_yticklabels():
-            tl.set_color('r')
+        if ax2 is not None:
+            dx = np.diff(self.I)[0]*3 # all differences are the same, so take the 0th. Made this 3 times larger to accentuate peaks
+            dvdi = np.gradient(self.V, dx)
+            ax2.plot(self.I*1e6, dvdi, 'r-')
+            ax2.set_ylabel(r'$dV_{squid}/dI_{bias}$ (Ohm)', fontsize=20, color='r')
+            for tl in ax2.get_yticklabels():
+                tl.set_color('r')
+
         if self.fig is not None:
             self.fig.tight_layout()
         return ax
