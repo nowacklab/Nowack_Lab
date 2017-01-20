@@ -282,29 +282,32 @@ class Keithley2400(Instrument):
         self.write('status:queue:clear;*RST;:stat:pres;:*CLS;')
 
 
-    # def sweep_V(self, Vstart, Vend, sweep_rate=0.1):
+    # def sweep_V(self, Vstart, Vend, Vstep=0.1, sweep_rate=0.1):
     #     '''
     #     Sweep voltage from Vstart to Vend at given rate in volts/second.
     #     Do measurements done during the sweep.
     #     '''
-    #     numsteps = abs(Vstart-Vend)/sweep_rate*10
+    #     delay = Vstep/sweep_rate
+    #     numsteps = abs(Vstart-Vend)/Vstep
     #     V = np.linspace(Vstart, Vend, numsteps)
     #     for v in V:
     #         self.Vout = v
     #         self.I # do a measurement to update the screen. This makes it slower than the desired sweep rate.
-    #         time.sleep(0.1)
+    #         time.sleep(delay)
 
 
     def sweep_V(self, Vstart, Vend, Vstep=.1, sweep_rate=.1):
         '''
         Uses the Keithley's internal sweep function to sweep from Vstart to Vend with a step size of Vstep and sweep rate of sweep_rate volts/second.
         '''
+        if Vstart == Vend:
+            return
         self.Vout = Vstart
 
         self.write(':SENS:FUNC:CONC OFF') # turn off concurrent functions - so you can't measure both voltage and current simultaneously??
         self.write(':SOUR:VOLT:START %s' %Vstart)
         self.write(':SOUR:VOLT:STOP %s' %Vend)
-        self.write(':SOUR:VOLT:STEP %s' %Vstep)
+        self.write(':SOUR:VOLT:STEP %s' %(np.sign(Vend-Vstart)*Vstep)) # need to specify negative step if going backwards
         self.write(':SOUR:VOLT:MODE SWE')
         self.write(':SOUR:SWE:SPAC LIN') # set linear staircase sweep
         numsteps = abs(Vstart-Vend)/Vstep
@@ -319,6 +322,7 @@ class Keithley2400(Instrument):
         a = self.ask(':READ?') # starts the sweep
         self.write(':SOUR:VOLT:MODE FIXED') # fixed voltage mode
         self.write(':SENS:FUNC:CONC ON') # turn concurrent functions back on
+        self.write(':TRIG:COUN 1') # single sample
 
         self.Vout = Vend # make sure the last voltage is explicit
 

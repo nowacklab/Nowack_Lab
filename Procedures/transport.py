@@ -40,7 +40,7 @@ class RvsVg(Measurement):
 #         self.keithley.output = 'on' #NO! will cause a spike!
 
         ## Sweep down to Vmin
-        self.keithley.sweep_V(0, self.Vmin, 1)
+        self.keithley.sweep_V(0, self.Vmin, .1, 1)
 
         ## Do the measurement sweep
         for i, Vg in enumerate(self.Vg):
@@ -64,7 +64,7 @@ class RvsVg(Measurement):
 
     def plot(self):
         super().plot()
-        
+
         self.line.set_ydata(self.R)
         self.lineIg.set_ydata(self.Ig*1e9)
 
@@ -78,7 +78,7 @@ class RvsVg(Measurement):
         self.fig.canvas.draw()
 
     def setup_keithley(self):
-        self.keithley.zero_V()
+        self.keithley.zero_V(1) # 1V/s
         self.keithley.source = 'V'
         self.keithley.I_compliance = self.I_compliance
         self.keithley.Vout_range = abs(self.Vg).max()
