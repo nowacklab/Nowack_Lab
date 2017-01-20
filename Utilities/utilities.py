@@ -1,7 +1,7 @@
 '''
 For random utilities
 '''
-import json, numpy as np
+import json, numpy as np, os
 from numpy.linalg import lstsq
 
 class AttrDict(dict):
@@ -50,16 +50,6 @@ def fit_plane(x,y,z):
     return lstsq(A, Z)[0] # a,b,c
 
 
-def get_nb_kernel():
-    '''
-    Returns a string with the kernel key for unique identification of a kernel.
-    '''
-    from ipykernel import get_connection_info
-    k = get_connection_info()
-    k_dict = json.loads(k)
-    return k_dict['key']
-
-
 def get_browser_height():
     '''
     THIS DOESN'T WORK RELIABLY
@@ -106,6 +96,24 @@ def get_browser_width():
       }
     }
     IPython.notebook.kernel.execute('width = '+getWidth())"""))
+
+
+def get_computer_name():
+    '''
+    Gets the computer's name. Should hopefully be unique!
+    '''
+    import socket
+    return socket.gethostname()
+
+
+def get_nb_kernel():
+    '''
+    Returns a string with the kernel key for unique identification of a kernel.
+    '''
+    from ipykernel import get_connection_info
+    k = get_connection_info()
+    k_dict = json.loads(k)
+    return k_dict['key']
 
 
 def get_superclasses(obj):

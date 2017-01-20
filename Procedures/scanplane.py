@@ -1,6 +1,5 @@
 import numpy as np
 from numpy.linalg import lstsq
-from . import navigation, planefit
 import time, os
 from datetime import datetime
 from scipy.interpolate import interp1d
@@ -9,12 +8,12 @@ from IPython import display
 from numpy import ma
 from ..Utilities.plotting import plot_mpl
 from ..Instruments import piezos, montana, squidarray
-from ..Utilities.save import Measurement, get_todays_data_path
+from ..Utilities.save import Measurement, get_todays_data_dir
 from ..Utilities import conversions
 from ..Utilities.utilities import AttrDict
 
 class Scanplane(Measurement):
-    _chan_labels = ['dc','cap','acx','acy'] # DAQ channel labels expected by this class
+    _chan_labels = ['dc','cap','acx','acy'] # DAQ channel labels expected by this class. You may add chan labels but don't change these!
     _conversions = AttrDict({
         'dc': conversions.Vsquid_to_phi0,
         'cap': conversions.V_to_C,
@@ -22,6 +21,14 @@ class Scanplane(Measurement):
         'acy': conversions.Vsquid_to_phi0,
         'x': conversions.Vx_to_um,
         'y': conversions.Vy_to_um
+    })
+    _units = AttrDict({  ### Do conversions and units cleanly in the future within the DAQ class!!
+        'dc': 'phi0',
+        'cap': 'C',
+        'acx': 'phi0',
+        'acy': 'phi0',
+        'x': '~um',
+        'y': '~um',
     })
     instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto','daq']
     ## Put things here necessary to have when reloading object
@@ -68,8 +75,12 @@ class Scanplane(Measurement):
 
         for chan in self._chan_labels:
             self.V[chan] = np.full(self.X.shape, np.nan) #initialize arrays
+            if chan not in self._conversions.keys(): # if no conversion factor given
+                self._conversions[chan] = 1
+            if chan not in self._units.keys():
+                self._units[chan] = 'V'
 
-        self.fast_axis = 'x' # modified as a kwarg in self.do()
+        self.fast_axis = 'x' # default; modified as a kwarg in self.do()
 
     def do(self, fast_axis = 'x', surface=False): # surface False = sweep in lines, True sweep over plane surface
         self.fast_axis = fast_axis
@@ -211,31 +222,39 @@ class Scanplane(Measurement):
         '''
         Set up all plots.
         '''
-        self.fig = plt.figure(figsize=(11,11))
+        numplots = len(self._chan_labels)
+        self.fig = plt.figure(figsize=(10,4*numplots))
         ## Give the subplots some breathing room
         self.fig.subplots_adjust(wspace=.5, hspace=.5)
         self.ax = AttrDict()
         self.im = AttrDict()
 
-        self.ax['dc'] = self.fig.add_subplot(321)
-        self.ax['acx'] = self.fig.add_subplot(323)
-        self.ax['acy'] = self.fig.add_subplot(324)
-        self.ax['cap'] = self.fig.add_subplot(322)
-
-        cmaps = ['RdBu', 'cubehelix', 'cubehelix','afmhot']
+        # Set up axes
+        cmaps = []
         for i, chan in enumerate(self._chan_labels):
+            self.ax[chan] = self.fig.add_subplot(int(np.ceil(numplots/2)+1), 2, i+1) # e.g. for 4 plots have 3 rows. First two rows have 2 plots, last row is for the single line plot added later.
+        # self.ax['dc'] = self.fig.add_subplot(3,2,1)
+        # self.ax['acx'] = self.fig.add_subplot(3,2,3)
+        # self.ax['acy'] = self.fig.add_subplot(3,2,4)
+        # self.ax['cap'] = self.fig.add_subplot(3,2,2)
+            if 'dc' in chan:
+                cmap = 'RdBu'
+            elif chan == 'cap':
+                cmap = 'afmhot'
+            else:
+                cmap = 'cubehelix'
             self.im[chan] = plot_mpl.plot2D(self.ax[chan],
                                             self.X,
                                             self.Y,
                                             self.V[chan],
-                                            cmap = cmaps[i],
+                                            cmap = cmap,
                                             title = self.filename,
                                             xlabel = '$V_{piezo}$ | $\sim\mu\mathrm{m}$',
                                             ylabel = '$V_{piezo}$ | $\sim\mu\mathrm{m}$',
-                                            clabel = r'%s ($\phi_0$)' %chan,
+                                            clabel = '%s (%s)' %(chan, self._units[chan]),
                                             fontsize=12
                                         )
-        self.im['cap'].colorbar.set_label('cap (C)') # not phi0's!
+        # self.im['cap'].colorbar.set_label('cap (C)') # not phi0's!
 
         for ax in self.ax.values():
             ax.set_xticklabels(['%i' %(x) for x in ax.get_xticks()])
@@ -290,8 +309,4 @@ class Line(Measurement):
         super().__init__()
 
     def save(self):
-        path = os.path.join(get_todays_data_path(), 'extras')
-        if not os.path.exists(path):
-            os.makedirs(path)
-
-        self._save(path, self.filename)
+        self._save(os.path.join('extras', self.filename))

@@ -9,7 +9,7 @@ _sensitivity_options = [
 200e-6, 500e-6, 1e-3, 2e-3, 5e-3, 10e-3, 20e-3,
 50e-3, 100e-3, 200e-3, 500e-3, 1]
 _reserve_options = ['High Reserve', 'Normal', 'Low Noise']
-
+_input_modes = ['A', 'A-B', 'I (10^6)', 'I (10^8)']
 
 class SR830(Instrument):
     _label = 'lockin'
@@ -116,6 +116,16 @@ class SR830(Instrument):
         self.write('FREQ %s' %value)
 
     @property
+    def input_mode(self):
+        self._input_mode = _input_modes[int(self.ask('ISRC?'))]
+        return self._input_mode
+
+    @input_mode.setter
+    def input_mode(self, value):
+        i = _input_modes.index(value)
+        self.write('ISRC%i' %i)
+
+    @property
     def harmonic(self):
         '''
         Get the detection harmonic
@@ -136,7 +146,7 @@ class SR830(Instrument):
         '''
         Get the reference phase shift (degrees)
         '''
-        self._phase = int(self.ask('PHAS?'))
+        self._phase = float(self.ask('PHAS?'))
         return self._phase
 
     @phase.setter
@@ -146,7 +156,6 @@ class SR830(Instrument):
         '''
         phase = (phase + 180) % 360 - 180 # restrict from -180 to 180
         self.write('PHAS %f' %value)
-
 
     @property
     def X(self):
@@ -189,6 +198,23 @@ class SR830(Instrument):
             good_value = _time_constant_values[index]
 
         self.write('OFLT %s' %index)
+
+    @property
+    def reference(self):
+        i = int(self.ask('FMOD?'))
+        if i == 0:
+            return 'external'
+        else:
+             return 'internal'
+
+    @reference.setter
+    def reference(self, value):
+        if value == 'external':
+            i=0
+        else:
+            i=1
+        self.write('FMOD%i' %i)
+
 
     @property
     def reserve(self):

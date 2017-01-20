@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.linalg import lstsq
-from . import navigation, planefit
+from .planefit import Planefit
 import time, os
 from datetime import datetime
 from scipy.interpolate import interp1d as interp
@@ -9,7 +9,7 @@ from IPython import display
 from numpy import ma
 from ..Utilities.plotting import plot_mpl
 from ..Instruments import piezos, montana, squidarray
-from ..Utilities.save import Measurement, get_todays_data_path
+from ..Utilities.save import Measurement
 from ..Utilities import conversions
 from ..Procedures import DaqSpectrum
 from ..Utilities.utilities import AttrDict
@@ -36,7 +36,7 @@ class Scanspectra(Measurement):
         self.center = center
         self.numpts = numpts
         if plane is None:
-            plane = planefit.Planefit()
+            plane = Planefit()
         self.plane = plane
 
         if scanheight < 0:

@@ -7,7 +7,7 @@ import time, os
 from datetime import datetime
 from .squidIV import SquidIV
 from ..Utilities.plotting import plot_mpl
-from ..Utilities.save import Measurement, get_todays_data_path
+from ..Utilities.save import Measurement
 from ..Utilities.utilities import AttrDict
 
 class Mod2D(Measurement):
@@ -34,7 +34,6 @@ class Mod2D(Measurement):
         self.Imodstep = 4e-6
 
         self.IV.calc_ramp()
-        self.Isquid = self.IV.I
         self.calc_ramp()
 
         display.clear_output()
@@ -44,7 +43,7 @@ class Mod2D(Measurement):
         self.numpts = int(self.Imodspan/self.Imodstep)
         self.Imod = np.linspace(-self.Imodspan/2, self.Imodspan/2, self.numpts) # Squid current
         self.V = np.full((self.numpts, self.IV.numpts), np.nan)
-
+        self.Isquid = self.IV.I
 
     def do(self):
         self.calc_ramp() #easy way to clear self.V
@@ -58,8 +57,7 @@ class Mod2D(Measurement):
             self.IV.do_IV()
             self.plot()
             self.ax['IV'].clear()
-            self.ax['IV2'].clear()
-            self.IV.plot(self.ax['IV'], self.ax['IV2'])
+            self.IV.plot(self.ax['IV'])
             self.V[:][i] = self.IV.V
             self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
         self.IV.daq.zero() # zero everything
@@ -106,7 +104,8 @@ class Mod2D(Measurement):
         Plot the 2D mod image
         '''
         super().plot()
-        plot_mpl.update2D(self.im, self.V, equal_aspect=False)
+        V = np.ma.masked_where(np.isnan(self.V), self.V) # hide Nans
+        plot_mpl.update2D(self.im, V, equal_aspect=False)
         plot_mpl.aspect(self.ax['2D'], 1)
 
 
@@ -116,11 +115,10 @@ class Mod2D(Measurement):
         '''
         self.ax = AttrDict()
         self.fig, (self.ax['IV'], self.ax['2D']) = plt.subplots(2,1,figsize=(7,7),gridspec_kw = {'height_ratios':[1, 3]})
-        self.ax['IV2'] = self.ax['IV'].twinx() # for dV/dI
         self.ax['IV'].set_title(self.filename+'\n'+self.notes)
         ## Set up 2D plot
         self.im = plot_mpl.plot2D(self.ax['2D'],
-                                self.Isquid*1e6,
+                                self.IV.I*1e6,
                                 self.Imod*1e6,
                                 self.V,
                                 xlabel=r'$I_{\rm{bias}} = V_{\rm{bias}}/R_{\rm{bias}}$ ($\mu \rm A$)',

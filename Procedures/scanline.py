@@ -5,7 +5,7 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 from ..Utilities import plotting, conversions
 from ..Instruments import piezos, nidaq, montana, squidarray
-from ..Utilities.save import Measurement, get_todays_data_path
+from ..Utilities.save import Measurement
 from ..Utilities.utilities import AttrDict
 
 
@@ -19,11 +19,6 @@ class Scanline(Measurement):
         'piezo': conversions.Vxy_to_um
     })
     instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto']
-
-    V = AttrDict({
-        chan: np.nan for chan in _chan_labels + ['piezo']
-    })
-    Vout = np.nan
 
     def __init__(self, instruments={}, plane=None, start=(-100,-100), end=(100,100), scanheight=15, scan_rate=120, return_to_zero=True):
         super().__init__()
@@ -43,6 +38,10 @@ class Scanline(Measurement):
         self.scanheight = scanheight
         self.scan_rate = scan_rate
 
+        self.V = AttrDict({
+            chan: np.nan for chan in self._chan_labels + ['piezo']
+        })
+        self.Vout = np.nan
 
     def do(self):
         tstart = time.time()
@@ -80,7 +79,7 @@ class Scanline(Measurement):
 
         for chan in ['acx','acy']:
             self.V[chan] = self.lockin_squid.convert_output(self.V[chan])
-        self.Vfull['cap'] = self.lockin_cap.convert_output(self.Vfull['cap'])
+        self.V['cap'] = self.lockin_cap.convert_output(self.V['cap'])
 
         self.plot()
 
@@ -116,7 +115,7 @@ class Scanline(Measurement):
 
         for label, ax in self.ax.items():
             ax.set_xlabel(r'$\sim\mu\mathrm{m} (|V_{piezo}|*%.2f)$'
-                                %conversions.Vpiezo_to_micron
+                                %self._conversions['piezo']
                     )
             ax.set_ylabel('%s ($\phi_0$)' %label)
             ax.set_title(self.filename)

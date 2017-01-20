@@ -1,5 +1,5 @@
 from jsonpickle.ext import numpy as jspnp
-import json, os, pickle, bz2, jsonpickle as jsp, numpy as np
+import json, os, pickle, bz2, jsonpickle as jsp, numpy as np, re
 from datetime import datetime
 jspnp.register_handlers()
 from copy import copy
@@ -83,15 +83,15 @@ class Measurement:
 
         if filename is None: # tries to find the last saved object; not guaranteed to work
             try:
-                filename =  max(glob.iglob(os.path.join(get_todays_data_path(),'*_%s.json' %cls.__name__)),
+                filename =  max(glob.iglob(os.path.join(get_local_data_path(), get_todays_data_dir(),'*_%s.json' %cls.__name__)),
                                         key=os.path.getctime)
             except: # we must have taken one during the previous day's work
-                folders = list(glob.iglob(os.path.join(get_todays_data_path(),'..','*')))
+                folders = list(glob.iglob(os.path.join(get_local_data_path(), get_todays_data_dir(),'..','*')))
                 # -2 should be the previous day (-1 is today)
                 filename =  max(glob.iglob(os.path.join(folders[-2],'*_%s.json' %cls.__name__)),
                                         key=os.path.getctime)
         elif os.path.dirname(filename) == '': # if no path specified
-            os.path.join(get_todays_data_path(), filename)
+            os.path.join(get_local_data_path(), get_todays_data_dir(), filename)
 
         ## Remove file extensions is given.
         ## This is done somewhat manually in case filename has periods in it for some reason.
@@ -206,30 +206,33 @@ class Measurement:
         everything else is saved to JSON
         Saved data stored locally but also copied to the data server.
         If you specify no filename, one will be automatically generated based on
-        this object's filename and the object will be saved in this cooldown's data folder.
+        this object's filename and the object will be saved in this experiment's data folder.
         If you specify a filename with no preceding path, it will save
-        automatically to the correct folder for this cooldown with the custom filename.
+        automatically to the correct folder for this experiment with the custom filename.
         Locally, saves to ~/data/; remotely, saves to /labshare/data/
-        If you specify a full path, the object will save to that path locally to labshare/data/other/(path)
-
-        In either case, da
-         in ~/data/ and labshare/data/.
+        If you specify a relative (partial) path, the data will still be saved
+        in the data directory, but in subdirectories specified in the filename.
+        For example, if the filename is 'custom/custom_filename', the data will
+        be saved in (today's data directory)/custom/custom_filename.
+        If you specify a full path, the object will save to that path locally
+        and to [get_data_server_path()]/[get_computer_name()]/other/[hirearchy past root directory]
         '''
 
-        ## Saving to the cooldown-specified directory
+        ## Saving to the experiment-specified directory
         if filename is None:
             if not hasattr(self, 'filename'): # if you forgot to make a filename
                 self.make_timestamp_and_filename()
             filename = self.filename
 
         if os.path.dirname(filename) == '': # you specified a filename with no preceding path
-            local_path = os.path.join(get_local_data_path(), get_todays_data_path(), filename)
-            remote_path = os.path.join(get_data_server_path(), get_todays_data_path(), filename)
+            local_path = os.path.join(get_local_data_path(), get_todays_data_dir(), filename)
+            remote_path = os.path.join(get_remote_data_path(), get_todays_data_dir(), filename)
 
         ## Saving to a custom path
         else: # you specified some sort of path
             local_path = filename
-            remote_path = os.path.join(get_data_server_path(), *filename.replace('\\', '/').split('/')[1:]) # removes anything before the first slash. e.g. ~/data/stuff -> data/stuff
+            remote_path = os.path.join(get_remote_data_path(), '..', 'other', *filename.replace('\\', '/').split('/')[1:]) # removes anything before the first slash. e.g. ~/data/stuff -> data/stuff
+            # All in all, remote_path should look something like: .../labshare/data/bluefors/other/
 
         ## Save locally:
         local_dir = os.path.split(local_path)[0]
@@ -238,38 +241,40 @@ class Measurement:
         self._save_hdf5(local_path)
         self._save_json(local_path)
 
+        nopdf = True
         if savefig and self.fig is not None:
             self.fig.savefig(local_path+'.pdf', bbox_inches='tight')
+            nopdf = False
 
         ## Save remotely
         try:
-            # First make a checksum
-            local_checksum_hdf = _md5(local_path+'.h5')
-            local_checksum_json = _md5(local_path+'.json')
-
             # Make sure directories exist
             remote_dir = os.path.split(remote_path)[0]
             if not os.path.exists(remote_dir):
                 os.makedirs(remote_dir)
 
-            # Copy the files
-            shutil.copyfile(local_path+'.h5', remote_path+'.h5')
-            shutil.copyfile(local_path+'.json', remote_path+'.json')
+            ## Loop over filetypes
+            for ext in ['.h5','.json','.pdf']:
+                if ext == '.pdf' and nopdf:
+                    continue
+                # First make a checksum
+                local_checksum = _md5(local_path + ext)
 
-            # Make comparison checksums
-            remote_checksum_hdf = _md5(remote_path+'.h5')
-            remote_checksum_json = _md5(remote_path+'.json')
+                # Copy the files
+                shutil.copyfile(local_path + ext, remote_path + ext)
 
-            # Check checksums
-            if local_checksum_hdf != remote_checksum_hdf:
-                print('HDF checksum failed! Cannot trust remote file %s' %(remote_path+'.h5'))
-            if local_checksum_json != remote_checksum_json:
-                print('JSON checksum failed! Cannot trust remote file %s' %(remote_path+'.json'))
-        except:
+                # Make comparison checksums
+                remote_checksum = _md5(remote_path + ext)
+
+                # Check checksums
+                if local_checksum != remote_checksum:
+                    print('%s checksum failed! Cannot trust remote file %s' %(ext, remote_path + ext))
+
+        except Exception as e:
             if not os.path.exists(get_data_server_path()):
                 print('SAMBASHARE not connected. Could not find path %s. Object saved locally but not remotely.' %get_data_server_path())
             else:
-                print('Saving to data server failed! And I don\'t know why! :(')
+                print('Saving to data server failed!\n\nException details: %s\n\nremote path: %s\nlocal path:%s' %(e, remote_path, local_path))
 
         ## See if saving worked properly
         try:
@@ -336,16 +341,40 @@ def exists(filename):
         return True
     return False
 
+def get_computer_name():
+    computer_name = utilities.get_computer_name()
+    aliases = {'SPRUCE': 'bluefors', 'HEMLOCK': 'montana'} # different names we want to give the directories for each computer
+    if computer_name in aliases.keys():
+        computer_name = aliases[computer_name]
+    return computer_name
 
-def get_cooldown_data_path():
-    with open(os.path.join(os.path.dirname(__file__),'paths.json'),'r') as f:
-        data = json.load(f)
-    return os.path.join(*data['cooldown'])
+
+def get_experiment_data_dir():
+    '''
+    Finds the most recently modified (current) experiment data directory. (Not the full path)
+    '''
+
+    latest_subdir = max(glob.glob(os.path.join(get_local_data_path(), '*/')), key=os.path.getmtime)
+
+    return os.path.relpath(latest_subdir, get_local_data_path()) # strip just the directory name
+
+    ## If we're sure that there will only be one directory per date. Bad assumption.
+    # exp_dirs = []
+    # for name in os.listdir(get_local_data_path()): # all experiment directories
+    #     if re.match(r'\d{4}-', name[:5]): # make sure directory starts with "20XX-"
+    #         exp_dirs.append(name)
+
+    # exp_dirs.sort(key=lambda x: datetime.strptime(x[:10], '%Y-%m-%d')) # sort by date
+    #
+    # return exp_dirs[-1] # this is the most recent
 
 
 def get_data_server_path():
+    '''
+    Returns full path of the data server's main directory, formatted based on OS.
+    '''
     if platform.system() == 'Windows':
-        return '//SAMBASHARE/labshare/data/'
+        return r'\\SAMBASHARE\labshare\data'
     elif platform.system() == 'Darwin': # Mac
         return '/Volumes/labshare/data/'
     elif platform.system() == 'Linux':
@@ -355,41 +384,65 @@ def get_data_server_path():
 
 
 def get_local_data_path():
-    return os.path.join(os.path.expanduser('~'), 'data')
+    '''
+    Returns full path of the local data directory.
+    '''
+    return os.path.join(
+                os.path.expanduser('~'),
+                'data',
+                get_computer_name(),
+                'experiments'
+            )
 
 
-def get_todays_data_path():
-    cooldown_path = get_cooldown_data_path()
+def get_remote_data_path():
+    '''
+    Returns full path of the remote data directory.
+    '''
+    return os.path.join(
+                get_data_server_path(),
+                get_computer_name(),
+                'experiments'
+            )
+
+
+def get_todays_data_dir():
+    '''
+    Returns name of today's data directory.
+    '''
+    experiment_path = get_experiment_data_dir()
     now = datetime.now()
-    todays_data_path = os.path.join(cooldown_path, now.strftime('%Y-%m-%d'))
+    todays_data_path = os.path.join(experiment_path, now.strftime('%Y-%m-%d'))
 
-    # Make the directory
-    if not os.path.exists(todays_data_path):
-        os.makedirs(todays_data_path)
+    # Make local and remote directory
+    dirs = [get_local_data_path(), get_remote_data_path()]
+    for d in dirs:
+        filename = os.path.join(d, todays_data_path)
+        if not os.path.exists(filename):
+            os.makedirs(filename)
+
     return todays_data_path
 
 
-def set_cooldown_data_path(description=''):
+def set_experiment_data_dir(description=''):
     '''
-    Run this when you start a new cooldown.
-    Makes a new directory in the Montana data folder
-    with the current date and a description of the cooldown.
-    Writes to paths.json to store the name of the data directory.
+    Run this when you start a new experiment (e.g. a cooldown).
+    Makes a new directory in the data folder corresponding to your computer
+    with the current date and a description of the experiment.
     '''
     now = datetime.now()
     now_fmt = now.strftime('%Y-%m-%d')
 
-    filetuple = ('montana', 'cooldowns', now_fmt + '_' + description)
+    # Make local and remote directories:
+    dirs = [get_local_data_path(), get_remote_data_path()]
+    for d in dirs:
+        try:
+            filename = os.path.join(d, now_fmt + '_' + description)
+            if not os.path.exists(filename):
+                os.makedirs(filename)
+        except:
+            print('Error making directory %s' %d)
 
-    paths = {'cooldown': filetuple}
-    with open(os.path.join(os.path.dirname(__file__),'paths.json'), 'w') as f:
-        json.dump(paths, f)
-
-    # Make the directory
-    _home = os.path.expanduser('~')
-    filename = os.path.join(_home, os.path.join(*filetuple))
-    if not os.path.exists(filename):
-        os.makedirs(filename)
 
 def _md5(filename):
     '''

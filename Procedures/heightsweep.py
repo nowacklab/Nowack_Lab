@@ -1,10 +1,9 @@
 import numpy as np
-from . import planefit
 import matplotlib.pyplot as plt
 from ..Instruments import piezos, nidaq, montana
 import time, os
 from datetime import datetime
-from ..Utilities.save import Measurement, get_todays_data_path
+from ..Utilities.save import Measurement
 from ..Utilities import conversions
 from ..Utilities.utilities import AttrDict
 
@@ -18,10 +17,6 @@ class Heightsweep(Measurement):
     })
     instrument_list = ['piezos','montana','squidarray']
 
-    V = AttrDict({
-        chan: np.nan for chan in _chan_labels + ['piezo', 'z']
-    })
-
 
     def __init__(self, instruments = {}, plane=None, x=0, y=0, z0=0, scan_rate=120):
         super().__init__()
@@ -33,7 +28,9 @@ class Heightsweep(Measurement):
         self.z0 = z0
         self.plane = plane
         self.scan_rate = scan_rate
-
+        self.V = AttrDict({
+            chan: np.nan for chan in self._chan_labels + ['piezo', 'z']
+        })
 
     def do(self):
 

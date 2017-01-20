@@ -1,6 +1,6 @@
 import time, os, numpy as np, matplotlib.pyplot as plt
 from ..Utilities import conversions
-from ..Utilities.save import Measurement, get_todays_data_path
+from ..Utilities.save import Measurement
 from ..Utilities.plotting import plot_mpl
 from ..Utilities.utilities import AttrDict
 
@@ -26,10 +26,10 @@ class MutualInductance(Measurement):
                 time.sleep(3)
                 #self.lockin_squid.auto_gain()
                 #self.lockin_I.auto_gain()
-                self.squidarray.reset()
+                #self.squidarray.reset()
                 time.sleep(3)
-                self.V[i,j] = self.lockin_squid.R
-                self.I[i,j] = self.lockin_I.R/self.Rmeas
+                self.V[i,j] = self.lockin_squid.X
+                self.I[i,j] = self.lockin_I.X/self.Rmeas
                 self.plot()
         self.save()
 

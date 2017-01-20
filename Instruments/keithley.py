@@ -262,6 +262,18 @@ class Keithley2400(Instrument):
         self._visa_handle.close()
         del(self._visa_handle)
 
+    def sweep_V(self, Vstart, Vend, sweep_rate=0.1):
+        '''
+        Sweep voltage from Vstart to Vend at given rate in volts/second.
+        Do measurements done during the sweep.
+        '''
+        numsteps = abs(Vstart-Vend)/sweep_rate*10
+        V = np.linspace(Vstart, Vend, numsteps)
+        for v in V:
+            self.Vout = v
+            self.I # do a measurement to update the screen. This makes it slower than the desired sweep rate.
+            time.sleep(0.1)
+
     def write(self, msg):
         self._visa_handle.write(msg)
 
@@ -269,12 +281,9 @@ class Keithley2400(Instrument):
         '''
         Ramp down voltage to zero. Sweep rate in volts/second
         '''
-        print('zeroing keithley voltage...')
-        numsteps = abs(self.Vout)/sweep_rate*10
-        V = np.linspace(self.Vout, 0., numsteps)
-        for v in V:
-            self.Vout = v
-            time.sleep(0.1)
+        print('Zeroing Keithley voltage...')
+        self.sweep_V(self.Vout, 0, sweep_rate)
+        print('Done zeroing Keithley.')
 
 class Keithley2400Old(Instrument):
     _label = 'keithley'
@@ -326,6 +335,36 @@ class Keithley2400Old(Instrument):
         if abs(value) > 1.05:
             value = np.sign(value)*1.05
         self.write(':SENS:CURR:PROT %s' %value)
+
+
+    def __getstate__(self):
+        self._save_dict = {'compliance_current': self.compliance_current,
+                          'mode': self.mode,
+                          'voltage': self.voltage,
+                          'voltage_range': self.voltage_range
+                          }
+        return self._save_dict
+
+
+    def __setstate__(self, state):
+        pass
+
+
+    @property
+    def compliance_current(self):
+        '''
+        Get the compliance current
+        '''
+        return float(self._visa_handle.ask(':SENS:CURR:PROT?'))
+
+    @compliance_current.setter
+    def compliance_current(self, value):
+        '''
+        Set the compliance current
+        '''
+        if abs(value) > 1.05:
+            value = np.sign(value)*1.05
+        self._visa_handle.write(':SENS:CURR:PROT %s' %value)
 
     @property
     def current(self):
@@ -389,6 +428,20 @@ class Keithley2400Old(Instrument):
                 value = np.sign(value) * 210
             self.write(':SOUR:VOLT:RANG:AUTO 0')
             self.write(':SOUR:VOLT:RANG %g' %value)
+
+    @property
+    def voltage_range(self):
+        return float(self._visa_handle.ask(':SOUR:VOLT:RANGE?'))
+
+    @voltage_range.setter
+    def voltage_range(self, value):
+        if value == 'auto':
+            self._visa_handle.write(':SOUR:VOLT:RANG:AUTO 1')
+        else:
+            if abs(value) > 210:
+                value = np.sign(value) * 210
+            self._visa_handle.write(':SOUR:VOLT:RANG:AUTO 0')
+            self._visa_handle.write(':SOUR:VOLT:RANG %g' %value)
 
     def close(self):
         self._visa_handle.close()

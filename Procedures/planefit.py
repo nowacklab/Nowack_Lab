@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.linalg import lstsq
-from . import touchdown, navigation
+from .touchdown import Touchdown
 import time, os, glob
 from datetime import datetime
 import matplotlib.pyplot as plt
@@ -8,7 +8,7 @@ from ..Utilities import logging
 from ..Instruments import piezos, montana
 from IPython import display
 from ..Utilities.utilities import reject_outliers_plane, fit_plane
-from ..Utilities.save import Measurement, get_todays_data_path
+from ..Utilities.save import Measurement
 from ..Utilities.utilities import AttrDict
 
 class Planefit(Measurement):
@@ -74,7 +74,7 @@ class Planefit(Measurement):
         print('Sweeping z piezo down...')
         self.piezos.V = {'x': self.center[0], 'y':self.center[1], 'z':-self.Vz_max}
         print('...done.')
-        td = touchdown.Touchdown(self.instruments, Vz_max = self.Vz_max)
+        td = Touchdown(self.instruments, Vz_max = self.Vz_max)
         center_z_value = td.do() # Will do initial touchdown at center of plane to (1) find the plane (2) make touchdown voltage near center of piezo's positive voltage range
 
         #check_td = input('Does the initial touchdown look good? Enter \'q\' to abort.')
@@ -107,7 +107,7 @@ class Planefit(Measurement):
                 self.piezos.V = {'x':self.X[i,j], 'y':self.Y[i,j], 'z': 0}
                 logging.log('Done moving to (%.2f, %.2f).' %(self.X[i,j], self.Y[i,j]))
 
-                td = touchdown.Touchdown(self.instruments, Vz_max = self.Vz_max, planescan=True) # new touchdown at this point
+                td = Touchdown(self.instruments, Vz_max = self.Vz_max, planescan=True) # new touchdown at this point
                 td.title = '(%i, %i). TD# %i' %(i,j, counter)
 
                 self.Z[i,j] = td.do() # Do the touchdown, starting 200 V below the location of the surface at the center of the plane. Hopefully planes are not more tilted than this.
@@ -199,7 +199,7 @@ class Planefit(Measurement):
 
         old_c = self.c
         self.piezos.V = {'x': Vx, 'y': Vy, 'z': 0}
-        td = touchdown.Touchdown(self.instruments, Vz_max = self.Vz_max)
+        td = Touchdown(self.instruments, Vz_max = self.Vz_max, planescan=True) # planefit=True prevents attocubes from moving
         center_z_value = td.do(start=start)
         self.c = center_z_value - self.a*Vx - self.b*Vy
 
