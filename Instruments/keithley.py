@@ -109,6 +109,8 @@ class Keithley2400(Instrument):
         '''
         Set the output current (if in current source mode).
         '''
+        if self.output != 'on':
+            raise Exception('Output is off, cannot set current!')
         if self.source != 'I':
             raise Exception('Cannot set source current if sourcing voltage!')
         if abs(value) > self.Iout_range:
@@ -185,6 +187,8 @@ class Keithley2400(Instrument):
         '''
         Set the output voltage (if in voltage source mode).
         '''
+        if self.output != 'on':
+            raise Exception('Output is off, cannot set voltage!')
         if self.source != 'V':
             raise Exception('Cannot set source voltage if sourcing current!')
         if abs(value) > self.Vout_range:
@@ -255,6 +259,15 @@ class Keithley2400(Instrument):
         self.write('OUTP %s' %status)
         self._output = value
 
+
+    def beep(self, frequency, duration):
+        """ Sounds a system beep.
+        :param frequency: A frequency in Hz between 65 Hz and 2 MHz
+        :param duration: A time in seconds between 0 and 7.9 seconds
+        """
+        self.write(":SYST:BEEP %g, %g" % (frequency, duration))
+
+
     def close(self):
         '''
         End the visa session.
@@ -262,17 +275,68 @@ class Keithley2400(Instrument):
         self._visa_handle.close()
         del(self._visa_handle)
 
-    def sweep_V(self, Vstart, Vend, sweep_rate=0.1):
+    def reset(self):
         '''
-        Sweep voltage from Vstart to Vend at given rate in volts/second.
-        Do measurements done during the sweep.
+        Reset GPIB comms.
         '''
-        numsteps = abs(Vstart-Vend)/sweep_rate*10
-        V = np.linspace(Vstart, Vend, numsteps)
-        for v in V:
-            self.Vout = v
-            self.I # do a measurement to update the screen. This makes it slower than the desired sweep rate.
-            time.sleep(0.1)
+        self.write('status:queue:clear;*RST;:stat:pres;:*CLS;')
+
+
+    # def sweep_V(self, Vstart, Vend, sweep_rate=0.1):
+    #     '''
+    #     Sweep voltage from Vstart to Vend at given rate in volts/second.
+    #     Do measurements done during the sweep.
+    #     '''
+    #     numsteps = abs(Vstart-Vend)/sweep_rate*10
+    #     V = np.linspace(Vstart, Vend, numsteps)
+    #     for v in V:
+    #         self.Vout = v
+    #         self.I # do a measurement to update the screen. This makes it slower than the desired sweep rate.
+    #         time.sleep(0.1)
+
+
+    def sweep_V(self, Vstart, Vend, Vstep=.1, sweep_rate=.1):
+        '''
+        Uses the Keithley's internal sweep function to sweep from Vstart to Vend with a step size of Vstep and sweep rate of sweep_rate volts/second.
+        '''
+        self.Vout = Vstart
+
+        self.write(':SENS:FUNC:CONC OFF') # turn off concurrent functions - so you can't measure both voltage and current simultaneously??
+        self.write(':SOUR:VOLT:START %s' %Vstart)
+        self.write(':SOUR:VOLT:STOP %s' %Vend)
+        self.write(':SOUR:VOLT:STEP %s' %Vstep)
+        self.write(':SOUR:VOLT:MODE SWE')
+        self.write(':SOUR:SWE:SPAC LIN') # set linear staircase sweep
+        numsteps = abs(Vstart-Vend)/Vstep
+        delay = Vstep/sweep_rate
+        self.write(':TRIG:COUN %s' %numsteps) # number of sweep points
+        self.write(':SOUR:DEL %s' %delay) # sleep time between steps
+
+        # Fix timeout issue due to unknown time of sweep
+        old_timeout = self._visa_handle.timeout
+        self._visa_handle.timeout = None # infinite timeout
+
+        a = self.ask(':READ?') # starts the sweep
+        self.write(':SOUR:VOLT:MODE FIXED') # fixed voltage mode
+        self.write(':SENS:FUNC:CONC ON') # turn concurrent functions back on
+
+        self.Vout = Vend # make sure the last voltage is explicit
+
+        self._visa_handle.timeout = old_timeout
+        return [float(i) for i in a.split(',')] # not sure what this data represents
+
+
+    def triad(self, base_frequency, duration):
+        """ Sounds a musical triad using the system beep.
+        :param base_frequency: A frequency in Hz between 65 Hz and 1.3 MHz
+        :param duration: A time in seconds between 0 and 7.9 seconds
+        """
+        self.beep(base_frequency, duration)
+        time.sleep(duration)
+        self.beep(base_frequency*5.0/4.0, duration)
+        time.sleep(duration)
+        self.beep(base_frequency*6.0/4.0, duration)
+
 
     def write(self, msg):
         self._visa_handle.write(msg)
@@ -282,7 +346,7 @@ class Keithley2400(Instrument):
         Ramp down voltage to zero. Sweep rate in volts/second
         '''
         print('Zeroing Keithley voltage...')
-        self.sweep_V(self.Vout, 0, sweep_rate)
+        self.sweep_V(self.Vout, 0, .1, sweep_rate)
         print('Done zeroing Keithley.')
 
 class Keithley2400Old(Instrument):
@@ -315,8 +379,9 @@ class Keithley2400Old(Instrument):
             return self._visa_handle.ask(msg)
         except:
             print('Communication error with Keithley')
-            self.close()
-            self.__init__(self.gpib_address)
+            self.reset()
+            # self.close()
+            # self.__init__(self.gpib_address)
             if tryagain:
                 self.ask(msg, False)
 
