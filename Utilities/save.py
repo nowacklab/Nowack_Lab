@@ -241,33 +241,35 @@ class Measurement:
         self._save_hdf5(local_path)
         self._save_json(local_path)
 
+        nopdf = True
         if savefig and self.fig is not None:
             self.fig.savefig(local_path+'.pdf', bbox_inches='tight')
+            nopdf = False
 
         ## Save remotely
         try:
-            # First make a checksum
-            local_checksum_hdf = _md5(local_path+'.h5')
-            local_checksum_json = _md5(local_path+'.json')
-
             # Make sure directories exist
             remote_dir = os.path.split(remote_path)[0]
             if not os.path.exists(remote_dir):
                 os.makedirs(remote_dir)
 
-            # Copy the files
-            shutil.copyfile(local_path+'.h5', remote_path+'.h5')
-            shutil.copyfile(local_path+'.json', remote_path+'.json')
+            ## Loop over filetypes
+            for ext in ['.h5','.json','.pdf']:
+                if ext == '.pdf' and nopdf:
+                    continue
+                # First make a checksum
+                local_checksum = _md5(local_path + ext)
 
-            # Make comparison checksums
-            remote_checksum_hdf = _md5(remote_path+'.h5')
-            remote_checksum_json = _md5(remote_path+'.json')
+                # Copy the files
+                shutil.copyfile(local_path + ext, remote_path + ext)
 
-            # Check checksums
-            if local_checksum_hdf != remote_checksum_hdf:
-                print('HDF checksum failed! Cannot trust remote file %s' %(remote_path+'.h5'))
-            if local_checksum_json != remote_checksum_json:
-                print('JSON checksum failed! Cannot trust remote file %s' %(remote_path+'.json'))
+                # Make comparison checksums
+                remote_checksum = _md5(remote_path + ext)
+
+                # Check checksums
+                if local_checksum != remote_checksum:
+                    print('%s checksum failed! Cannot trust remote file %s' %(ext, remote_path + ext))
+
         except Exception as e:
             if not os.path.exists(get_data_server_path()):
                 print('SAMBASHARE not connected. Could not find path %s. Object saved locally but not remotely.' %get_data_server_path())
