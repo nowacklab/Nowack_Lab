@@ -63,6 +63,8 @@ class RvsVg(Measurement):
         self.save()
 
     def plot(self):
+        super().plot()
+        
         self.line.set_ydata(self.R)
         self.lineIg.set_ydata(self.Ig*1e9)
 
@@ -103,6 +105,8 @@ class RvsVg(Measurement):
 
         lineIg = self.axIg.plot(self.Vg, self.Ig*1e9, 'r')
         self.lineIg = lineIg[0]
+
+        self.ax.set_title(self.filename)
 
     def Vg_to_n(self, t_ox = 300):
         '''
