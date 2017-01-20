@@ -78,7 +78,10 @@ class SR830(Instrument):
     @property
     def sensitivity(self):
         '''Get the lockin sensitivity'''
-        self._sensitivity = _sensitivity_options[int(self.ask('SENS?'))]
+        multiplier = 1
+        if 'I' in self.input_mode:
+            multiplier = 1e-6 # if we're in a current mode
+        self._sensitivity = _sensitivity_options[int(self.ask('SENS?'))]*multiplier
         return self._sensitivity
 
     @sensitivity.setter
@@ -227,8 +230,12 @@ class SR830(Instrument):
         i = _reserve_options.index(value)
         self.write('RMOD%i' %i)
 
-    def ask(self, cmd):
+    def ask(self, cmd, timeout=3000):
+        '''
+        Default timeout 3000 ms. None for infinite timeout
+        '''
         self.init_visa()
+        self._visa_handle.timeout = timeout
         out = self._visa_handle.ask(cmd)
         time.sleep(0.1)
         self.close()
@@ -237,13 +244,16 @@ class SR830(Instrument):
     def ac_coupling(self):
         self.write('ICPL0')
 
+    def alarm_off(self):
+        self.write('ALRM 0')
+
     def auto_gain(self):
         self.write('AGAN')
-        time.sleep(5) # let it finish
+        self.ask('*STB?', None) # let it finish
 
     def auto_phase(self):
         self.write('APHS')
-        time.sleep(5) # let it finish
+        self.ask('*STB?', None) # let it finish
 
     def dc_coupling(self):
         self.write('ICPL1')
@@ -252,6 +262,17 @@ class SR830(Instrument):
         self._visa_handle = visa.ResourceManager().open_resource(self.gpib_address)
         self._visa_handle.read_termination = '\n'
         self._visa_handle.write('OUTX 1') #1=GPIB
+
+    def is_OL(self):
+        '''
+        Looks at the magnitude and x and y components to determine whether or not we are overloading the lockin.
+        There is a status byte that you can read that will supposedly tell you this as well, but it wasn't working reliably.
+        '''
+        m = max(abs(np.array([self.R, self.X, self.Y]))/self.sensitivity)
+        if m > 1:
+            return True
+        else:
+            return False
 
     def get_all(self):
         table = []
@@ -293,10 +314,38 @@ class SR830(Instrument):
         self._visa_handle.close()
         del(self._visa_handle)
 
+    def read(self):
+        self.init_visa()
+        read = self._visa_handle.read()
+        self.close()
+        return read
+
+    def sweep(self, Vstart, Vend, Vstep=0.01, sweep_rate=0.1):
+        '''
+        Sweeps the lockin amplitude at given sweep rate in V/s (default 0.1).
+        Sweeps with a step size of 0.01 V by default.
+        '''
+        delay = Vstep/sweep_rate
+        numsteps = abs(Vstart-Vend)/Vstep
+        V = np.linspace(Vstart, Vend, numsteps)
+        for v in V:
+            self.amplitude = v
+            time.sleep(delay)
+
     def write(self, cmd):
         self.init_visa()
         self._visa_handle.write(cmd)
         self.close()
+
+    def zero(self, sweep_rate=0.1):
+        '''
+        Zeroes the lockin amplitude at given sweep rate in V/s.
+        Sweeps down to minimum amplitude, which is 0.004 V.
+        Sweeps with a step size of 0.01 V.
+        '''
+        Vstep = 0.01
+        self.sweep(self.amplitude, 0, Vstep, sweep_rate)
+
 
 if __name__ == '__main__':
     lockin = SR830('GPIB::09::INSTR')
