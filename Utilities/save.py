@@ -417,12 +417,9 @@ def get_todays_data_dir():
     # Make local and remote directory
     dirs = [get_local_data_path(), get_remote_data_path()]
     for d in dirs:
-        try:
-            filename = os.path.join(d, todays_data_path)
-            if not os.path.exists(filename):
-                os.makedirs(filename)
-        except Exception as e:
-            print(e)
+        filename = os.path.join(d, todays_data_path)
+        if not os.path.exists(filename):
+            os.makedirs(filename)
 
     return todays_data_path
 
