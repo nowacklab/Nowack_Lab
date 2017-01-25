@@ -265,9 +265,10 @@ class RvsVg(Measurement):
     def Vg_to_n(self, t_ox = 300):
         '''
         Converts gate voltage to an approximate carrier density.
+        Carrier density is stored as the attribute n.
         t_ox is the thickness of the oxide in nm. Default 300 nm.
         '''
         eps_SiO2 = 3.9
         eps0 = 8.854187817e-12 #F/m
         e = 1.60217662e-19 #coulombs
-        self.n = self.Vg*eps0*eps_SiO2/(t*1e-9*e)/100**2 # convert to cm^-2
+        self.n = self.Vg*eps0*eps_SiO2/(t_ox*1e-9*e)/100**2 # convert to cm^-2
