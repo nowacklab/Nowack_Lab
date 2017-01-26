@@ -1,24 +1,22 @@
-'''
-PPMS Control Driver written by Guen Prawiroatmodjo c. Nov 2015, adapted for use by the Nowack lab Jan 2017
-'''
+# PPMS Control Driver written by Guen Prawiroatmodjo c. Nov 2015, adapted for use by the Nowack lab Jan 2017
 
 from .instrument import Instrument
+import select
 
 class PPMS(Instrument):
-    '''
+    r'''
     For remote operation of the Quantum Design PPMS.
     Makes use of PyQDInstrument (https://github.com/guenp/PyQDInstrument)
     Make sure to run PyQDInstrument.run_server() in an IronPython console on a machine that can connect to the PPMS control PC's QDInstrument_Server.exe program.
     The basic commands to set up the server for the blue PPMS are:
         import sys
-        sys.path.append(r'C:\Users\ccmradmin\Documents\GitHub') # if pyQDInstrument is in the GitHub directory
+        sys.path.append(r'C:\Users\ccmradmin\Documents\GitHub') (if pyQDInstrument is in the GitHub directory)
         import pyQDInstrument as pqi
         pqi.run_server('192.168.0.103', 50009, '192.168.0.100', 11000)
     Attributes represent the system control parameters:
     'temperature', 'temperature_rate', 'temperature_approach', 'field', 'field_rate', 'field_approach', 'field_mode', 'temperature_status', 'field_status', 'chamber'
     '''
     def __init__(self, host, port, s=None):
-        self._name = name
         if s == None:
             self._s = connect_socket(host, port)
         else:

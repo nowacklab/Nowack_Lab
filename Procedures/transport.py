@@ -273,7 +273,7 @@ class RvsVg(Measurement):
         e = 1.60217662e-19 #coulombs
         self.n = self.Vg*eps0*eps_SiO2/(t_ox*1e-9*e)/100**2 # convert to cm^-2
 
-class RvsVg_2(Measurement):
+class RvsVg2(Measurement):
     instrument_list = ['keithley', 'lockin_V', 'lockin_V2', 'lockin_I']
     I_compliance = 1e-6 # 1 uA
 
