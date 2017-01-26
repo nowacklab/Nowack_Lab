@@ -322,6 +322,7 @@ class Keithley2400(Instrument):
         a = self.ask(':READ?') # starts the sweep
         self.write(':SOUR:VOLT:MODE FIXED') # fixed voltage mode
         self.write(':SENS:FUNC:CONC ON') # turn concurrent functions back on
+        self.write(':SENS:FUNC \"CURR\"')
         self.write(':TRIG:COUN 1') # single sample
 
         self.Vout = Vend # make sure the last voltage is explicit

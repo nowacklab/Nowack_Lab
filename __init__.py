@@ -48,9 +48,7 @@ from Nowack_Lab.Procedures.scanplane import Scanplane
 from Nowack_Lab.Procedures.scanspectra import Scanspectra
 from Nowack_Lab.Procedures.squidIV import SquidIV
 from Nowack_Lab.Procedures.touchdown import Touchdown
-from Nowack_Lab.Procedures.transport import RvsVg
-from Nowack_Lab.Procedures.transport import IV
-from Nowack_Lab.Procedures.transport import IVvsVg
+from Nowack_Lab.Procedures.transport import RvsVg, RvsVg2, IV, IVvsVg
 from Nowack_Lab.Instruments.attocube import Attocube
 from Nowack_Lab.Instruments.keithley import Keithley2400
 from Nowack_Lab.Instruments.montana import Montana
@@ -59,7 +57,7 @@ from Nowack_Lab.Instruments.piezos import Piezos
 from Nowack_Lab.Instruments.preamp import SR5113
 from Nowack_Lab.Instruments.squidarray import SquidArray
 from Nowack_Lab.Instruments.lockin import SR830
-
+from Nowack_Lab.Instruments.ppms import PPMS
 ''');
 
 def in_ipynb():
