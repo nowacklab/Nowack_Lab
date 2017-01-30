@@ -58,6 +58,7 @@ from Nowack_Lab.Instruments.preamp import SR5113
 from Nowack_Lab.Instruments.squidarray import SquidArray
 from Nowack_Lab.Instruments.lockin import SR830
 from Nowack_Lab.Instruments.ppms import PPMS
+from Nowack_Lab.Instruments.keithley import Keithley2600
 ''');
 
 def in_ipynb():
