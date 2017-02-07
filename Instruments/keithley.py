@@ -281,6 +281,78 @@ class Keithley2400(Instrument):
         '''
         self.write('status:queue:clear;*RST;:stat:pres;:*CLS;')
 
+ # def sweep_V(self, Vstart, Vend, Vstep=0.1, sweep_rate=0.1):
+    #     '''
+    #     Sweep voltage from Vstart to Vend at given rate in volts/second.
+    #     Do measurements done during the sweep.
+    #     '''
+    #     delay = Vstep/sweep_rate
+    #     numsteps = abs(Vstart-Vend)/Vstep
+    #     V = np.linspace(Vstart, Vend, numsteps)
+    #     for v in V:
+    #         self.Vout = v
+    #         self.I # do a measurement to update the screen. This makes it slower than the desired sweep rate.
+    #         time.sleep(delay)
+
+
+    def sweep_V(self, Vstart, Vend, Vstep=.1, sweep_rate=.1):
+        '''
+        Uses the Keithley's internal sweep function to sweep from Vstart to Vend with a step size of Vstep and sweep rate of sweep_rate volts/second.
+        '''
+        if Vstart == Vend:
+            return
+        self.Vout = Vstart
+
+        self.write(':SENS:FUNC:CONC OFF') # turn off concurrent functions - so you can't measure both voltage and current simultaneously??
+        self.write(':SOUR:VOLT:START %s' %Vstart)
+        self.write(':SOUR:VOLT:STOP %s' %Vend)
+        self.write(':SOUR:VOLT:STEP %s' %(np.sign(Vend-Vstart)*Vstep)) # need to specify negative step if going backwards
+        self.write(':SOUR:VOLT:MODE SWE')
+        self.write(':SOUR:SWE:SPAC LIN') # set linear staircase sweep
+        numsteps = abs(Vstart-Vend)/Vstep
+        delay = Vstep/sweep_rate
+        self.write(':TRIG:COUN %s' %numsteps) # number of sweep points
+        self.write(':SOUR:DEL %s' %delay) # sleep time between steps
+
+        # Fix timeout issue due to unknown time of sweep
+        old_timeout = self._visa_handle.timeout
+        self._visa_handle.timeout = None # infinite timeout
+
+        a = self.ask(':READ?') # starts the sweep
+        self.write(':SOUR:VOLT:MODE FIXED') # fixed voltage mode
+        self.write(':SENS:FUNC:CONC ON') # turn concurrent functions back on
+        self.write(':SENS:FUNC \"CURR\"')
+        self.write(':TRIG:COUN 1') # single sample
+
+        self.Vout = Vend # make sure the last voltage is explicit
+
+        self._visa_handle.timeout = old_timeout
+        return [float(i) for i in a.split(',')] # not sure what this data represents
+
+
+    def triad(self, base_frequency, duration):
+        """ Sounds a musical triad using the system beep.
+        :param base_frequency: A frequency in Hz between 65 Hz and 1.3 MHz
+        :param duration: A time in seconds between 0 and 7.9 seconds
+        """
+        self.beep(base_frequency, duration)
+        time.sleep(duration)
+        self.beep(base_frequency*5.0/4.0, duration)
+        time.sleep(duration)
+        self.beep(base_frequency*6.0/4.0, duration)
+
+
+    def write(self, msg):
+        self._visa_handle.write(msg)
+
+    def zero_V(self, sweep_rate=0.1):
+        '''
+        Ramp down voltage to zero. Sweep rate in volts/second
+        '''
+        print('Zeroing Keithley voltage...')
+        self.sweep_V(self.Vout, 0, .1, sweep_rate)
+        print('Done zeroing Keithley.')
+
 
 class Keithley2600(Instrument):
     '''
@@ -483,132 +555,132 @@ class Keithley2600(Instrument):
         print('Done zeroing Keithley.')
 
 
-class Keithley2600(Instrument):
-    '''
-    Instrument driver for Keithley 2600-model Source Meter (tested with 2636A)
-    '''
-    def __init__(self, gpib_address='', name='sourcemeter'):
-        self._units = {'current': 'A','voltage': 'V'}
-        self._visa_handle = visa.ResourceManager().open_resource(gpib_address)
-        self._visa_handle.read_termination = '\n'
-        super(Keithley2600, self).__init__(name)
+# class Keithley2600(Instrument):
+#     '''
+#     Instrument driver for Keithley 2600-model Source Meter (tested with 2636A)
+#     '''
+#     def __init__(self, gpib_address='', name='sourcemeter'):
+#         self._units = {'current': 'A','voltage': 'V'}
+#         self._visa_handle = visa.ResourceManager().open_resource(gpib_address)
+#         self._visa_handle.read_termination = '\n'
+#         super(Keithley2600, self).__init__(name)
         
-    @property
-    def currentA(self):
-        '''Get the current reading for channel A.'''
-        return float(self._visa_handle.query('print(smua.measure.i())'))
-    @property
-    def currentB(self):
-        '''Get the current reading for channel B.'''
-        return float(self._visa_handle.query('print(smub.measure.i())'))
-    @currentA.setter
-    def currentA(self, value):
-        '''Set the source current for channel A.'''
-        self._visa_handle.write('smua.source.func=smua.OUTPUT_DCAMPS;smua.source.leveli=%s' % value)
-    @currentB.setter
-    def currentB(self, value):
-        '''Set the source current for channel B.'''
-        self._visa_handle.write('smub.source.func=smub.OUTPUT_DCAMPS;smub.source.leveli=%s' % value)
+#     @property
+#     def currentA(self):
+#         '''Get the current reading for channel A.'''
+#         return float(self._visa_handle.query('print(smua.measure.i())'))
+#     @property
+#     def currentB(self):
+#         '''Get the current reading for channel B.'''
+#         return float(self._visa_handle.query('print(smub.measure.i())'))
+#     @currentA.setter
+#     def currentA(self, value):
+#         '''Set the source current for channel A.'''
+#         self._visa_handle.write('smua.source.func=smua.OUTPUT_DCAMPS;smua.source.leveli=%s' % value)
+#     @currentB.setter
+#     def currentB(self, value):
+#         '''Set the source current for channel B.'''
+#         self._visa_handle.write('smub.source.func=smub.OUTPUT_DCAMPS;smub.source.leveli=%s' % value)
 
-    @property
-    def voltageA(self):
-        '''Get the voltage reading for channel A'''
-        return float(self._visa_handle.query('print(smua.measure.v())'))
-    @property
-    def voltageB(self):
-        '''Get the voltage reading for channel B'''
-        return float(self._visa_handle.query('print(smub.measure.v())'))
-    @voltageA.setter
-    def voltageA(self, value):
-        '''Set the source voltage for channel A.'''
-        self._visa_handle.write('smua.source.func=smua.OUTPUT_DCVOLTS;smua.source.levelv=%s' % value)
-    @voltageB.setter
-    def voltageB(self, value):
-        '''Set the source voltage for channel B.'''
-        self._visa_handle.write('smub.source.func=smub.OUTPUT_DCVOLTS;smub.source.levelv=%s' % value)
+#     @property
+#     def voltageA(self):
+#         '''Get the voltage reading for channel A'''
+#         return float(self._visa_handle.query('print(smua.measure.v())'))
+#     @property
+#     def voltageB(self):
+#         '''Get the voltage reading for channel B'''
+#         return float(self._visa_handle.query('print(smub.measure.v())'))
+#     @voltageA.setter
+#     def voltageA(self, value):
+#         '''Set the source voltage for channel A.'''
+#         self._visa_handle.write('smua.source.func=smua.OUTPUT_DCVOLTS;smua.source.levelv=%s' % value)
+#     @voltageB.setter
+#     def voltageB(self, value):
+#         '''Set the source voltage for channel B.'''
+#         self._visa_handle.write('smub.source.func=smub.OUTPUT_DCVOLTS;smub.source.levelv=%s' % value)
 
-    @property
-    def modeA(self):
-        '''Get the source function for channel A.'''
-        return self._visa_handle.query('print(smuA.source.func())')
-    @property
-    def modeB(self):
-        '''Get the source function for channel B.'''
-        return self._visa_handle.query('print(smuB.source.func())')
-    @modeA.setter
-    def modeA(self, value):
-        '''Set the source function ('voltage' or 'current') for channel A'''
-        value={'voltage':'OUTPUT_DCVOLTS','current':'OUTPUT_DCAMPS'}[value]
-        self._visa_handle.write('smua.source.func=smua.%s' % value)
-    @modeB.setter
-    def modeB(self, value):
-        '''Set the source function ('voltage' or 'current') for channel B'''
-        value={'voltage':'OUTPUT_DCVOLTS','current':'OUTPUT_DCAMPS'}[value]
-        self._visa_handle.write('smub.source.func=smub.%s' % value)
+#     @property
+#     def modeA(self):
+#         '''Get the source function for channel A.'''
+#         return self._visa_handle.query('print(smuA.source.func())')
+#     @property
+#     def modeB(self):
+#         '''Get the source function for channel B.'''
+#         return self._visa_handle.query('print(smuB.source.func())')
+#     @modeA.setter
+#     def modeA(self, value):
+#         '''Set the source function ('voltage' or 'current') for channel A'''
+#         value={'voltage':'OUTPUT_DCVOLTS','current':'OUTPUT_DCAMPS'}[value]
+#         self._visa_handle.write('smua.source.func=smua.%s' % value)
+#     @modeB.setter
+#     def modeB(self, value):
+#         '''Set the source function ('voltage' or 'current') for channel B'''
+#         value={'voltage':'OUTPUT_DCVOLTS','current':'OUTPUT_DCAMPS'}[value]
+#         self._visa_handle.write('smub.source.func=smub.%s' % value)
 
-    @property
-    def outputA(self):
-        '''Gets the source output ('on'/'off'/'highz') for channel A'''
-        return {0: 'off', 1:'on', 2: 'highz'}[int(float(self._visa_handle.query('print(smua.source.output)')))]
-    @property
-    def outputB(self):
-        '''Gets the source output ('on'/'off'/'highz')  for channel B'''
-        return {0: 'off', 1:'on', 2: 'highz'}[int(float(self._visa_handle.query('print(smub.source.output)')))]
-    @outputA.setter
-    def outputA(self, value):
-        '''Sets the source output ('on'/'off'/'highz') for channel A'''
-        status = 'ON' if ((value==True) or (value==1) or (value=='on')) else 'OFF'
-        self._visa_handle.write('smua.source.output= smua.OUTPUT_%s' %status)
-    @outputB.setter
-    def outputB(self, value):
-        '''Sets the source output ('on'/'off'/'highz') for channel B'''
-        status = 'ON' if ((value==True) or (value==1) or (value=='on')) else 'OFF'
-        self._visa_handle.write('smub.source.output= smub.OUTPUT_%s' %status)
+#     @property
+#     def outputA(self):
+#         '''Gets the source output ('on'/'off'/'highz') for channel A'''
+#         return {0: 'off', 1:'on', 2: 'highz'}[int(float(self._visa_handle.query('print(smua.source.output)')))]
+#     @property
+#     def outputB(self):
+#         '''Gets the source output ('on'/'off'/'highz')  for channel B'''
+#         return {0: 'off', 1:'on', 2: 'highz'}[int(float(self._visa_handle.query('print(smub.source.output)')))]
+#     @outputA.setter
+#     def outputA(self, value):
+#         '''Sets the source output ('on'/'off'/'highz') for channel A'''
+#         status = 'ON' if ((value==True) or (value==1) or (value=='on')) else 'OFF'
+#         self._visa_handle.write('smua.source.output= smua.OUTPUT_%s' %status)
+#     @outputB.setter
+#     def outputB(self, value):
+#         '''Sets the source output ('on'/'off'/'highz') for channel B'''
+#         status = 'ON' if ((value==True) or (value==1) or (value=='on')) else 'OFF'
+#         self._visa_handle.write('smub.source.output= smub.OUTPUT_%s' %status)
 
-    @property
-    def voltagelimitA(self,value):
-        '''Get the output voltage compliance limit for channel A'''
-        return float(self._visa_handle.query('print(smua.source.limitv'))
-    @property
-    def voltagelimitB(self,value):
-        '''Get the output voltage compliance limit for channel B'''
-        return float(self._visa_handle.query('print(smub.source.limitv'))
-    @voltagelimitA.setter
-    def voltagelimitA(self,value):
-        '''Get the output voltage compliance limit for channel A'''
-        return self._visa_handle.write('smua.source.limitv=%s' %value)
-    @voltagelimitB.setter
-    def voltagelimitB(self,value):
-        '''Get the output voltage compliance limit for channel B'''
-        return self._visa_handle.write('smub.source.limitv=%s' %value)
+#     @property
+#     def voltagelimitA(self,value):
+#         '''Get the output voltage compliance limit for channel A'''
+#         return float(self._visa_handle.query('print(smua.source.limitv'))
+#     @property
+#     def voltagelimitB(self,value):
+#         '''Get the output voltage compliance limit for channel B'''
+#         return float(self._visa_handle.query('print(smub.source.limitv'))
+#     @voltagelimitA.setter
+#     def voltagelimitA(self,value):
+#         '''Get the output voltage compliance limit for channel A'''
+#         return self._visa_handle.write('smua.source.limitv=%s' %value)
+#     @voltagelimitB.setter
+#     def voltagelimitB(self,value):
+#         '''Get the output voltage compliance limit for channel B'''
+#         return self._visa_handle.write('smub.source.limitv=%s' %value)
 
 
-    @property
-    def currentlimitA(self,value):
-        '''Get the output current compliance limit for channel A'''
-        return float(self._visa_handle.query('print(smua.source.limiti'))
-    @property
-    def currentlimitB(self,value):
-        '''Get the output current compliance limit for channel B'''
-        return float(self._visa_handle.query('print(smub.source.limiti'))
-    @currentlimitA.setter
-    def currentlimitA(self,value):
-        '''Get the output current compliance limit for channel A'''
-        return self._visa_handle.write('smua.source.limiti=%s' %value)
-    @currentlimitB.setter
-    def currentlimitB(self,value):
-        '''Get the output current compliance limit for channel B'''
-        return self._visa_handle.write('smub.source.limiti=%s' %value)
+#     @property
+#     def currentlimitA(self,value):
+#         '''Get the output current compliance limit for channel A'''
+#         return float(self._visa_handle.query('print(smua.source.limiti'))
+#     @property
+#     def currentlimitB(self,value):
+#         '''Get the output current compliance limit for channel B'''
+#         return float(self._visa_handle.query('print(smub.source.limiti'))
+#     @currentlimitA.setter
+#     def currentlimitA(self,value):
+#         '''Get the output current compliance limit for channel A'''
+#         return self._visa_handle.write('smua.source.limiti=%s' %value)
+#     @currentlimitB.setter
+#     def currentlimitB(self,value):
+#         '''Get the output current compliance limit for channel B'''
+#         return self._visa_handle.write('smub.source.limiti=%s' %value)
 
-    def resetA(self):
-        '''Resets the A channel'''
-        self._visa_handle.write('smua.reset()')
-    def resetB(self):
-        '''Resets the B channel'''
-        self._visa_handle.write('smub.reset()')
+#     def resetA(self):
+#         '''Resets the A channel'''
+#         self._visa_handle.write('smua.reset()')
+#     def resetB(self):
+#         '''Resets the B channel'''
+#         self._visa_handle.write('smub.reset()')
     
-    def __del__(self):
-        self._visa_handle.close()
+#     def __del__(self):
+#         self._visa_handle.close()
 
         
 
@@ -784,6 +856,36 @@ class Keithley2400Old(Instrument):
         for v in V:
             self.voltage = v
             time.sleep(0.01)
+
+
+class Keithley_PPMS(Keithley2400):
+    def __init__(self, gpib_address, zero_V, ten_V):
+        '''
+        Keithley multimeter to measure PPMS temperature.
+        Can configure 0-10 V scale in PPMS software (Analog Output).
+        '''
+        if type(gpib_address) is int:
+            gpib_address = 'GPIB::%02i::INSTR' %gpib_address
+        self.gpib_address= gpib_address
+        self._visa_handle = visa.ResourceManager().open_resource(self.gpib_address)
+        self._visa_handle.read_termination = '\n'
+        self.write(':SAMP:COUN 1')
+        self.zero_V = zero_V
+        self.ten_V = ten_V
+
+    def __getstate__(self):
+        return {
+            'output': self.output,
+        }
+    
+    @property
+    def output(self):
+        return self.V/10*(self.zero_V-self.ten_V) + self.zero_V # calibration set in PPMS software
+    
+    @property
+    def V(self):
+        return float(self.ask(':FETC?'))
+
 
 if __name__ == '__main__':
     '''

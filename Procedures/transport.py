@@ -45,10 +45,10 @@ class IV(Measurement):
         ## Do the measurement sweep
         for i, Vs in enumerate(self.Vs):
             self.lockin_V.amplitude = Vs
-            if self.lockin_V.is_OL() or i==0: # only do auto gain if we're overloading or if it's the first measurement
-                self.lockin_V.auto_gain()
-            if self.lockin_I.is_OL() or i==0:
-                self.lockin_I.auto_gain()
+            # if self.lockin_V.is_OL() or i==0: # only do auto gain if we're overloading or if it's the first measurement
+            #     self.lockin_V.auto_gain()
+            # if self.lockin_I.is_OL() or i==0:
+            #     self.lockin_I.auto_gain()
             time.sleep(self.delay)
 
             self.Vx[i] = self.lockin_V.X
@@ -401,3 +401,224 @@ class RvsVg2(Measurement):
         eps0 = 8.854187817e-12 #F/m
         e = 1.60217662e-19 #coulombs
         self.n = self.Vg*eps0*eps_SiO2/(t_ox*1e-9*e)/100**2 # convert to cm^-2
+
+
+class FourProbeResSweep(Measurement):
+    '''class to return four probe resistance using lockin_V and lockin_I'''
+    '''set up lock-in before doing this measurement - the setup info is in the transport.py file'''
+    '''set up primary measurement parameters:
+       voltage bias range - Vbi (an array)'''
+
+    instrument_list = ['lockin_V', 'lockin_I']
+    I_compliance = 1e-6 # 1 uA
+
+
+    def __init__(self, instruments = {},Vbi = 0.1, delay=1):
+        
+        super().__init__()
+        self._load_instruments(instruments)
+
+        self.Vs = Vbi;
+        self.Vx = np.full(self.Vs.shape, np.nan)
+        self.Vy = np.full(self.Vs.shape, np.nan)
+        self.Ix = np.full(self.Vs.shape, np.nan)
+        self.Iy = np.full(self.Vs.shape, np.nan)
+        self.R = np.full(self.Vs.shape, np.nan)
+        self.R2p = np.full(self.Vs.shape, np.nan)
+        self.delay = delay
+
+
+        self.setup_lockins()
+        
+    def do(self):
+        if self.fig == None:
+            self.setup_plots()
+            self.sumR = 0 
+        ## Sweep to Vmin
+        ## self.lockin_V.sweep(self.lockin_V.amplitude, self.Vmin, .01, .1)
+        ## Do the measurement sweep
+        for i, Vs in enumerate(self.Vs):
+            self.lockin_V.amplitude = Vs
+            # if self.lockin_V.is_OL() or i==0: # only do auto gain if we're overloading or if it's the first measurement
+            #     self.lockin_V.auto_gain()
+            # if self.lockin_I.is_OL() or i==0:
+            #     self.lockin_I.auto_gain()
+            time.sleep(self.delay)
+
+
+
+
+            self.Vx[i] = self.lockin_V.X # unit: V
+            self.Vy[i] = self.lockin_V.Y 
+            self.Ix[i] = self.lockin_I.X # unit: A, read value from SR 830 is A
+            self.Iy[i] = self.lockin_I.Y
+            self.R[i] = self.Vx[i]/self.Ix[i]
+            self.R2p[i] = self.Vs[0]/self.Ix[i]
+            self.plot()
+
+            print  ("Applied voltage is %.3e V." % self.lockin_V.amplitude)
+            print  ("Current is %.3e A." % self.lockin_I.X)
+            print  ("delta voltage is %.3e V." % self.lockin_V.X)
+            print  ("Four-probe R: %.3e ohm." % self.R[i])
+            print  ("Two-probe R: %.3e ohm.\n" % self.R2p[i])
+            self.sumR = self.sumR + self.R[i]
+        
+        return (self.sumR)/self.Vs.shape
+
+
+        # self.save()
+
+
+    def plot(self):
+        super().plot()
+
+        self.line.set_xdata(self.Vx)
+        self.line.set_ydata(self.Ix)
+
+        self.ax.relim()
+        self.ax.autoscale_view(True,True,True)
+
+        self.fig.tight_layout()
+        self.fig.canvas.draw()
+
+
+    def setup_lockins(self):
+        '''if you comment any commands here, then please set them up manually on SR830
+        '''
+        self.lockin_V.input_mode = 'A-B'
+        self.lockin_I.input_mode = 'I (10^8)'
+        
+        self.lockin_V.reference = 'internal'
+        self.lockin_V.frequency = 67.8
+        self.lockin_I.reference = 'external'
+        
+        self.lockin_V.time_constant = '300 ms'
+        self.lockin_I.time_constant = '300 ms'
+        
+        # self set up by lock ins?
+        #self.lockin_V.sensitivity = 0.1 # unit: V
+        #self.lockin_I.sensitivity = 0.1 # unit: uA
+        
+        #self.lockin_V.alarm_off()
+        #self.lockin_I.alarm_off()
+
+
+    def setup_plots(self):
+        self.fig, self.ax = plt.subplots(figsize=(5, 5))
+        self.ax.set_xlabel('V (V)', fontsize=20)
+        self.ax.set_ylabel('I (A)', fontsize=20)
+        self.ax.autoscale_view(True,True,True)
+
+        line = self.ax.plot(self.Vx, self.Ix, 'k')
+        self.line = line[0]
+
+        self.ax.set_title(self.filename)
+
+
+
+class FourProbeRes(Measurement):
+    '''class to return four probe resistance using lockin_V and lockin_I'''
+    '''do 5 times measurements and return avaraged R '''
+    '''set up lock-in before doing this measurement - the setup info is in the transport.py file'''
+    '''set up primary measurement parameters:
+       voltage bias range - Vbi (an array)'''
+
+    instrument_list = ['lockin_V', 'lockin_I']
+    I_compliance = 1e-6 # 1 uA
+
+
+    def __init__(self, instruments = {},Vbi = 0.1, delay=1):
+        
+        super().__init__()
+        self._load_instruments(instruments)
+
+        self.Vs = Vbi;
+        self.Vx = np.full(5, np.nan)
+        self.Vy = np.full(5, np.nan)
+        self.Ix = np.full(5, np.nan)
+        self.Iy = np.full(5, np.nan)
+        self.R = np.full(5, np.nan)
+        self.R2p = np.full(5, np.nan)
+        self.delay = delay
+
+
+        self.setup_lockins()
+        
+    def do(self):
+        if self.fig == None:
+            # self.setup_plots()
+            self.sumR = 0 
+        ## Sweep to Vmin
+        ## self.lockin_V.sweep(self.lockin_V.amplitude, self.Vmin, .01, .1)
+        ## Do the measurement sweep
+        for i  in [0,1,2,3,4]:
+            self.lockin_V.amplitude = self.Vs
+            # if self.lockin_V.is_OL() or i==0: # only do auto gain if we're overloading or if it's the first measurement
+            #     self.lockin_V.auto_gain()
+            # if self.lockin_I.is_OL() or i==0:
+            #     self.lockin_I.auto_gain()
+            time.sleep(self.delay)
+
+            self.Vx[i] = self.lockin_V.X # unit: V
+            self.Vy[i] = self.lockin_V.Y 
+            self.Ix[i] = self.lockin_I.X # unit: A, read value from SR 830 is A
+            self.Iy[i] = self.lockin_I.Y
+            self.R[i] = self.Vx[i]/self.Ix[i]
+            self.R2p[i] = self.Vs/self.Ix[i]
+            # self.plot()
+
+            # print  ("Applied voltage is %.3e V." % self.lockin_V.amplitude)
+            # print  ("Current is %.3e A." % self.lockin_I.X)
+            # print  ("delta voltage is %.3e V." % self.lockin_V.X)
+            print  ("Four-probe R: %.3e ohm." % self.R[i])
+            # print  ("Two-probe R: %.3e ohm.\n" % self.R2p[i])
+            self.sumR = self.sumR + self.R[i]
+        
+        return (self.sumR-self.R[i])/4
+
+
+        # self.save()
+
+
+    def plot(self):
+        super().plot()
+
+        self.line.set_xdata(self.Vx)
+        self.line.set_ydata(self.Ix)
+
+        self.ax.relim()
+        self.ax.autoscale_view(True,True,True)
+
+        self.fig.tight_layout()
+        self.fig.canvas.draw()
+
+
+    def setup_lockins(self):
+        self.lockin_V.input_mode = 'A-B'
+        self.lockin_I.input_mode = 'I (10^8)'
+        
+        self.lockin_V.reference = 'internal'
+        self.lockin_I.reference = 'external'
+        
+        # self.lockin_V.frequency = 67.8
+        # self.lockin_V.time_constant = '100 ms'
+        # self.lockin_I.time_constant = '100 ms'
+        
+        # self set up by lock ins?
+        #self.lockin_V.sensitivity = 0.1 # unit: V
+        #self.lockin_I.sensitivity = 0.1 # unit: uA
+        
+        #self.lockin_V.alarm_off()
+        #self.lockin_I.alarm_off()
+
+
+    def setup_plots(self):
+        self.fig, self.ax = plt.subplots(figsize=(5, 5))
+        self.ax.set_xlabel('V (V)', fontsize=20)
+        self.ax.set_ylabel('I (A)', fontsize=20)
+        self.ax.autoscale_view(True,True,True)
+
+        line = self.ax.plot(self.Vx, self.Ix, 'k')
+        self.line = line[0]
+
+        self.ax.set_title(self.filename)
