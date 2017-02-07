@@ -858,7 +858,7 @@ class Keithley2400Old(Instrument):
             time.sleep(0.01)
 
 
-class Keithley_PPMS(Keithley2400):
+class KeithleyPPMS(Keithley2400):
     def __init__(self, gpib_address, zero_V, ten_V):
         '''
         Keithley multimeter to measure PPMS temperature.
@@ -880,7 +880,7 @@ class Keithley_PPMS(Keithley2400):
     
     @property
     def output(self):
-        return self.V/10*(self.zero_V-self.ten_V) + self.zero_V # calibration set in PPMS software
+        return self.V/10*(self.ten_V-self.zero_V) + self.zero_V # calibration set in PPMS software
     
     @property
     def V(self):
