@@ -13,6 +13,28 @@ _input_modes = ['A', 'A-B', 'I (10^6)', 'I (10^8)']
 
 class SR830(Instrument):
     _label = 'lockin'
+    time_constant_options = {
+            "10 us": 0,
+            "30 us": 1,
+            "100 us": 2,
+            "300 us": 3,
+            "1 ms": 4,
+            "3 ms": 5,
+            "10 ms": 6,
+            "30 ms": 7,
+            "100 ms": 8,
+            "300 ms": 9,
+            "1 s": 10,
+            "3 s": 11,
+            "10 s": 12,
+            "30 s": 13,
+            "100 s": 14,
+            "300 s": 15,
+            "1 ks": 16,
+            "3 ks": 17,
+            "10 ks": 18,
+            "30 ks": 19
+        }
     '''
     Instrument driver for SR830, modified from Guen's squidpy driver
     '''
@@ -21,29 +43,14 @@ class SR830(Instrument):
             gpib_address = 'GPIB::%02i::INSTR' %gpib_address
         self.gpib_address = gpib_address
 
-        self.time_constant_options = {
-                "10 us": 0,
-                "30 us": 1,
-                "100 us": 2,
-                "300 us": 3,
-                "1 ms": 4,
-                "3 ms": 5,
-                "10 ms": 6,
-                "30 ms": 7,
-                "100 ms": 8,
-                "300 ms": 9,
-                "1 s": 10,
-                "3 s": 11,
-                "10 s": 12,
-                "30 s": 13,
-                "100 s": 14,
-                "300 s": 15,
-                "1 ks": 16,
-                "3 ks": 17,
-                "10 ks": 18,
-                "30 ks": 19
-            }
+        self.init_visa()
+        self._visa_handle.timeout = 3000 # default
 
+    def __del__(self):
+        '''
+        Destroy the object and close the visa handle
+        '''
+        self.close()
 
     def __getstate__(self):
         self._save_dict = {"sensitivity": self.sensitivity,
@@ -234,12 +241,8 @@ class SR830(Instrument):
         '''
         Default timeout 3000 ms. None for infinite timeout
         '''
-        self.init_visa()
         self._visa_handle.timeout = timeout
-        out = self._visa_handle.ask(cmd)
-        time.sleep(0.1)
-        self.close()
-        return out
+        return self._visa_handle.ask(cmd)
 
     def ac_coupling(self):
         self.write('ICPL0')
@@ -315,10 +318,8 @@ class SR830(Instrument):
         del(self._visa_handle)
 
     def read(self):
-        self.init_visa()
-        read = self._visa_handle.read()
+        return self._visa_handle.read()
         self.close()
-        return read
 
     def sweep(self, Vstart, Vend, Vstep=0.01, sweep_rate=0.1):
         '''
@@ -333,9 +334,7 @@ class SR830(Instrument):
             time.sleep(delay)
 
     def write(self, cmd):
-        self.init_visa()
         self._visa_handle.write(cmd)
-        self.close()
 
     def zero(self, sweep_rate=0.1):
         '''
