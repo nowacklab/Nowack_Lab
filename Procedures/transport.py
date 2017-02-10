@@ -186,7 +186,6 @@ class RvsVg(Measurement):
         self.setup_keithley()
         self.setup_lockins()
 
-
     def do(self):
         self.setup_plots()
 
@@ -262,51 +261,32 @@ class RvsVg(Measurement):
 
         self.ax.set_title(self.filename)
 
-    def Vg_to_n(self, t_ox = 300):
+    def Vg_to_n(self, t_ox = 300, center_CNP=True):
         '''
         Converts gate voltage to an approximate carrier density.
         Carrier density is stored as the attribute n.
         t_ox is the thickness of the oxide in nm. Default 300 nm.
+        Charge neutrality point centered by default.
         '''
         eps_SiO2 = 3.9
         eps0 = 8.854187817e-12 #F/m
         e = 1.60217662e-19 #coulombs
         self.n = self.Vg*eps0*eps_SiO2/(t_ox*1e-9*e)/100**2 # convert to cm^-2
+        if center_CNP:
+            ind_max = np.where(self.R==self.R.max())[0] # find CNP
+            self.n -= self.n[ind_max] # set CNP = 0 carrier density
 
-class RvsVg2(Measurement):
+
+class RvsVg2(RvsVg):
     instrument_list = ['keithley', 'lockin_V', 'lockin_V2', 'lockin_I']
     I_compliance = 1e-6 # 1 uA
 
     def __init__(self, instruments = {}, Vmin = -10, Vmax = 10, Vstep=.1, delay=1):
         super().__init__()
-        self._load_instruments(instruments)
 
-        self.Vmin = Vmin
-        self.Vmax = Vmax
-        self.Vstep = Vstep
-        self.delay = delay
-
-        self.Vg = np.linspace(Vmin, Vmax, round(abs(Vmax-Vmin)/Vstep)+1)
-
-        ## Decided to not measure during sweeps to/from min/max
-        # Vup = np.linspace(0, Vmax, round(abs(Vmax)/Vstep), endpoint=False)
-        # Vdown = np.linspace(Vmax, Vmin, round(abs(Vmax-Vmin)/Vstep), endpoint=False)
-        # Vup2 = np.linspace(Vmin, 0, round(abs(Vmin)/Vstep), endpoint=False)
-
-        # self.Vg = np.concatenate((Vup, Vdown, Vup2))
-
-        self.Ig = np.full(self.Vg.shape, np.nan)
-        self.Vx = np.full(self.Vg.shape, np.nan)
-        self.Vy = np.full(self.Vg.shape, np.nan)
         self.Vx2 = np.full(self.Vg.shape, np.nan)
-        self.Vy2 = np.full(self.Vg.shape, np.nan)        
-        self.Ix = np.full(self.Vg.shape, np.nan)
-        self.Iy = np.full(self.Vg.shape, np.nan)
-        self.R = np.full(self.Vg.shape, np.nan)
+        self.Vy2 = np.full(self.Vg.shape, np.nan)
         self.R2 = np.full(self.Vg.shape, np.nan)
-
-        self.setup_keithley()
-        self.setup_lockins()
 
 
     def do(self):
@@ -342,7 +322,7 @@ class RvsVg2(Measurement):
         self.save()
 
     def plot(self):
-        super().plot()
+        Measurement.plot(self)
 
         self.line.set_ydata(self.R)
         self.line2.set_ydata(self.R2)
@@ -356,19 +336,6 @@ class RvsVg2(Measurement):
 
         self.fig.tight_layout()
         self.fig.canvas.draw()
-
-    def setup_keithley(self):
-        self.keithley.zero_V(1) # 1V/s
-        self.keithley.source = 'V'
-        self.keithley.I_compliance = self.I_compliance
-        self.keithley.Vout_range = abs(self.Vg).max()
-
-    def setup_lockins(self):
-        self.lockin_V.input_mode = 'A-B'
-        self.lockin_I.input_mode = 'I (10^8)'
-        self.lockin_V.reference = 'internal'
-#         self.lockin_V.frequency = 53.01
-        self.lockin_I.reference = 'external'
 
     def setup_plots(self):
         self.fig, self.ax = plt.subplots()
@@ -392,16 +359,6 @@ class RvsVg2(Measurement):
         self.ax.legend(('R1', 'R2'), loc='best')
         self.ax.set_title(self.filename)
 
-    def Vg_to_n(self, t_ox = 300):
-        '''
-        Converts gate voltage to an approximate carrier density.
-        t_ox is the thickness of the oxide in nm. Default 300 nm.
-        '''
-        eps_SiO2 = 3.9
-        eps0 = 8.854187817e-12 #F/m
-        e = 1.60217662e-19 #coulombs
-        self.n = self.Vg*eps0*eps_SiO2/(t_ox*1e-9*e)/100**2 # convert to cm^-2
-
 
 class FourProbeResSweep(Measurement):
     '''class to return four probe resistance using lockin_V and lockin_I'''
@@ -414,7 +371,7 @@ class FourProbeResSweep(Measurement):
 
 
     def __init__(self, instruments = {},Vbi = 0.1, delay=1):
-        
+
         super().__init__()
         self._load_instruments(instruments)
 
@@ -429,11 +386,11 @@ class FourProbeResSweep(Measurement):
 
 
         self.setup_lockins()
-        
+
     def do(self):
         if self.fig == None:
             self.setup_plots()
-            self.sumR = 0 
+            self.sumR = 0
         ## Sweep to Vmin
         ## self.lockin_V.sweep(self.lockin_V.amplitude, self.Vmin, .01, .1)
         ## Do the measurement sweep
@@ -449,7 +406,7 @@ class FourProbeResSweep(Measurement):
 
 
             self.Vx[i] = self.lockin_V.X # unit: V
-            self.Vy[i] = self.lockin_V.Y 
+            self.Vy[i] = self.lockin_V.Y
             self.Ix[i] = self.lockin_I.X # unit: A, read value from SR 830 is A
             self.Iy[i] = self.lockin_I.Y
             self.R[i] = self.Vx[i]/self.Ix[i]
@@ -462,7 +419,7 @@ class FourProbeResSweep(Measurement):
             print  ("Four-probe R: %.3e ohm." % self.R[i])
             print  ("Two-probe R: %.3e ohm.\n" % self.R2p[i])
             self.sumR = self.sumR + self.R[i]
-        
+
         return (self.sumR)/self.Vs.shape
 
 
@@ -487,18 +444,18 @@ class FourProbeResSweep(Measurement):
         '''
         self.lockin_V.input_mode = 'A-B'
         self.lockin_I.input_mode = 'I (10^8)'
-        
+
         self.lockin_V.reference = 'internal'
         self.lockin_V.frequency = 67.8
         self.lockin_I.reference = 'external'
-        
+
         self.lockin_V.time_constant = '300 ms'
         self.lockin_I.time_constant = '300 ms'
-        
+
         # self set up by lock ins?
         #self.lockin_V.sensitivity = 0.1 # unit: V
         #self.lockin_I.sensitivity = 0.1 # unit: uA
-        
+
         #self.lockin_V.alarm_off()
         #self.lockin_I.alarm_off()
 
@@ -528,7 +485,7 @@ class FourProbeRes(Measurement):
 
 
     def __init__(self, instruments = {},Vbi = 0.1, delay=1):
-        
+
         super().__init__()
         self._load_instruments(instruments)
 
@@ -543,11 +500,11 @@ class FourProbeRes(Measurement):
 
 
         self.setup_lockins()
-        
+
     def do(self):
         if self.fig == None:
             # self.setup_plots()
-            self.sumR = 0 
+            self.sumR = 0
         ## Sweep to Vmin
         ## self.lockin_V.sweep(self.lockin_V.amplitude, self.Vmin, .01, .1)
         ## Do the measurement sweep
@@ -560,7 +517,7 @@ class FourProbeRes(Measurement):
             time.sleep(self.delay)
 
             self.Vx[i] = self.lockin_V.X # unit: V
-            self.Vy[i] = self.lockin_V.Y 
+            self.Vy[i] = self.lockin_V.Y
             self.Ix[i] = self.lockin_I.X # unit: A, read value from SR 830 is A
             self.Iy[i] = self.lockin_I.Y
             self.R[i] = self.Vx[i]/self.Ix[i]
@@ -573,7 +530,7 @@ class FourProbeRes(Measurement):
             print  ("Four-probe R: %.3e ohm." % self.R[i])
             # print  ("Two-probe R: %.3e ohm.\n" % self.R2p[i])
             self.sumR = self.sumR + self.R[i]
-        
+
         return (self.sumR-self.R[i])/4
 
 
@@ -596,18 +553,18 @@ class FourProbeRes(Measurement):
     def setup_lockins(self):
         self.lockin_V.input_mode = 'A-B'
         self.lockin_I.input_mode = 'I (10^8)'
-        
+
         self.lockin_V.reference = 'internal'
         self.lockin_I.reference = 'external'
-        
+
         # self.lockin_V.frequency = 67.8
         # self.lockin_V.time_constant = '100 ms'
         # self.lockin_I.time_constant = '100 ms'
-        
+
         # self set up by lock ins?
         #self.lockin_V.sensitivity = 0.1 # unit: V
         #self.lockin_I.sensitivity = 0.1 # unit: uA
-        
+
         #self.lockin_V.alarm_off()
         #self.lockin_I.alarm_off()
 
