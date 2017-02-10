@@ -2,6 +2,9 @@ import time, numpy as np, matplotlib.pyplot as plt
 from ..Utilities.save import Measurement
 from matplotlib import cm
 
+## Constants here
+e = 1.60217662e-19 #coulombs
+
 class IV(Measurement):
     instrument_list = ['lockin_V', 'lockin_I']
 #     I_compliance = 1e-6 # 1 uA
@@ -186,6 +189,7 @@ class RvsVg(Measurement):
         self.setup_keithley()
         self.setup_lockins()
 
+
     def do(self):
         self.setup_plots()
 
@@ -214,6 +218,39 @@ class RvsVg(Measurement):
 #         self.keithley.output = 'off'
         # self.IV.ax.legend(labels=self.Vg, title='Vg')
         self.save()
+
+
+    def calc_mobility(self, num_squares=1):
+        '''
+        Calculate the carrier mobility from the carrier density n and the device
+         resistivity. Since we measured resistance, this function divides by the
+         number of squares to calculate a 2D resistivity (sheet resistance).
+
+        mu = sigma/(ne), sigma = 1/Rs, Rs = R/(number of squares)
+
+        Units are cm^2/(V*s)
+        '''
+        if not hasattr(self, 'n'):
+            raise Exception('need to calculate carrier density using calc_n')
+        Rs = self.R/num_squares
+        sigma = 1/Rs
+        self.mobility = sigma/(self.n*e)
+
+    def calc_n(self, t_ox = 300, center_CNP=True):
+        '''
+        Converts gate voltage to an approximate carrier density.
+        Carrier density is stored as the attribute n.
+        t_ox is the thickness of the oxide in nm. Default 300 nm.
+        Charge neutrality point centered by default.
+        Units are cm^-2
+        '''
+        eps_SiO2 = 3.9
+        eps0 = 8.854187817e-12 #F/m
+        self.n = self.Vg*eps0*eps_SiO2/(t_ox*1e-9*e)/100**2 # convert to cm^-2
+        if center_CNP:
+            ind_max = np.where(self.R==self.R.max())[0] # find CNP
+            self.n -= self.n[ind_max] # set CNP = 0 carrier density
+
 
     def plot(self):
         super().plot()
@@ -260,21 +297,6 @@ class RvsVg(Measurement):
         self.lineIg = lineIg[0]
 
         self.ax.set_title(self.filename)
-
-    def Vg_to_n(self, t_ox = 300, center_CNP=True):
-        '''
-        Converts gate voltage to an approximate carrier density.
-        Carrier density is stored as the attribute n.
-        t_ox is the thickness of the oxide in nm. Default 300 nm.
-        Charge neutrality point centered by default.
-        '''
-        eps_SiO2 = 3.9
-        eps0 = 8.854187817e-12 #F/m
-        e = 1.60217662e-19 #coulombs
-        self.n = self.Vg*eps0*eps_SiO2/(t_ox*1e-9*e)/100**2 # convert to cm^-2
-        if center_CNP:
-            ind_max = np.where(self.R==self.R.max())[0] # find CNP
-            self.n -= self.n[ind_max] # set CNP = 0 carrier density
 
 
 class RvsVg2(RvsVg):
