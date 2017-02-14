@@ -51,9 +51,9 @@ class SquidIV(Measurement):
 
         self.rate = rate # Hz # measurement rate of the daq
 
-        self.Rbias = 2000
+        self.Rbias = 50
         self.Rmeas = 0 # Ohm # determined by squid testing box
-        self.Rbias_mod = 2e3 # Ohm # Inside SQUID testing box
+        self.Rbias_mod = 50 # Ohm # Inside SQUID testing box
         self.Imod = 0 # A # constant mod current
 
         self.Irampcenter = 0
@@ -71,14 +71,17 @@ class SquidIV(Measurement):
         self.Vbias = Ibias*(self.Rbias+self.Rmeas) # SQUID bias voltage
 
 
-    def do(self):
+    def do(self, hysteretic=False):
         self.param_prompt() # Check parameters
 
-        self.do_IV()
+        if hysteretic:
+            self.do_HIV();
+        else:
+            self.do_IV()
         self.daq.zero() # zero everything
 
         self.setup_plots()
-        self.plot()
+        self.plot(hysteretic=hysteretic)
         self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
 
         self.notes = input('Notes for this IV (r to redo, q to quit): ')
@@ -89,6 +92,38 @@ class SquidIV(Measurement):
         elif self.notes != 'q':
             self.ax.set_title(self.filename+'\n'+self.notes)
             self.save()
+
+
+    def do_HIV(self):
+        """ Copied from do_IV, modified to take and plot a sweep up and down to
+            test for hysteretic squids """
+        self.daq.outputs['modout'].V = self.Imod*self.Rbias_mod # Set mod current
+        # Collect data
+        in_chans = ['squidin','currentin']
+        output_data, received = self.daq.sweep({'squidout': self.Vbias[0]},
+                                               {'squidout': self.Vbias[-1]},
+                                               chan_in=in_chans,
+                                               sample_rate=self.rate,
+                                               numsteps=self.numpts
+                                           )
+        self.Vup = np.array(received['squidin'])/self.preamp.gain
+        if self.two_preamps:
+            self.Iup = np.array(received['currentin'])/self.preamp_I.gain/self.Rmeas # Measure current from series resistor
+        else:
+            self.Iup = self.Vbias/(self.Rbias + self.Rmeas) # estimate current by assuming Rbias >> Rsquid
+
+        self.Vbias = np.flipud(self.Vbias);
+        output_data, received = self.daq.sweep({'squidout': self.Vbias[0]},
+                                               {'squidout': self.Vbias[-1]},
+                                               chan_in=in_chans,
+                                               sample_rate=self.rate,
+                                               numsteps=self.numpts
+                                           )
+        self.Vdown = np.array(received['squidin'])/self.preamp.gain
+        if self.two_preamps:
+            self.Idown = np.array(received['currentin'])/self.preamp_I.gain/self.Rmeas # Measure current from series resistor
+        else:
+            self.Idown = self.Vbias/(self.Rbias + self.Rmeas) # estimate current by assuming Rbias >> Rsquid
 
 
     def do_IV(self):
@@ -139,13 +174,16 @@ class SquidIV(Measurement):
                 display.clear_output()
                 print('Invalid command\n')
 
-    def plot(self, ax=None, ax2=None):
+    def plot(self, ax=None, ax2=None, hysteretic=False):
         if ax == None: # if plotting on Mod2D's axis
             super().plot()
             ax = self.ax
             ax2 = ax.twinx()
-
-        ax.plot(self.I*1e6, self.V, 'k-')
+        if hysteretic:
+            ax.plot(self.Iup*1e6, self.Vup, 'r')
+            ax.plot(self.Idown*1e6, self.Vdown, 'b')
+        else:
+            ax.plot(self.I*1e6, self.V, 'k-')
         ax.set_title(self.filename+'\n'+self.notes) # NEED DESCRIPTIVE TITLE
         if self.two_preamps:
             ax.set_xlabel(r'$I_{\rm{bias}} = V_{\rm{meas}}/R_{\rm{meas}}$ ($\mu \rm A$)', fontsize=20)
@@ -155,7 +193,7 @@ class SquidIV(Measurement):
         ax.ticklabel_format(style='sci', axis='y', scilimits=(-3,3))
 
         ## To plot dVdI
-        if ax2 is not None:
+        if ax2 is not None and not hysteretic:
             dx = np.diff(self.I)[0]*3 # all differences are the same, so take the 0th. Made this 3 times larger to accentuate peaks
             dvdi = np.gradient(self.V, dx)
             ax2.plot(self.I*1e6, dvdi, 'r-')

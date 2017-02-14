@@ -1,5 +1,6 @@
 import time, numpy as np, matplotlib.pyplot as plt
 from ..Utilities.save import Measurement
+from ..Utilities.utilities import AttrDict
 from matplotlib import cm
 
 class IV(Measurement):
@@ -33,16 +34,20 @@ class IV(Measurement):
         self.R = np.full(self.Vs.shape, np.nan)
 
         self.setup_lockins()
+        print('David')
 
 
     def do(self):
-        if self.fig == None:
-            self.setup_plots()
+        print("begin do")
+        #if self.fig == None:
+        #    self.setup_plots()
+        self.setup_plots();
 
         ## Sweep to Vmin
         self.lockin_V.sweep(self.lockin_V.amplitude, self.Vmin, .01, .1)
 
         ## Do the measurement sweep
+        print("Begin Measurement")
         for i, Vs in enumerate(self.Vs):
             self.lockin_V.amplitude = Vs
             if self.lockin_V.is_OL() or i==0: # only do auto gain if we're overloading or if it's the first measurement
@@ -56,27 +61,33 @@ class IV(Measurement):
             self.Ix[i] = self.lockin_I.X
             self.Iy[i] = self.lockin_I.Y
 
-            self.plot()
+        self.plot()
 
+        self.R = np.array([self.Vx[i]/self.Ix[i] for i in range(2,len(self.Vx))]);
+        self.Rstd = np.std(self.R);
+        self.Rave = np.mean(self.R);
+        print(self.Rave, self.Rstd)
         self.save()
-
+        self.lockin_V.zero();
 
     def plot(self):
         super().plot()
+        self.ax['x'].plot(self.Ix*1e6,self.Vx*1e6);
+        self.ax['y'].plot(self.Iy*1e9,self.Vy*1e9);
 
-        self.line.set_xdata(self.Ix*1e6)
-        self.line.set_ydata(self.Vx*1e3)
+        #self.line.set_xdata(self.Ix*1e6)
+        #self.line.set_ydata(self.Vx*1e3)
 
-        self.ax.relim()
-        self.ax.autoscale_view(True,True,True)
+        #self.ax.relim()
+        #self.ax.autoscale_view(True,True,True)
 
-        self.fig.tight_layout()
-        self.fig.canvas.draw()
+        #self.fig.tight_layout()
+        #self.fig.canvas.draw()
 
 
     def setup_lockins(self):
         self.lockin_V.input_mode = 'A-B'
-        self.lockin_I.input_mode = 'I (10^8)'
+        self.lockin_I.input_mode = 'I (10^6)'
         self.lockin_V.reference = 'internal'
 #         self.lockin_V.frequency = 53.01
         self.lockin_I.reference = 'external'
@@ -85,14 +96,21 @@ class IV(Measurement):
 
 
     def setup_plots(self):
-        self.fig, self.ax = plt.subplots()
-        self.ax.set_xlabel('I (uA)', fontsize=20)
-        self.ax.set_ylabel('V (mV)', fontsize=20)
+        self.fig = plt.figure(figsize=(12,6))
+        self.ax = AttrDict()
+        self.ax['x'] = self.fig.add_subplot(121)
+        self.ax['y'] = self.fig.add_subplot(122)
+        self.ax['x'].set_xlabel('I (uA)')
+        self.ax['x'].set_ylabel('V (uV)')
+        self.ax['y'].set_xlabel('I (nA)')
+        self.ax['y'].set_ylabel('V (nV)')
 
-        line = self.ax.plot(self.Ix*1e6, self.Vx*1e3, 'k')
-        self.line = line[0]
-
-        self.ax.set_title(self.filename)
+        #line = self.ax.plot(self.Ix*1e6, self.Vx*1e3)
+        #self.line = line[0]
+        self.ax['x'].annotate(self.timestamp, xy=(0.02,.98), xycoords='axes fraction',
+            fontsize=10, ha='left', va = 'top', family='monospace'
+        )
+        #self.ax.set_title(self.filename)
 
 
 class IVvsVg(Measurement):

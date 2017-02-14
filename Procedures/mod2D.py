@@ -25,8 +25,8 @@ class Mod2D(Measurement):
 
         self.IV = SquidIV(instruments, rate=rate)
 
-        self.IV.Rbias = 2e3 # Ohm # 1k cold bias resistors on the SQUID testing PCB
-        self.IV.Rbias_mod = 2e3 # Ohm # 1k cold bias resistors on the SQUID testing PCB
+        self.IV.Rbias = 99e3+40 # Ohm # 1k cold bias resistors on the SQUID testing PCB
+        self.IV.Rbias_mod = 3e3+40 # Ohm # 1k cold bias resistors on the SQUID testing PCB
         self.IV.Irampspan = 120e-6 # A # Will sweep from -Irampspan/2 to +Irampspan/2
         self.IV.Irampstep = 0.5e-6 # A # Step size
 
