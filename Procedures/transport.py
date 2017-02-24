@@ -304,7 +304,7 @@ class RvsVg2(RvsVg):
     I_compliance = 1e-6 # 1 uA
 
     def __init__(self, instruments = {}, Vmin = -10, Vmax = 10, Vstep=.1, delay=1):
-        super().__init__()
+        super().__init__(instruments, Vmin, Vmax, Vstep, delay)
 
         self.Vx2 = np.full(self.Vg.shape, np.nan)
         self.Vy2 = np.full(self.Vg.shape, np.nan)
