@@ -159,6 +159,214 @@ class IVvsVg(Measurement):
 
 
 class RvsVg(Measurement):
+    '''
+    Monitor R = lockin_V.X/lockin_I.Y from two different lockins.
+    Can supply additional lockin_V2, lockin_V3 to montior more voltages
+    (plotted as resistance)
+    '''
+    instrument_list = ['keithley', 'lockin_V', 'lockin_I']
+    I_compliance = 1e-6 # 1 uA
+
+    def __init__(self, instruments = {}, Vmin = -10, Vmax = 10, Vstep=.1, delay=1):
+        super().__init__()
+        self._load_instruments(instruments)
+
+        self.Vmin = Vmin
+        self.Vmax = Vmax
+        self.Vstep = Vstep
+        self.delay = delay
+
+        self.Vg = np.linspace(Vmin, Vmax, round(abs(Vmax-Vmin)/Vstep)+1)
+
+        ## Decided to not measure during sweeps to/from min/max
+        # Vup = np.linspace(0, Vmax, round(abs(Vmax)/Vstep), endpoint=False)
+        # Vdown = np.linspace(Vmax, Vmin, round(abs(Vmax-Vmin)/Vstep), endpoint=False)
+        # Vup2 = np.linspace(Vmin, 0, round(abs(Vmin)/Vstep), endpoint=False)
+
+        # self.Vg = np.concatenate((Vup, Vdown, Vup2))
+
+        self.Ig = np.full(self.Vg.shape, np.nan)
+        self.Vx = [np.full(self.Vg.shape, np.nan)]*self.num_lockins # one for each voltage channel
+        self.Vy = [np.full(self.Vg.shape, np.nan)]*self.num_lockins # this array is (num channels) x (num gate voltages)
+        self.Ix = np.full(self.Vg.shape, np.nan)
+        self.Iy = np.full(self.Vg.shape, np.nan)
+        self.R = [np.full(self.Vg.shape, np.nan)]*self.num_lockins
+
+
+        self.setup_keithley()
+        self.setup_lockins()
+
+    def _load_instruments(self, instruments={}):
+        '''
+        Loads instruments from a dictionary.
+        Specify instruments needed using self.instrument_list.
+        This is unique for this class because you can supply up to two
+        additional lockins to monitor inputs from.
+        '''
+        for instrument in self.instrument_list:
+            if instrument in instruments:
+                setattr(self, instrument, instruments[instrument])
+            else:
+                setattr(self, instrument, None)
+        self.num_lockins=0
+        for name, handle in instruments.items():
+            if name[:-1] == 'lockin_V': # e.g. lockin_V2
+                setattr(self, name, handle)
+                self.num_lockins += 1
+
+
+    def do(self):
+        self.setup_plots()
+
+#         self.keithley.output = 'on' #NO! will cause a spike!
+
+        ## Sweep down to Vmin
+        self.keithley.sweep_V(0, self.Vmin, .1, 1)
+
+        ## Do the measurement sweep
+        for i, Vg in enumerate(self.Vg):
+            self.keithley.Vout = Vg
+            time.sleep(self.delay)
+
+            self.Ig[i] = self.keithley.I
+
+            self.Ix[i] = self.lockin_I.X
+            self.Iy[i] = self.lockin_I.Y
+            for j in self.num_lockins:
+                self.Vx[j][i] = getattr(self, 'lockin_V%i' %j, 'X')
+                self.Vy[j][i] = getattr(self, 'lockin_V%i' %j, 'Y')
+                self.R[j][i] = self.Vx[j][i]/self.Ix[j][i]
+
+            self.plot()
+
+        ## Sweep back to zero at 1V/s
+        self.keithley.zero_V(1)
+#         self.keithley.current = 0
+#         self.keithley.output = 'off'
+        # self.IV.ax.legend(labels=self.Vg, title='Vg')
+        self.save()
+
+
+    def calc_mobility(self, num_squares=1):
+        '''
+        Calculate the carrier mobility from the carrier density n and the device
+         resistivity. Since we measured resistance, this function divides by the
+         number of squares to calculate a 2D resistivity (sheet resistance).
+
+        mu = sigma/(ne), sigma = 1/Rs, Rs = R/(number of squares)
+
+        Units are cm^2/(V*s)
+        '''
+        if not hasattr(self, 'n'):
+            raise Exception('need to calculate carrier density using calc_n')
+        Rs = self.R[0]/num_squares
+        sigma = 1/Rs
+        self.mobility = abs(sigma/(self.n*e))
+
+
+    def calc_n_geo(self, t_ox = 300, center_CNP=True):
+        '''
+        Converts gate voltage to an approximate carrier density using geometry.
+        Carrier density is stored as the attribute n.
+        t_ox is the thickness of the oxide in nm. Default 300 nm.
+        Charge neutrality point centered by default.
+        Units are cm^-2
+        '''
+        eps_SiO2 = 3.9
+        eps0 = 8.854187817e-12 #F/m
+        self.n = self.Vg*eps0*eps_SiO2/(t_ox*1e-9*e)/100**2 # convert to cm^-2
+        if center_CNP:
+            CNP = self.find_CNP()
+            self.n -= self.n[CNP] # set CNP = 0 carrier density
+
+
+    def calc_n_LL(self, B_LL, nu, Vg=0):
+        '''
+        Converts gate voltage to a carrier density using conversion factor
+        determined by location of center of quantum Hall plateaux.
+        n = nu*e*B_LL/h, where e and h are electron charge and Planck constant,
+        B_LL is the field at the center of the Landau Level, and nu is the
+        filling factor.
+        B_LL and nu should be arrays of landau level centers and filling factors.
+        Vg is the gate voltage at which the measurements were taken.
+        '''
+        if type(B_LL) is not np.ndarray:
+            B_LL = np.array(B_LL)
+
+        if type(nu) is not np.ndarray:
+            nu = np.array(nu)
+
+        n_at_Vg = np.mean(nu*e*B_LL/h/100**2) # convert to cm^2
+
+        CNP = self.find_CNP()
+        if Vg < CNP:
+            n_at_Vg *= -1 # fix the sign if we are below CNP
+        self.n = n_at_Vg*(self.Vg-self.Vg[CNP])/(Vg-self.Vg[CNP])
+
+
+    def find_CNP(self):
+        '''
+        Finds the index of gate voltage corresponding to charge neutrality point
+        '''
+        return np.where(self.R[0]==self.R[0].max())[0] # find CNP
+
+
+    def plot(self):
+        super().plot()
+
+        for i, line in enumerate(self.lines):
+            line.set_ydata(self.R[i])
+        self.lineIg.set_ydata(self.Ig*1e9)
+
+        self.ax.relim()
+        self.ax.autoscale_view(True,True,True)
+
+        self.axIg.relim()
+        self.axIg.autoscale_view(True,True,True)
+
+        self.fig.tight_layout()
+        self.fig.canvas.draw()
+
+    def setup_keithley(self):
+        self.keithley.zero_V(1) # 1V/s
+        self.keithley.source = 'V'
+        self.keithley.I_compliance = self.I_compliance
+        self.keithley.Vout_range = abs(self.Vg).max()
+
+    def setup_lockins(self):
+        self.lockin_V.input_mode = 'A-B'
+        self.lockin_I.input_mode = 'I (10^8)'
+        self.lockin_V.reference = 'internal'
+#         self.lockin_V.frequency = 53.01
+        self.lockin_I.reference = 'external'
+
+    def setup_plots(self):
+        self.fig, self.ax = plt.subplots()
+        self.ax.set_xlabel('Vg (V)', fontsize=20)
+        self.ax.set_ylabel('R (Ohm)', fontsize=20)
+
+        self.axIg = self.ax.twinx()
+        self.axIg.set_ylabel('Ig (nA)', fontsize=20, color='r', alpha=0.2)
+
+#         self.ax.set_xlim(min(self.Vg), max(self.Vg))
+
+        ## plot all the resistances
+        self.lines = []
+        for j in self.num_lockins:
+            line =  self.ax.plot(self.Vg, self.R[j])
+            self.lines[j] = line[0]
+
+        ## plot gate leakage
+        lineIg = self.axIg.plot(self.Vg, self.Ig*1e9, 'r', alpha=0.2)
+        self.lineIg = lineIg[0]
+
+        self.ax.legend(['R%i' %i for i in range(self.num_lockins)], loc='best')
+        self.ax.set_title(self.filename)
+
+class RvsVg1(Measurement):
+    '''
+    Old class, replaced by RvsVg
+    '''
     instrument_list = ['keithley', 'lockin_V', 'lockin_I']
     I_compliance = 1e-6 # 1 uA
 
@@ -332,7 +540,10 @@ class RvsVg(Measurement):
         self.ax.set_title(self.filename)
 
 
-class RvsVg2(RvsVg):
+class RvsVg2(RvsVg1):
+    '''
+    Old class, replaced by RvsVg
+    '''
     instrument_list = ['keithley', 'lockin_V', 'lockin_V2', 'lockin_I']
     I_compliance = 1e-6 # 1 uA
 
