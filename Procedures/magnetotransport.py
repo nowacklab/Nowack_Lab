@@ -1,5 +1,6 @@
 import time, numpy as np, matplotlib.pyplot as plt
 from ..Utilities.save import Measurement
-from .transport import RvsVg, RvsVg2
+from .transport import RvsSomething
 
-class RvsB(Measurement):
+class RvsB(RvsSomething):
+    pass
