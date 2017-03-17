@@ -186,17 +186,15 @@ class RvsVg(Measurement):
         self.Iy = np.full(self.Vg.shape, np.nan)
         self.R = np.full(self.Vg.shape, np.nan)
 
-        self.setup_keithley()
         self.setup_lockins()
 
 
-    def do(self):
+    def do(self, zero=True):
         self.setup_plots()
 
 #         self.keithley.output = 'on' #NO! will cause a spike!
 
-        ## Sweep down to Vmin
-        self.keithley.sweep_V(0, self.Vmin, .1, 1)
+        self.setup_keithley()
 
         ## Do the measurement sweep
         for i, Vg in enumerate(self.Vg):
@@ -213,7 +211,8 @@ class RvsVg(Measurement):
             self.plot()
 
         ## Sweep back to zero at 1V/s
-        self.keithley.zero_V(1)
+        if zero:
+            self.keithley.zero_V(1)
 #         self.keithley.current = 0
 #         self.keithley.output = 'off'
         # self.IV.ax.legend(labels=self.Vg, title='Vg')
@@ -268,10 +267,11 @@ class RvsVg(Measurement):
         self.fig.canvas.draw()
 
     def setup_keithley(self):
-        self.keithley.zero_V(1) # 1V/s
         self.keithley.source = 'V'
         self.keithley.I_compliance = self.I_compliance
-        self.keithley.Vout_range = abs(self.Vg).max()
+        ## Sweep down to Vmin
+        self.keithley.Vout_range = 210
+        self.keithley.sweep_V(self.keithley.V, self.Vmin, .1, 1)
 
     def setup_lockins(self):
         self.lockin_V.input_mode = 'A-B'
@@ -311,13 +311,12 @@ class RvsVg2(RvsVg):
         self.R2 = np.full(self.Vg.shape, np.nan)
 
 
-    def do(self):
+    def do(self, zero=True):
         self.setup_plots()
 
 #         self.keithley.output = 'on' #NO! will cause a spike!
 
-        ## Sweep down to Vmin
-        self.keithley.sweep_V(0, self.Vmin, .1, 1)
+        self.setup_keithley()
 
         ## Do the measurement sweep
         for i, Vg in enumerate(self.Vg):
@@ -337,7 +336,8 @@ class RvsVg2(RvsVg):
             self.plot()
 
         ## Sweep back to zero at 1V/s
-        self.keithley.zero_V(1)
+        if zero:
+            self.keithley.zero_V(1)
 #         self.keithley.current = 0
 #         self.keithley.output = 'off'
         # self.IV.ax.legend(labels=self.Vg, title='Vg')
