@@ -4,6 +4,7 @@ from matplotlib import cm
 
 ## Constants here
 e = 1.60217662e-19 #coulombs
+h = 6.626e-34 # m^2*kg/s
 
 class IV(Measurement):
     instrument_list = ['lockin_V', 'lockin_I']
@@ -233,11 +234,12 @@ class RvsVg(Measurement):
             raise Exception('need to calculate carrier density using calc_n')
         Rs = self.R/num_squares
         sigma = 1/Rs
-        self.mobility = sigma/(self.n*e)
+        self.mobility = abs(sigma/(self.n*e))
 
-    def calc_n(self, t_ox = 300, center_CNP=True):
+
+    def calc_n_geo(self, t_ox = 300, center_CNP=True):
         '''
-        Converts gate voltage to an approximate carrier density.
+        Converts gate voltage to an approximate carrier density using geometry.
         Carrier density is stored as the attribute n.
         t_ox is the thickness of the oxide in nm. Default 300 nm.
         Charge neutrality point centered by default.
@@ -247,8 +249,39 @@ class RvsVg(Measurement):
         eps0 = 8.854187817e-12 #F/m
         self.n = self.Vg*eps0*eps_SiO2/(t_ox*1e-9*e)/100**2 # convert to cm^-2
         if center_CNP:
-            ind_max = np.where(self.R==self.R.max())[0] # find CNP
-            self.n -= self.n[ind_max] # set CNP = 0 carrier density
+            CNP = self.find_CNP()
+            self.n -= self.n[CNP] # set CNP = 0 carrier density
+
+
+    def calc_n_LL(self, B_LL, nu, Vg=0):
+        '''
+        Converts gate voltage to a carrier density using conversion factor
+        determined by location of center of quantum Hall plateaux.
+        n = nu*e*B_LL/h, where e and h are electron charge and Planck constant,
+        B_LL is the field at the center of the Landau Level, and nu is the
+        filling factor.
+        B_LL and nu should be arrays of landau level centers and filling factors.
+        Vg is the gate voltage at which the measurements were taken.
+        '''
+        if type(B_LL) is not np.ndarray:
+            B_LL = np.array(B_LL)
+
+        if type(nu) is not np.ndarray:
+            nu = np.array(nu)
+
+        n_at_Vg = np.mean(nu*e*B_LL/h/100**2) # convert to cm^2
+
+        CNP = self.find_CNP()
+        if Vg < CNP:
+            n_at_Vg *= -1 # fix the sign if we are below CNP
+        self.n = n_at_Vg*(self.Vg-self.Vg[CNP])/(Vg-self.Vg[CNP])
+
+
+    def find_CNP(self):
+        '''
+        Finds the index of gate voltage corresponding to charge neutrality point
+        '''
+        return np.where(self.R==self.R.max())[0] # find CNP
 
 
     def plot(self):

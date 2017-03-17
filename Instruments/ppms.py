@@ -37,7 +37,7 @@ class PPMS(Instrument):
         return d
 
     def __setstate__(self, state):
-        pass
+        self.__dict__.update(state)
 
     def _get_param(self, param):
         return ask_socket(self._s, param)
