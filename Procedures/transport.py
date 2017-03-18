@@ -170,6 +170,7 @@ class RvsSomething(Measurement):
     '''
     instrument_list = ['lockin_V', 'lockin_I']
     something='time'
+    something_units = 's'
 
     def __init__(self, instruments = {}):
         super().__init__()
@@ -180,7 +181,7 @@ class RvsSomething(Measurement):
         self.Ix = np.array([])
         self.Iy = np.array([])
         self.R = [np.array([])]*self.num_lockins
-        setattr(self, something, np.array([]))
+        setattr(self, self.something, np.array([]))
 
         self.setup_lockins()
 
@@ -212,13 +213,13 @@ class RvsSomething(Measurement):
         if duration is None:
             try:
                 while True:
-                    getattr(self, something) = np.append(getattr(self,something), time.time()-self.time_start)
+                    getattr(self, self.something) = np.append(getattr(self,self.something), time.time()-self.time_start)
                     self.do_measurement(delay)
             except KeyboardInterrupt:
                 pass
         else:
-            while self.something[-1] < duration:
-                getattr(self, something) = np.append(getattr(self,something), time.time()-self.time_start)
+            while getattr(self, self.something)[-1] < duration:
+                getattr(self, self.something) = np.append(getattr(self,self.something), time.time()-self.time_start)
                 self.do_measurement(delay)
 
         self.do_after()
@@ -260,13 +261,9 @@ class RvsSomething(Measurement):
 
         for i, line in enumerate(self.lines):
             line.set_ydata(self.R[i])
-        self.lineIg.set_ydata(self.Ig*1e9)
 
         self.ax.relim()
         self.ax.autoscale_view(True,True,True)
-
-        self.axIg.relim()
-        self.axIg.autoscale_view(True,True,True)
 
         self.fig.tight_layout()
         self.fig.canvas.draw()
@@ -280,13 +277,13 @@ class RvsSomething(Measurement):
 
     def setup_plots(self):
         self.fig, self.ax = plt.subplots()
-        self.ax.set_xlabel('Vg (V)', fontsize=20)
+        self.ax.set_xlabel('%s (%s)' %(self.something, self.something_units), fontsize=20)
         self.ax.set_ylabel('R (Ohm)', fontsize=20)
 
         ## plot all the resistances
         self.lines = []
         for j in self.num_lockins:
-            line =  self.ax.plot(self.Vg, self.R[j])
+            line =  self.ax.plot(getattr(self, self.something), self.R[j])
             self.lines[j] = line[0]
 
         self.ax.legend(['R%i' %i for i in range(self.num_lockins)], loc='best')
@@ -300,11 +297,11 @@ class RvsVg(RvsSomething):
     (plotted as resistance)
     '''
     instrument_list = ['keithley', 'lockin_V', 'lockin_I']
-    something='Vg'
+    something = 'Vg'
+    something_units = 'V'
 
-    def __init__(self, instruments = {}, Vmin = -10, Vmax = 10, Vstep=.1, delay=1):
+    def __init__(self, instruments = {}, Vmin = -40, Vmax = 40, Vstep=.1, delay=1):
         super().__init__()
-        self._load_instruments(instruments)
 
         self.Vmin = Vmin
         self.Vmax = Vmax
@@ -322,7 +319,7 @@ class RvsVg(RvsSomething):
 #         self.keithley.output = 'on' #NO! will cause a spike!
 
         ## Sweep down to Vmin
-        self.keithley.sweep_V(0, self.Vmin, .1, 1)
+        self.keithley.sweep_V(self.keithley.V, self.Vmin, .1, 1)
 
         ## Do the measurement sweep
         for i, Vg in enumerate(self.Vg_values):
@@ -402,13 +399,7 @@ class RvsVg(RvsSomething):
     def plot(self):
         super().plot()
 
-        for i, line in enumerate(self.lines):
-            line.set_ydata(self.R[i])
         self.lineIg.set_ydata(self.Ig*1e9)
-
-        self.ax.relim()
-        self.ax.autoscale_view(True,True,True)
-
         self.axIg.relim()
         self.axIg.autoscale_view(True,True,True)
 
@@ -422,27 +413,13 @@ class RvsVg(RvsSomething):
         self.keithley.Vout_range = abs(self.Vg).max()
 
     def setup_plots(self):
-        self.fig, self.ax = plt.subplots()
-        self.ax.set_xlabel('Vg (V)', fontsize=20)
-        self.ax.set_ylabel('R (Ohm)', fontsize=20)
+        super().setup_plots()
 
         self.axIg = self.ax.twinx()
         self.axIg.set_ylabel('Ig (nA)', fontsize=20, color='r', alpha=0.2)
 
-#         self.ax.set_xlim(min(self.Vg), max(self.Vg))
-
-        ## plot all the resistances
-        self.lines = []
-        for j in self.num_lockins:
-            line =  self.ax.plot(self.Vg, self.R[j])
-            self.lines[j] = line[0]
-
-        ## plot gate leakage
         lineIg = self.axIg.plot(self.Vg, self.Ig*1e9, 'r', alpha=0.2)
         self.lineIg = lineIg[0]
-
-        self.ax.legend(['R%i' %i for i in range(self.num_lockins)], loc='best')
-        self.ax.set_title(self.filename)
 
 
 class FourProbeResSweep(Measurement):
