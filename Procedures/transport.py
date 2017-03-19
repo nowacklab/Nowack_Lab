@@ -213,13 +213,13 @@ class RvsSomething(Measurement):
         if duration is None:
             try:
                 while True:
-                    getattr(self, self.something) = np.append(getattr(self,self.something), time.time()-self.time_start)
+                    setattr(self, self.something, np.append(getattr(self,self.something), time.time()-self.time_start))
                     self.do_measurement(delay)
             except KeyboardInterrupt:
                 pass
         else:
             while getattr(self, self.something)[-1] < duration:
-                getattr(self, self.something) = np.append(getattr(self,self.something), time.time()-self.time_start)
+                getattr(self, self.something, np.append(getattr(self,self.something), time.time()-self.time_start))
                 self.do_measurement(delay)
 
         self.do_after()

@@ -107,7 +107,7 @@ class RvsVg_B(RvsVg):
         self.im = np.empty(self.ax.shape)
 
         for i in self.ax.shape[0]: # rows == different channels
-            self.im[i,0] = plot_mpl.plot2D(ax, gs.Vg, self.B, (np.abs(self.R2D[i]), interpolation = 'none', cmap='cubehelix', xlabel='Vg (V)', ylabel= 'B (T)', clabel='R%i (Ohm)' %i)
+            self.im[i,0] = plot_mpl.plot2D(ax, gs.Vg, self.B, np.abs(self.R2D[i]), interpolation = 'none', cmap='cubehelix', xlabel='Vg (V)', ylabel= 'B (T)', clabel='R%i (Ohm)' %i)
             self.im[i,1] = plot_mpl.plot2D(ax, gs.Vg, self.B, np.log(np.abs(self.R2D[i])), interpolation = 'none', cmap='cubehelix', xlabel='Vg (V)', ylabel= 'B (T)', clabel='log(R%i (Ohm))' %i)
 
             plot_mpl.aspect(ax, 1)
