@@ -170,16 +170,22 @@ class SR830(Instrument):
     @property
     def X(self):
         self._X = float(self.ask('OUTP?1'))
+        if self._X == 0:
+            self._X = self.sensitivity/1e12 # so we don't have zeros
         return self._X
 
     @property
     def Y(self):
         self._Y = float(self.ask('OUTP?2'))
+        if self._Y == 0:
+            self._Y = self.sensitivity/1e12 # so we don't have zeros        
         return self._Y
 
     @property
     def R(self):
         self._R = float(self.ask('OUTP?3'))
+        if self._R == 0:
+            self._R = self.sensitivity/1e12 # so we don't have zeros     
         return self._R
 
     @property
@@ -314,8 +320,9 @@ class SR830(Instrument):
         return value/10*self.sensitivity
 
     def close(self):
-        self._visa_handle.close()
-        del(self._visa_handle)
+        if hasattr(self, '_visa_handle'):
+            self._visa_handle.close()
+            del(self._visa_handle)
 
     def read(self):
         return self._visa_handle.read()
