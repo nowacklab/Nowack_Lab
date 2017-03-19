@@ -176,11 +176,11 @@ class RvsSomething(Measurement):
         super().__init__()
         self._load_instruments(instruments)
 
-        self.Vx = [np.array([])]*self.num_lockins # one for each voltage channel
-        self.Vy = [np.array([])]*self.num_lockins # this array is (num channels) x (num gate voltages)
+        self.Vx = {str(i): np.array([]) for i in range(self.num_lockins)} # one for each voltage channel
+        self.Vy = {str(i): np.array([]) for i in range(self.num_lockins)} # use a dictionary to enable saving
         self.Ix = np.array([])
         self.Iy = np.array([])
-        self.R = [np.array([])]*self.num_lockins
+        self.R = {str(i): np.array([]) for i in range(self.num_lockins)} 
         setattr(self, self.something, np.array([]))
 
         self.setup_lockins()
@@ -197,11 +197,18 @@ class RvsSomething(Measurement):
                 setattr(self, instrument, instruments[instrument])
             else:
                 setattr(self, instrument, None)
-        self.num_lockins=0
         for name, handle in instruments.items():
             if name[:-1] == 'lockin_V': # e.g. lockin_V2, cut off the "2"
                 setattr(self, name, handle)
-                self.num_lockins += 1
+
+    @property
+    def num_lockins(self):
+        num_lockins=0
+        for name, handle in self.__dict__.items():
+            if name[:-1] == 'lockin_V': # e.g. lockin_V2, cut off the "2"
+                num_lockins += 1
+        self._num_lockins = num_lockins
+        return self._num_lockins
 
     def do(self, duration=None, delay=1):
         '''
@@ -252,8 +259,10 @@ class RvsSomething(Measurement):
         self.Ix = np.append(self.Ix, self.lockin_I.X)
         self.Iy = np.append(self.Iy, self.lockin_I.Y)
         for j in range(self.num_lockins):
-            self.Vx[j] = np.append(self.Vx[j], getattr(getattr(self, 'lockin_V%i' %(j+1)), 'X'))
-            self.Vy[j] = np.append(self.Vy[j], getattr(getattr(self, 'lockin_V%i' %(j+1)), 'Y'))
+            J = j
+            j = str(j)
+            self.Vx[j] = np.append(self.Vx[j], getattr(getattr(self, 'lockin_V%i' %(J+1)), 'X'))
+            self.Vy[j] = np.append(self.Vy[j], getattr(getattr(self, 'lockin_V%i' %(J+1)), 'Y'))
             self.R[j] = np.append(self.R[j], self.Vx[j][-1]/self.Ix[-1])
         if plot:
             self.plot()
@@ -261,7 +270,7 @@ class RvsSomething(Measurement):
     def plot(self):
         super().plot()
 
-        for i, line in enumerate(self.lines):
+        for i, line in self.lines.items():
             line.set_xdata(getattr(self, self.something))
             line.set_ydata(self.R[i])
 
@@ -284,8 +293,9 @@ class RvsSomething(Measurement):
         self.ax.set_ylabel('R (Ohm)', fontsize=20)
 
         ## plot all the resistances
-        self.lines = [None]*self.num_lockins
+        self.lines = {}
         for j in range(self.num_lockins):
+            j = str(j)
             line =  self.ax.plot(getattr(self, self.something), self.R[j])
             self.lines[j] = line[0]
 
