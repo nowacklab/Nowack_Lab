@@ -213,14 +213,16 @@ class RvsSomething(Measurement):
         if duration is None:
             try:
                 while True:
-                    setattr(self, self.something, np.append(getattr(self,self.something), time.time()-self.time_start))
+                    self.time = np.append(self.time, time.time()-self.time_start)
                     self.do_measurement(delay)
             except KeyboardInterrupt:
                 pass
         else:
-            while getattr(self, self.something)[-1] < duration:
-                getattr(self, self.something, np.append(getattr(self,self.something), time.time()-self.time_start))
+            while True:
+                self.time = np.append(self.time, time.time()-self.time_start)
                 self.do_measurement(delay)
+                if self.time[-1] >= duration:
+                    break
 
         self.do_after()
 
@@ -249,10 +251,10 @@ class RvsSomething(Measurement):
             time.sleep(delay)
         self.Ix = np.append(self.Ix, self.lockin_I.X)
         self.Iy = np.append(self.Iy, self.lockin_I.Y)
-        for j in self.num_lockins:
-            self.Vx[j] = np.append(self.Vx[j], getattr(self, 'lockin_V%i' %j, 'X'))
-            self.Vy[j] = np.append(self.Vy[j], getattr(self, 'lockin_V%i' %j, 'Y'))
-            self.R[j] = self.Vx[j]/self.Ix[j]
+        for j in range(self.num_lockins):
+            self.Vx[j] = np.append(self.Vx[j], getattr(getattr(self, 'lockin_V%i' %(j+1)), 'X'))
+            self.Vy[j] = np.append(self.Vy[j], getattr(getattr(self, 'lockin_V%i' %(j+1)), 'Y'))
+            self.R[j] = np.append(self.R[j], self.Vx[j][-1]/self.Ix[-1])
         if plot:
             self.plot()
 
@@ -260,6 +262,7 @@ class RvsSomething(Measurement):
         super().plot()
 
         for i, line in enumerate(self.lines):
+            line.set_xdata(getattr(self, self.something))
             line.set_ydata(self.R[i])
 
         self.ax.relim()
@@ -269,9 +272,9 @@ class RvsSomething(Measurement):
         self.fig.canvas.draw()
 
     def setup_lockins(self):
-        self.lockin_V.input_mode = 'A-B'
+        self.lockin_V1.input_mode = 'A-B'
         self.lockin_I.input_mode = 'I (10^8)'
-        self.lockin_V.reference = 'internal'
+        self.lockin_V1.reference = 'internal'
 #         self.lockin_V.frequency = 53.01
         self.lockin_I.reference = 'external'
 
@@ -281,12 +284,12 @@ class RvsSomething(Measurement):
         self.ax.set_ylabel('R (Ohm)', fontsize=20)
 
         ## plot all the resistances
-        self.lines = []
-        for j in self.num_lockins:
+        self.lines = [None]*self.num_lockins
+        for j in range(self.num_lockins):
             line =  self.ax.plot(getattr(self, self.something), self.R[j])
             self.lines[j] = line[0]
 
-        self.ax.legend(['R%i' %i for i in range(self.num_lockins)], loc='best')
+        self.ax.legend(['R%i' %(i+1) for i in range(self.num_lockins)], loc='best')
         self.ax.set_title(self.filename)
 
 
