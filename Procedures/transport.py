@@ -314,7 +314,7 @@ class RvsVg(RvsSomething):
     something_units = 'V'
 
     def __init__(self, instruments = {}, Vmin = -40, Vmax = 40, Vstep=.1, delay=1):
-        super().__init__()
+        super().__init__(instruments)
 
         self.Vmin = Vmin
         self.Vmax = Vmax
@@ -336,9 +336,10 @@ class RvsVg(RvsSomething):
 
         ## Do the measurement sweep
         for i, Vg in enumerate(self.Vg_values):
+            self.Vg = np.append(self.Vg, Vg)
             self.keithley.Vout = Vg
+            self.Ig = np.append(self.Ig, self.keithley.I)
             self.do_measurement(delay=self.delay)
-            self.Ig = self.Ig.append(self.Ig, self.keithley.I)
 
         ## Sweep back to zero at 1V/s
         self.keithley.zero_V(1)
@@ -412,6 +413,7 @@ class RvsVg(RvsSomething):
     def plot(self):
         super().plot()
 
+        self.lineIg.set_xdata(self.Vg)
         self.lineIg.set_ydata(self.Ig*1e9)
         self.axIg.relim()
         self.axIg.autoscale_view(True,True,True)
@@ -423,7 +425,7 @@ class RvsVg(RvsSomething):
         self.keithley.zero_V(1) # 1V/s
         self.keithley.source = 'V'
         self.keithley.I_compliance = 1e-6
-        self.keithley.Vout_range = abs(self.Vg).max()
+        self.keithley.Vout_range = max(abs(self.Vmin), abs(self.Vmax))
 
     def setup_plots(self):
         super().setup_plots()
