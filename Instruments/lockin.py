@@ -91,7 +91,7 @@ class SR830(Instrument):
         self._sensitivity = value
         return self._sensitivity
 
-        
+
     @sensitivity.setter
     def sensitivity(self, value):
         '''
@@ -292,6 +292,17 @@ class SR830(Instrument):
     def dc_coupling(self):
         self.write('ICPL1')
 
+    def fix_sensitivity(self):
+        '''
+        Checks to see if the lockin is overloading or underloading (signal/sensivity < 10^-)
+        and adjusts the sensitivity accordingly.
+        '''
+        while self.is_OL():
+            self.sensitivity = 'up'
+        while self.is_UL():
+            self.sensitivity = 'down'
+
+        
     def init_visa(self):
         self._visa_handle = visa.ResourceManager().open_resource(self.gpib_address)
         self._visa_handle.read_termination = '\n'
@@ -304,6 +315,18 @@ class SR830(Instrument):
         '''
         m = max(abs(np.array([self.R, self.X, self.Y]))/self.sensitivity)
         if m > 1:
+            return True
+        else:
+            return False
+
+    def is_UL(self, thresh=1e-2):
+        '''
+        Looks at the magnitude of the larger of the x and y components to determine
+        whether or not the lockin is "underloading". This is defined by the given 
+        threshold, which is by default signal/sensitivity < 0.01
+        '''
+        m = max(abs(np.array([self.R, self.X, self.Y]))/self.sensitivity)
+        if m < thresh:
             return True
         else:
             return False
