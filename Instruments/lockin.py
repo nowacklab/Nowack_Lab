@@ -85,21 +85,46 @@ class SR830(Instrument):
     @property
     def sensitivity(self):
         '''Get the lockin sensitivity'''
-        multiplier = 1
+        value = _sensitivity_options[int(self.ask('SENS?'))]
         if 'I' in self.input_mode:
-            multiplier = 1e-6 # if we're in a current mode
-        self._sensitivity = _sensitivity_options[int(self.ask('SENS?'))]*multiplier
+            value *= 1e-6 # if we're in a current mode
+        self._sensitivity = value
         return self._sensitivity
 
+        
     @sensitivity.setter
     def sensitivity(self, value):
-        '''Set the sensitivity'''
-        if value > 1:
+        '''
+        Set the sensitivity.
+
+        You can also set this equal to 'up' or 'down' to increment/decrement the sensitivity.
+
+        Note that if in current mode, the sensitivities are in terms of current.
+        '''
+
+        if value == 'up':
+            index = int(self.ask('SENS?')) + 1 # take current sensitivity and increase it
+            if index == len(_sensitivity_options):
+                index -= 1 # highest sensitivity
+            value = _sensitivity_options[index]
+        elif value == 'down':
+            index = int(self.ask('SENS?')) - 1 
+            if index == -1:
+                index += 1 # lowest sensitivity
+            value = _sensitivity_options[index]
+        elif value > 1:
             value = 1
+
+        ## Go to the nearest sensitivity above the set value
         index = abs(np.array([v - value  if (v - value)>=0 else -100000 for v in _sensitivity_options])).argmin() #finds sensitivity just above input
         good_value = _sensitivity_options[index]
 
-        self.write('SENS%d' %_sensitivity_options.index(good_value))
+        new_sensitivity = _sensitivity_options.index(good_value)
+
+        # if 'I' in self.input_mode: # check if in current mode
+        #     new_sensitivity /= 1e-6 # if we're in a current mode
+
+        self.write('SENS%d' %new_sensitivity)
 
     @property
     def amplitude(self):
