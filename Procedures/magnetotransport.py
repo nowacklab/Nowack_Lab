@@ -11,7 +11,7 @@ class RvsB(RvsSomething):
         '''
         Sweep rate and field in T. PPMS uses Oe. Delay is in seconds. Rate is T/second
         '''
-        super().__init__()
+        super().__init__(instruments)
 
         self.Bstart = Bstart
         self.Bend = Bend
@@ -22,22 +22,25 @@ class RvsB(RvsSomething):
         self.do_before()
 
         ## Set initial field if not already there
-        if self.ppms.field != self.Bstart*10000: # FIXME program in some leniency?
+        if abs(self.ppms.field - self.Bstart*10000) > 0.1: # different by more than 0.1 Oersted = 10 uT.
             self.ppms.field = self.Bstart*10000 # T to Oe
             time.sleep(5) # let the field start ramping to Bstart
-            while self.ppms.field_status != 'StablePersistent': # wait until stabilized
+            while self.ppms.field_status in ('Iterating', 'Charging'): # wait until stabilized
                 time.sleep(5)
 
         ## Set sweep to final field
         self.ppms.field_rate = self.sweep_rate*10000# T to Oe
-        # self.ppms.field_mode = 'Persistent' # FIXME
-        # self.ppms.field_approach = 'No O\'Shoot' # FIXME
+        self.ppms.field_mode = 'Persistent'
+        self.ppms.field_approach = 'Linear'
         self.ppms.field = self.Bend*10000 # T to Oe
 
+        while self.ppms.field_status not in ('Iterating', 'Charging'):
+            time.sleep(2) # wait until the field is changing
+
         ## Measure while sweeping
-        while ppms.field_status != 'StablePersistent': # change to when charging only? FIXME
+        while self.ppms.field_status in ('Iterating', 'Charging'):
+            self.B = np.append(self.B, self.ppms.field/10000) # Oe to T
             self.do_measurement(delay=self.delay)
-            self.B = np.append(self.B, ppms.field/10000) # Oe to T
 
         self.do_after()
 
@@ -62,7 +65,7 @@ class RvsVg_B(RvsVg):
         sweep_rate: field sweep rate (Tesla/s)
         Vg_sweep: gate voltage at which to do the field sweep (V)
         '''
-        super().__init__()
+        super().__init__(instruments, Vmin, Vmax, Vstep, delay)
         self.__dict__.update(locals()) # cute way to set attributes from arguments
         del self.self # but includes self, get rid of this!
 
