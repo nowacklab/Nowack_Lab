@@ -292,15 +292,44 @@ class SR830(Instrument):
     def dc_coupling(self):
         self.write('ICPL1')
 
-    def fix_sensitivity(self):
+    def fix_sensitivity(self, OL_thresh=1, UL_thresh=1e-2):
         '''
         Checks to see if the lockin is overloading or underloading (signal/sensivity < 10^-)
         and adjusts the sensitivity accordingly.
+
+        This is basically the same thing as auto gain, except auto gain always chooses
+        the minimum acceptable gain. This allows more leniency when determining when to
+        change senstivity.
+
+        Accepts thresholds for the overload and underload conditions.
         '''
-        while self.is_OL():
+        while self.is_OL(OL_thresh):
+            sens_before = self.sensitivity
             self.sensitivity = 'up'
-        while self.is_UL():
+            time.sleep(3*self.time_constant) # wait for stabilization
+            if sens_before == self.sensitivity:
+                print('Signal larger than max sensitivity!')
+                return # we cannot change sensitivity any more
+        while self.is_UL(UL_thresh):
+            sens_before = self.sensitivity
             self.sensitivity = 'down'
+            time.sleep(3*self.time_constant) # wait for stabilization
+            if sens_before == self.sensitivity:
+                print('Signal not detected on smallest sensitivity!')
+                return # we cannot change sensitivity any more
+
+
+    def get_all(self):
+        table = []
+        for name in ['sensitivity', 'amplitude', 'frequency', 'time_constant']:
+            table.append([name, getattr(self, name)])
+        snapped = self.ask('SNAP?1,2,3,4')
+        snapped = snapped.split(',')
+        table.append(['X', snapped[0]])
+        table.append(['Y', snapped[1]])
+        table.append(['R', snapped[2]])
+        table.append(['theta', snapped[3]])
+        return tabulate(table, headers = ['Parameter', 'Value'])
 
         
     def init_visa(self):
@@ -308,13 +337,16 @@ class SR830(Instrument):
         self._visa_handle.read_termination = '\n'
         self._visa_handle.write('OUTX 1') #1=GPIB
 
-    def is_OL(self):
+    def is_OL(self, thresh=1):
         '''
         Looks at the magnitude and x and y components to determine whether or not we are overloading the lockin.
         There is a status byte that you can read that will supposedly tell you this as well, but it wasn't working reliably.
+        
+        Set the threshold for changing the gain. Note that each sensitivity does allow
+        inputs to be slightly higher than the nominal sensitivity.
         '''
         m = max(abs(np.array([self.R, self.X, self.Y]))/self.sensitivity)
-        if m > 1:
+        if m > thresh:
             return True
         else:
             return False
@@ -330,18 +362,6 @@ class SR830(Instrument):
             return True
         else:
             return False
-
-    def get_all(self):
-        table = []
-        for name in ['sensitivity', 'amplitude', 'frequency', 'time_constant']:
-            table.append([name, getattr(self, name)])
-        snapped = self.ask('SNAP?1,2,3,4')
-        snapped = snapped.split(',')
-        table.append(['X', snapped[0]])
-        table.append(['Y', snapped[1]])
-        table.append(['R', snapped[2]])
-        table.append(['theta', snapped[3]])
-        return tabulate(table, headers = ['Parameter', 'Value'])
 
     def set_out(self, chan, param):
         """ set output on channel [1,2] to parameter [Ch1:['R','X'],Ch2:['Y','theta']]"""
