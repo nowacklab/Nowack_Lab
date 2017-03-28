@@ -7,6 +7,9 @@ e = 1.60217662e-19 #coulombs
 h = 6.626e-34 # m^2*kg/s
 
 class IV(Measurement):
+    '''
+    UNDER CONSTRUCTION
+    '''
     instrument_list = ['lockin_V', 'lockin_I']
 #     I_compliance = 1e-6 # 1 uA
 
@@ -49,11 +52,13 @@ class IV(Measurement):
         ## Do the measurement sweep
         for i, Vs in enumerate(self.Vs):
             self.lockin_V.amplitude = Vs
+            #while self.lockin_V.is_OL():
+                #self.lockin_V.sensitivity = 
             # if self.lockin_V.is_OL() or i==0: # only do auto gain if we're overloading or if it's the first measurement
             #     self.lockin_V.auto_gain()
             # if self.lockin_I.is_OL() or i==0:
             #     self.lockin_I.auto_gain()
-            time.sleep(self.delay)
+            #time.sleep(self.delay)
 
             self.Vx[i] = self.lockin_V.X
             self.Vy[i] = self.lockin_V.Y
@@ -210,7 +215,7 @@ class RvsSomething(Measurement):
         self._num_lockins = num_lockins
         return self._num_lockins
 
-    def do(self, duration=None, delay=1):
+    def do(self, duration=None, delay=1, num_avg = 1, delay_avg = 0):
         '''
         Duration and delay both in seconds.
         Use do_measurement() for each resistance measurement.
@@ -221,13 +226,13 @@ class RvsSomething(Measurement):
             try:
                 while True:
                     self.time = np.append(self.time, time.time()-self.time_start)
-                    self.do_measurement(delay)
+                    self.do_measurement(delay, num_avg, delay_avg)
             except KeyboardInterrupt:
                 pass
         else:
             while True:
                 self.time = np.append(self.time, time.time()-self.time_start)
-                self.do_measurement(delay)
+                self.do_measurement(delay, num_avg, delay_avg)
                 if self.time[-1] >= duration:
                     break
 
@@ -241,31 +246,59 @@ class RvsSomething(Measurement):
         self.setup_plots()
         self.time_start = time.time()
 
+
     def do_after(self):
         '''
         Standard things to do after the loop.
         '''
         time_end = time.time()
         self.time_elapsed = time_end-self.time_start
+        print('Measurement took %.1f minutes' %(self.time_elapsed/60))
         self.save()
 
-    def do_measurement(self, delay=0, plot=True):
+
+    def do_measurement(self, delay=0, num_avg = 1, delay_avg = 0, plot=True):
         '''
         Take a resistance measurement. Usually this will happen in a loop.
         Optional argument to set a delay before the measurement happens.
+        plot argument determines whether data is plotted or not
+        num_avg is the number of data points to be averaged
+        delay_avg is the time delay (seconds) between averages
+
+        Doesn't make a whole lot of sense to average for a measurement vs time, 
+        but the averaging could be useful for a subclass.
         '''
+
         if delay > 0:
             time.sleep(delay)
         self.Ix = np.append(self.Ix, self.lockin_I.X)
         self.Iy = np.append(self.Iy, self.lockin_I.Y)
         for j in range(self.num_lockins):
-            J = j
+            J = j # J is int, j is string (for dictionary)
             j = str(j)
-            self.Vx[j] = np.append(self.Vx[j], getattr(getattr(self, 'lockin_V%i' %(J+1)), 'X'))
-            self.Vy[j] = np.append(self.Vy[j], getattr(getattr(self, 'lockin_V%i' %(J+1)), 'Y'))
-            self.R[j] = np.append(self.R[j], self.Vx[j][-1]/self.Ix[-1])
+
+            ## Take as many measurements as requested and average them
+            vx = 0
+            vy = 0
+            r = 0
+            for i in range(num_avg):
+                getattr(self, 'lockin_V%i' %(J+1)).fix_sensitivity() # make sure we aren't overloading or underloading.
+                vx += getattr(self, 'lockin_V%i' %(J+1)).X
+                vy += getattr(self, 'lockin_V%i' %(J+1)).Y
+                r += vx/self.Ix[-1]
+                if i != num_avg-1: # no reason to sleep the last time!
+                    time.sleep(delay_avg)
+            vx /= num_avg
+            vy /= num_avg
+            r /= num_avg
+
+            self.Vx[j] = np.append(self.Vx[j], vx)
+            self.Vy[j] = np.append(self.Vy[j], vy)
+            self.R[j] = np.append(self.R[j], r)
+
         if plot:
             self.plot()
+
 
     def plot(self):
         super().plot()
@@ -280,12 +313,14 @@ class RvsSomething(Measurement):
         self.fig.tight_layout()
         self.fig.canvas.draw()
 
+
     def setup_lockins(self):
         self.lockin_V1.input_mode = 'A-B'
         self.lockin_I.input_mode = 'I (10^8)'
         self.lockin_V1.reference = 'internal'
 #         self.lockin_V.frequency = 53.01
         self.lockin_I.reference = 'external'
+
 
     def setup_plots(self):
         self.fig, self.ax = plt.subplots()
@@ -326,7 +361,7 @@ class RvsVg(RvsSomething):
 
         self.setup_keithley()
 
-    def do(self):
+    def do(self, num_avg = 1, delay_avg = 0):
         self.do_before()
 
 #         self.keithley.output = 'on' #NO! will cause a spike!
@@ -339,7 +374,7 @@ class RvsVg(RvsSomething):
             self.Vg = np.append(self.Vg, Vg)
             self.keithley.Vout = Vg
             self.Ig = np.append(self.Ig, self.keithley.I)
-            self.do_measurement(delay=self.delay)
+            self.do_measurement(self.delay, num_avg = 1, delay_avg = 0,)
 
         ## Sweep back to zero at 1V/s
         self.keithley.zero_V(1)
@@ -597,7 +632,8 @@ class FourProbeRes(Measurement):
             self.Vy[i] = self.lockin_V.Y
             self.Ix[i] = self.lockin_I.X # unit: A, read value from SR 830 is A
             self.Iy[i] = self.lockin_I.Y
-            self.R[i] = self.Vx[i]/self.Ix[i]
+            #self.R[i] = self.Vx[i]/self.Ix[i]
+            self.R[i] = self.lockin_V.R/self.lockin_I.R
             self.R2p[i] = self.Vs/self.Ix[i]
             # self.plot()
 
@@ -608,7 +644,7 @@ class FourProbeRes(Measurement):
             # print  ("Two-probe R: %.3e ohm.\n" % self.R2p[i])
             self.sumR = self.sumR + self.R[i]
 
-        return (self.sumR-self.R[i])/4
+        return (self.sumR-self.R[0])/4
 
 
         # self.save()
