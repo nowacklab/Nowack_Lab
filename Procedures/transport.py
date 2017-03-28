@@ -215,35 +215,36 @@ class RvsSomething(Measurement):
         self._num_lockins = num_lockins
         return self._num_lockins
 
-    def do(self, duration=None, delay=1, num_avg = 1, delay_avg = 0):
+    def do(self, duration=None, delay=1, num_avg = 1, delay_avg = 0, plot=True):
         '''
         Duration and delay both in seconds.
         Use do_measurement() for each resistance measurement.
         '''
-        self.do_before()
+        self.do_before(plot)
 
         if duration is None:
             try:
                 while True:
                     self.time = np.append(self.time, time.time()-self.time_start)
-                    self.do_measurement(delay, num_avg, delay_avg)
+                    self.do_measurement(delay, num_avg, delay_avg, plot)
             except KeyboardInterrupt:
                 pass
         else:
             while True:
                 self.time = np.append(self.time, time.time()-self.time_start)
-                self.do_measurement(delay, num_avg, delay_avg)
+                self.do_measurement(delay, num_avg, delay_avg, plot)
                 if self.time[-1] >= duration:
                     break
 
         self.do_after()
 
 
-    def do_before(self):
+    def do_before(self, plot=True):
         '''
         Standard things to do before the loop.
         '''
-        self.setup_plots()
+        if plot:
+            self.setup_plots()
         self.time_start = time.time()
 
 
@@ -361,8 +362,8 @@ class RvsVg(RvsSomething):
 
         self.setup_keithley()
 
-    def do(self, num_avg = 1, delay_avg = 0):
-        self.do_before()
+    def do(self, num_avg = 1, delay_avg = 0, plot=True):
+        self.do_before(plot)
 
 #         self.keithley.output = 'on' #NO! will cause a spike!
 
@@ -374,7 +375,7 @@ class RvsVg(RvsSomething):
             self.Vg = np.append(self.Vg, Vg)
             self.keithley.Vout = Vg
             self.Ig = np.append(self.Ig, self.keithley.I)
-            self.do_measurement(self.delay, num_avg = 1, delay_avg = 0,)
+            self.do_measurement(self.delay, num_avg, delay_avg, plot)
 
         ## Sweep back to zero at 1V/s
         self.keithley.zero_V(1)

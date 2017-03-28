@@ -70,7 +70,7 @@ from Nowack_Lab.Procedures.scanspectra import Scanspectra
 from Nowack_Lab.Procedures.squidIV import SquidIV
 from Nowack_Lab.Procedures.touchdown import Touchdown
 from Nowack_Lab.Procedures.transport import RvsVg, RvsSomething, IV, IVvsVg, FourProbeRes
-from Nowack_Lab.Procedures.magnetotransport import RvsB
+from Nowack_Lab.Procedures.magnetotransport import RvsB, RvsVg_B
 from Nowack_Lab.Instruments.attocube import Attocube
 from Nowack_Lab.Instruments.keithley import Keithley2400, Keithley2600, KeithleyPPMS
 from Nowack_Lab.Instruments.montana import Montana
