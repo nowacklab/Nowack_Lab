@@ -252,6 +252,13 @@ class RvsSomething(Measurement):
         '''
         Standard things to do after the loop.
         '''
+
+        # # Make sure arrays in ascending order
+        # if getattr(self, self.something)[-1] < getattr(self, self.something)[0]:
+        #      getattr(self, self.something) = getattr(self, self.something)[-1]
+        #      for j in range(self.num_lockins):
+        #         self.R[str(j)] = self.R[str(j)][-1]
+
         time_end = time.time()
         self.time_elapsed = time_end-self.time_start
         print('Measurement took %.1f minutes' %(self.time_elapsed/60))
@@ -381,6 +388,7 @@ class RvsVg(RvsSomething):
         ## Sweep back to zero at 1V/s
         if zero:
             self.keithley.zero_V(1)
+
         self.do_after()
 
 
@@ -460,12 +468,11 @@ class RvsVg(RvsSomething):
         self.fig.canvas.draw()
 
     def setup_keithley(self):
-        i = input('Set up keithley manually? (y)/n')
-        if i == 'n': # only do this setup if requested
-            self.keithley.zero_V(1) # 1V/s
-            self.keithley.source = 'V'
-            self.keithley.I_compliance = 1e-6
-            self.keithley.Vout_range = max(abs(self.Vstart), abs(self.Vend))
+        pass
+        # self.keithley.zero_V(1) # 1V/s
+        # self.keithley.source = 'V'
+        # self.keithley.I_compliance = 1e-6
+        # self.keithley.Vout_range = max(abs(self.Vstart), abs(self.Vend))
 
     def setup_plots(self):
         super().setup_plots()

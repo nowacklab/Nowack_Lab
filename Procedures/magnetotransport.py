@@ -26,11 +26,14 @@ class RvsB(RvsSomething):
         if abs(self.ppms.field - self.Bstart*10000) > 0.1: # different by more than 0.1 Oersted = 10 uT.
             self.ppms.field = self.Bstart*10000 # T to Oe
             time.sleep(5) # let the field start ramping to Bstart
-            while self.ppms.field_status in ('Iterating', 'Charging'): # wait until stabilized
+            print('Waiting for field to sweep to Bstart...')
+            while self.ppms.field_status in ('Iterating', 'Charging', 'WarmingSwitch', 'Unknown'): # wait until stabilized
                 time.sleep(5)
 
         if abs(self.Bstart-self.Bend)*10000 < 0.1:
             return # sweeping between the same two fields, no point in doing the measurement
+
+        print('Starting field sweep...')
 
         ## Set sweep to final field
         self.ppms.field_rate = self.sweep_rate*10000# T to Oe
@@ -51,15 +54,15 @@ class RvsB(RvsSomething):
 class RvsVg_B(RvsVg):
     instrument_list = list(set(RvsB.instrument_list) | set(RvsVg.instrument_list))
 
-    def __init__(self, instruments = {}, Vmin = -40, Vmax = 40, Vstep=.1,
-                delay=1, Bstart = 0, Bend = 14, Bstep=1, Bdelay=1,sweep_rate=.01, Vg_sweep=0):
+    def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1,
+                delay=1, Bstart = 0, Bend = 14, Bstep=1, Bdelay=1,sweep_rate=.01, Vg_sweep=None):
         '''
         Does gatesweeps at a series of magnetic fields.
         Stores the full gatesweeps at each field, as well as a RvsB curve done
         at a particular gate voltage between gatesweeps.
 
-        Vmin: bottom of gatesweep
-        Vmax: top of gatesweep
+        Vstart: start of gatesweep
+        Vend: end of gatesweep
         Vstep: gatesweep voltage step size
         delay: gatesweep delay time
         Bstart: starting field (Tesla)
@@ -67,30 +70,34 @@ class RvsVg_B(RvsVg):
         Bstep: field step between gatesweeps (Tesla)
         Bdelay: delay between resistance measurements during fieldsweep
         sweep_rate: field sweep rate (Tesla/s)
-        Vg_sweep: gate voltage at which to do the field sweep (V)
+        Vg_sweep: gate voltage at which to do the field sweep (V). Leave at None if you don't care.
         '''
-        super().__init__(instruments, Vmin, Vmax, Vstep, delay)
+        super().__init__(instruments, Vstart, Vend, Vstep, delay)
         self.__dict__.update(locals()) # cute way to set attributes from arguments
         del self.self # but includes self, get rid of this!
 
         self.B = np.linspace(Bstart, Bend, round(abs(Bstart-Bend)/Bstep)+1)
-        self.gs = RvsVg(self.instruments, self.Vmin, self.Vmax, self.Vstep, self.delay)
+        self.gs = RvsVg(self.instruments, self.Vstart, self.Vend, self.Vstep, self.delay)
         
         self.Vg = self.gs.Vg_values
 
-        self.R2D = {str(i): np.full((len(self.Vg), len(self.B)), np.nan) for i in range(self.num_lockins)} 
-        
+        self.R2D = {str(i): np.full((len(self.B), len(self.Vg)), np.nan) for i in range(self.num_lockins)} 
+        ## remember: shape of matrix given in y,x. So B is on the y axis and Vg on the x axis.
+
         # store full field sweep data
         self.Bfull = np.array([])
         for j in range(self.num_lockins):
             setattr(self, 'R%ifull' %j, np.array([]))
 
 
-    def do(self):
+    def do(self, ):
         self.do_before()
 
         for i, B in enumerate(self.B):
-            self.keithley.sweep_V(self.keithley.V, self.Vg_sweep, .1, 1) # set desired gate voltage for the field sweep
+            if self.Vg_sweep is not None:
+                self.keithley.sweep_V(self.keithley.V, self.Vg_sweep, .1, 1) # set desired gate voltage for the field sweep
+            else: # otherwise we will go as quickly as possible and reverse every other gatesweep
+                self.Vstart, self.Vend = self.Vend, self.Vstart
 
             ## reset field sweep
             self.fs = RvsB(self.instruments, self.ppms.field/10000, B, 1, self.sweep_rate)
@@ -103,11 +110,14 @@ class RvsVg_B(RvsVg):
                 r = np.append(r, self.fs.R[str(j)])
 
             ## reset arrays for gatesweep
-            self.gs = RvsVg(self.instruments, self.Vmin, self.Vmax, self.Vstep, self.delay)
+            self.gs = RvsVg(self.instruments, self.Vstart, self.Vend, self.Vstep, self.delay)
             self.gs.do()
 
             for j in range(self.num_lockins):
-                self.R2D[str(j)][:, i] = self.gs.R[str(j)] # first index is voltage channel, second is Vg, third is B
+                if self.Vstart > self.Vend:
+                    self.R2D[str(j)][i, :] = self.gs.R[str(j)][::-1] # reverse if we did the sweep backwards
+                else:
+                    self.R2D[str(j)][i, :] = self.gs.R[str(j)] # first index is voltage channel, second is B, third is Vg. Reve
             self.plot()
 
         self.do_after()
@@ -116,8 +126,8 @@ class RvsVg_B(RvsVg):
         Measurement.plot(self) # don't want to do RvsVg plotting
 
         for i in range(len(self.ax.keys())): # rows == different channels
-            plot_mpl.update2D(self.im[str(i)]['0'], np.abs(self.R2D[str(i)].T), equal_aspect=False) # FIXME - shouldn't need to transpose
-            plot_mpl.update2D(self.im[str(i)]['1'], np.log(np.abs(self.R2D[str(i)].T)), equal_aspect=False)
+            plot_mpl.update2D(self.im[str(i)]['0'], np.abs(self.R2D[str(i)]), equal_aspect=False)
+            plot_mpl.update2D(self.im[str(i)]['1'], np.log(np.abs(self.R2D[str(i)])), equal_aspect=False)
 
         self.fig.tight_layout()
         self.fig.canvas.draw()
@@ -136,7 +146,7 @@ class RvsVg_B(RvsVg):
             self.im[i]['0'] = plot_mpl.plot2D(ax['0'], 
                                                 self.Vg, 
                                                 self.B, 
-                                                np.abs(self.R2D[i].T), 
+                                                self.R2D[i].T, 
                                                 interpolation = 'none', 
                                                 cmap='cubehelix', 
                                                 xlabel='Vg (V)', 
@@ -151,7 +161,7 @@ class RvsVg_B(RvsVg):
                                                 cmap='cubehelix', 
                                                 xlabel='Vg (V)',
                                                 ylabel= 'B (T)',
-                                                clabel='log(R%s (Ohm))' %i,
+                                                clabel='log(|R%s (Ohm)|)' %i,
                                                 equal_aspect=False)
 
             for j in range(2):
