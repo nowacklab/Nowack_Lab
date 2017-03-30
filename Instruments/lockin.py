@@ -292,9 +292,9 @@ class SR830(Instrument):
     def dc_coupling(self):
         self.write('ICPL1')
 
-    def fix_sensitivity(self, OL_thresh=1, UL_thresh=1e-2):
+    def fix_sensitivity(self, OL_thresh=1, UL_thresh=0.1):
         '''
-        Checks to see if the lockin is overloading or underloading (signal/sensivity < 10^-)
+        Checks to see if the lockin is overloading or underloading (signal/sensivity < 0.1)
         and adjusts the sensitivity accordingly.
 
         This is basically the same thing as auto gain, except auto gain always chooses

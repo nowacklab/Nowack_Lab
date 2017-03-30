@@ -14,6 +14,7 @@ def in_ipynb():
 ## For interactive matplotlib plots
 if in_ipynb():
     ip.magic('matplotlib notebook') # matplotlib notebook....
+    # ip.magic('matplotlib inline')
 else:
     ip.magic('matplotlib qt') # if not in a notebook
 
