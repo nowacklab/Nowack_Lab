@@ -13,10 +13,10 @@ class IV(Measurement):
     instrument_list = ['lockin_V', 'lockin_I']
 #     I_compliance = 1e-6 # 1 uA
 
-    def __init__(self, instruments = {}, Vmin = 0, Vmax = 1, Vstep=.1, delay=1):
+    def __init__(self, instruments = {}, Vstart = 0, Vend = 1, Vstep=.1, delay=1):
         '''
-        Vmin: smallest amplitude output from lockin
-        Vmax: largest amplitude output from lockin
+        Vstart: starting amplitude output from lockin
+        Vend: ending amplitude output from lockin
         Vstep: amplitude step
         delay: time between changing voltage. Make sure this is 5x longer than time constant or 1/frequency)
 
@@ -26,12 +26,12 @@ class IV(Measurement):
         super().__init__()
         self._load_instruments(instruments)
 
-        self.Vmin = Vmin
-        self.Vmax = Vmax
+        self.Vstart = Vstart
+        self.Vend = Vend
         self.Vstep = Vstep
         self.delay = delay
 
-        self.Vs = np.linspace(Vmin, Vmax, round(abs(Vmax-Vmin)/Vstep)+1)
+        self.Vs = np.linspace(Vstart, Vend, round(abs(Vend-Vstart)/Vstep)+1)
 
         self.Vx = np.full(self.Vs.shape, np.nan)
         self.Vy = np.full(self.Vs.shape, np.nan)
@@ -46,8 +46,8 @@ class IV(Measurement):
         if self.fig == None:
             self.setup_plots()
 
-        ## Sweep to Vmin
-        self.lockin_V.sweep(self.lockin_V.amplitude, self.Vmin, .01, .1)
+        ## Sweep to Vstart
+        self.lockin_V.sweep(self.lockin_V.amplitude, self.Vstart, .01, .1)
 
         ## Do the measurement sweep
         for i, Vs in enumerate(self.Vs):
@@ -108,10 +108,10 @@ class IVvsVg(Measurement):
     instrument_list = ['keithley', 'lockin_V', 'lockin_I']
     I_compliance = 1e-6 # 1 uA
 
-    def __init__(self, instruments = {}, Vmin = 0, Vmax = 1, Vstep=.1, delay=1, Vgmin=0, Vgmax=1, Vgstep=.1):
+    def __init__(self, instruments = {}, Vstart = 0, Vend = 1, Vstep=.1, delay=1, Vgmin=0, Vgmax=1, Vgstep=.1):
         '''
-        Vmin: smallest amplitude output from lockin
-        Vmax: largest amplitude output from lockin
+        Vstart: starting amplitude output from lockin
+        Vend: ending amplitude output from lockin
         Vstep: amplitude step
 
         Vgmin: smallest backgate voltage
@@ -126,7 +126,7 @@ class IVvsVg(Measurement):
         super().__init__()
         self._load_instruments(instruments)
 
-        self.IV = IV(instruments, Vmin, Vmax, Vstep, delay)
+        self.IV = IV(instruments, Vstart, Vend, Vstep, delay)
 
         self.Vgmin = Vgmin
         self.Vgmax = Vgmax
@@ -272,6 +272,7 @@ class RvsSomething(Measurement):
 
         if delay > 0:
             time.sleep(delay)
+
         self.Ix = np.append(self.Ix, self.lockin_I.X)
         self.Iy = np.append(self.Iy, self.lockin_I.Y)
         for j in range(self.num_lockins):
@@ -349,26 +350,26 @@ class RvsVg(RvsSomething):
     something = 'Vg'
     something_units = 'V'
 
-    def __init__(self, instruments = {}, Vmin = -40, Vmax = 40, Vstep=.1, delay=1):
+    def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1, delay=1):
         super().__init__(instruments)
 
-        self.Vmin = Vmin
-        self.Vmax = Vmax
+        self.Vmin = Vstart
+        self.Vend = Vend
         self.Vstep = Vstep
         self.delay = delay
 
-        self.Vg_values = np.linspace(Vmin, Vmax, round(abs(Vmax-Vmin)/Vstep)+1)
+        self.Vg_values = np.linspace(Vstart, Vend, round(abs(Vend-Vstart)/Vstep)+1)
         self.Ig = np.array([])
 
         self.setup_keithley()
 
-    def do(self, num_avg = 1, delay_avg = 0, plot=True):
+    def do(self, num_avg = 1, delay_avg = 0, zero=False, plot=True):
         self.do_before(plot)
 
 #         self.keithley.output = 'on' #NO! will cause a spike!
 
-        ## Sweep down to Vmin
-        self.keithley.sweep_V(self.keithley.V, self.Vmin, .1, 1)
+        ## Sweep to Vstart
+        self.keithley.sweep_V(self.keithley.V, self.Vstart, .1, 1)
 
         ## Do the measurement sweep
         for i, Vg in enumerate(self.Vg_values):
@@ -378,7 +379,8 @@ class RvsVg(RvsSomething):
             self.do_measurement(self.delay, num_avg, delay_avg, plot)
 
         ## Sweep back to zero at 1V/s
-        self.keithley.zero_V(1)
+        if zero:
+            self.keithley.zero_V(1)
         self.do_after()
 
 
@@ -458,10 +460,12 @@ class RvsVg(RvsSomething):
         self.fig.canvas.draw()
 
     def setup_keithley(self):
-        self.keithley.zero_V(1) # 1V/s
-        self.keithley.source = 'V'
-        self.keithley.I_compliance = 1e-6
-        self.keithley.Vout_range = max(abs(self.Vmin), abs(self.Vmax))
+        i = input('Set up keithley manually? (y)/n')
+        if i == 'n': # only do this setup if requested
+            self.keithley.zero_V(1) # 1V/s
+            self.keithley.source = 'V'
+            self.keithley.I_compliance = 1e-6
+            self.keithley.Vout_range = max(abs(self.Vstart), abs(self.Vend))
 
     def setup_plots(self):
         super().setup_plots()
@@ -504,8 +508,8 @@ class FourProbeResSweep(Measurement):
         if self.fig == None:
             self.setup_plots()
             self.sumR = 0
-        ## Sweep to Vmin
-        ## self.lockin_V.sweep(self.lockin_V.amplitude, self.Vmin, .01, .1)
+        ## Sweep to Vstart
+        ## self.lockin_V.sweep(self.lockin_V.amplitude, self.Vstart, .01, .1)
         ## Do the measurement sweep
         for i, Vs in enumerate(self.Vs):
             self.lockin_V.amplitude = Vs
@@ -618,8 +622,8 @@ class FourProbeRes(Measurement):
         if self.fig == None:
             # self.setup_plots()
             self.sumR = 0
-        ## Sweep to Vmin
-        ## self.lockin_V.sweep(self.lockin_V.amplitude, self.Vmin, .01, .1)
+        ## Sweep to Vstart
+        ## self.lockin_V.sweep(self.lockin_V.amplitude, self.Vstart, .01, .1)
         ## Do the measurement sweep
         for i  in [0,1,2,3,4]:
             self.lockin_V.amplitude = self.Vs
