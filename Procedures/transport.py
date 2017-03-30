@@ -353,7 +353,7 @@ class RvsVg(RvsSomething):
     def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1, delay=1):
         super().__init__(instruments)
 
-        self.Vmin = Vstart
+        self.Vstart = Vstart
         self.Vend = Vend
         self.Vstep = Vstep
         self.delay = delay
