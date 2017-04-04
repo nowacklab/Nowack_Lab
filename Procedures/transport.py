@@ -37,11 +37,12 @@ class IV(Measurement):
         print('David')
 
 
-    def do(self):
+    def do(self, plot=True, zero = True):
         print("begin do")
         #if self.fig == None:
         #    self.setup_plots()
-        self.setup_plots();
+        if(plot):
+            self.setup_plots();
 
         ## Sweep to Vmin
         self.lockin_V.sweep(self.lockin_V.amplitude, self.Vmin, .01, .1)
@@ -61,14 +62,17 @@ class IV(Measurement):
             self.Ix[i] = self.lockin_I.X
             self.Iy[i] = self.lockin_I.Y
 
-        self.plot()
+        if(plot):
+            self.plot()
 
         self.R = np.array([self.Vx[i]/self.Ix[i] for i in range(2,len(self.Vx))]);
         self.Rstd = np.std(self.R);
         self.Rave = np.mean(self.R);
         print(self.Rave, self.Rstd)
         self.save()
-        self.lockin_V.zero();
+
+        if(zero):
+            self.lockin_V.zero();
 
     def plot(self):
         super().plot()
