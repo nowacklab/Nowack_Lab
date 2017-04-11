@@ -7,13 +7,16 @@ e = 1.60217662e-19 #coulombs
 h = 6.626e-34 # m^2*kg/s
 
 class IV(Measurement):
+    '''
+    UNDER CONSTRUCTION
+    '''
     instrument_list = ['lockin_V', 'lockin_I']
 #     I_compliance = 1e-6 # 1 uA
 
-    def __init__(self, instruments = {}, Vmin = 0, Vmax = 1, Vstep=.1, delay=1):
+    def __init__(self, instruments = {}, Vstart = 0, Vend = 1, Vstep=.1, delay=1):
         '''
-        Vmin: smallest amplitude output from lockin
-        Vmax: largest amplitude output from lockin
+        Vstart: starting amplitude output from lockin
+        Vend: ending amplitude output from lockin
         Vstep: amplitude step
         delay: time between changing voltage. Make sure this is 5x longer than time constant or 1/frequency)
 
@@ -23,12 +26,12 @@ class IV(Measurement):
         super().__init__()
         self._load_instruments(instruments)
 
-        self.Vmin = Vmin
-        self.Vmax = Vmax
+        self.Vstart = Vstart
+        self.Vend = Vend
         self.Vstep = Vstep
         self.delay = delay
 
-        self.Vs = np.linspace(Vmin, Vmax, round(abs(Vmax-Vmin)/Vstep)+1)
+        self.Vs = np.linspace(Vstart, Vend, round(abs(Vend-Vstart)/Vstep)+1)
 
         self.Vx = np.full(self.Vs.shape, np.nan)
         self.Vy = np.full(self.Vs.shape, np.nan)
@@ -43,17 +46,19 @@ class IV(Measurement):
         if self.fig == None:
             self.setup_plots()
 
-        ## Sweep to Vmin
-        self.lockin_V.sweep(self.lockin_V.amplitude, self.Vmin, .01, .1)
+        ## Sweep to Vstart
+        self.lockin_V.sweep(self.lockin_V.amplitude, self.Vstart, .01, .1)
 
         ## Do the measurement sweep
         for i, Vs in enumerate(self.Vs):
             self.lockin_V.amplitude = Vs
+            #while self.lockin_V.is_OL():
+                #self.lockin_V.sensitivity = 
             # if self.lockin_V.is_OL() or i==0: # only do auto gain if we're overloading or if it's the first measurement
             #     self.lockin_V.auto_gain()
             # if self.lockin_I.is_OL() or i==0:
             #     self.lockin_I.auto_gain()
-            time.sleep(self.delay)
+            #time.sleep(self.delay)
 
             self.Vx[i] = self.lockin_V.X
             self.Vy[i] = self.lockin_V.Y
@@ -103,10 +108,10 @@ class IVvsVg(Measurement):
     instrument_list = ['keithley', 'lockin_V', 'lockin_I']
     I_compliance = 1e-6 # 1 uA
 
-    def __init__(self, instruments = {}, Vmin = 0, Vmax = 1, Vstep=.1, delay=1, Vgmin=0, Vgmax=1, Vgstep=.1):
+    def __init__(self, instruments = {}, Vstart = 0, Vend = 1, Vstep=.1, delay=1, Vgmin=0, Vgmax=1, Vgstep=.1):
         '''
-        Vmin: smallest amplitude output from lockin
-        Vmax: largest amplitude output from lockin
+        Vstart: starting amplitude output from lockin
+        Vend: ending amplitude output from lockin
         Vstep: amplitude step
 
         Vgmin: smallest backgate voltage
@@ -121,7 +126,7 @@ class IVvsVg(Measurement):
         super().__init__()
         self._load_instruments(instruments)
 
-        self.IV = IV(instruments, Vmin, Vmax, Vstep, delay)
+        self.IV = IV(instruments, Vstart, Vend, Vstep, delay)
 
         self.Vgmin = Vgmin
         self.Vgmax = Vgmax
@@ -157,43 +162,32 @@ class IVvsVg(Measurement):
         self.keithley.I_compliance = self.I_compliance
         self.keithley.Vout_range = abs(self.Vg).max()
 
-
-class RvsVg(Measurement):
+class RvsSomething(Measurement):
     '''
     Monitor R = lockin_V.X/lockin_I.Y from two different lockins.
     Can supply additional lockin_V2, lockin_V3, etc to montior more voltages
     (plotted as resistance)
-    '''
-    instrument_list = ['keithley', 'lockin_V', 'lockin_I']
-    I_compliance = 1e-6 # 1 uA
+    This is a superclass for measuring resistance vs different things
+    (e.g. gate voltage, temperature, field...)
+    By default, this class measures vs. time (useful for timing subclasses!)
 
-    def __init__(self, instruments = {}, Vmin = -10, Vmax = 10, Vstep=.1, delay=1):
+    Make sure to change the name of the "something" you're measuring vs!
+    '''
+    instrument_list = ['lockin_V', 'lockin_I']
+    something='time'
+    something_units = 's'
+
+    def __init__(self, instruments = {}):
         super().__init__()
         self._load_instruments(instruments)
 
-        self.Vmin = Vmin
-        self.Vmax = Vmax
-        self.Vstep = Vstep
-        self.delay = delay
+        self.Vx = {str(i): np.array([]) for i in range(self.num_lockins)} # one for each voltage channel
+        self.Vy = {str(i): np.array([]) for i in range(self.num_lockins)} # use a dictionary to enable saving
+        self.Ix = np.array([])
+        self.Iy = np.array([])
+        self.R = {str(i): np.array([]) for i in range(self.num_lockins)} 
+        setattr(self, self.something, np.array([]))
 
-        self.Vg = np.linspace(Vmin, Vmax, round(abs(Vmax-Vmin)/Vstep)+1)
-
-        ## Decided to not measure during sweeps to/from min/max
-        # Vup = np.linspace(0, Vmax, round(abs(Vmax)/Vstep), endpoint=False)
-        # Vdown = np.linspace(Vmax, Vmin, round(abs(Vmax-Vmin)/Vstep), endpoint=False)
-        # Vup2 = np.linspace(Vmin, 0, round(abs(Vmin)/Vstep), endpoint=False)
-
-        # self.Vg = np.concatenate((Vup, Vdown, Vup2))
-
-        self.Ig = np.full(self.Vg.shape, np.nan)
-        self.Vx = [np.full(self.Vg.shape, np.nan)]*self.num_lockins # one for each voltage channel
-        self.Vy = [np.full(self.Vg.shape, np.nan)]*self.num_lockins # this array is (num channels) x (num gate voltages)
-        self.Ix = np.full(self.Vg.shape, np.nan)
-        self.Iy = np.full(self.Vg.shape, np.nan)
-        self.R = [np.full(self.Vg.shape, np.nan)]*self.num_lockins
-
-
-        self.setup_keithley()
         self.setup_lockins()
 
     def _load_instruments(self, instruments={}):
@@ -208,43 +202,194 @@ class RvsVg(Measurement):
                 setattr(self, instrument, instruments[instrument])
             else:
                 setattr(self, instrument, None)
-        self.num_lockins=0
         for name, handle in instruments.items():
-            if name[:-1] == 'lockin_V': # e.g. lockin_V2
+            if name[:-1] == 'lockin_V': # e.g. lockin_V2, cut off the "2"
                 setattr(self, name, handle)
-                self.num_lockins += 1
+
+    @property
+    def num_lockins(self):
+        num_lockins=0
+        for name, handle in self.__dict__.items():
+            if name[:-1] == 'lockin_V': # e.g. lockin_V2, cut off the "2"
+                num_lockins += 1
+        self._num_lockins = num_lockins
+        return self._num_lockins
+
+    def do(self, duration=None, delay=1, num_avg = 1, delay_avg = 0, plot=True):
+        '''
+        Duration and delay both in seconds.
+        Use do_measurement() for each resistance measurement.
+        '''
+        self.do_before(plot)
+
+        if duration is None:
+            try:
+                while True:
+                    self.time = np.append(self.time, time.time()-self.time_start)
+                    self.do_measurement(delay, num_avg, delay_avg, plot)
+            except KeyboardInterrupt:
+                pass
+        else:
+            while True:
+                self.time = np.append(self.time, time.time()-self.time_start)
+                self.do_measurement(delay, num_avg, delay_avg, plot)
+                if self.time[-1] >= duration:
+                    break
+
+        self.do_after()
 
 
-    def do(self):
-        self.setup_plots()
+    def do_before(self, plot=True):
+        '''
+        Standard things to do before the loop.
+        '''
+        if plot:
+            self.setup_plots()
+        self.time_start = time.time()
+
+
+    def do_after(self):
+        '''
+        Standard things to do after the loop.
+        '''
+
+        # # Make sure arrays in ascending order
+        # if getattr(self, self.something)[-1] < getattr(self, self.something)[0]:
+        #      getattr(self, self.something) = getattr(self, self.something)[-1]
+        #      for j in range(self.num_lockins):
+        #         self.R[str(j)] = self.R[str(j)][-1]
+
+        time_end = time.time()
+        self.time_elapsed = time_end-self.time_start
+        print('Measurement took %.1f minutes' %(self.time_elapsed/60))
+        self.save()
+
+
+    def do_measurement(self, delay=0, num_avg = 1, delay_avg = 0, plot=True):
+        '''
+        Take a resistance measurement. Usually this will happen in a loop.
+        Optional argument to set a delay before the measurement happens.
+        plot argument determines whether data is plotted or not
+        num_avg is the number of data points to be averaged
+        delay_avg is the time delay (seconds) between averages
+
+        Doesn't make a whole lot of sense to average for a measurement vs time, 
+        but the averaging could be useful for a subclass.
+        '''
+
+        if delay > 0:
+            time.sleep(delay)
+
+        self.Ix = np.append(self.Ix, self.lockin_I.X)
+        self.Iy = np.append(self.Iy, self.lockin_I.Y)
+        for j in range(self.num_lockins):
+            J = j # J is int, j is string (for dictionary)
+            j = str(j)
+
+            ## Take as many measurements as requested and average them
+            vx = 0
+            vy = 0
+            r = 0
+            for i in range(num_avg):
+                getattr(self, 'lockin_V%i' %(J+1)).fix_sensitivity() # make sure we aren't overloading or underloading.
+                vx += getattr(self, 'lockin_V%i' %(J+1)).X
+                vy += getattr(self, 'lockin_V%i' %(J+1)).Y
+                r += vx/self.Ix[-1]
+                if i != num_avg-1: # no reason to sleep the last time!
+                    time.sleep(delay_avg)
+            vx /= num_avg
+            vy /= num_avg
+            r /= num_avg
+
+            self.Vx[j] = np.append(self.Vx[j], vx)
+            self.Vy[j] = np.append(self.Vy[j], vy)
+            self.R[j] = np.append(self.R[j], r)
+
+        if plot:
+            self.plot()
+
+
+    def plot(self):
+        super().plot()
+
+        for i, line in self.lines.items():
+            line.set_xdata(getattr(self, self.something))
+            line.set_ydata(self.R[i])
+
+        self.ax.relim()
+        self.ax.autoscale_view(True,True,True)
+
+        self.fig.tight_layout()
+        self.fig.canvas.draw()
+
+
+    def setup_lockins(self):
+        self.lockin_V1.input_mode = 'A-B'
+        self.lockin_I.input_mode = 'I (10^8)'
+        self.lockin_V1.reference = 'internal'
+#         self.lockin_V.frequency = 53.01
+        self.lockin_I.reference = 'external'
+
+
+    def setup_plots(self):
+        self.fig, self.ax = plt.subplots()
+        self.ax.set_xlabel('%s (%s)' %(self.something, self.something_units), fontsize=20)
+        self.ax.set_ylabel('R (Ohm)', fontsize=20)
+
+        ## plot all the resistances
+        self.lines = {}
+        for j in range(self.num_lockins):
+            j = str(j)
+            line =  self.ax.plot(getattr(self, self.something), self.R[j])
+            self.lines[j] = line[0]
+
+        self.ax.legend(['R%i' %(i+1) for i in range(self.num_lockins)], loc='best')
+        self.ax.set_title(self.filename)
+
+
+class RvsVg(RvsSomething):
+    '''
+    Monitor R = lockin_V.X/lockin_I.Y from two different lockins.
+    Can supply additional lockin_V2, lockin_V3, etc to montior more voltages
+    (plotted as resistance)
+    '''
+    instrument_list = ['keithley', 'lockin_V', 'lockin_I']
+    something = 'Vg'
+    something_units = 'V'
+
+    def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1, delay=1):
+        super().__init__(instruments)
+
+        self.Vstart = Vstart
+        self.Vend = Vend
+        self.Vstep = Vstep
+        self.delay = delay
+
+        self.Vg_values = np.linspace(Vstart, Vend, round(abs(Vend-Vstart)/Vstep)+1)
+        self.Ig = np.array([])
+
+        self.setup_keithley()
+
+    def do(self, num_avg = 1, delay_avg = 0, zero=False, plot=True):
+        self.do_before(plot)
 
 #         self.keithley.output = 'on' #NO! will cause a spike!
 
-        ## Sweep down to Vmin
-        self.keithley.sweep_V(0, self.Vmin, .1, 1)
+        ## Sweep to Vstart
+        self.keithley.sweep_V(self.keithley.V, self.Vstart, .1, 1)
 
         ## Do the measurement sweep
-        for i, Vg in enumerate(self.Vg):
+        for i, Vg in enumerate(self.Vg_values):
+            self.Vg = np.append(self.Vg, Vg)
             self.keithley.Vout = Vg
-            time.sleep(self.delay)
-
-            self.Ig[i] = self.keithley.I
-
-            self.Ix[i] = self.lockin_I.X
-            self.Iy[i] = self.lockin_I.Y
-            for j in self.num_lockins:
-                self.Vx[j][i] = getattr(self, 'lockin_V%i' %j, 'X')
-                self.Vy[j][i] = getattr(self, 'lockin_V%i' %j, 'Y')
-                self.R[j][i] = self.Vx[j][i]/self.Ix[j][i]
-
-            self.plot()
+            self.Ig = np.append(self.Ig, self.keithley.I)
+            self.do_measurement(self.delay, num_avg, delay_avg, plot)
 
         ## Sweep back to zero at 1V/s
-        self.keithley.zero_V(1)
-#         self.keithley.current = 0
-#         self.keithley.output = 'off'
-        # self.IV.ax.legend(labels=self.Vg, title='Vg')
-        self.save()
+        if zero:
+            self.keithley.zero_V(1)
+
+        self.do_after()
 
 
     def calc_mobility(self, num_squares=1):
@@ -314,13 +459,8 @@ class RvsVg(Measurement):
     def plot(self):
         super().plot()
 
-        for i, line in enumerate(self.lines):
-            line.set_ydata(self.R[i])
+        self.lineIg.set_xdata(self.Vg)
         self.lineIg.set_ydata(self.Ig*1e9)
-
-        self.ax.relim()
-        self.ax.autoscale_view(True,True,True)
-
         self.axIg.relim()
         self.axIg.autoscale_view(True,True,True)
 
@@ -328,40 +468,20 @@ class RvsVg(Measurement):
         self.fig.canvas.draw()
 
     def setup_keithley(self):
-        self.keithley.zero_V(1) # 1V/s
-        self.keithley.source = 'V'
-        self.keithley.I_compliance = self.I_compliance
-        self.keithley.Vout_range = abs(self.Vg).max()
-
-    def setup_lockins(self):
-        self.lockin_V.input_mode = 'A-B'
-        self.lockin_I.input_mode = 'I (10^8)'
-        self.lockin_V.reference = 'internal'
-#         self.lockin_V.frequency = 53.01
-        self.lockin_I.reference = 'external'
+        pass
+        # self.keithley.zero_V(1) # 1V/s
+        # self.keithley.source = 'V'
+        # self.keithley.I_compliance = 1e-6
+        # self.keithley.Vout_range = max(abs(self.Vstart), abs(self.Vend))
 
     def setup_plots(self):
-        self.fig, self.ax = plt.subplots()
-        self.ax.set_xlabel('Vg (V)', fontsize=20)
-        self.ax.set_ylabel('R (Ohm)', fontsize=20)
+        super().setup_plots()
 
         self.axIg = self.ax.twinx()
         self.axIg.set_ylabel('Ig (nA)', fontsize=20, color='r', alpha=0.2)
 
-#         self.ax.set_xlim(min(self.Vg), max(self.Vg))
-
-        ## plot all the resistances
-        self.lines = []
-        for j in self.num_lockins:
-            line =  self.ax.plot(self.Vg, self.R[j])
-            self.lines[j] = line[0]
-
-        ## plot gate leakage
         lineIg = self.axIg.plot(self.Vg, self.Ig*1e9, 'r', alpha=0.2)
         self.lineIg = lineIg[0]
-
-        self.ax.legend(['R%i' %i for i in range(self.num_lockins)], loc='best')
-        self.ax.set_title(self.filename)
 
 
 class FourProbeResSweep(Measurement):
@@ -395,8 +515,8 @@ class FourProbeResSweep(Measurement):
         if self.fig == None:
             self.setup_plots()
             self.sumR = 0
-        ## Sweep to Vmin
-        ## self.lockin_V.sweep(self.lockin_V.amplitude, self.Vmin, .01, .1)
+        ## Sweep to Vstart
+        ## self.lockin_V.sweep(self.lockin_V.amplitude, self.Vstart, .01, .1)
         ## Do the measurement sweep
         for i, Vs in enumerate(self.Vs):
             self.lockin_V.amplitude = Vs
@@ -509,8 +629,8 @@ class FourProbeRes(Measurement):
         if self.fig == None:
             # self.setup_plots()
             self.sumR = 0
-        ## Sweep to Vmin
-        ## self.lockin_V.sweep(self.lockin_V.amplitude, self.Vmin, .01, .1)
+        ## Sweep to Vstart
+        ## self.lockin_V.sweep(self.lockin_V.amplitude, self.Vstart, .01, .1)
         ## Do the measurement sweep
         for i  in [0,1,2,3,4]:
             self.lockin_V.amplitude = self.Vs
@@ -524,7 +644,8 @@ class FourProbeRes(Measurement):
             self.Vy[i] = self.lockin_V.Y
             self.Ix[i] = self.lockin_I.X # unit: A, read value from SR 830 is A
             self.Iy[i] = self.lockin_I.Y
-            self.R[i] = self.Vx[i]/self.Ix[i]
+            #self.R[i] = self.Vx[i]/self.Ix[i]
+            self.R[i] = self.lockin_V.R/self.lockin_I.R
             self.R2p[i] = self.Vs/self.Ix[i]
             # self.plot()
 
@@ -535,7 +656,7 @@ class FourProbeRes(Measurement):
             # print  ("Two-probe R: %.3e ohm.\n" % self.R2p[i])
             self.sumR = self.sumR + self.R[i]
 
-        return (self.sumR-self.R[i])/4
+        return (self.sumR-self.R[0])/4
 
 
         # self.save()

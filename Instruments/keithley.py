@@ -6,12 +6,12 @@ class Keithley2400(Instrument):
     '''
     Instrument driver for Keithley 2400 Source Meter
     '''
-    Iout = None
-    Iout_range = None
-    I_compliance = None
-    Vout = None
-    Vout_range = None
-    V_compliance = None
+    _Iout = None
+    _Iout_range = None
+    _I_compliance = None
+    _Vout = None
+    _Vout_range = None
+    _V_compliance = None
 
     def __init__(self, gpib_address=''):
         if type(gpib_address) is int:
