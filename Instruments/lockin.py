@@ -306,14 +306,14 @@ class SR830(Instrument):
         while self.is_OL(OL_thresh):
             sens_before = self.sensitivity
             self.sensitivity = 'up'
-            time.sleep(3*self.time_constant) # wait for stabilization
+            time.sleep(10*self.time_constant) # wait for stabilization
             if sens_before == self.sensitivity:
                 print('Signal larger than max sensitivity!')
                 return # we cannot change sensitivity any more
         while self.is_UL(UL_thresh):
             sens_before = self.sensitivity
             self.sensitivity = 'down'
-            time.sleep(3*self.time_constant) # wait for stabilization
+            time.sleep(10*self.time_constant) # wait for stabilization
             if sens_before == self.sensitivity:
                 print('Signal not detected on smallest sensitivity!')
                 return # we cannot change sensitivity any more
