@@ -281,7 +281,7 @@ class Keithley2400(Instrument):
         '''
         self.write('status:queue:clear;*RST;:stat:pres;:*CLS;')
 
- # def sweep_V(self, Vstart, Vend, Vstep=0.1, sweep_rate=0.1):
+    # def sweep_V(self, Vstart, Vend, Vstep=0.1, sweep_rate=0.1):
     #     '''
     #     Sweep voltage from Vstart to Vend at given rate in volts/second.
     #     Do measurements done during the sweep.
@@ -299,7 +299,8 @@ class Keithley2400(Instrument):
         '''
         Uses the Keithley's internal sweep function to sweep from Vstart to Vend with a step size of Vstep and sweep rate of sweep_rate volts/second.
         '''
-        if Vstart == Vend:
+        if abs(Vstart - Vend) < Vstep: # within step size of the starting value
+            self.Vout = Vend
             return
         self.Vout = Vstart
 
@@ -363,7 +364,7 @@ class Keithley2600(Instrument):
         self._visa_handle = visa.ResourceManager().open_resource(gpib_address)
         self._visa_handle.read_termination = '\n'
         super(Keithley2600, self).__init__(name)
-        
+
     @property
     def currentA(self):
         '''Get the current reading for channel A.'''
@@ -477,7 +478,7 @@ class Keithley2600(Instrument):
     def resetB(self):
         '''Resets the B channel'''
         self._visa_handle.write('smub.reset()')
-    
+
     def __del__(self):
         self._visa_handle.close()
 
@@ -564,7 +565,7 @@ class Keithley2600(Instrument):
         self._visa_handle = visa.ResourceManager().open_resource(gpib_address)
         self._visa_handle.read_termination = '\n'
         super(Keithley2600, self).__init__(name)
-        
+
     @property
     def currentA(self):
         '''Get the current reading for channel A.'''
@@ -688,11 +689,11 @@ class Keithley2600(Instrument):
     def resetB(self):
         '''Resets the B channel'''
         self._visa_handle.write('smub.reset()')
-    
+
     def __del__(self):
         self._visa_handle.close()
 
-        
+
 
 
 class Keithley2400Old(Instrument):
@@ -887,11 +888,11 @@ class KeithleyPPMS(Keithley2400):
         return {
             'output': self.output,
         }
-    
+
     @property
     def output(self):
         return self.V/10*(self.ten_V-self.zero_V) + self.zero_V # calibration set in PPMS software
-    
+
     @property
     def V(self):
         return float(self.ask(':FETC?'))
