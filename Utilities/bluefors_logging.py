@@ -85,8 +85,77 @@ def thermometercalibration(filename_res, filename_temp, tcutoff=4):
 
      return [res, temp, f, popt, pcov]
 
+def thermcal(datestr='17-04-10', resname=r'CH7 R ', tempname=r'CH6 T ',
+             tcutoff=4, numpts = 200, binsize = 3):
+    [res,temp,f,popt,pcov] =  thermometercalibration(
+                                os.path.join(save.get_data_server_path(),
+                                            'bluefors', 'blueforslogs',
+                                            datestr, resname+datestr+'.log'),
+                                os.path.join(save.get_data_server_path(),
+                                            'bluefors', 'blueforslogs',
+                                            datestr, tempname+datestr+'.log'),
+                                tcutoff
+                            )
+    res = np.array(res);
+    temp = np.array(temp);
+    finv = lambda f: np.exp((np.log(f)-popt[1])/popt[0]);
+    newf = lambda res: np.exp(f(np.log(res), *popt));
+
+    newtemp = np.linspace(np.ceil(10*min(temp))/10, np.floor(10*max(temp))/10, 200)
+
+    newres = [];
+    for t in newtemp:
+        index = np.abs(t-newf(res)).argmin();
+        start = max(int(index-binsize/2), 0);
+        end   = min(int(abs(index-binsize/2))+binsize, len(res)-1);
+        averes = np.mean([res[i] for i in range(start, end)]);
+        print("[{},{},{},{}]".format(index,start,end,averes));
+        newres.append(averes);
+
+    return [newres, newtemp, finv, newf, res, temp, f, popt, pcov];
+
+
+def thermometercalibration2(datestr='17-03-03', resname=r'CH7 R ', tempname='CH6 T ', tcutoff=[4,100]):
+    rawlog = [];
+    for t in [resname, tempname]:
+        rawlog.append(getLog(
+                        os.path.join(save.get_data_server_path(),
+                                    'bluefors', 'blueforslogs',
+                                    datestr, t+datestr+'.log')
+                    ));
+
+    # remove zero entries
+    for i in range(len(rawlog)-1,-1,-1):
+        for j in range(len(rawlog[i])-1,-1,-1):
+            if abs(rawlog[i][j][1]) < 1e-16:
+                del rawlog[i][j];
+
+
+    rawlogsep = [];
+    for i in range(2):
+        rawlogsep.append([  [a[0] for a in rawlog[i]],
+                            [a[1] for a in rawlog[i]]
+                        ]);
+    log = [];
+    for i in range(2):
+        times = [a[0].timestamp() for a in rawlog[i]];
+        vals  = [a[1] for a in rawlog[i]];
+        log.append([times,vals])
+
+    temps = np.linspace(tcutoff[0],tcutoff[1],200);
+    times = np.interp(temps, log[1][1], log[1][0]);
+    res   = np.interp(times, log[0][0], log[0][1]);
+
+    f = lambda x,a,b: a*x + b;
+
+    [popt, pcov] = curve_fit(f, np.log(temps), np.log(res));
+
+    return [temps, res, times, f, popt, pcov, log[1], log[0]];
+
+
+
 def plotlogs(datestr='17-03-03', extratemps = [r'CH7 T ', r'CH8 T ']):
-    filenamebase = save.get_data_server_path() + r'\bluefors\blueforslogs';
+    #filenamebase = save.get_data_server_path() + r'\bluefors\blueforslogs';
 
     temperatures = [r'CH1 T ',
                     r'CH2 T ',
