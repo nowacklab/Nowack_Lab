@@ -152,6 +152,9 @@ class DaqSpectrum(Measurement):
 
 
     def setup_preamp(self):
+        if not hasattr(self, 'preamp') or self.preamp is None:
+            print('No preamp!')
+            return
         self.preamp.gain = 1
         self.preamp.filter = (0, 100e3)
         self.preamp.dc_coupling()

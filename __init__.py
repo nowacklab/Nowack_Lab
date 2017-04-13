@@ -1,5 +1,24 @@
 # import Nowack_Lab.Procedures, Nowack_Lab.Instruments, Nowack_Lab.Utilities, os
 import os
+from IPython import get_ipython, display
+ip = get_ipython()
+
+def in_ipynb():
+    import sys
+    if 'ipykernel' in sys.modules:
+        return True
+    else:
+        return False
+
+# Interactive notebook plots
+## For interactive matplotlib plots
+if in_ipynb():
+    ip.magic('matplotlib notebook') # matplotlib notebook....
+    # ip.magic('matplotlib inline')
+else:
+    ip.magic('matplotlib qt') # if not in a notebook
+
+
 from Nowack_Lab.Utilities import save
 
 from matplotlib import rcParams
@@ -23,9 +42,12 @@ if inp in ('y', 'Y'):
 if not os.path.exists(save.get_data_server_path()):
     print('''SAMBASHARE not connected. Could not find path %s. If you want to change the expected path, modify the get_data_server_path function in Nowack_Lab/Utilities/save.py''' %save.get_data_server_path())
 
+
+
+
+
 ## Importing commonly used packages
-from IPython import get_ipython, display
-ip = get_ipython()
+
 ip.run_code('''
 import numpy as np
 import matplotlib.pyplot as plt
@@ -48,30 +70,15 @@ from Nowack_Lab.Procedures.scanplane import Scanplane
 from Nowack_Lab.Procedures.scanspectra import Scanspectra
 from Nowack_Lab.Procedures.squidIV import SquidIV
 from Nowack_Lab.Procedures.touchdown import Touchdown
-from Nowack_Lab.Procedures.transport import RvsVg
-from Nowack_Lab.Procedures.transport import IV
-from Nowack_Lab.Procedures.transport import IVvsVg
+from Nowack_Lab.Procedures.transport import RvsVg, RvsSomething, IV, IVvsVg, FourProbeRes
+from Nowack_Lab.Procedures.magnetotransport import RvsB, RvsVg_B
 from Nowack_Lab.Instruments.attocube import Attocube
-from Nowack_Lab.Instruments.keithley import Keithley2400
+from Nowack_Lab.Instruments.keithley import Keithley2400, Keithley2600, KeithleyPPMS
 from Nowack_Lab.Instruments.montana import Montana
 from Nowack_Lab.Instruments.nidaq import NIDAQ
 from Nowack_Lab.Instruments.piezos import Piezos
 from Nowack_Lab.Instruments.preamp import SR5113
 from Nowack_Lab.Instruments.squidarray import SquidArray
 from Nowack_Lab.Instruments.lockin import SR830
-
+from Nowack_Lab.Instruments.ppms import PPMS
 ''');
-
-def in_ipynb():
-    import sys
-    if 'ipykernel' in sys.modules:
-        return True
-    else:
-        return False
-
-# Interactive notebook plots
-## For interactive matplotlib plots
-if in_ipynb():
-    ip.magic('matplotlib notebook') # matplotlib notebook....
-else:
-    ip.magic('matplotlib qt') # if not in a notebook

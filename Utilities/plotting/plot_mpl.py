@@ -54,7 +54,7 @@ def plotline(ax, x, y, z):
 def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='', ylabel='', clabel='', fontsize=20, equal_aspect=True):
     '''
     Plots a 2D heatmap on axes ax using plt.imshow.
-    x,y must be a meshgrid with 'ij' indexing. (list functionality to come?)
+    x,y must be a meshgrid with default indexing, or lists.
     z has to be the same shape.
     Masks Nones and will plot as white.
     Can specify title and axis labels here as well ^.^
