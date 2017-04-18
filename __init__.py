@@ -3,22 +3,6 @@ import os
 from IPython import get_ipython, display
 ip = get_ipython()
 
-def in_ipynb():
-    import sys
-    if 'ipykernel' in sys.modules:
-        return True
-    else:
-        return False
-
-# Interactive notebook plots
-## For interactive matplotlib plots
-if in_ipynb():
-    ip.magic('matplotlib notebook') # matplotlib notebook....
-    # ip.magic('matplotlib inline')
-else:
-    ip.magic('matplotlib qt') # if not in a notebook
-
-
 from Nowack_Lab.Utilities import save
 
 from matplotlib import rcParams
