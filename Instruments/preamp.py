@@ -27,8 +27,8 @@ class SR5113(Instrument):
         #not sure if this will work
         #might be better to save "gain" and "filter" in the Measurement, since
         #they are chosen in the Measurement
-        self._save_dict = {"_gain": self.gain,
-                          "_filter": self.filter}
+        self._save_dict = {"gain": self.gain,
+                          "filter": self.filter}
         return self._save_dict
 
 
