@@ -51,13 +51,14 @@ def plotline(ax, x, y, z):
     pass
 
 
-def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='', ylabel='', clabel='', fontsize=20, equal_aspect=True):
+def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='',
+           ylabel='', clabel='', fontsize=20, equal_aspect=True):
     '''
     Plots a 2D heatmap on axes ax using plt.imshow.
     x,y must be a meshgrid with default indexing, or lists.
     z has to be the same shape.
     Masks Nones and will plot as white.
-    Can specify title and axis labels here as well ^.^
+    Can specify title and axis labels here as well
     Fontsize kwarg will affect title and all labels
     '''
 
@@ -92,16 +93,6 @@ def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='', 
 
     if equal_aspect:
         aspect(ax, 1, absolute=False) # equal aspect ratio based on data scales
-
-    ## Round ticks to the nearest integer, and only have three ticks per axis
-    #try:
-    #    xticks = [math.ceil(x.min()), int((x.min()+x.max())/2), math.floor(x.max())]
-    #    yticks = [math.ceil(y.min()), int((y.min()+y.max())/2), math.floor(y.max())]
-
-    #    ax.set_xticks(xticks)
-    #    ax.set_yticks(yticks)
-    #except:
-    #    pass # if x and y are nans, this will fail!
 
     return im
 

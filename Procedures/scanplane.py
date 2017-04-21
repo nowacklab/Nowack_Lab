@@ -4,6 +4,7 @@ import time, os
 from datetime import datetime
 from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from IPython import display
 from numpy import ma
 from ..Utilities.plotting import plot_mpl
@@ -30,7 +31,14 @@ class Scanplane(Measurement):
         'x': '~um',
         'y': '~um',
     })
-    instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto','daq']
+    instrument_list = ['piezos',
+                       'montana',
+                       'squidarray',
+                       'preamp',
+                       'lockin_squid',
+                       'lockin_cap',
+                       'atto',
+                       'daq']
     ## Put things here necessary to have when reloading object
 
     def __init__(self, instruments={}, plane=None, span=[800,800],
@@ -58,10 +66,6 @@ class Scanplane(Measurement):
            chan: np.nan for chan in self._chan_labels + ['piezo']
         })
 
-        #if scanheight < 0:
-        #    inp = input('Scan height is negative, SQUID will ram into sample! Are you sure you want this? \'q\' to quit.')
-        #    if inp == 'q':
-        #        raise Exception('Terminated by user')
         self.scanheight = scanheight
 
         x = np.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
@@ -201,70 +205,87 @@ class Scanplane(Measurement):
         print('Scan took %f minutes' %((tend-tstart)/60))
         return
 
-
     def plot(self):
         '''
         Update all plots.
         '''
         super().plot()
 
-        for i, chan in enumerate(self._chan_labels):
-            plot_mpl.update2D(self.im[chan], self.V[chan]*self._conversions[chan])
-
         self.plot_line()
+
+        # TODO fix voltage conversions
+        for chan in self._chan_labels:
+            data_nan = np.array(self.V[chan], dtype=np.float)
+            data_masked = np.ma.masked_where(np.isnan(data_nan), data_nan)
+
+            # Set a new image for the plot
+            self.im[chan].set_array(data_masked)
+            # Adjust colorbar limits for new data
+            self.cbars[chan].set_clim([data_masked.min(),
+                                       data_masked.max()])
+            self.cbars[chan].draw_all()
+
         self.fig.canvas.draw()
-
-        # ## Give the subplots some breathing room
-        # self.fig.subplots_adjust(wspace=.5, hspace=.5)
-
+        self.fig.canvas.flush_events()
 
     def setup_plots(self):
         '''
         Set up all plots.
         '''
-        numplots = len(self._chan_labels)
-        self.fig = plt.figure(figsize=(10,4*numplots))
-        ## Give the subplots some breathing room
-        self.fig.subplots_adjust(wspace=.5, hspace=.5)
-        self.ax = AttrDict()
+        self.fig, self.axes = plt.subplots(2, 2, figsize=(8,8))
+        self.fig_cuts, self.axes_cuts = plt.subplots(4, 1, figsize=(6,8))
+        chans = ['dc',
+                'cap',
+                'acx',
+                'acy']
+        cmaps = ['RdBu',
+                 'afmhot',
+                 'magma',
+                 'magma']
+        clabels = ['DC Flux ($\Phi_o$)',
+                   "Capacitance (F)",
+                   'AC X ($\Phi_o$)',
+                   'AC Y ($\Phi_o$)']
+
         self.im = AttrDict()
+        self.cbars = AttrDict()
+        self.lines_full = AttrDict()
+        self.lines_interp = AttrDict()
 
-        # Set up axes
-        cmaps = []
-        for i, chan in enumerate(self._chan_labels):
-            self.ax[chan] = self.fig.add_subplot(int(np.ceil(numplots/2)+1), 2, i+1) # e.g. for 4 plots have 3 rows. First two rows have 2 plots, last row is for the single line plot added later.
-        # self.ax['dc'] = self.fig.add_subplot(3,2,1)
-        # self.ax['acx'] = self.fig.add_subplot(3,2,3)
-        # self.ax['acy'] = self.fig.add_subplot(3,2,4)
-        # self.ax['cap'] = self.fig.add_subplot(3,2,2)
-            if 'dc' in chan:
-                cmap = 'RdBu'
-            elif chan == 'cap':
-                cmap = 'afmhot'
-            else:
-                cmap = 'cubehelix'
-            self.im[chan] = plot_mpl.plot2D(self.ax[chan],
-                                            self.X,
-                                            self.Y,
-                                            self.V[chan],
-                                            cmap = cmap,
-                                            title = self.filename,
-                                            xlabel = '$V_{piezo}$ | $\sim\mu\mathrm{m}$',
-                                            ylabel = '$V_{piezo}$ | $\sim\mu\mathrm{m}$',
-                                            clabel = '%s (%s)' %(chan, self._units[chan]),
-                                            fontsize=12
-                                        )
-        # self.im['cap'].colorbar.set_label('cap (C)') # not phi0's!
+        # Plot the DC signal, capactitance and AC signal on 2D colorplots
+        for ax, chan, cmap, clabel in zip(self.axes.flatten(), chans, cmaps, clabels):
+            # Convert None in data to NaN
+            nan_data = np.array(self.V[chan])
+            # Create masked array where data is NaN
+            masked_data = np.ma.masked_where(np.isnan(nan_data), nan_data)
 
-        for ax in self.ax.values():
-            ax.set_xticklabels(['%i' %(x) for x in ax.get_xticks()])
-            ax.set_yticklabels(['%i' %(y) for y in ax.get_yticks()])
+            # Plot masked data on the appropriate axis with imshow
+            image = ax.imshow(masked_data, cmap=cmap, origin="lower",
+                              extent = [self.X.min(), self.X.max(),
+                                        self.Y.min(), self.Y.max()])
+            # Create a colorbar that matches the image height
+            d = make_axes_locatable(ax)
+            cax = d.append_axes("right", size=0.1, pad=0.1)
+            cbar = plt.colorbar(image, cax=cax)
+            cbar.set_label(clabel, rotation=270, labelpad=12)
+            cbar.formatter.set_powerlimits((-2,2))
+            self.im[chan] = image
+            self.cbars[chan] = cbar
+
+        # Plot the last linecut for DC, AC and capacitance signals
+        #for ax, chan, clabel in zip(self.axes_cuts, chans, clabels):
+        for ax, chan, clabel in zip (self.axes_cuts, chans, clabels):
+            self.lines_full[chan] = ax.plot(self.Vfull[piezo],
+                                            self.Vfull[chan])
+            self.lines_interp[chan] = ax.plot(self.Vinterp[piezo],
+                                              self.Vinterp[chan], 'o')
 
 
+        '''
         ## "Last full scan" plot
         self.ax['line'] = self.fig.add_subplot(313)
         self.ax['line'].set_title(self.filename, fontsize=8)
-        self.line_full = self.ax['line'].plot(self.Vfull['piezo'], self.Vfull['dc'], '-.k') # commas only take first element of array? ANyway, it works.
+        self.line_full = self.ax['line'].plot(self.Vfull['piezo'], self.Vfull['dc'], '-.k') # commas only take first element of array? Anyway, it works.
 
         self.line_interp = self.ax['line'].plot(self.Vinterp['piezo'], self.Vinterp['acx'], '.r', markersize=12)
 
@@ -273,12 +294,22 @@ class Scanplane(Measurement):
 
         self.line_full = self.line_full[0] # it is given as an array
         self.line_interp = self.line_interp[0]
+        '''
 
-        ## Draw everything in the notebook
-        self.fig.canvas.draw()
+    def plot_line(self):
+        # Iterate over the channels (DC, ACX, ACY and Cap) and plot the last
+        # linecut for each channel
+        for ax, chan, clabel in zip(self.axes_cuts, chans, clabels):
+            self.lines_full[chan].set_xdata(self.Vfull['piezo'] *
+                                            self._conversions[self.fast_axis])
+            self.lines_full[chan].set_ydata(self.Vfull[chan] *
+                                            self._conversions[chan])
+            self.lines_interp[chan].set_xdata(self.Vfull['piezo'] *
+                                            self._conversions[self.fast_axis])
+            self.lines_interp[chan].set_ydata(self.Vfull[chan] *
+                                            self._conversions[chan])
 
 
-    def plot_line(self, chan = 'acx'):
         self.line_full.set_xdata(self.Vfull['piezo']*self._conversions[self.fast_axis])
         self.line_full.set_ydata(self.Vfull[chan]*self._conversions[chan])
         self.line_interp.set_xdata(self.Vinterp['piezo']*self._conversions[self.fast_axis])

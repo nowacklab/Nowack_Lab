@@ -1,6 +1,10 @@
 import numpy as np
 from ..Utilities.logging import log
 from .instrument import Instrument
+import time
+import PyDAQmx
+from PyDAQmx import *
+from ctypes import *
 
 class Piezos(Instrument):
     '''
@@ -293,6 +297,129 @@ class Piezos(Instrument):
 
     def zero(self):
         self.V = 0
+
+    def HVALookup(self,readArray,chan_1,chan_2):
+        '''
+        Calculates gain from AO and A1 channels on HVA bitstream. Channel
+        numbers start with zero
+
+        readArray: array returned by digital read from HVA
+        chan_1: AO in HVA manual, offset by -1 from HVA manual numbering
+        convention
+        chan_2: A1 in HVA manual, offset by -1 from HVA manual numbering
+        convention
+
+        returns the gain calculated
+        '''
+        if readArray[chan_1] == 1:
+            if readArray[chan_2] == 1:
+                output = 40
+            else:
+                output = 4
+        else:
+            if readArray[chan_2] == 1:
+                output = 15
+            else:
+                output = 1
+        return output
+
+
+    def checkHVAStatus(self):
+        '''
+        Checks high voltage amplifier for overheat and high temp as well as
+        checking if all parameters equal those in code
+
+        Raises exceptions for mismatches in code and hardware, or if there is
+        fault condition in the HVA.
+        '''
+        arraySize = 16; # Length of serial word
+        sampsPerChanToAcquire = arraySize + 1
+        readArray = np.ones(arraySize, dtype=np.uint8)
+        loadArray = np.ones(sampsPerChanToAcquire, dtype=np.uint8)
+        loadArray[1] = 0; # Create trigger
+        LP_c_double = POINTER(c_long);
+        actRead = LP_c_double()
+        numBytes = LP_c_double()
+        rate = 100000 # Communication rate, should be set as high as possible
+        numRead = LP_c_double()
+        sampsPerChanWritten = LP_c_double()
+
+        # Create tasks
+        taskIn = Task()
+        taskOut = Task()
+        taskClock = Task()
+
+        # Creates input and output
+        taskIn.CreateDIChan("/Dev1/port0/line4","dIn",
+                            PyDAQmx.DAQmx_Val_ChanPerLine)
+        taskOut.CreateDOChan("/Dev1/port0/line5","Load",
+                             PyDAQmx.DAQmx_Val_ChanPerLine)
+
+        # Creates a counter to use as a clock
+        taskClock.CreateCOPulseChanFreq("/Dev1/ctr0", "clock",
+                                        DAQmx_Val_Hz,DAQmx_Val_Low,0,rate,.5)
+        taskClock.CfgImplicitTiming(DAQmx_Val_ContSamps,17)
+
+        #Set both input and output to use the counter we created as clock
+        taskIn.CfgSampClkTiming ("/Dev1/Ctr0InternalOutput",
+                                 rate,DAQmx_Val_Rising,DAQmx_Val_FiniteSamps,
+                                 sampsPerChanToAcquire);
+        taskOut.CfgSampClkTiming ("/Dev1/Ctr0InternalOutput",rate,
+                                  DAQmx_Val_Rising,DAQmx_Val_ContSamps,
+                                  sampsPerChanToAcquire);
+
+        # Syncs input to external connection from counter
+        taskIn.CfgDigEdgeStartTrig("/Dev1/PFI1",DAQmx_Val_Rising)
+
+        # Loads data to be written
+        taskOut.WriteDigitalLines(sampsPerChanToAcquire,False,.9,
+                                  PyDAQmx.DAQmx_Val_GroupByChannel,loadArray,
+                                  sampsPerChanWritten,None)
+
+        #Start tasks
+        taskClock.StartTask()
+        taskOut.StartTask()
+        time.sleep(.01)
+        taskIn.StartTask()
+        taskIn.ReadDigitalLines(-1,.9,DAQmx_Val_GroupByChannel,readArray,80,
+                                numRead,numBytes,None)
+        time.sleep(.01)
+        taskIn.StopTask()
+        taskClock.StopTask()
+        taskOut.StopTask()
+
+        #throw exceptions for errors
+        if readArray[0] == 0:
+             raise Exception("The aux output is not enabled!")
+        if readArray[1] == 0:
+             raise Exception("The Z output is not enabled!")
+        if readArray[2] == 0:
+             raise Exception("The X&Y outputs are not enabled!")
+        if readArray[3] == 0:
+             print("The output connector is not plugged in!")
+        if readArray[5] == 1:
+             raise Exception("HVA High Temperature!")
+        if readArray[6] == 0:
+             raise Exception("HV Supply error")
+        if readArray[7] == 1:
+             raise Exception("Overheated!")
+        if readArray[8] == 1:
+             raise Exception("the polarity of aux is positive")
+        if readArray[11] == 0:
+             raise Exception("the polarity of Z is negative")
+        if self.HVALookup(readArray, 10,9) != self.z.gain:
+            raise Exception("the gain of aux should be " + str(self.aux.gain)
+                            + " but it is set to "
+                            + str(self.HVALookup(readArray, 10,9)))
+        if self.HVALookup(readArray, 14,15) != self.z.gain:
+            raise Exception("the gain of z should be " + str(self.z.gain)
+                            + " but it is set to "
+                            + str(self.HVALookup(readArray, 14,15)))
+        if self.HVALookup(readArray, 12,13) != self.x.gain:
+            raise Exception("the gain of x should be " + str(self.x.gain)
+                            + " but it is set to "
+                            + str(self.HVALookup(readArray, 12,13)))
+
 
 
 class Piezo(Instrument):
