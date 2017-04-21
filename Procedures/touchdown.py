@@ -43,7 +43,22 @@ class Touchdown(Measurement):
 
     def __init__(self, instruments={}, planescan=False, Vz_max = None):
         '''
-        set planescan=True to disable attocubes during touchdown
+        Approach the sample to the SQUID while recording the capacitance of the
+        cantelever in a lockin measurement to detect touchdown.
+
+        Arguments:
+        instruments -- dictionary containing instruments for the touchdown.
+        planescan -- if set to True the attocubes will not move.
+        Vz_max -- the maximum voltage that can be applied to the Z piezo.
+
+        Required instruments:
+        daq, lockin_cap, attocubes, peizos, montana
+
+        Required daq inputs:
+        'cap', 'capx', 'capy' 'theta'
+
+        Required daq ouputs:
+        'x', 'y', 'z'
         '''
         super().__init__()
 
@@ -71,8 +86,17 @@ class Touchdown(Measurement):
     def _init_arrays(self):
         self.numsteps = int(2*self.Vz_max/self.z_piezo_step)
         self.V = np.linspace(-self.Vz_max, self.Vz_max, self.numsteps)
-        self.C = np.array([np.nan]*self.numsteps) # Capacitance (fF)
-        self.rs = np.array([np.nan]*self.numsteps) # correlation coefficients of each fit
+
+        # Capacitance (fF) - read as "R" from the lockin
+        self.C = np.array([np.nan]*self.numsteps)
+
+        # Also record the X, Y and theta measurements on the lockin
+        self.Cx = np.array([np.nan]*self.numsteps)
+        self.Cy = np.array([np.nan]*self.numsteps)
+        self.theta = np.array([np.nan]*self.numsteps)
+
+        # Correlation coefficients of each fit
+        self.rs = np.array([np.nan]*self.numsteps)
 
     def check_balance(self, V_unbalanced=2e-6):
         '''
@@ -111,14 +135,14 @@ class Touchdown(Measurement):
         Set up lockin_cap amplifier for a touchdown.
         '''
         self.lockin_cap.amplitude = 1
-        self.lockin_cap.frequency = 24989 # prime number ^_^
-        self.lockin_cap.set_out(1, 'R') # Possibly X is better?
+        self.lockin_cap.frequency = 610901
+        self.lockin_cap.set_out(1, 'R')
         self.lockin_cap.set_out(2, 'theta') # not used, but may be good to see
         self.lockin_cap.sensitivity = 20e-6
         self.lockin_cap.time_constant = 0.100
         self.lockin_cap.reserve = 'Low Noise'
         self.lockin_cap.ac_coupling()
-        self.lockin_cap.auto_phase()
+        #self.lockin_cap.auto_phase()
 
 
     def do(self, start=None):
@@ -132,11 +156,11 @@ class Touchdown(Measurement):
         slow_scan = False
         td_array = []
 
-        ## Loop that does sweeps of z piezo
-        ## Z atto is moved up between iterations
-        ## Loop breaks when true touchdown detected.
+        # Loop that does sweeps of z piezo
+        # Z atto is moved up between iterations
+        # Loop breaks when true touchdown detected.
         while not self.touchdown:
-            ## Determine where to start sweeping
+            # Determine where to start sweeping
             if slow_scan:
                 start = Vtd-40 # once it finds touchdown, will try again slower
                 self.z_piezo_step = _Z_PIEZO_STEP_SLOW
@@ -149,13 +173,16 @@ class Touchdown(Measurement):
                 self.piezos.z.V = -self.Vz_max # if we have no idea where the surface is.
 
 
-            ## Check balance of capacitance bridge
+            # Check balance of capacitance bridge
             time.sleep(2) # wait for capacitance to stabilize
             self.check_balance()
 
-            ## Reset capacitance and correlation coefficient values
+            # Reset capacitance and correlation coefficient values
             self.C = np.array([np.nan]*self.numsteps)
             self.rs = np.array([np.nan]*self.numsteps)
+            self.Cx = np.array([np.nan]*self.numsteps)
+            self.Cy = np.array([np.nan]*self.numsteps)
+            self.theta = np.array([np.nan]*self.numsteps)
             self.C0 = None # offset: will take on value of the first point
             self.lines_data = AttrDict(
                 V_app = np.array([]),
@@ -163,7 +190,7 @@ class Touchdown(Measurement):
                 V_td = np.array([]),
                 C_td = np.array([])
             )
-            ## Inner loop to sweep z-piezo
+            # Inner loop to sweep z-piezo
             for i in range(self.numsteps):
                 # Determine starting voltage
                 if start is not None:
@@ -172,12 +199,12 @@ class Touchdown(Measurement):
                         self.start_offset = i # in the end, this is how many points we skipped
                         continue # skip all of these
 
-                ## Set the current voltage and wait
+                # Set the current voltage and wait
                 self.piezos.z.V = self.V[i] # Set the current voltage
                 if slow_scan:
                     time.sleep(2) # wait a long time
 
-                ## Get capacitance
+                # Get capacitance
                 if self.C0 == None:
                     time.sleep(2) # wait for stabilization, was getting weird first values
                 Vcap = self.daq.inputs['cap'].V # Read the voltage from the daq
@@ -186,9 +213,13 @@ class Touchdown(Measurement):
                 if self.C0 == None:
                     self.C0 = Cap # Sets the offset datum
                 self.C[i] = Cap - self.C0 # remove offset
+                # Record the X, Y and theta voltages
+                self.Cx[i] = self.daq.inputs['capx'].V
+                self.Cy[i] = self.daq.inputs['capy'].V
+                self.theta[i] = self.daq.inputs['theta'].V
 
-                ## gotta cheat and take care of the infs by making them the same
-                ## as the first real data point... this is because we skipped them
+                # gotta cheat and take care of the infs by making them the same
+                # as the first real data point... this is because we skipped them
                 if start is not None:
                     if self.C[0] == np.inf: # set at beginning of loop
                         if self.C[i] not in (np.inf, np.nan):
@@ -211,7 +242,7 @@ class Touchdown(Measurement):
                     self.plot()
 
                     if not self.planescan: # Don't want to move attos during planescan
-                        ## Check if touchdown near center of z piezo +V range
+                        # Check if touchdown near center of z piezo +V range
                         if slow_scan:
                             u = 0.55 # percentages of the total voltage range to aim touchdown to be within
                             l = 0.35
@@ -236,9 +267,9 @@ class Touchdown(Measurement):
 
                     break # stop approaching
 
-            ## end of inner loop
+            # end of inner loop
 
-            ## Move the attos; either we're too far away for a touchdown or TD voltage not centered
+            # Move the attos; either we're too far away for a touchdown or TD voltage not centered
             if not self.planescan: # don't want to move attos if in a planescan!
                 if not self.touchdown:
                     self.piezos.z.V = -self.Vz_max # before moving attos, make sure we're far away from the sample!
@@ -250,14 +281,14 @@ class Touchdown(Measurement):
                         self.atto.z.move(-self.attoshift/2) # we probably moved too far
                         time.sleep(2)
 
-            ## Do a slow scan next
+            # Do a slow scan next
             if self.touchdown: # if this is a true touchdown
                 if not self.planescan: # but not a planescan
                     if not slow_scan: # and if we haven't done a slow scan yet
                         slow_scan = True
                         self.touchdown = False
 
-        ## end of outer loop
+        # end of outer loop
 
         self.piezos.z.V = 0 # bring the piezo back to zero
 
@@ -279,34 +310,34 @@ class Touchdown(Measurement):
             V = self.V[:i3]
             C = self.C[:i3]
 
-            ## How many lines to try to fit
+            # How many lines to try to fit
             N2 = len(C)+1-5 # last number is minimum number of points to fit
             r2 = np.array([np.nan]*N2) # correlation coefficients go here
 
-            ## Loop over fits of the touchdown curve
+            # Loop over fits of the touchdown curve
             start = 1
             for i in range(start, N2):
                 _, _, r2[i], _, _ = linregress(V[i:], C[i:])
 
-            ## find touchdown index and perform final fit
+            # find touchdown index and perform final fit
             i = np.nanargmax(r2)-2 # this is where touchdown probably is, gave it a couple of extra points; it always seemed to need them
 
-            ## Figure out how many lines to try to fit for approach curve
+            # Figure out how many lines to try to fit for approach curve
             N1 = i+1-3 # last number is minimum number of points to fit for the approach curve
             r1 = np.array([np.nan]*N1) # correlation coefficients go here
             m1 = np.array([np.nan]*N1) # slopes go here
 
-            ## Approach curve
+            # Approach curve
             k = i-3 # fit the approach curve ending this 2 points away from the touchdown curve
             N1 = N1-3 # must adjust N1 by this same amount
             for j in range(start, N1):
                 m1[j], b1, r1[j], _, _ = linregress(V[j:k], C[j:k])
 
-            ## Determine best approach curve
+            # Determine best approach curve
             minimize_this = (1-r1)*1 + abs(m1)*100 # Two weight factors: how much we care that it's a good fit, how much we care that the slope is near zero.
             j = np.nanargmin(minimize_this)
 
-            ## Recalculate slopes and intercepts
+            # Recalculate slopes and intercepts
             m2, b2, r2, _, _ = linregress(V[i:], C[i:])
             m1, b1, r1, _, _ = linregress(V[j:k], C[j:k])
 
