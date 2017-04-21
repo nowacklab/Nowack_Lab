@@ -152,6 +152,7 @@ class Touchdown(Measurement):
         self.lockin_cap.time_constant = 0.100
         self.lockin_cap.reserve = 'Low Noise'
         self.lockin_cap.ac_coupling()
+        self.lockin_cap.auto_phase
 
     def do(self, start=None):
         '''

@@ -1,4 +1,4 @@
-import numpy as np
+ import numpy as np
 from numpy.linalg import lstsq
 import time, os
 from datetime import datetime
@@ -297,13 +297,16 @@ class Scanplane(Measurement):
         '''
 
     def plot_line(self):
-        # Iterate over the channels (DC, ACX, ACY and Cap) and plot the last
-        # linecut for each channel
+        '''
+
+        '''
         for ax, chan, clabel in zip(self.axes_cuts, chans, clabels):
+            # Update X and Y data for the "full data"
             self.lines_full[chan].set_xdata(self.Vfull['piezo'] *
                                             self._conversions[self.fast_axis])
             self.lines_full[chan].set_ydata(self.Vfull[chan] *
                                             self._conversions[chan])
+            # Update X and Y data for the interpolated data
             self.lines_interp[chan].set_xdata(self.Vfull['piezo'] *
                                             self._conversions[self.fast_axis])
             self.lines_interp[chan].set_ydata(self.Vfull[chan] *
