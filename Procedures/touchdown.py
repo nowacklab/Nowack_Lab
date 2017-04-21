@@ -84,6 +84,7 @@ class Touchdown(Measurement):
 
 
     def _init_arrays(self):
+        ''' Generate arrays of NaN with the correct length for the touchdown'''
         self.numsteps = int(2*self.Vz_max/self.z_piezo_step)
         self.V = np.linspace(-self.Vz_max, self.Vz_max, self.numsteps)
 
@@ -104,46 +105,53 @@ class Touchdown(Measurement):
         Voltage must be less than V_unbalanced.
         By default, this is heuristically 2 uV.
         '''
-        # Read daq voltage and conver to real lockin voltage
+        # Read daq voltage and convert to real lockin voltage
         Vcap = self.daq.inputs['cap'].V
         Vcap = self.lockin_cap.convert_output(Vcap)
 
         if Vcap > V_unbalanced:
-            inp = input('Check balance of capacitance bridge! Press enter to continue, q to quit')
+            inp = input(
+                'Balance capacitance bridge. Press enter to continue, q to quit'
+                )
             if inp == 'q':
                 raise Exception('quit by user')
 
-    def check_touchdown(self, corr_coeff_thresh=0.9):
+    def check_touchdown(self):
         '''
-        Checks for touchdown.
-        Fits a line including the last five data points taken.
-        If the correlation coefficient of the last three fits is better than
-        corr_coeff_thresh, returns True. Otherwise, we have not touched down.
+        Checks for a touchdown.
+
+        If the last numfit points are monotically increasing and the capacitance
+        increases by an ammount larger than _CAPACITANCE_THRESHOLD over the last
+        numfit points then a touchdown is detected
+
+        Returns:
+        True -- when the condition above is satisfied
+        False -- when the condition above is not satisfied OR numfit points have
+        not been collected
         '''
         i = np.where(~np.isnan(self.C))[0][-1] # index of last data point taken
-        if i > self.numfit + self.start_offset: # if we've taken enough points
-            if self.C[i-self.numfit] > _CAPACITANCE_THRESHOLD: # if the capacitance has been high enough (above 3 fF)
+        # Chcek that enough data has been collected to do a linear fit
+        if i > self.numfit + self.start_offset:
+        # Check if the capacitance has been high enough (above 3 fF)
+            if self.C[i-self.numfit] > _CAPACITANCE_THRESHOLD:
+                # Check that the last numfit points are monotonically increasing
                 for j in range(i-self.numfit, i):
-                    if self.C[j+1] - self.C[j] < 0: # check to see if the last numfit points are increasing
-                        return False # if not increasing, then no touchdown
+                    if self.C[j+1] - self.C[j] < 0:
+                        return False
                 return True # if the for loop passed, then touchdown
         return False # if we haven't taken enough points
 
 
     def configure_lockin(self):
-        '''
-        Set up lockin_cap amplifier for a touchdown.
-        '''
+        '''Set up lockin_cap amplifier for a touchdown.'''
         self.lockin_cap.amplitude = 1
         self.lockin_cap.frequency = 610901
         self.lockin_cap.set_out(1, 'R')
-        self.lockin_cap.set_out(2, 'theta') # not used, but may be good to see
+        self.lockin_cap.set_out(2, 'theta')
         self.lockin_cap.sensitivity = 20e-6
         self.lockin_cap.time_constant = 0.100
         self.lockin_cap.reserve = 'Low Noise'
         self.lockin_cap.ac_coupling()
-        #self.lockin_cap.auto_phase()
-
 
     def do(self, start=None):
         '''
@@ -206,10 +214,13 @@ class Touchdown(Measurement):
 
                 # Get capacitance
                 if self.C0 == None:
-                    time.sleep(2) # wait for stabilization, was getting weird first values
-                Vcap = self.daq.inputs['cap'].V # Read the voltage from the daq
-                Vcap = self.lockin_cap.convert_output(Vcap) # convert to a lockin voltage
-                Cap = Vcap*conversions.V_to_C # convert to true capacitance (fF)
+                    # Wait for the lockin reading to stabalize
+                    time.sleep(2)
+                # Read the voltage from the daq
+                Vcap = self.daq.inputs['cap'].V
+                # convert to a real capacitance
+                Vcap = self.lockin_cap.convert_output(Vcap)
+                Cap = Vcap*conversions.V_to_C
                 if self.C0 == None:
                     self.C0 = Cap # Sets the offset datum
                 self.C[i] = Cap - self.C0 # remove offset
