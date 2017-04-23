@@ -111,7 +111,7 @@ class Touchdown(Measurement):
         Set up lockin_cap amplifier for a touchdown.
         '''
         self.lockin_cap.amplitude = 1
-        self.lockin_cap.frequency = 24989 # prime number ^_^
+        self.lockin_cap.frequency = 61311 # prime number ^_^
         self.lockin_cap.set_out(1, 'R') # Possibly X is better?
         self.lockin_cap.set_out(2, 'theta') # not used, but may be good to see
         self.lockin_cap.sensitivity = 20e-6
@@ -341,7 +341,7 @@ class Touchdown(Measurement):
 
         self.ax.set_title(self.title, fontsize=20)
 
-        self.fig.tight_layout()
+        #self.fig.tight_layout()
         self.fig.canvas.draw()
 
 
