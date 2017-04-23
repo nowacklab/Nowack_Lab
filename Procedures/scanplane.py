@@ -1,9 +1,10 @@
- import numpy as np
+import numpy as np
 from numpy.linalg import lstsq
 import time, os
 from datetime import datetime
 from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from IPython import display
 from numpy import ma
@@ -39,7 +40,7 @@ class Scanplane(Measurement):
                        'lockin_cap',
                        'atto',
                        'daq']
-    ## Put things here necessary to have when reloading object
+    # Put things here necessary to have when reloading object
 
     def __init__(self, instruments={}, plane=None, span=[800,800],
                         center=[0,0], numpts=[20,20],
@@ -93,16 +94,15 @@ class Scanplane(Measurement):
         #temporarily commented out so we can scan witout internet on montana
         #computer
         #self.temp_start = self.montana.temperature['platform']
-
         self.setup_plots()
 
-        ## make sure all points are not out of range of piezos before starting anything
+        # Check if points in the scan are within the voltage limits of Piezos
         for i in range(self.X.shape[0]):
             self.piezos.x.check_lim(self.X[i,:])
             self.piezos.y.check_lim(self.Y[i,:])
             self.piezos.z.check_lim(self.Z[i,:])
 
-        ## Loop over Y values if fast_axis is x, X values if fast_axis is y
+        # Loop over Y values if fast_axis is x, X values if fast_axis is y
         if fast_axis == 'x':
             num_lines = int(self.X.shape[0]) # loop over Y
         elif fast_axis == 'y':
@@ -110,14 +110,15 @@ class Scanplane(Measurement):
         else:
             raise Exception('Specify x or y as fast axis!')
 
-        ## Measure capacitance offset
+        # Measure capacitance offset
         Vcap_offset = []
         for i in range(5):
             time.sleep(0.5)
             Vcap_offset.append(self.lockin_cap.convert_output(self.daq.inputs['cap'].V))
         Vcap_offset = np.mean(Vcap_offset)
 
-        for i in range(num_lines): # loop over every line
+        # Loop over each line in the scan
+        for i in range(num_lines):
             k = 0
             if self.raster:
                 if i%2 == 0: # if even
@@ -134,12 +135,11 @@ class Scanplane(Measurement):
                 Vstart = {'x': self.X[k,i], 'y': self.Y[k,i], 'z': self.Z[k,i]} # for forward, starts at i,0; backward: i,-1
                 Vend = {'x': self.X[-(k+1),i], 'y': self.Y[-(k+1),i], 'z': self.Z[-(k+1),i]} # for forward, ends at i,-1; backward: i,0
 
-            ## Explicitly go to first point of scan
+            # Go to first point of scan
             self.piezos.sweep(self.piezos.V, Vstart)
             self.squidarray.reset()
             time.sleep(3)
-
-            ## Do the sweep
+            # Begin the sweep
             if not surface:
                 output_data, received = self.piezos.sweep(Vstart, Vend,
                                             chan_in = self._chan_labels,
@@ -157,19 +157,18 @@ class Scanplane(Measurement):
                                                         chan_in = self._chan_labels,
                                                         sweep_rate = self.scan_rate
                                                     )
-
-            ## Flip the backwards sweeps
+            # Flip the backwards sweeps
             if k == -1: # flip only the backwards sweeps
                 for d in output_data, received:
                     for key, value in d.items():
                         d[key] = value[::-1] # flip the 1D array
 
-            ## Return to zero for a couple of seconds:
+            # Return to zero for a couple of seconds:
             self.piezos.V = 0
             time.sleep(2)
 
-            ## Interpolate to the number of lines
-            self.Vfull['piezo'] = output_data[fast_axis] # actual voltages swept in x or y direction
+            # Interpolate to the number of lines
+            self.Vfull['piezo'] = output_data[fast_axis]
             if fast_axis == 'x':
                 self.Vinterp['piezo'] = self.X[i,:]
             elif fast_axis == 'y':
@@ -186,6 +185,7 @@ class Scanplane(Measurement):
             self.Vfull['cap'] = self.lockin_cap.convert_output(self.Vfull['cap']) - Vcap_offset
 
             # Interpolate the data and store in the 2D arrays
+
             for chan in self._chan_labels:
                 if fast_axis == 'x':
                     self.Vinterp[chan] = interp1d(self.Vfull['piezo'], self.Vfull[chan])(self.Vinterp['piezo'])
@@ -193,13 +193,12 @@ class Scanplane(Measurement):
                 else:
                     self.Vinterp[chan] = interp1d(self.Vfull['piezo'], self.Vfull[chan])(self.Vinterp['piezo'])
                     self.V[chan][:,i] = self.Vinterp[chan]
-            self.save_line(i, Vstart)
 
+            self.save_line(i, Vstart)
             self.plot()
 
-
         self.piezos.V = 0
-        self.save()
+        #self.save()
 
         tend = time.time()
         print('Scan took %f minutes' %((tend-tstart)/60))
@@ -233,11 +232,8 @@ class Scanplane(Measurement):
         Set up all plots.
         '''
         self.fig, self.axes = plt.subplots(2, 2, figsize=(8,8))
-        self.fig_cuts, self.axes_cuts = plt.subplots(4, 1, figsize=(6,8))
-        chans = ['dc',
-                'cap',
-                'acx',
-                'acy']
+        self.fig_cuts, self.axes_cuts = plt.subplots(4, 1, figsize=(6,8),
+                                                     sharex=True)
         cmaps = ['RdBu',
                  'afmhot',
                  'magma',
@@ -253,7 +249,10 @@ class Scanplane(Measurement):
         self.lines_interp = AttrDict()
 
         # Plot the DC signal, capactitance and AC signal on 2D colorplots
-        for ax, chan, cmap, clabel in zip(self.axes.flatten(), chans, cmaps, clabels):
+        for ax, chan, cmap, clabel in zip(self.axes.flatten(),
+                                          self._chan_labels,
+                                          cmaps,
+                                          clabels):
             # Convert None in data to NaN
             nan_data = np.array(self.V[chan])
             # Create masked array where data is NaN
@@ -272,35 +271,42 @@ class Scanplane(Measurement):
             self.im[chan] = image
             self.cbars[chan] = cbar
 
+            # Label the axes - including a timestamp
+            ax.set_xlabel("X Position (V)")
+            ax.set_ylabel("Y Position (V)")
+            ax.set_title(self.timestamp, loc="left", size = "medium")
+
         # Plot the last linecut for DC, AC and capacitance signals
-        #for ax, chan, clabel in zip(self.axes_cuts, chans, clabels):
-        for ax, chan, clabel in zip (self.axes_cuts, chans, clabels):
-            self.lines_full[chan] = ax.plot(self.Vfull[piezo],
-                                            self.Vfull[chan])
-            self.lines_interp[chan] = ax.plot(self.Vinterp[piezo],
-                                              self.Vinterp[chan], 'o')
-
-
-        '''
-        ## "Last full scan" plot
-        self.ax['line'] = self.fig.add_subplot(313)
-        self.ax['line'].set_title(self.filename, fontsize=8)
-        self.line_full = self.ax['line'].plot(self.Vfull['piezo'], self.Vfull['dc'], '-.k') # commas only take first element of array? Anyway, it works.
-
-        self.line_interp = self.ax['line'].plot(self.Vinterp['piezo'], self.Vinterp['acx'], '.r', markersize=12)
-
-        self.ax['line'].set_xlabel('Vpiezo %s (V)' %self.fast_axis, fontsize=8)
-        self.ax['line'].set_ylabel('Last V AC x line (V)', fontsize=8)
-
-        self.line_full = self.line_full[0] # it is given as an array
-        self.line_interp = self.line_interp[0]
-        '''
+        for ax, chan, clabel in zip (self.axes_cuts,
+                                     self._chan_labels,
+                                     clabels):
+            # ax.plot returns a list containing the line
+            # Take the line object - not the list containing the line
+            self.lines_full[chan] = ax.plot(self.Vfull['piezo'],
+                                            self.Vfull[chan],
+                                            'k')[0]
+            self.lines_interp[chan] = ax.plot(self.Vinterp['piezo'],
+                                              self.Vinterp[chan], 'o',
+                                              markersize=3)[0]
+            ax.set_ylabel(clabel)
+        # Label the X axis of only the bottom plot
+        self.axes_cuts[-1].set_xlabel("Position (V)")
+        # Title the top plot with the timestamp
+        self.axes_cuts[0].set_title(self.timestamp, size="medium")
+        # Adjust subplot layout so all labels are visible
+        self.fig.tight_layout()
+        self.fig_cuts.tight_layout()
 
     def plot_line(self):
         '''
+        Update the data in the linecut plot.
 
         '''
-        for ax, chan, clabel in zip(self.axes_cuts, chans, clabels):
+        clabels = ['DC Flux ($\Phi_o$)',
+                    'Capacitance (F)',
+                    'AC X ($\Phi_o$)',
+                    'AC Y ($\Phi_o$)']
+        for ax, chan, clabel in zip(self.axes_cuts, self._chan_labels, clabels):
             # Update X and Y data for the "full data"
             self.lines_full[chan].set_xdata(self.Vfull['piezo'] *
                                             self._conversions[self.fast_axis])
@@ -311,17 +317,14 @@ class Scanplane(Measurement):
                                             self._conversions[self.fast_axis])
             self.lines_interp[chan].set_ydata(self.Vfull[chan] *
                                             self._conversions[chan])
+            # Rescale axes for newly plotted data
+            ax.relim()
+            ax.autoscale_view()
 
+        #self.ax['line'].relim()
+        #self.ax['line'].autoscale_view()
 
-        self.line_full.set_xdata(self.Vfull['piezo']*self._conversions[self.fast_axis])
-        self.line_full.set_ydata(self.Vfull[chan]*self._conversions[chan])
-        self.line_interp.set_xdata(self.Vinterp['piezo']*self._conversions[self.fast_axis])
-        self.line_interp.set_ydata(self.Vinterp[chan]*self._conversions[chan])
-
-        self.ax['line'].relim()
-        self.ax['line'].autoscale_view()
-
-        plot_mpl.aspect(self.ax['line'], .3)
+        #plot_mpl.aspect(self.ax['line'], .3)
 
 
     def save_line(self, i, Vstart):
