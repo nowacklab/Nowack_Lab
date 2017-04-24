@@ -93,8 +93,8 @@ class Measurement:
         elif os.path.dirname(filename) == '': # if no path specified
             os.path.join(get_local_data_path(), get_todays_data_dir(), filename)
 
-        ## Remove file extensions is given.
-        ## This is done somewhat manually in case filename has periods in it for some reason.
+        # Remove file extensions
+        # This is done somewhat manually in case filename has periods in it for some reason.
         if filename[-5:] == '.json': # ends in .json
             filename = filename[:-5] # strip extension
         elif filename[-3:] == '.h5': # ends in .h5
@@ -200,25 +200,37 @@ class Measurement:
         self._save(filename, savefig=True)
 
 
-    def _save(self, filename=None, savefig=True):
+    def _save(self, filename=None, savefig=True, ignored = []):
         '''
-        Saves data. numpy arrays are saved to one file as hdf5,
-        everything else is saved to JSON
+        Saves data. numpy arrays are saved to one file as hdf5, everything else
+        is saved to JSON
+
+        Keyword arguments:
+        filename -- The path where the datafile will be saved. One hdf5 file and
+        one JSON file with the specified filename will be saved. If no filename
+        is supplied then the filename is generated from the timestamp
+
+        savefig -- If "True" figures are saved. If "False" only data and config
+        are saved
+
+        ignored -- Array of objects to be ignored during saving. Passed to
+        _save_hdf5 and _save_json.
+
         Saved data stored locally but also copied to the data server.
-        If you specify no filename, one will be automatically generated based on
-        this object's filename and the object will be saved in this experiment's data folder.
-        If you specify a filename with no preceding path, it will save
-        automatically to the correct folder for this experiment with the custom filename.
+        If you specify no filename, one will be automatically generated.
+
         Locally, saves to ~/data/; remotely, saves to /labshare/data/
+
         If you specify a relative (partial) path, the data will still be saved
         in the data directory, but in subdirectories specified in the filename.
         For example, if the filename is 'custom/custom_filename', the data will
         be saved in (today's data directory)/custom/custom_filename.
+
         If you specify a full path, the object will save to that path locally
         and to [get_data_server_path()]/[get_computer_name()]/other/[hirearchy past root directory]
         '''
 
-        ## Saving to the experiment-specified directory
+        # Saving to the experiment-specified directory
         if filename is None:
             if not hasattr(self, 'filename'): # if you forgot to make a filename
                 self.make_timestamp_and_filename()
@@ -228,17 +240,17 @@ class Measurement:
             local_path = os.path.join(get_local_data_path(), get_todays_data_dir(), filename)
             remote_path = os.path.join(get_remote_data_path(), get_todays_data_dir(), filename)
 
-        ## Saving to a custom path
+        # Saving to a custom path
         else: # you specified some sort of path
             local_path = filename
             remote_path = os.path.join(get_remote_data_path(), '..', 'other', *filename.replace('\\', '/').split('/')[1:]) # removes anything before the first slash. e.g. ~/data/stuff -> data/stuff
             # All in all, remote_path should look something like: .../labshare/data/bluefors/other/
 
-        ## Save locally:
+        # Save locally:
         local_dir = os.path.split(local_path)[0]
         if not os.path.exists(local_dir):
             os.makedirs(local_dir)
-        self._save_hdf5(local_path)
+        self._save_hdf5(local_path, ignored = ignored)
         self._save_json(local_path)
 
         nopdf = True
@@ -246,7 +258,7 @@ class Measurement:
             self.fig.savefig(local_path+'.pdf', bbox_inches='tight')
             nopdf = False
 
-        ## Save remotely
+        # Save remotely
         if os.path.exists(get_data_server_path()):
             try:
                 # Make sure directories exist
@@ -254,7 +266,7 @@ class Measurement:
                 if not os.path.exists(remote_dir):
                     os.makedirs(remote_dir)
 
-                ## Loop over filetypes
+                # Loop over filetypes
                 for ext in ['.h5','.json','.pdf']:
                     if ext == '.pdf' and nopdf:
                         continue
@@ -286,7 +298,7 @@ class Measurement:
             raise Exception('Reloading failed, but object was saved!')
 
 
-    def _save_hdf5(self, filename):
+    def _save_hdf5(self, filename, ignored = []):
         '''
         Save numpy arrays to h5py. Walks through the object's dictionary
         and any subdictionaries and subobjects, picks out numpy arrays,
@@ -296,18 +308,26 @@ class Measurement:
         '''
 
         with h5py.File(filename+'.h5', 'w') as f:
-            def walk(d, group): # walk through a dictionary
+            # Walk through the dictionary
+            def walk(d, group):
                 for key, value in d.items():
-                    if type(value) is np.ndarray: # found a numpy array
+                    # If the key is in ignored then skip over it
+                    if key in ignored:
+                        continue
+                    # If a numpy array is found
+                    if type(value) is np.ndarray:
+                        # Save the numpy array as a dataset
                         d = group.create_dataset(key, value.shape,
-                            compression = 'gzip', compression_opts=9
-                        ) # save the numpy array as a dataset
+                            compression = 'gzip', compression_opts=9)
                         d.set_fill_value = np.nan
-                        d[...] = value # fill it with data
-                    elif 'dict' in utilities.get_superclasses(value): # found a dictionary
+                        # Fill the dataset with the corresponding value
+                        d[...] = value
+                    # If a dictionary is found
+                    elif 'dict' in utilities.get_superclasses(value):
                         new_group = group.create_group(key) # make a group with the dictionary name
                         walk(value, new_group) # walk through the dictionary
-                    elif hasattr(value, '__dict__'): # found an object of some sort
+                    # If the there is some other object
+                    elif hasattr(value, '__dict__'):
                         if 'Measurement' in utilities.get_superclasses(value): # restrict saving Measurements.
                             new_group = group.create_group('!'+key) # make a group with !(object name)
                             walk(value.__dict__, new_group) # walk through the object dictionary

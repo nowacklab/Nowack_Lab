@@ -15,7 +15,8 @@ from ..Utilities import conversions
 from ..Utilities.utilities import AttrDict
 
 class Scanplane(Measurement):
-    _chan_labels = ['dc','cap','acx','acy'] # DAQ channel labels expected by this class. You may add chan labels but don't change these!
+    # DAQ channel labels required for this class.
+    _chan_labels = ['dc','cap','acx','acy']
     _conversions = AttrDict({
         'dc': conversions.Vsquid_to_phi0,
         'cap': conversions.V_to_C,
@@ -24,7 +25,7 @@ class Scanplane(Measurement):
         'x': conversions.Vx_to_um,
         'y': conversions.Vy_to_um
     })
-    _units = AttrDict({  ### Do conversions and units cleanly in the future within the DAQ class!!
+    _units = AttrDict({
         'dc': 'phi0',
         'cap': 'C',
         'acx': 'phi0',
@@ -40,7 +41,6 @@ class Scanplane(Measurement):
                        'lockin_cap',
                        'atto',
                        'daq']
-    # Put things here necessary to have when reloading object
 
     def __init__(self, instruments={}, plane=None, span=[800,800],
                         center=[0,0], numpts=[20,20],
@@ -49,6 +49,18 @@ class Scanplane(Measurement):
         super().__init__()
 
         self._load_instruments(instruments)
+
+        # After SAA is loaded we can compute the conversions to real units
+        # Load the correct SAA sensitivity based on the SAA feedback resistor
+        Vsquid_to_phi0 = conversions.Vsquid_to_phi0[self.squidarray.sensitivity]
+        # Divide out the preamp gain for the DC channel
+        self._conversions = AttrDict({'dc': Vsquid_to_phi0/self.preamp.gain,
+                                     'cap': conversions.V_to_C,
+                                     'acx': Vsquid_to_phi0,
+                                     'acy': Vsquid_to_phi0,
+                                     'x': conversions.Vx_to_um,
+                                     'y': conversions.Vy_to_um
+            })
 
         self.scan_rate = scan_rate
         self.raster = raster
@@ -76,24 +88,34 @@ class Scanplane(Measurement):
         try:
             self.Z = self.plane.plane(self.X, self.Y) - self.scanheight
         except:
-            print('plane not loaded... no idea where the surface is without a plane!')
+            print('plane not loaded')
 
         for chan in self._chan_labels:
-            self.V[chan] = np.full(self.X.shape, np.nan) #initialize arrays
-            if chan not in self._conversions.keys(): # if no conversion factor given
+            # Initialize one array per DAQ channel monitored during the scan
+            self.V[chan] = np.full(self.X.shape, np.nan)
+            # If no conversion factor is given then directly record the voltages
+            # by setting the conversion to 1.
+            if chan not in self._conversions.keys():
                 self._conversions[chan] = 1
             if chan not in self._units.keys():
                 self._units[chan] = 'V'
 
-        self.fast_axis = 'x' # default; modified as a kwarg in self.do()
+        # Scan in the X direction by default this can be changed in scan.do()
+        self.fast_axis = 'x'
 
     def do(self, fast_axis = 'x', surface=False): # surface False = sweep in lines, True sweep over plane surface
+        '''
+        Routine to perform a scan over a plane
+
+        Keyword arguments:
+        fast_axis -- If 'x' (default) take linecuts in the X direction. If 'y',
+        take linecuts in the Y direction.
+        surface -- If False sweep out lines over the sufrace. If True,
+        piezos.sweep_surface is used during the scan
+        '''
         self.fast_axis = fast_axis
-        ## Start time and temperature
+        # Record start time for the scan
         tstart = time.time()
-        #temporarily commented out so we can scan witout internet on montana
-        #computer
-        #self.temp_start = self.montana.temperature['platform']
         self.setup_plots()
 
         # Check if points in the scan are within the voltage limits of Piezos
@@ -198,7 +220,7 @@ class Scanplane(Measurement):
             self.plot()
 
         self.piezos.V = 0
-        #self.save()
+        self.save()
 
         tend = time.time()
         print('Scan took %f minutes' %((tend-tstart)/60))
@@ -210,9 +232,10 @@ class Scanplane(Measurement):
         '''
         super().plot()
 
+        # Update the line plot
         self.plot_line()
 
-        # TODO fix voltage conversions
+        # Iterate over the color plots and update data with new line
         for chan in self._chan_labels:
             data_nan = np.array(self.V[chan], dtype=np.float)
             data_masked = np.ma.masked_where(np.isnan(data_nan), data_nan)
@@ -222,6 +245,7 @@ class Scanplane(Measurement):
             # Adjust colorbar limits for new data
             self.cbars[chan].set_clim([data_masked.min(),
                                        data_masked.max()])
+            # Update the colorbars
             self.cbars[chan].draw_all()
 
         self.fig.canvas.draw()
@@ -321,11 +345,15 @@ class Scanplane(Measurement):
             ax.relim()
             ax.autoscale_view()
 
-        #self.ax['line'].relim()
-        #self.ax['line'].autoscale_view()
+    def save(self):
+        '''
+        Saves the Scanplane object
 
-        #plot_mpl.aspect(self.ax['line'], .3)
-
+        Remove the objects axes and axes_cuts from the object which are
+        misinterpreted as arrays by the _save_hdf5 routine
+        '''
+        ignored = ["axes_cuts", "axes"]
+        self._save(self.filename, ignored = ignored)
 
     def save_line(self, i, Vstart):
         '''
