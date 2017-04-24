@@ -197,7 +197,7 @@ class NIDAQ(Instrument):
         '''
 
 
-        ## Make everything a numpy array
+        # Make everything a numpy array
         data = data.copy() # so we don't modify original data
         for key, value in data.items():
             value = value.copy() # so we don't modify original data
@@ -206,32 +206,32 @@ class NIDAQ(Instrument):
             elif type(value) is list:
                 value = np.array(value)
 
-            ## Make sure daq does not go out of range
+            # Make sure daq does not go out of range
             absmax = abs(value).max()
             if absmax > self._output_range:
                 value = np.clip(value, -self._output_range, self._output_range)
                 print('%s is out of range for DAQ with output range %s! Set to max output.' %(absmax,self._output_range))
 
-            ## Repeat the last data point.
-            ## The DAQ for some reason gives data points late by 1. (see later)
+            # Repeat the last data point.
+            # The DAQ for some reason gives data points late by 1. (see later)
             value = np.append(value, value[-1])
 
-            ## Add units for Instrumental
+            # Add units for Instrumental
             value = value * u.V
 
             data[key] = value
 
 
-        ## Make sure there's at least one input channel (or DAQmx complains)
+        # Make sure there's at least one input channel (or DAQmx complains)
         if chan_in is None:
             chan_in = ['ai23'] # just a random channel
         elif np.isscalar(chan_in):
             chan_in = [chan_in]
 
-        ## Need to copy chan_in to ensure names don't change!
+        # Need to copy chan_in to ensure names don't change!
         chan_in = chan_in.copy()
 
-        ## Convert to real channel names
+        # Convert to real channel names
         output_labels = list(data.keys())
         for label in output_labels:
             if label in self.output_names: # this means we've labeled it something other than the channel name
@@ -243,7 +243,7 @@ class NIDAQ(Instrument):
                 chan_in.remove(label)
                 chan_in.append(self.input_names[label])
 
-        ## prepare a NIDAQ Task
+        # prepare a NIDAQ Task
         taskargs = tuple([getattr(self._daq, ch) for ch in list(data.keys()) + chan_in])
         task = ni.Task(*taskargs)
         some_data = next(iter(data.values())) # All data must be equal length, so just choose one.

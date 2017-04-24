@@ -103,13 +103,13 @@ class Scanplane(Measurement):
         # Scan in the X direction by default this can be changed in scan.do()
         self.fast_axis = 'x'
 
-    def do(self, fast_axis = 'x', surface=False): # surface False = sweep in lines, True sweep over plane surface
+    def do(self, fast_axis = 'x', surface=False):
         '''
         Routine to perform a scan over a plane
 
         Keyword arguments:
-        fast_axis -- If 'x' (default) take linecuts in the X direction. If 'y',
-        take linecuts in the Y direction.
+        fast_axis -- If 'x' (default) take linecuts in the X direction. 
+        If 'y', take linecuts in the Y direction.
         surface -- If False sweep out lines over the sufrace. If True,
         piezos.sweep_surface is used during the scan
         '''
@@ -255,7 +255,28 @@ class Scanplane(Measurement):
         '''
         Set up all plots.
         '''
-        self.fig, self.axes = plt.subplots(2, 2, figsize=(8,8))
+        # Use the aspect ratio of the image set subplot size.
+        # The aspect ratio is Xspan/Yspan
+        aspect = self.span[0]/self.span[1]
+        numplots = 4
+        # If X is longer than Y we want 2 columns of wide plots
+        if aspect > 1:
+            num_row = int(np.ceil(numplots/2))
+            num_col = 2
+            width = 14
+            # Add 1 to height for title/axis labels
+            height = min(width, width/aspect) + 1
+        # If Y is longer than X we want 2 rows of tall plots
+        else:
+            num_row = 2
+            num_col = int(np.ceil(numplots/2))
+            height = 10
+            # Pad the plots for the colorbars/axis labels
+            width = min(height, height*aspect) + 4
+            
+        self.fig, self.axes = plt.subplots(num_row,
+                                           num_col,
+                                           figsize=(width, height))
         self.fig_cuts, self.axes_cuts = plt.subplots(4, 1, figsize=(6,8),
                                                      sharex=True)
         cmaps = ['RdBu',
@@ -286,6 +307,7 @@ class Scanplane(Measurement):
             image = ax.imshow(masked_data, cmap=cmap, origin="lower",
                               extent = [self.X.min(), self.X.max(),
                                         self.Y.min(), self.Y.max()])
+            
             # Create a colorbar that matches the image height
             d = make_axes_locatable(ax)
             cax = d.append_axes("right", size=0.1, pad=0.1)
@@ -293,13 +315,16 @@ class Scanplane(Measurement):
             cbar.set_label(clabel, rotation=270, labelpad=12)
             cbar.formatter.set_powerlimits((-2,2))
             self.im[chan] = image
-            self.cbars[chan] = cbar
+            self.cbars[chan] = cbar    
 
             # Label the axes - including a timestamp
             ax.set_xlabel("X Position (V)")
             ax.set_ylabel("Y Position (V)")
-            ax.set_title(self.timestamp, loc="left", size = "medium")
-
+            title = ax.set_title(self.timestamp, size="medium", y=1.02)
+            # If the title intersects the exponent label from the colorbar
+            # shift the title up and center it
+            # TODO
+                
         # Plot the last linecut for DC, AC and capacitance signals
         for ax, chan, clabel in zip (self.axes_cuts,
                                      self._chan_labels,
@@ -317,10 +342,12 @@ class Scanplane(Measurement):
         self.axes_cuts[-1].set_xlabel("Position (V)")
         # Title the top plot with the timestamp
         self.axes_cuts[0].set_title(self.timestamp, size="medium")
+
         # Adjust subplot layout so all labels are visible
+        # First call tight layout to prevent axis label overlap.
         self.fig.tight_layout()
         self.fig_cuts.tight_layout()
-
+        
     def plot_line(self):
         '''
         Update the data in the linecut plot.
