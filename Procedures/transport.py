@@ -39,7 +39,8 @@ class IV(Measurement):
         self.Iy = np.full(self.Vs.shape, np.nan)
         self.R = np.full(self.Vs.shape, np.nan)
 
-        self.setup_lockins()
+        if instruments != {}:
+            self.setup_lockins()
 
 
     def do(self):
@@ -53,7 +54,7 @@ class IV(Measurement):
         for i, Vs in enumerate(self.Vs):
             self.lockin_V.amplitude = Vs
             #while self.lockin_V.is_OL():
-                #self.lockin_V.sensitivity = 
+                #self.lockin_V.sensitivity =
             # if self.lockin_V.is_OL() or i==0: # only do auto gain if we're overloading or if it's the first measurement
             #     self.lockin_V.auto_gain()
             # if self.lockin_I.is_OL() or i==0:
@@ -185,10 +186,11 @@ class RvsSomething(Measurement):
         self.Vy = {str(i): np.array([]) for i in range(self.num_lockins)} # use a dictionary to enable saving
         self.Ix = np.array([])
         self.Iy = np.array([])
-        self.R = {str(i): np.array([]) for i in range(self.num_lockins)} 
+        self.R = {str(i): np.array([]) for i in range(self.num_lockins)}
         setattr(self, self.something, np.array([]))
 
-        self.setup_lockins()
+        if instruments != {}:
+            self.setup_lockins()
 
     def _load_instruments(self, instruments={}):
         '''
@@ -212,6 +214,11 @@ class RvsSomething(Measurement):
         for name, handle in self.__dict__.items():
             if name[:-1] == 'lockin_V': # e.g. lockin_V2, cut off the "2"
                 num_lockins += 1
+        if num_lockins == 0:
+            try:
+                num_lockins = len(self.R) # if you give this class data without instruments.
+            except:
+                pass # if you haven't yet given data.
         self._num_lockins = num_lockins
         return self._num_lockins
 
@@ -273,7 +280,7 @@ class RvsSomething(Measurement):
         num_avg is the number of data points to be averaged
         delay_avg is the time delay (seconds) between averages
 
-        Doesn't make a whole lot of sense to average for a measurement vs time, 
+        Doesn't make a whole lot of sense to average for a measurement vs time,
         but the averaging could be useful for a subclass.
         '''
 

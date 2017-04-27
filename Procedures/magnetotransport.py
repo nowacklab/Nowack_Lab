@@ -3,6 +3,10 @@ from ..Utilities.save import Measurement
 from .transport import RvsSomething, RvsVg
 from ..Utilities.plotting import plot_mpl
 
+## Constants here
+e = 1.60217662e-19 #coulombs
+h = 6.626e-34 # m^2*kg/s
+
 class RvsB(RvsSomething):
     instrument_list = ['ppms', 'lockin_V', 'lockin_I']
     something='B'
@@ -51,6 +55,24 @@ class RvsB(RvsSomething):
 
         self.do_after()
 
+    def plot_quantized_conductance(self, nu=1, Rxy_channel=0, Rxx_channel=1):
+        '''
+        Generate a plot with Gxy in units of nu*e^2/h. By default, the zeroth lockin (the one
+        used to source current) measures Rxy.
+        '''
+        fig, ax = plt.subplots()
+        ax2 = ax.twinx()
+        ax.set_xlabel('B (T)', fontsize=20)
+        ax.set_ylabel('Gxy (%ie^2/h)' %nu, fontsize=20)
+        ax2.set_ylabel('Rxx (Ohm)', fontsize=20)
+        G0 = e**2/h
+        ax.plot(self.B, 1/self.R[str(Rxy_channel)]/G0/nu, 'g')
+        ax2.plot(self.B, self.R[str(Rxx_channel)], 'b')
+        ax.set_title(self.filename)
+        ax.set_ylim(-40/nu,40/nu)
+
+        return fig, ax, ax2
+
 class RvsVg_B(RvsVg):
     instrument_list = list(set(RvsB.instrument_list) | set(RvsVg.instrument_list))
 
@@ -78,10 +100,10 @@ class RvsVg_B(RvsVg):
 
         self.B = np.linspace(Bstart, Bend, round(abs(Bstart-Bend)/Bstep)+1)
         self.gs = RvsVg(self.instruments, self.Vstart, self.Vend, self.Vstep, self.delay)
-        
+
         self.Vg = self.gs.Vg_values
 
-        self.R2D = {str(i): np.full((len(self.B), len(self.Vg)), np.nan) for i in range(self.num_lockins)} 
+        self.R2D = {str(i): np.full((len(self.B), len(self.Vg)), np.nan) for i in range(self.num_lockins)}
         ## remember: shape of matrix given in y,x. So B is on the y axis and Vg on the x axis.
 
         # store full field sweep data
@@ -143,22 +165,22 @@ class RvsVg_B(RvsVg):
             ## Here we are plotting both |R| and log|R| for each channel
             i = str(i)
             ax = self.ax[i]
-            self.im[i]['0'] = plot_mpl.plot2D(ax['0'], 
-                                                self.Vg, 
-                                                self.B, 
-                                                self.R2D[i].T, 
-                                                interpolation = 'none', 
-                                                cmap='cubehelix', 
-                                                xlabel='Vg (V)', 
-                                                ylabel= 'B (T)', 
+            self.im[i]['0'] = plot_mpl.plot2D(ax['0'],
+                                                self.Vg,
+                                                self.B,
+                                                self.R2D[i].T,
+                                                interpolation = 'none',
+                                                cmap='cubehelix',
+                                                xlabel='Vg (V)',
+                                                ylabel= 'B (T)',
                                                 clabel='R%s (Ohm)' %i,
                                                 equal_aspect=False)
-            self.im[i]['1'] = plot_mpl.plot2D(ax['1'], 
-                                                self.Vg, 
-                                                self.B, 
-                                                np.log(np.abs(self.R2D[i].T)), 
-                                                interpolation = 'none', 
-                                                cmap='cubehelix', 
+            self.im[i]['1'] = plot_mpl.plot2D(ax['1'],
+                                                self.Vg,
+                                                self.B,
+                                                np.log(np.abs(self.R2D[i].T)),
+                                                interpolation = 'none',
+                                                cmap='cubehelix',
                                                 xlabel='Vg (V)',
                                                 ylabel= 'B (T)',
                                                 clabel='log(|R%s (Ohm)|)' %i,
