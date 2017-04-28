@@ -55,16 +55,16 @@ class RvsB(RvsSomething):
 
         self.do_after()
 
-    def plot_quantized_conductance(self, nu=1, Rxy_channel=0, Rxx_channel=1):
+    def plot_quantized_conductance(self, nu=1, Rxy_channel=1, Rxx_channel=0):
         '''
-        Generate a plot with Gxy in units of nu*e^2/h. By default, the zeroth lockin (the one
+        Generate a plot with Gxy in units of nu*e^2/h. By default, the 1st lockin (the one
         used to source current) measures Rxy.
         '''
         fig, ax = plt.subplots()
         ax2 = ax.twinx()
         ax.set_xlabel('B (T)', fontsize=20)
-        ax.set_ylabel('Gxy (%ie^2/h)' %nu, fontsize=20)
-        ax2.set_ylabel('Rxx (Ohm)', fontsize=20)
+        ax.set_ylabel('Gxy (%se^2/h)' %(str(nu) if nu!=1 else ''), fontsize=20, color='g')
+        ax2.set_ylabel('Rxx (Ohm)', fontsize=20, color = 'b')
         G0 = e**2/h
         ax.plot(self.B, 1/self.R[str(Rxy_channel)]/G0/nu, 'g')
         ax2.plot(self.B, self.R[str(Rxx_channel)], 'b')
@@ -111,7 +111,6 @@ class RvsVg_B(RvsVg):
         for j in range(self.num_lockins):
             setattr(self, 'R%ifull' %j, np.array([]))
 
-
     def do(self, ):
         self.do_before()
 
@@ -153,6 +152,34 @@ class RvsVg_B(RvsVg):
 
         self.fig.tight_layout()
         self.fig.canvas.draw()
+
+    def plot_mobility(self, Rxy_channel=1, Rxx_channel=0):
+        '''
+        Makes a plot of the Hall coefficient and carrier mobility vs gate voltage.
+        The voltage channel measuring Rxy is by default 1, and Rxx is 0.
+        Right now we assume geometrical factor of 1, so Rxx = rho_xx
+        mu = R_H/<R_xx>, average value of R_xx
+        R_H = Rxy/B
+        '''
+        from scipy.stats import linregress as lr
+        slopes = np.array([])
+        mobility = np.array([])
+        Rxx = self.R2D[str(Rxx_channel)]
+        Rxy = self.R2D[str(Rxy_channel)]
+        for i in range(Rxy.shape[1]):
+            slope, intercept, _, _, _ = lr(self.B, Rxy[:,i])
+            slopes = np.append(slopes, slope)
+            mobility = np.append(mobility, slope/Rxx[:,i].mean())
+        fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(10,4))
+        ax1.plot(self.Vg, abs(slopes))
+        ax2.plot(self.Vg, abs(mobility)*100**2)
+        ax1.set_xlabel('Vg (V)',fontsize=20)
+        ax1.set_ylabel('Hall Coefficient (Ohm/T)', fontsize=20)
+        ax2.set_ylabel('Carrier mobility (cm^2/V*s)', fontsize=20)
+
+        fig.tight_layout()
+
+        return fig, ax1, ax2, slopes, mobility
 
     def setup_plots(self):
         self.fig, ax = plt.subplots(nrows = self.num_lockins, ncols=2, figsize=(10,10))
