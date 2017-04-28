@@ -237,7 +237,8 @@ class Scanplane(Measurement):
 
         # Iterate over the color plots and update data with new line
         for chan in self._chan_labels:
-            data_nan = np.array(self.V[chan], dtype=np.float)
+            data_nan = np.array(self.V[chan]*self._conversions[chan],
+                                dtype=np.float)
             data_masked = np.ma.masked_where(np.isnan(data_nan), data_nan)
 
             # Set a new image for the plot
@@ -249,7 +250,7 @@ class Scanplane(Measurement):
             self.cbars[chan].draw_all()
 
         self.fig.canvas.draw()
-        self.fig.canvas.flush_events()
+       # self.fig.canvas.flush_events()
 
     def setup_plots(self):
         '''
@@ -299,7 +300,7 @@ class Scanplane(Measurement):
                                           cmaps,
                                           clabels):
             # Convert None in data to NaN
-            nan_data = np.array(self.V[chan])
+            nan_data = np.array(self.V[chan]*self._conversions[chan])
             # Create masked array where data is NaN
             masked_data = np.ma.masked_where(np.isnan(nan_data), nan_data)
 
@@ -371,6 +372,9 @@ class Scanplane(Measurement):
             # Rescale axes for newly plotted data
             ax.relim()
             ax.autoscale_view()
+        # Update the figure    
+        self.fig_cuts.canvas.draw()
+        #self.fig_cuts.canvas.flush_events()
 
     def save(self):
         '''
