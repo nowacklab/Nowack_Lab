@@ -177,6 +177,7 @@ class RvsSomething(Measurement):
     instrument_list = ['lockin_V', 'lockin_I']
     something='time'
     something_units = 's'
+    legendtitle=None
 
     def __init__(self, instruments = {}):
         super().__init__()
@@ -250,6 +251,9 @@ class RvsSomething(Measurement):
         '''
         Standard things to do before the loop.
         '''
+
+        self.setup_label()
+
         if plot:
             self.setup_plots()
         self.time_start = time.time()
@@ -329,6 +333,31 @@ class RvsSomething(Measurement):
         self.fig.tight_layout()
         self.fig.canvas.draw()
 
+    def setup_label(self):
+        '''
+        Add info about PPMS or Keithley status, if relevant.
+        Fixed variables (e.g. temperature, field for a gatesweep) will show up
+        in the plot legend as the legend title.
+        '''
+        self.legendtitle = None
+
+        def add_text_to_legend(text):
+            if self.legendtitle is None:
+                self.legendtitle = text
+            else:
+                self.legendtitle += '\n'+text
+
+        if hasattr(self, 'ppms'):
+            if self.ppms is not None:
+                if self.something != 'T': # if we're measuring vs many temperatures
+                    add_text_to_legend('T = %.2f K' %self.ppms.temperature)
+                if self.something != 'B':
+                    add_text_to_legend('B = %.2f T' %(self.ppms.field/10000))
+
+        if hasattr(self, 'keithley'):
+            if self.keithley is not None:
+                if self.something != 'Vg':
+                    add_text_to_legend('Vg = %.1f V' %self.keithley.V)
 
     def setup_lockins(self):
         self.lockin_V1.input_mode = 'A-B'
@@ -350,7 +379,7 @@ class RvsSomething(Measurement):
             line =  self.ax.plot(getattr(self, self.something), self.R[j])
             self.lines[j] = line[0]
 
-        self.ax.legend(['R%i' %(i+1) for i in range(self.num_lockins)], loc='best')
+        l = self.ax.legend(['R%i' %(i+1) for i in range(self.num_lockins)], loc='best', title=self.legendtitle)
         self.ax.set_title(self.filename)
 
 
