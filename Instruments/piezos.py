@@ -13,11 +13,14 @@ class Piezos(Instrument):
     Sweeps between voltages smoothly.
     '''
     _label = 'piezos'
-    _chan_labels = ['x','y','z'] # DAQ channel labels expected by this class
+    # DAQ channel labels expected by this class
+    _chan_labels = ['x','y','z'] 
     _piezos = ['x','y','z']
     _gain = [40, 40, 40]
-    _Vmax = [400, 400, 400] # maximum allowed total voltage across piezo
-    _bipolar = [2, 2, 2] # multiplier for whether piezos are biased +V/-V or not.
+    # maximum allowed total voltage across piezo
+    _Vmax = [400, 400, 400]
+    # multiplier for whether piezos are biased +V/-V or not.
+    _bipolar = [2, 2, 2] 
     _V = {}
     _daq = None
     _max_sweep_rate = 180 # Vpiezo/s
@@ -148,7 +151,6 @@ class Piezos(Instrument):
         msg = 'Sweeping piezos! '
         for key in all_keys:
             msg = msg + '\n%s: %.1f to %.1f ' %(key, Vstart[key], Vend[key])
-        log(msg)
 
         ## Calculate number of steps. This is max(|(Whole voltage range)/(step size)|).
         ## Add 1 so there is at least 1 step

@@ -1,4 +1,6 @@
-import visa, numpy as np, time
+import visa
+import numpy as np
+import time
 from .instrument import Instrument
 
 class Keithley2400(Instrument):

@@ -1,5 +1,8 @@
-# import Nowack_Lab.Procedures, Nowack_Lab.Instruments, Nowack_Lab.Utilities, os
+import time
 import os
+# Workaround for scipy altering KeyboardInterrupt behavior
+os.environ['FOR_DISABLE_CONSOLE_CTRL_HANDLER'] = '1'
+
 from IPython import get_ipython, display
 ip = get_ipython()
 

@@ -2,7 +2,7 @@ import numpy as np
 from numpy.linalg import lstsq
 import time, os
 from datetime import datetime
-from scipy.interpolate import interp1d
+#from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -50,8 +50,8 @@ class Scanplane(Measurement):
 
         self._load_instruments(instruments)
 
-        # After SAA is loaded we can compute the conversions to real units
-        # Load the correct SAA sensitivity based on the SAA feedback resistor
+        # Load the correct SAA sensitivity based on the SAA feedback
+        # resistor
         Vsquid_to_phi0 = conversions.Vsquid_to_phi0[self.squidarray.sensitivity]
         # Divide out the preamp gain for the DC channel
         self._conversions = AttrDict({'dc': Vsquid_to_phi0/self.preamp.gain,
@@ -62,6 +62,7 @@ class Scanplane(Measurement):
                                      'y': conversions.Vy_to_um
             })
 
+        # Define variables specified in init
         self.scan_rate = scan_rate
         self.raster = raster
         self.span = span
@@ -81,8 +82,12 @@ class Scanplane(Measurement):
 
         self.scanheight = scanheight
 
-        x = np.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
-        y = np.linspace(center[1]-span[1]/2, center[1]+span[1]/2, numpts[1])
+        x = np.linspace(center[0]-span[0]/2,
+                        center[0]+span[0]/2,
+                        numpts[0])
+        y = np.linspace(center[1]-span[1]/2,
+                        center[1]+span[1]/2,
+                        numpts[1])
 
         self.X, self.Y = np.meshgrid(x, y)
         try:
@@ -91,16 +96,16 @@ class Scanplane(Measurement):
             print('plane not loaded')
 
         for chan in self._chan_labels:
-            # Initialize one array per DAQ channel monitored during the scan
+            # Initialize one array per DAQ channel
             self.V[chan] = np.full(self.X.shape, np.nan)
-            # If no conversion factor is given then directly record the voltages
-            # by setting the conversion to 1.
+            # If no conversion factor is given then directly record the
+            # voltage by setting conversion = 1
             if chan not in self._conversions.keys():
                 self._conversions[chan] = 1
             if chan not in self._units.keys():
                 self._units[chan] = 'V'
 
-        # Scan in the X direction by default this can be changed in scan.do()
+        # Scan in X direction by default
         self.fast_axis = 'x'
 
     def do(self, fast_axis = 'x', surface=False):
@@ -118,13 +123,15 @@ class Scanplane(Measurement):
         tstart = time.time()
         self.setup_plots()
 
-        # Check if points in the scan are within the voltage limits of Piezos
+        # Check if points in the scan are within the voltage limits of
+        # Piezos
         for i in range(self.X.shape[0]):
             self.piezos.x.check_lim(self.X[i,:])
             self.piezos.y.check_lim(self.Y[i,:])
             self.piezos.z.check_lim(self.Z[i,:])
 
-        # Loop over Y values if fast_axis is x, X values if fast_axis is y
+        # Loop over Y values if fast_axis is x,
+        # Loop over X values if fast_axis is y
         if fast_axis == 'x':
             num_lines = int(self.X.shape[0]) # loop over Y
         elif fast_axis == 'y':
@@ -144,14 +151,18 @@ class Scanplane(Measurement):
             k = 0
             if self.raster:
                 if i%2 == 0: # if even
-                    k = 0 # k is used to determine Vstart/Vend. For forward, will sweep from the 0th element to the -(k+1) = -1st = last element
+                    # k keeps track of sweeping forward vs. backwards
+                    k = 0 
                 else: # if odd
-                    k = -1 # k is used to determine Vstart/Vend. For forward, will sweep from the -1st = last element to the -(k+1) = 0th = first element
+                    k = -1 
             # if not rastering, k=0, meaning always forward sweeps
 
-            ## Starting and ending piezo voltages for the line
+            # Starting and ending piezo voltages for the line
+            # for forward, starts at 0,i; backward: -1, i
             if fast_axis == 'x':
-                Vstart = {'x': self.X[i,k], 'y': self.Y[i,k], 'z': self.Z[i,k]} # for forward, starts at 0,i; backward: -1, i
+                Vstart = {'x': self.X[i,k],
+                          'y': self.Y[i,k],
+                          'z': self.Z[i,k]} 
                 Vend = {'x': self.X[i,-(k+1)], 'y': self.Y[i,-(k+1)], 'z': self.Z[i,-(k+1)]} # for forward, ends at -1,i; backward: 0, i
             elif fast_axis == 'y':
                 Vstart = {'x': self.X[k,i], 'y': self.Y[k,i], 'z': self.Z[k,i]} # for forward, starts at i,0; backward: i,-1
@@ -207,13 +218,20 @@ class Scanplane(Measurement):
             self.Vfull['cap'] = self.lockin_cap.convert_output(self.Vfull['cap']) - Vcap_offset
 
             # Interpolate the data and store in the 2D arrays
-
+            # 2017-04-28 using np.interp instead of
+            # scipy.interpolate.interp1d to avoid Ctrl-C but in scipy
             for chan in self._chan_labels:
                 if fast_axis == 'x':
-                    self.Vinterp[chan] = interp1d(self.Vfull['piezo'], self.Vfull[chan])(self.Vinterp['piezo'])
+                    #self.Vinterp[chan] = interp1d(self.Vfull['piezo'], self.Vfull[chan])(self.Vinterp['piezo'])
+                    self.Vinterp[chan] = np.interp(self.Vinterp['piezo'],
+                                                   self.Vfull['piezo'],
+                                                   self.Vfull[chan])
                     self.V[chan][i,:] = self.Vinterp[chan]
                 else:
-                    self.Vinterp[chan] = interp1d(self.Vfull['piezo'], self.Vfull[chan])(self.Vinterp['piezo'])
+                    #self.Vinterp[chan] = interp1d(self.Vfull['piezo'], self.Vfull[chan])(self.Vinterp['piezo'])
+                    self.Vinterp[chan] = np.interp(self.Vinterp['piezo'],
+                                                   self.Vfull['piezo'],
+                                                   self.Vfull[chan])
                     self.V[chan][:,i] = self.Vinterp[chan]
 
             self.save_line(i, Vstart)
@@ -250,7 +268,7 @@ class Scanplane(Measurement):
             self.cbars[chan].draw_all()
 
         self.fig.canvas.draw()
-       # self.fig.canvas.flush_events()
+        self.fig.canvas.flush_events()
 
     def setup_plots(self):
         '''
@@ -374,7 +392,7 @@ class Scanplane(Measurement):
             ax.autoscale_view()
         # Update the figure    
         self.fig_cuts.canvas.draw()
-        #self.fig_cuts.canvas.flush_events()
+        self.fig_cuts.canvas.flush_events()
 
     def save(self):
         '''
