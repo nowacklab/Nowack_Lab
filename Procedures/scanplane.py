@@ -2,7 +2,7 @@ import numpy as np
 from numpy.linalg import lstsq
 import time, os
 from datetime import datetime
-#from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -15,6 +15,14 @@ from ..Utilities import conversions
 from ..Utilities.utilities import AttrDict
 
 class Scanplane(Measurement):
+    """Scan over a plane while monitoring signal on DAQ
+    
+    Attributes:
+        _chan_labels (list): list of channel names for DAQ to monitor
+        _conversions (AttrDict): mapping from DAQ voltages to real units
+        instrument_list (list): instrument names that Scanplane needs in
+            order to be initialized.
+    """
     # DAQ channel labels required for this class.
     _chan_labels = ['dc','cap','acx','acy']
     _conversions = AttrDict({
@@ -70,6 +78,9 @@ class Scanplane(Measurement):
         self.numpts = numpts
         self.plane = plane
 
+        # Define interrupt variable that is used to detect interrupts
+        self.interrupt = False
+
         self.V = AttrDict({
            chan: np.nan for chan in self._chan_labels + ['piezo']
         })
@@ -108,15 +119,28 @@ class Scanplane(Measurement):
         # Scan in X direction by default
         self.fast_axis = 'x'
 
+    def run(self, **kwargs):
+        '''
+        Wrapper function for do() that catches keyboard interrrupts
+        without leaving open DAQ tasks running. Allows scans to be 
+        interrupted without restarting the python instance afterwards
+
+        '''
+        try:
+            self.do(**kwargs)
+        except KeyboardInterrupt:
+            self.interrupt = True
+            
     def do(self, fast_axis = 'x', surface=False):
         '''
-        Routine to perform a scan over a plane
+        Routine to perform a scan over a plane.
 
         Keyword arguments:
-        fast_axis -- If 'x' (default) take linecuts in the X direction. 
-        If 'y', take linecuts in the Y direction.
-        surface -- If False sweep out lines over the sufrace. If True,
-        piezos.sweep_surface is used during the scan
+            fast_axis: If 'x' (default) take linecuts in the X direction
+            If 'y', take linecuts in the Y direction.
+
+            surface: If False sweep out lines over the sufrace. If True,
+            piezos.sweep_surface is used during the scan
         '''
         self.fast_axis = fast_axis
         # Record start time for the scan
@@ -143,11 +167,18 @@ class Scanplane(Measurement):
         Vcap_offset = []
         for i in range(5):
             time.sleep(0.5)
-            Vcap_offset.append(self.lockin_cap.convert_output(self.daq.inputs['cap'].V))
+            Vcap_offset.append(
+                self.lockin_cap.convert_output(self.daq.inputs['cap'].V)
+            )
         Vcap_offset = np.mean(Vcap_offset)
-
-        # Loop over each line in the scan
+    
+        # Loop over each line in the scan            
         for i in range(num_lines):
+            # If we detected a keyboard interrupt stop the scan here
+            # The DAQ is not in use at this point so ending the scan
+            # should be safe.
+            if self.interrupt:
+                break
             k = 0
             if self.raster:
                 if i%2 == 0: # if even
@@ -162,11 +193,20 @@ class Scanplane(Measurement):
             if fast_axis == 'x':
                 Vstart = {'x': self.X[i,k],
                           'y': self.Y[i,k],
-                          'z': self.Z[i,k]} 
-                Vend = {'x': self.X[i,-(k+1)], 'y': self.Y[i,-(k+1)], 'z': self.Z[i,-(k+1)]} # for forward, ends at -1,i; backward: 0, i
+                          'z': self.Z[i,k]}
+                # for forward, ends at -1,i; backward: 0, i
+                Vend = {'x': self.X[i,-(k+1)],
+                        'y': self.Y[i,-(k+1)],
+                        'z': self.Z[i,-(k+1)]} 
             elif fast_axis == 'y':
-                Vstart = {'x': self.X[k,i], 'y': self.Y[k,i], 'z': self.Z[k,i]} # for forward, starts at i,0; backward: i,-1
-                Vend = {'x': self.X[-(k+1),i], 'y': self.Y[-(k+1),i], 'z': self.Z[-(k+1),i]} # for forward, ends at i,-1; backward: i,0
+                # for forward, starts at i,0; backward: i,-1
+                Vstart = {'x': self.X[k,i],
+                          'y': self.Y[k,i],
+                          'z': self.Z[k,i]}
+                # for forward, ends at i,-1; backward: i,0
+                Vend = {'x': self.X[-(k+1),i],
+                        'y': self.Y[-(k+1),i],
+                        'z': self.Z[-(k+1),i]} 
 
             # Go to first point of scan
             self.piezos.sweep(self.piezos.V, Vstart)
@@ -174,22 +214,26 @@ class Scanplane(Measurement):
             time.sleep(3)
             # Begin the sweep
             if not surface:
+                # Sweep over X
                 output_data, received = self.piezos.sweep(Vstart, Vend,
                                             chan_in = self._chan_labels,
                                             sweep_rate=self.scan_rate
-                                        ) # sweep over X
+                                        ) 
             else:
-                x = np.linspace(Vstart['x'], Vend['x']) # 50 points should be good for giving this to piezos.sweep_surface
+                # 50 points should be good for giving this to
+                # piezos.sweep_surface
+                x = np.linspace(Vstart['x'], Vend['x']) 
                 y = np.linspace(Vstart['y'], Vend['y'])
                 if fast_axis == 'x':
                     Z = self.plane.surface(x,y)[:,i]
                 else:
                     Z = self.plane.surface(x,y)[i,:]
                 output_data = {'x': x, 'y':y, 'z': Z}
-                output_data, received = self.piezos.sweep_surface(output_data,
-                                                        chan_in = self._chan_labels,
-                                                        sweep_rate = self.scan_rate
-                                                    )
+                output_data, received = self.piezos.sweep_surface(
+                    output_data,
+                    chan_in = self._chan_labels,
+                    sweep_rate = self.scan_rate
+                )
             # Flip the backwards sweeps
             if k == -1: # flip only the backwards sweeps
                 for d in output_data, received:
@@ -209,29 +253,29 @@ class Scanplane(Measurement):
 
 
             # Store this line's signals for Vdc, Vac x/y, and Cap
-            # Convert from DAQ volts to lockin volts where applicable
             for chan in self._chan_labels:
                 self.Vfull[chan] = received[chan]
-
+                
+            # Convert from DAQ volts to lockin volts where applicable
             for chan in ['acx', 'acy']:
-                self.Vfull[chan] = self.lockin_squid.convert_output(self.Vfull[chan])
-            self.Vfull['cap'] = self.lockin_cap.convert_output(self.Vfull['cap']) - Vcap_offset
+                self.Vfull[chan] = self.lockin_squid.convert_output(
+                    self.Vfull[chan])
+            self.Vfull['cap'] = self.lockin_cap.convert_output(
+                self.Vfull['cap']) - Vcap_offset
 
             # Interpolate the data and store in the 2D arrays
-            # 2017-04-28 using np.interp instead of
-            # scipy.interpolate.interp1d to avoid Ctrl-C but in scipy
             for chan in self._chan_labels:
                 if fast_axis == 'x':
-                    #self.Vinterp[chan] = interp1d(self.Vfull['piezo'], self.Vfull[chan])(self.Vinterp['piezo'])
-                    self.Vinterp[chan] = np.interp(self.Vinterp['piezo'],
-                                                   self.Vfull['piezo'],
-                                                   self.Vfull[chan])
+                    self.Vinterp[chan] = interp1d(
+                        self.Vfull['piezo'],
+                        self.Vfull[chan])(self.Vinterp['piezo']
+                        )
                     self.V[chan][i,:] = self.Vinterp[chan]
                 else:
-                    #self.Vinterp[chan] = interp1d(self.Vfull['piezo'], self.Vfull[chan])(self.Vinterp['piezo'])
-                    self.Vinterp[chan] = np.interp(self.Vinterp['piezo'],
-                                                   self.Vfull['piezo'],
-                                                   self.Vfull[chan])
+                    self.Vinterp[chan] = interp1d(
+                        self.Vfull['piezo'],
+                        self.Vfull[chan])(self.Vinterp['piezo']
+                        )
                     self.V[chan][:,i] = self.Vinterp[chan]
 
             self.save_line(i, Vstart)

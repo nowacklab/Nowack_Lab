@@ -159,7 +159,8 @@ class NIDAQ(Instrument):
     @property
     def output_names(self):
         '''
-        Returns a dictionary mapping output channel labels (keys) to the real channel names (values).
+        Returns a dictionary mapping output channel labels (keys) to the
+        real channel names (values).
         '''
         self._output_names = {}
         for chan in self._outs:
@@ -169,15 +170,24 @@ class NIDAQ(Instrument):
 
     def monitor(self, chan_in, duration, sample_rate=100):
         '''
-        Monitor any number of channels for a given duration, sampling at sample_rate.
-        Default 100 Hz sample rate.
-        Returns a dictionary of received data from each channel, including time.
+        Monitor any number of channels for a given duration.
+        
+        Example:
+
+        Arguments:
+            chan_in (list): channels for DAQ to monitor
+            duration (float): acquisition time in seconds
+            sample_rate (float): frequency of measurement
+
+        Returns:
+            dict: Voltages and measurement times for each channel
         '''
         if np.isscalar(chan_in):
             chan_in = [chan_in]
 
-        ## Prepare "data" for the Task. We'll just send the current value of ao0
-        ## and tell the DAQ to output that value of ao0 for every data point.
+        # Prepare "data" for the Task. Send the current value of ao0
+        # and tell the DAQ to output that value of ao0 for every data
+        # point.
         numsteps = int(duration*sample_rate)
         current_ao0 = self.ao0.V
         data = {'ao0': np.array([current_ao0]*numsteps)}
