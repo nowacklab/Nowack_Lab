@@ -143,6 +143,7 @@ class RvsVg_B(RvsVg):
             self.Bfull = np.append(self.Bfull, self.fs.B)
             for j in range(self.num_lockins):
                 r = getattr(self, 'R%ifull' %j)
+                setattr(self, 'R%ifull' %j, np.append(r, self.fs.R[str(j)]))
 
             ## reset arrays for gatesweep
             self.gs = RvsVg(self.instruments, self.Vstart, self.Vend, self.Vstep, self.delay)
