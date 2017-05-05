@@ -73,6 +73,21 @@ class RvsB(RvsSomething):
 
         return fig, ax, ax2
 
+    def setup_label(self):
+        '''
+        Add sweep step size and delay to legend
+        '''
+        super().setup_label()
+
+        def add_text_to_legend(text):
+            if self.legendtitle is None:
+                self.legendtitle = text
+            else:
+                self.legendtitle += '\n'+text
+
+        add_text_to_legend('Rate = %.1f Oe/s' %self.sweep_rate)
+        add_text_to_legend('delay = %.1f s' %self.delay)
+
 class RvsVg_B(RvsVg):
     instrument_list = list(set(RvsB.instrument_list) | set(RvsVg.instrument_list))
 

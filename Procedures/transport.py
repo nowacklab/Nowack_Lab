@@ -510,6 +510,21 @@ class RvsVg(RvsSomething):
         # self.keithley.I_compliance = 1e-6
         # self.keithley.Vout_range = max(abs(self.Vstart), abs(self.Vend))
 
+    def setup_label(self):
+        '''
+        Add sweep step size and delay to legend
+        '''
+        super().setup_label()
+
+        def add_text_to_legend(text):
+            if self.legendtitle is None:
+                self.legendtitle = text
+            else:
+                self.legendtitle += '\n'+text
+
+        add_text_to_legend('Vstep = %.2f V' %self.Vstep)
+        add_text_to_legend('delay = %.2f s' %self.delay)
+
     def setup_plots(self):
         super().setup_plots()
 
