@@ -14,6 +14,7 @@ def in_ipynb():
 ## For interactive matplotlib plots
 if in_ipynb():
     ip.magic('matplotlib notebook') # matplotlib notebook....
+    # ip.magic('matplotlib inline')
 else:
     ip.magic('matplotlib qt') # if not in a notebook
 
@@ -69,7 +70,8 @@ from Nowack_Lab.Procedures.scanplane import Scanplane
 from Nowack_Lab.Procedures.scanspectra import Scanspectra
 from Nowack_Lab.Procedures.squidIV import SquidIV
 from Nowack_Lab.Procedures.touchdown import Touchdown
-from Nowack_Lab.Procedures.transport import RvsVg, IV, IVvsVg, FourProbeRes
+from Nowack_Lab.Procedures.transport import RvsVg, RvsSomething, IV, IVvsVg, FourProbeRes
+from Nowack_Lab.Procedures.magnetotransport import RvsB, RvsVg_B
 from Nowack_Lab.Instruments.attocube import Attocube
 from Nowack_Lab.Instruments.keithley import Keithley2400, Keithley2600, KeithleyPPMS
 from Nowack_Lab.Instruments.montana import Montana
@@ -79,4 +81,5 @@ from Nowack_Lab.Instruments.preamp import SR5113
 from Nowack_Lab.Instruments.squidarray import SquidArray
 from Nowack_Lab.Instruments.lockin import SR830
 from Nowack_Lab.Instruments.ppms import PPMS
+#from Nowack_Lab.Fun.callme import call
 ''');

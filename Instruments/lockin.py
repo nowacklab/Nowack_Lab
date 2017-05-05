@@ -85,21 +85,46 @@ class SR830(Instrument):
     @property
     def sensitivity(self):
         '''Get the lockin sensitivity'''
-        multiplier = 1
+        value = _sensitivity_options[int(self.ask('SENS?'))]
         if 'I' in self.input_mode:
-            multiplier = 1e-6 # if we're in a current mode
-        self._sensitivity = _sensitivity_options[int(self.ask('SENS?'))]*multiplier
+            value *= 1e-6 # if we're in a current mode
+        self._sensitivity = value
         return self._sensitivity
+
 
     @sensitivity.setter
     def sensitivity(self, value):
-        '''Set the sensitivity'''
-        if value > 1:
+        '''
+        Set the sensitivity.
+
+        You can also set this equal to 'up' or 'down' to increment/decrement the sensitivity.
+
+        Note that if in current mode, the sensitivities are in terms of current.
+        '''
+
+        if value == 'up':
+            index = int(self.ask('SENS?')) + 1 # take current sensitivity and increase it
+            if index == len(_sensitivity_options):
+                index -= 1 # highest sensitivity
+            value = _sensitivity_options[index]
+        elif value == 'down':
+            index = int(self.ask('SENS?')) - 1 
+            if index == -1:
+                index += 1 # lowest sensitivity
+            value = _sensitivity_options[index]
+        elif value > 1:
             value = 1
+
+        ## Go to the nearest sensitivity above the set value
         index = abs(np.array([v - value  if (v - value)>=0 else -100000 for v in _sensitivity_options])).argmin() #finds sensitivity just above input
         good_value = _sensitivity_options[index]
 
-        self.write('SENS%d' %_sensitivity_options.index(good_value))
+        new_sensitivity = _sensitivity_options.index(good_value)
+
+        # if 'I' in self.input_mode: # check if in current mode
+        #     new_sensitivity /= 1e-6 # if we're in a current mode
+
+        self.write('SENS%d' %new_sensitivity)
 
     @property
     def amplitude(self):
@@ -170,16 +195,22 @@ class SR830(Instrument):
     @property
     def X(self):
         self._X = float(self.ask('OUTP?1'))
+        if self._X == 0:
+            self._X = self.sensitivity/1e12 # so we don't have zeros
         return self._X
 
     @property
     def Y(self):
         self._Y = float(self.ask('OUTP?2'))
+        if self._Y == 0:
+            self._Y = self.sensitivity/1e12 # so we don't have zeros        
         return self._Y
 
     @property
     def R(self):
         self._R = float(self.ask('OUTP?3'))
+        if self._R == 0:
+            self._R = self.sensitivity/1e12 # so we don't have zeros     
         return self._R
 
     @property
@@ -261,21 +292,32 @@ class SR830(Instrument):
     def dc_coupling(self):
         self.write('ICPL1')
 
-    def init_visa(self):
-        self._visa_handle = visa.ResourceManager().open_resource(self.gpib_address)
-        self._visa_handle.read_termination = '\n'
-        self._visa_handle.write('OUTX 1') #1=GPIB
+    def fix_sensitivity(self, OL_thresh=1, UL_thresh=0.1):
+        '''
+        Checks to see if the lockin is overloading or underloading (signal/sensivity < 0.1)
+        and adjusts the sensitivity accordingly.
 
-    def is_OL(self):
+        This is basically the same thing as auto gain, except auto gain always chooses
+        the minimum acceptable gain. This allows more leniency when determining when to
+        change senstivity.
+
+        Accepts thresholds for the overload and underload conditions.
         '''
-        Looks at the magnitude and x and y components to determine whether or not we are overloading the lockin.
-        There is a status byte that you can read that will supposedly tell you this as well, but it wasn't working reliably.
-        '''
-        m = max(abs(np.array([self.R, self.X, self.Y]))/self.sensitivity)
-        if m > 1:
-            return True
-        else:
-            return False
+        while self.is_OL(OL_thresh):
+            sens_before = self.sensitivity
+            self.sensitivity = 'up'
+            time.sleep(10*self.time_constant) # wait for stabilization
+            if sens_before == self.sensitivity:
+                print('Signal larger than max sensitivity!')
+                return # we cannot change sensitivity any more
+        while self.is_UL(UL_thresh):
+            sens_before = self.sensitivity
+            self.sensitivity = 'down'
+            time.sleep(10*self.time_constant) # wait for stabilization
+            if sens_before == self.sensitivity:
+                print('Signal not detected on smallest sensitivity!')
+                return # we cannot change sensitivity any more
+
 
     def get_all(self):
         table = []
@@ -288,6 +330,38 @@ class SR830(Instrument):
         table.append(['R', snapped[2]])
         table.append(['theta', snapped[3]])
         return tabulate(table, headers = ['Parameter', 'Value'])
+
+        
+    def init_visa(self):
+        self._visa_handle = visa.ResourceManager().open_resource(self.gpib_address)
+        self._visa_handle.read_termination = '\n'
+        self._visa_handle.write('OUTX 1') #1=GPIB
+
+    def is_OL(self, thresh=1):
+        '''
+        Looks at the magnitude and x and y components to determine whether or not we are overloading the lockin.
+        There is a status byte that you can read that will supposedly tell you this as well, but it wasn't working reliably.
+        
+        Set the threshold for changing the gain. Note that each sensitivity does allow
+        inputs to be slightly higher than the nominal sensitivity.
+        '''
+        m = max(abs(np.array([self.R, self.X, self.Y]))/self.sensitivity)
+        if m > thresh:
+            return True
+        else:
+            return False
+
+    def is_UL(self, thresh=1e-2):
+        '''
+        Looks at the magnitude of the larger of the x and y components to determine
+        whether or not the lockin is "underloading". This is defined by the given 
+        threshold, which is by default signal/sensitivity < 0.01
+        '''
+        m = max(abs(np.array([self.R, self.X, self.Y]))/self.sensitivity)
+        if m < thresh:
+            return True
+        else:
+            return False
 
     def set_out(self, chan, param):
         """ set output on channel [1,2] to parameter [Ch1:['R','X'],Ch2:['Y','theta']]"""
@@ -314,8 +388,9 @@ class SR830(Instrument):
         return value/10*self.sensitivity
 
     def close(self):
-        self._visa_handle.close()
-        del(self._visa_handle)
+        if hasattr(self, '_visa_handle'):
+            self._visa_handle.close()
+            del(self._visa_handle)
 
     def read(self):
         return self._visa_handle.read()

@@ -126,10 +126,19 @@ class Measurement:
                                 walk(d[key[1:]].__dict__, f[key])
                                 # [:1] strips the !; walks through the subobject
                             else: # it's a dictionary
-                            # walk through the subdictionary
+                                # walk through the subdictionary
                                 walk(d[key], f[key])
                         else:
                             d[key] = f[key][:] # we've arrived at a dataset
+
+                    ## If a dictionary key was an int, convert it back
+                    try:
+                        newkey = int(key) # test if can convert to an integer
+                        value = d.pop(key) # replace the key with integer version
+                        d[newkey] = value # do this all stepwise in case of error
+                    except:
+                        pass
+
                 return d
 
             walk(self.__dict__, f) # start walkin'
@@ -247,34 +256,37 @@ class Measurement:
             nopdf = False
 
         ## Save remotely
-        try:
-            # Make sure directories exist
-            remote_dir = os.path.split(remote_path)[0]
-            if not os.path.exists(remote_dir):
-                os.makedirs(remote_dir)
+        if os.path.exists(get_data_server_path()):
+            try:
+                # Make sure directories exist
+                remote_dir = os.path.split(remote_path)[0]
+                if not os.path.exists(remote_dir):
+                    os.makedirs(remote_dir)
 
-            ## Loop over filetypes
-            for ext in ['.h5','.json','.pdf']:
-                if ext == '.pdf' and nopdf:
-                    continue
-                # First make a checksum
-                local_checksum = _md5(local_path + ext)
+                ## Loop over filetypes
+                for ext in ['.h5','.json','.pdf']:
+                    if ext == '.pdf' and nopdf:
+                        continue
+                    # First make a checksum
+                    local_checksum = _md5(local_path + ext)
 
-                # Copy the files
-                shutil.copyfile(local_path + ext, remote_path + ext)
+                    # Copy the files
+                    shutil.copyfile(local_path + ext, remote_path + ext)
 
-                # Make comparison checksums
-                remote_checksum = _md5(remote_path + ext)
+                    # Make comparison checksums
+                    remote_checksum = _md5(remote_path + ext)
 
-                # Check checksums
-                if local_checksum != remote_checksum:
-                    print('%s checksum failed! Cannot trust remote file %s' %(ext, remote_path + ext))
+                    # Check checksums
+                    if local_checksum != remote_checksum:
+                        print('%s checksum failed! Cannot trust remote file %s' %(ext, remote_path + ext))
 
-        except Exception as e:
-            if not os.path.exists(get_data_server_path()):
-                print('SAMBASHARE not connected. Could not find path %s. Object saved locally but not remotely.' %get_data_server_path())
-            else:
-                print('Saving to data server failed!\n\nException details: %s\n\nremote path: %s\nlocal path:%s' %(e, remote_path, local_path))
+            except Exception as e:
+                if not os.path.exists(get_data_server_path()):
+                    print('SAMBASHARE not connected. Could not find path %s. Object saved locally but not remotely.' %get_data_server_path())
+                else:
+                    print('Saving to data server failed!\n\nException details: %s\n\nremote path: %s\nlocal path:%s' %(e, remote_path, local_path))
+        else:
+            print('Not connected to %s, data not saved remotely!' %get_data_server_path())
 
         ## See if saving worked properly
         try:
@@ -295,6 +307,8 @@ class Measurement:
         with h5py.File(filename+'.h5', 'w') as f:
             def walk(d, group): # walk through a dictionary
                 for key, value in d.items():
+                    if type(key) is int:
+                        key = str(key) # convert int keys to string. Will be converted back when loading
                     if type(value) is np.ndarray: # found a numpy array
                         d = group.create_dataset(key, value.shape,
                             compression = 'gzip', compression_opts=9
@@ -415,7 +429,9 @@ def get_todays_data_dir():
     todays_data_path = os.path.join(experiment_path, now.strftime('%Y-%m-%d'))
 
     # Make local and remote directory
-    dirs = [get_local_data_path(), get_remote_data_path()]
+    dirs = [get_local_data_path()]
+    if os.path.exists(get_data_server_path()):
+        dirs += [get_remote_data_path()]
     for d in dirs:
         try:
             filename = os.path.join(d, todays_data_path)
@@ -437,7 +453,9 @@ def set_experiment_data_dir(description=''):
     now_fmt = now.strftime('%Y-%m-%d')
 
     # Make local and remote directories:
-    dirs = [get_local_data_path(), get_remote_data_path()]
+    dirs = [get_local_data_path()]
+    if os.path.exists(get_data_server_path()):
+        dirs += [get_remote_data_path()]
     for d in dirs:
         try:
             filename = os.path.join(d, now_fmt + '_' + description)
