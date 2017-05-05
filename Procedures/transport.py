@@ -183,11 +183,11 @@ class RvsSomething(Measurement):
         super().__init__()
         self._load_instruments(instruments)
 
-        self.Vx = {str(i): np.array([]) for i in range(self.num_lockins)} # one for each voltage channel
-        self.Vy = {str(i): np.array([]) for i in range(self.num_lockins)} # use a dictionary to enable saving
+        self.Vx = {i: np.array([]) for i in range(self.num_lockins)} # one for each voltage channel
+        self.Vy = {i: np.array([]) for i in range(self.num_lockins)} # use a dictionary to enable saving
         self.Ix = np.array([])
         self.Iy = np.array([])
-        self.R = {str(i): np.array([]) for i in range(self.num_lockins)}
+        self.R = {i: np.array([]) for i in range(self.num_lockins)}
         setattr(self, self.something, np.array([]))
 
         if instruments != {}:
@@ -294,17 +294,15 @@ class RvsSomething(Measurement):
         self.Ix = np.append(self.Ix, self.lockin_I.X)
         self.Iy = np.append(self.Iy, self.lockin_I.Y)
         for j in range(self.num_lockins):
-            J = j # J is int, j is string (for dictionary)
-            j = str(j)
 
             ## Take as many measurements as requested and average them
             vx = 0
             vy = 0
             r = 0
             for i in range(num_avg):
-                getattr(self, 'lockin_V%i' %(J+1)).fix_sensitivity() # make sure we aren't overloading or underloading.
-                vx += getattr(self, 'lockin_V%i' %(J+1)).X
-                vy += getattr(self, 'lockin_V%i' %(J+1)).Y
+                getattr(self, 'lockin_V%i' %(j+1)).fix_sensitivity() # make sure we aren't overloading or underloading.
+                vx += getattr(self, 'lockin_V%i' %(j+1)).X
+                vy += getattr(self, 'lockin_V%i' %(j+1)).Y
                 r += vx/self.Ix[-1]
                 if i != num_avg-1: # no reason to sleep the last time!
                     time.sleep(delay_avg)
@@ -375,7 +373,6 @@ class RvsSomething(Measurement):
         ## plot all the resistances
         self.lines = {}
         for j in range(self.num_lockins):
-            j = str(j)
             line =  self.ax.plot(getattr(self, self.something), self.R[j])
             self.lines[j] = line[0]
 
