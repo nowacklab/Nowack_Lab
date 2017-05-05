@@ -2,8 +2,11 @@ import numpy as np
 from ..Utilities.logging import log
 from .instrument import Instrument
 import time
-import PyDAQmx
-from PyDAQmx import *
+try:
+    import PyDAQmx as mx
+    from PyDAQmx import *
+except:
+    print('PyDAQmx not imported in piezos.py!')
 from ctypes import *
 
 class Piezos(Instrument):
@@ -14,13 +17,13 @@ class Piezos(Instrument):
     '''
     _label = 'piezos'
     # DAQ channel labels expected by this class
-    _chan_labels = ['x','y','z'] 
+    _chan_labels = ['x','y','z']
     _piezos = ['x','y','z']
     _gain = [40, 40, 40]
     # maximum allowed total voltage across piezo
     _Vmax = [400, 400, 400]
     # multiplier for whether piezos are biased +V/-V or not.
-    _bipolar = [2, 2, 2] 
+    _bipolar = [2, 2, 2]
     _V = {}
     _daq = None
     _max_sweep_rate = 180 # Vpiezo/s
@@ -353,9 +356,9 @@ class Piezos(Instrument):
 
         # Creates input and output
         taskIn.CreateDIChan("/Dev1/port0/line4","dIn",
-                            PyDAQmx.DAQmx_Val_ChanPerLine)
+                            mx.DAQmx_Val_ChanPerLine)
         taskOut.CreateDOChan("/Dev1/port0/line5","Load",
-                             PyDAQmx.DAQmx_Val_ChanPerLine)
+                             mx.DAQmx_Val_ChanPerLine)
 
         # Creates a counter to use as a clock
         taskClock.CreateCOPulseChanFreq("/Dev1/ctr0", "clock",
@@ -375,7 +378,7 @@ class Piezos(Instrument):
 
         # Loads data to be written
         taskOut.WriteDigitalLines(sampsPerChanToAcquire,False,.9,
-                                  PyDAQmx.DAQmx_Val_GroupByChannel,loadArray,
+                                  mx.DAQmx_Val_GroupByChannel,loadArray,
                                   sampsPerChanWritten,None)
 
         #Start tasks

@@ -16,7 +16,7 @@ from ..Utilities.utilities import AttrDict
 
 class Scanplane(Measurement):
     """Scan over a plane while monitoring signal on DAQ
-    
+
     Attributes:
         _chan_labels (list): list of channel names for DAQ to monitor
         _conversions (AttrDict): mapping from DAQ voltages to real units
@@ -26,10 +26,10 @@ class Scanplane(Measurement):
     # DAQ channel labels required for this class.
     _chan_labels = ['dc','cap','acx','acy']
     _conversions = AttrDict({
-        'dc': conversions.Vsquid_to_phi0,
+        'dc': conversions.Vsquid_to_phi0['High'], # Assume high; changed in init when array loaded
         'cap': conversions.V_to_C,
-        'acx': conversions.Vsquid_to_phi0,
-        'acy': conversions.Vsquid_to_phi0,
+        'acx': conversions.Vsquid_to_phi0['High'],
+        'acy': conversions.Vsquid_to_phi0['High'],
         'x': conversions.Vx_to_um,
         'y': conversions.Vy_to_um
     })
@@ -60,15 +60,15 @@ class Scanplane(Measurement):
 
         # Load the correct SAA sensitivity based on the SAA feedback
         # resistor
-        Vsquid_to_phi0 = conversions.Vsquid_to_phi0[self.squidarray.sensitivity]
-        # Divide out the preamp gain for the DC channel
-        self._conversions = AttrDict({'dc': Vsquid_to_phi0/self.preamp.gain,
-                                     'cap': conversions.V_to_C,
-                                     'acx': Vsquid_to_phi0,
-                                     'acy': Vsquid_to_phi0,
-                                     'x': conversions.Vx_to_um,
-                                     'y': conversions.Vy_to_um
-            })
+        try: # try block enables creating object without instruments
+            Vsquid_to_phi0 = conversions.Vsquid_to_phi0[self.squidarray.sensitivity]
+            self._conversions['acx'] = Vsquid_to_phi0
+            self._conversions['acy'] = Vsquid_to_phi0
+            self._conversions['dc'] = Vsquid_to_phi0 # doesn't consider preamp gain. If preamp communication fails, then this will be recorded
+            # Divide out the preamp gain for the DC channel
+            self._conversions['dc'] /= self.preamp.gain
+        except:
+            pass
 
         # Define variables specified in init
         self.scan_rate = scan_rate
@@ -122,7 +122,7 @@ class Scanplane(Measurement):
     def run(self, **kwargs):
         '''
         Wrapper function for do() that catches keyboard interrrupts
-        without leaving open DAQ tasks running. Allows scans to be 
+        without leaving open DAQ tasks running. Allows scans to be
         interrupted without restarting the python instance afterwards
 
         '''
@@ -130,7 +130,7 @@ class Scanplane(Measurement):
             self.do(**kwargs)
         except KeyboardInterrupt:
             self.interrupt = True
-            
+
     def do(self, fast_axis = 'x', surface=False):
         '''
         Routine to perform a scan over a plane.
@@ -171,8 +171,8 @@ class Scanplane(Measurement):
                 self.lockin_cap.convert_output(self.daq.inputs['cap'].V)
             )
         Vcap_offset = np.mean(Vcap_offset)
-    
-        # Loop over each line in the scan            
+
+        # Loop over each line in the scan
         for i in range(num_lines):
             # If we detected a keyboard interrupt stop the scan here
             # The DAQ is not in use at this point so ending the scan
@@ -183,9 +183,9 @@ class Scanplane(Measurement):
             if self.raster:
                 if i%2 == 0: # if even
                     # k keeps track of sweeping forward vs. backwards
-                    k = 0 
+                    k = 0
                 else: # if odd
-                    k = -1 
+                    k = -1
             # if not rastering, k=0, meaning always forward sweeps
 
             # Starting and ending piezo voltages for the line
@@ -197,7 +197,7 @@ class Scanplane(Measurement):
                 # for forward, ends at -1,i; backward: 0, i
                 Vend = {'x': self.X[i,-(k+1)],
                         'y': self.Y[i,-(k+1)],
-                        'z': self.Z[i,-(k+1)]} 
+                        'z': self.Z[i,-(k+1)]}
             elif fast_axis == 'y':
                 # for forward, starts at i,0; backward: i,-1
                 Vstart = {'x': self.X[k,i],
@@ -206,7 +206,7 @@ class Scanplane(Measurement):
                 # for forward, ends at i,-1; backward: i,0
                 Vend = {'x': self.X[-(k+1),i],
                         'y': self.Y[-(k+1),i],
-                        'z': self.Z[-(k+1),i]} 
+                        'z': self.Z[-(k+1),i]}
 
             # Go to first point of scan
             self.piezos.sweep(self.piezos.V, Vstart)
@@ -218,11 +218,11 @@ class Scanplane(Measurement):
                 output_data, received = self.piezos.sweep(Vstart, Vend,
                                             chan_in = self._chan_labels,
                                             sweep_rate=self.scan_rate
-                                        ) 
+                                        )
             else:
                 # 50 points should be good for giving this to
                 # piezos.sweep_surface
-                x = np.linspace(Vstart['x'], Vend['x']) 
+                x = np.linspace(Vstart['x'], Vend['x'])
                 y = np.linspace(Vstart['y'], Vend['y'])
                 if fast_axis == 'x':
                     Z = self.plane.surface(x,y)[:,i]
@@ -255,7 +255,7 @@ class Scanplane(Measurement):
             # Store this line's signals for Vdc, Vac x/y, and Cap
             for chan in self._chan_labels:
                 self.Vfull[chan] = received[chan]
-                
+
             # Convert from DAQ volts to lockin volts where applicable
             for chan in ['acx', 'acy']:
                 self.Vfull[chan] = self.lockin_squid.convert_output(
@@ -336,7 +336,7 @@ class Scanplane(Measurement):
             height = 10
             # Pad the plots for the colorbars/axis labels
             width = min(height, height*aspect) + 4
-            
+
         self.fig, self.axes = plt.subplots(num_row,
                                            num_col,
                                            figsize=(width, height))
@@ -370,7 +370,7 @@ class Scanplane(Measurement):
             image = ax.imshow(masked_data, cmap=cmap, origin="lower",
                               extent = [self.X.min(), self.X.max(),
                                         self.Y.min(), self.Y.max()])
-            
+
             # Create a colorbar that matches the image height
             d = make_axes_locatable(ax)
             cax = d.append_axes("right", size=0.1, pad=0.1)
@@ -378,7 +378,7 @@ class Scanplane(Measurement):
             cbar.set_label(clabel, rotation=270, labelpad=12)
             cbar.formatter.set_powerlimits((-2,2))
             self.im[chan] = image
-            self.cbars[chan] = cbar    
+            self.cbars[chan] = cbar
 
             # Label the axes - including a timestamp
             ax.set_xlabel("X Position (V)")
@@ -387,7 +387,7 @@ class Scanplane(Measurement):
             # If the title intersects the exponent label from the colorbar
             # shift the title up and center it
             # TODO
-                
+
         # Plot the last linecut for DC, AC and capacitance signals
         for ax, chan, clabel in zip (self.axes_cuts,
                                      self._chan_labels,
@@ -410,7 +410,7 @@ class Scanplane(Measurement):
         # First call tight layout to prevent axis label overlap.
         self.fig.tight_layout()
         self.fig_cuts.tight_layout()
-        
+
     def plot_line(self):
         '''
         Update the data in the linecut plot.
@@ -434,7 +434,7 @@ class Scanplane(Measurement):
             # Rescale axes for newly plotted data
             ax.relim()
             ax.autoscale_view()
-        # Update the figure    
+        # Update the figure
         self.fig_cuts.canvas.draw()
         self.fig_cuts.canvas.flush_events()
 

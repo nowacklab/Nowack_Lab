@@ -8,6 +8,7 @@ Vxy_to_um = 1/3.5 # implemented in scanline. This will be the assumption until w
 Vz_to_um = .14 # based on "atto um"  atto micron/ V piezo for attocube's LUTs
 
 # Conversion from SAA voltage to flux with SQUID locked
+## NOTE: probably possible to load previous array settings without messing up the array
 Vsquid_to_phi0 = {'High': 1/14.4,
                   'Med': 1/1.44,
                   'Low': 1/0.144}

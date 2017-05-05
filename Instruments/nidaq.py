@@ -9,7 +9,7 @@ import numpy as np
 try:
     import PyDAQmx as mx
 except:
-    print('PyDAQmx not imported!')
+    print('PyDAQmx not imported in nidaq.py!')
 import time
 from copy import copy
 from ..Utilities import logging
@@ -171,7 +171,7 @@ class NIDAQ(Instrument):
     def monitor(self, chan_in, duration, sample_rate=100):
         '''
         Monitor any number of channels for a given duration.
-        
+
         Example:
 
         Arguments:
