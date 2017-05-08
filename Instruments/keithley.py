@@ -346,7 +346,7 @@ class Keithley2400(Instrument):
     def write(self, msg):
         self._visa_handle.write(msg)
 
-    def zero_V(self, sweep_rate=0.1):
+    def zero_V(self, sweep_rate=1):
         '''
         Ramp down voltage to zero. Sweep rate in volts/second
         '''
