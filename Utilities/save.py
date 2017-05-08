@@ -123,10 +123,19 @@ class Measurement:
                                 walk(d[key[1:]].__dict__, f[key])
                                 # [:1] strips the !; walks through the subobject
                             else: # it's a dictionary
-                            # walk through the subdictionary
+                                # walk through the subdictionary
                                 walk(d[key], f[key])
                         else:
                             d[key] = f[key][:] # we've arrived at a dataset
+
+                    ## If a dictionary key was an int, convert it back
+                    try:
+                        newkey = int(key) # test if can convert to an integer
+                        value = d.pop(key) # replace the key with integer version
+                        d[newkey] = value # do this all stepwise in case of error
+                    except:
+                        pass
+
                 return d
 
             walk(self.__dict__, f) # start walkin'
@@ -290,6 +299,8 @@ class Measurement:
         with h5py.File(filename+'.h5', 'w') as f:
             def walk(d, group): # walk through a dictionary
                 for key, value in d.items():
+                    if type(key) is int:
+                        key = str(key) # convert int keys to string. Will be converted back when loading
                     if type(value) is np.ndarray: # found a numpy array
                         d = group.create_dataset(key, value.shape,
                             compression = 'gzip', compression_opts=9
