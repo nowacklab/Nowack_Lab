@@ -27,7 +27,7 @@ class Measurement:
     instrument_list = []
     fig = None
 
-    def __init__(self):
+    def __init__(self, instruments = {}):
         self.timestamp = ''
 
         self.make_timestamp_and_filename()
@@ -102,12 +102,9 @@ class Measurement:
         elif filename[-4:] == '.pdf': # ends in .pdf
             filename = filename[:-4] # strip extension
 
-        unwanted_keys += cls.instrument_list # don't load instruments
-
         obj = Measurement._load_json(filename+'.json', unwanted_keys)
         obj._load_hdf5(filename+'.h5')
         obj._load_instruments(instruments)
-
         return obj
 
 
@@ -138,18 +135,13 @@ class Measurement:
     def _load_instruments(self, instruments={}):
         '''
         Loads instruments from a dictionary.
-        Specify instruments needed using self.instrument_list.
         '''
-        for instrument in self.instrument_list:
-            if instrument in instruments:
-                setattr(self, instrument, instruments[instrument])
-                if instrument == 'daq':
-                    for ch in self._chan_labels:
-                        if ch not in self.daq.outputs and ch not in self.daq.inputs:
-                            raise Exception('Need to set daq channel labels! Need a %s' %ch)
-            else:
-                setattr(self, instrument, None)
-
+        for instrument in instruments:
+            setattr(self, instrument, instruments[instrument])
+            if instrument == 'daq':
+                for ch in self._chan_labels:
+                    if ch not in self.daq.outputs and ch not in self.daq.inputs:
+                        raise Exception('Need to set daq channel labels! Need a %s' %ch)
 
 
     @staticmethod
