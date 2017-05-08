@@ -3,6 +3,7 @@ from numpy.linalg import lstsq
 import time, os
 from datetime import datetime
 from scipy.interpolate import interp1d
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -304,7 +305,7 @@ class Scanplane(Measurement):
             data_masked = np.ma.masked_where(np.isnan(data_nan), data_nan)
 
             # Set a new image for the plot
-            self.im[chan].set_array(data_masked)
+            self.im[chan].set_data(data_masked)
             # Adjust colorbar limits for new data
             self.cbars[chan].set_clim([data_masked.min(),
                                        data_masked.max()])
@@ -312,6 +313,11 @@ class Scanplane(Measurement):
             self.cbars[chan].draw_all()
 
         self.fig.canvas.draw()
+
+        ## Do not flush events for inline or notebook backends
+        if matplotlib.get_backend() in ('nbAgg','module://ipykernel.pylab.backend_inline'):
+            return
+            
         self.fig.canvas.flush_events()
 
     def setup_plots(self):
@@ -411,6 +417,7 @@ class Scanplane(Measurement):
         self.fig.tight_layout()
         self.fig_cuts.tight_layout()
 
+
     def plot_line(self):
         '''
         Update the data in the linecut plot.
@@ -436,6 +443,11 @@ class Scanplane(Measurement):
             ax.autoscale_view()
         # Update the figure
         self.fig_cuts.canvas.draw()
+
+        ## Do not flush events for inline or notebook backends
+        if matplotlib.get_backend() in ('nbAgg','module://ipykernel.pylab.backend_inline'):
+            return
+
         self.fig_cuts.canvas.flush_events()
 
     def save(self):

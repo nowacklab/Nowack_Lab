@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 
+## NOTE: Aspect handled differently in matplotlib 2.0. Don't need to set it this way!
 def aspect(ax, ratio, absolute=True):
     '''
     Sets an absolute (or relative) aspect ratio for the given axes using the axis limits.
@@ -50,7 +51,9 @@ def cubehelix(g=1.0, s=0.5, r=-1.0, h=1.5):
 def plotline(ax, x, y, z):
     pass
 
-
+## NOTE: Still works with MPL 2.0, but plotting is under construction in scanplane.
+## We may want to rename this as "our" imshow
+## For moving forward, this function should take care of all the non-obvious stuff (e.g. don't need set_xlabel)
 def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='',
            ylabel='', clabel='', fontsize=20, equal_aspect=True):
     '''
@@ -63,34 +66,40 @@ def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='',
     '''
 
     ## Format axes
+    ## NOTE: REMOVE
     ax.set_title(title, fontsize=12)
     ax.set_xlabel(xlabel, fontsize=fontsize)
     ax.set_ylabel(ylabel, fontsize=fontsize)
 
     ## If lists, convert to arrays
+    ## NOTE: POSSIBLY REMOVE?
     if type(x) == list:
         x = np.array(x)
     if type(y) == list:
         y = np.array(y)
 
     ## Convert image to a masked numpy array
+    ## NOTE: KEEP
     z = np.array(z, dtype=np.float) # Will convert Nones to nans
     zm = np.ma.masked_where(np.isnan(z), z)
 
     ## Create the image
+    ## NOTE: KEEP, but allow for arbitrary kwargs, include cmap and interpolation here
     im = ax.imshow(
                 zm, # not transpose for xy indexing!!
                 cmap=cmap,
                 interpolation=interpolation,
-                origin='lower',
-                extent=[x.min(), x.max(), y.min(), y.max()]
+                origin='lower', ## NOTE: KEEP
+                extent=[x.min(), x.max(), y.min(), y.max()] ## NOTE: KEEP
             )
 
     ## Make a colorbar
+    ## NOTE: KEEP, but maybe just put it in another function?
     cb = plt.colorbar(im, ax=ax)
     cb.formatter.set_powerlimits((-2,2)) # only two decimal places!
     cb.set_label(clabel, fontsize=12)
 
+    ## NOTE: REMOVE
     if equal_aspect:
         aspect(ax, 1, absolute=False) # equal aspect ratio based on data scales
 
@@ -114,6 +123,8 @@ def update2D(im, z, center_at_zero=False, equal_aspect=True):
         aspect(im.axes, 1, absolute=False) # equal aspect ratio
 
     ## Adjust colorbar limits accordingly
+    ## NOTE: Instead of center_at_zero, check if colormap is diverging. Suggested first line replacement below.
+    # if not cmap_is_diverging(im.cmap):
     if not center_at_zero:
         clim(im, zm.min(), zm.max())
     else:
