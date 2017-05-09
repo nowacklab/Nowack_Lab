@@ -63,8 +63,8 @@ class RvsB(RvsSomething):
         fig, ax = plt.subplots()
         ax2 = ax.twinx()
         ax.set_xlabel('B (T)', fontsize=20)
-        ax.set_ylabel('Gxy (%se^2/h)' %(str(nu) if nu!=1 else ''), fontsize=20, color='g')
-        ax2.set_ylabel('Rxx (Ohm)', fontsize=20, color = 'b')
+        ax.set_ylabel('$G_{xy}\/(%se^2/h)$' %(str(nu) if nu!=1 else ''), fontsize=20, color='g')
+        ax2.set_ylabel('$R_{xx}\/(\Omega)$', fontsize=20, color = 'b')
         G0 = e**2/h
         ax.plot(self.B, 1/self.R[Rxy_channel]/G0/nu, 'g')
         ax2.plot(self.B, self.R[Rxx_channel], 'b')

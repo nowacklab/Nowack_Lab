@@ -538,7 +538,7 @@ class RvsVg(RvsSomething):
         '''
         Finds the index of gate voltage corresponding to charge neutrality point
         '''
-        return np.where(self.R[0]==self.R[0].max())[0] # find CNP
+        return np.where(self.R[0]==np.nanmax(self.R[0]))[0] # find CNP
 
 
     def plot(self):
