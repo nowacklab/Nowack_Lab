@@ -424,6 +424,7 @@ class RvsT(RvsSomething):
         self.ppms.temperature_approach = 'FastSettle'
         self.ppms.temperature = self.Tend # T to Oe
 
+        time.sleep(5) # wait for ppms to process command
         ## Measure while sweeping
         while self.ppms.temperature_status not in ('Near', 'Stable'): 
             self.T = np.append(self.T, self.ppms.temperature) # Oe to T

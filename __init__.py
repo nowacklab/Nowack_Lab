@@ -28,6 +28,7 @@ rcParams.update({'figure.autolayout': False}) # If set to True, will autoformat 
 # warnings.filterwarnings("ignore") # This was to hide nanmin warnings, maybe not so good to have in general.
 
 ## Set experiment data path
+print('Current experiment: %s' %save.get_experiment_data_dir())
 inp = input('New experiment? y/(n): ')
 if inp in ('y', 'Y'):
     while True:
