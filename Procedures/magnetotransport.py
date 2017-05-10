@@ -216,12 +216,15 @@ class RvsVg_B(RvsVg):
         ax1.plot(self.Vg, abs(slopes))
         ax2.plot(self.Vg, abs(mobility)*100**2)
         ax1.set_xlabel('Vg (V)',fontsize=20)
-        ax1.set_ylabel('Hall Coefficient (Ohm/T)', fontsize=20)
-        ax2.set_ylabel('Carrier mobility (cm^2/V*s)', fontsize=20)
+        ax1.set_ylabel(r'Hall Coefficient ($\rm \Omega/T$)', fontsize=16)
+        ax2.set_ylabel(r'Carrier mobility ($\rm{cm^2/V\cdot s}$)', fontsize=16)
 
         fig.tight_layout()
 
-        return fig, ax1, ax2, slopes, mobility
+        self.Hall_coefficient = abs(slopes)
+        self.mobility = abs(mobility)*100**2
+
+        return fig, ax1, ax2
 
     def setup_plots(self):
         self.fig, ax = plt.subplots(nrows = self.num_lockins, ncols=2, figsize=(10,10))

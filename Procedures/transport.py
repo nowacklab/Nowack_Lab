@@ -426,7 +426,7 @@ class RvsT(RvsSomething):
 
         time.sleep(5) # wait for ppms to process command
         ## Measure while sweeping
-        while self.ppms.temperature_status not in ('Near', 'Stable'): 
+        while self.ppms.temperature_status not in ('Near', 'Stable'):
             self.T = np.append(self.T, self.ppms.temperature) # Oe to T
             self.do_measurement(delay=self.delay, plot=plot)
 
@@ -574,6 +574,10 @@ class RvsVg(RvsSomething):
 
         add_text_to_legend('Vstep = %.2f V' %self.Vstep)
         add_text_to_legend('delay = %.2f s' %self.delay)
+        if self.Vstart < self.Vend:
+            add_text_to_legend(r'sweep $\longrightarrow$')
+        else:
+            add_text_to_legend(r'sweep $\longleftarrow$')
 
     def setup_plots(self):
         super().setup_plots()
