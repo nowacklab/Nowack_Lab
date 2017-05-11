@@ -3,7 +3,6 @@ from scipy.interpolate import interp1d
 from ..Utilities.logging import log
 from .instrument import Instrument
 import time
-import PyDAQmx
 from PyDAQmx import *
 from ctypes import *
 
@@ -15,13 +14,13 @@ class Piezos(Instrument):
     '''
     _label = 'piezos'
     # DAQ channel labels expected by this class
-    _chan_labels = ['x','y','z'] 
+    _chan_labels = ['x','y','z']
     _piezos = ['x','y','z']
     _gain = [40, 40, 40]
     # maximum allowed total voltage across piezo
     _Vmax = [400, 400, 400]
     # multiplier for whether piezos are biased +V/-V or not.
-    _bipolar = [2, 2, 2] 
+    _bipolar = [2, 2, 2]
     _V = {}
     _daq = None
     _max_sweep_rate = 180 # Vpiezo/s
@@ -340,9 +339,9 @@ class Piezos(Instrument):
 
         # Creates input and output
         taskIn.CreateDIChan("/Dev1/port0/line4","dIn",
-                            PyDAQmx.DAQmx_Val_ChanPerLine)
+                            DAQmx_Val_ChanPerLine)
         taskOut.CreateDOChan("/Dev1/port0/line5","Load",
-                             PyDAQmx.DAQmx_Val_ChanPerLine)
+                             DAQmx_Val_ChanPerLine)
 
         # Creates a counter to use as a clock
         taskClock.CreateCOPulseChanFreq("/Dev1/ctr0", "clock",
@@ -362,7 +361,7 @@ class Piezos(Instrument):
 
         # Loads data to be written
         taskOut.WriteDigitalLines(sampsPerChanToAcquire,False,.9,
-                                  PyDAQmx.DAQmx_Val_GroupByChannel,loadArray,
+                                  DAQmx_Val_GroupByChannel,loadArray,
                                   sampsPerChanWritten,None)
 
         #Start tasks
@@ -397,7 +396,7 @@ class Piezos(Instrument):
         if readArray[11] == 0:
              raise Exception("the polarity of Z is negative")
         if self.HVALookup(readArray, 10,9) != self.z.gain:
-            raise Exception("the gain of aux should be " + str(self.aux.gain)
+            raise Exception("the gain of aux should be " + str(self.z.gain) # aux channel is our z-
                             + " but it is set to "
                             + str(self.HVALookup(readArray, 10,9)))
         if self.HVALookup(readArray, 14,15) != self.z.gain:
@@ -451,7 +450,7 @@ class Piezo(Instrument):
         '''
         try:
             # Convert daq volts to piezo volts
-            self._V = self._daq.outputs[self.label].V*self.gain*self.bipolar 
+            self._V = self._daq.outputs[self.label].V*self.gain*self.bipolar
         except:
             print('Couldn\'t communicate with daq! Current %s piezo voltage unknown!' %self.label)
         return self._V
@@ -465,7 +464,7 @@ class Piezo(Instrument):
 
     def apply_gain(self, value):
         '''
-        Converts DAQ volts to piezo volts by multiplying a voltage by the 
+        Converts DAQ volts to piezo volts by multiplying a voltage by the
         gain and bipolar factor
         '''
         if np.isscalar(value):
@@ -476,7 +475,7 @@ class Piezo(Instrument):
 
     def remove_gain(self, value):
         '''
-        Converts piezo volts to DAQ volts by dividing a voltage by the 
+        Converts piezo volts to DAQ volts by dividing a voltage by the
         gain and bipolar factor
         '''
         if np.isscalar(value):
@@ -487,7 +486,7 @@ class Piezo(Instrument):
 
     def check_lim(self, V):
         '''
-        checks voltage list V = [...] to see if it is out of range for the 
+        checks voltage list V = [...] to see if it is out of range for the
         piezo
         '''
         if np.isscalar(V):
@@ -517,7 +516,7 @@ class Piezo(Instrument):
         # Self.V calls this function, but recursion should only go one
         # level deep.
         # Need self._V or else it will do a measurement and loop forever!
-        if Vstart != self._V: 
+        if Vstart != self._V:
             self.V = Vstart
 
         ## Check voltage limits
