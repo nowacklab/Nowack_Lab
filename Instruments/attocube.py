@@ -26,6 +26,7 @@ class ANC350(Instrument):
     _label = 'atto'
     _stages = ['x','y','z'] # order of axis controllers
     _pos_lims = [20000, 20000, 20000] # um (temporary until LUT calibrated)
+    _instances = []
 
     def __init__(self, montana=None):
         '''
@@ -33,6 +34,14 @@ class ANC350(Instrument):
         This will check the temperature to see if it is safe to go to 60 V.
         Else, we stay at 45 V.
         '''
+
+        ## Use self._instances to keep track of instances of the attocube class
+        ## This is necessary to delete the ANC before we make a new one.
+        if len(self._instances) > 0:
+            for i in self._instances:
+                i.__del__() # call the __del__ method of the old instance when creating a new instance
+            self._instances = []
+
         self.anc = ANC350Pos()
 
         V_lim = 45 # room temperature
@@ -46,9 +55,12 @@ class ANC350(Instrument):
             setattr(self, s, Positioner(self.anc, i, V_lim=V_lim, pos_lim=self._pos_lims[i], label=s)) # makes positioners x, y, and z
             getattr(self,s).check_voltage()
 
+        self._instances.append(self) # Add a reference to this object to the
+
 
     def __del__(self):
         try:
+            print('Disconnecting ANC')
             self.anc.disconnect()
             del self.anc
         except:
