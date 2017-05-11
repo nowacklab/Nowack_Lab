@@ -10,6 +10,9 @@ except:
 from .instrument import Instrument
 
 ''' *** Use the Attocube class, definition is at the bottom *** '''
+'''
+Careful! Can only initialize one attocube Object at a time.
+'''
 
 class ANC350(Instrument):
     '''
@@ -46,6 +49,7 @@ class ANC350(Instrument):
 
     def __del__(self):
         try:
+            self.anc.disconnect()
             del self.anc
         except:
             pass
