@@ -16,7 +16,7 @@ _Z_PIEZO_STEP_SLOW = 4 # V piezo
 _CAPACITANCE_THRESHOLD = 1 # fF
 
 class Touchdown(Measurement):
-    _chan_labels = ['cap']
+    _chan_labels = ['cap', 'capx', 'capy', 'theta']
     instrument_list = ['lockin_cap','atto','piezos','daq','montana']
 
     Vtd = None
@@ -145,7 +145,7 @@ class Touchdown(Measurement):
     def configure_lockin(self):
         '''Set up lockin_cap amplifier for a touchdown.'''
         self.lockin_cap.amplitude = 1
-        self.lockin_cap.frequency = 610901
+        self.lockin_cap.frequency = 26751
         self.lockin_cap.set_out(1, 'R')
         self.lockin_cap.set_out(2, 'theta')
         self.lockin_cap.sensitivity = 20e-6
@@ -171,7 +171,7 @@ class Touchdown(Measurement):
         while not self.touchdown:
             # Determine where to start sweeping
             if slow_scan:
-                start = Vtd-40 # once it finds touchdown, will try again slower
+                start = Vtd-50 # once it finds touchdown, will try again slower
                 self.z_piezo_step = _Z_PIEZO_STEP_SLOW
                 self._init_arrays()
                 self.setup_plots()

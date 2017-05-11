@@ -46,7 +46,7 @@ import sys, os
 from Nowack_Lab.Utilities import utilities, save, logging, conversions, anim
 from Nowack_Lab.Utilities.plotting import plot_mpl
 from Nowack_Lab.Utilities.save import Measurement
-from Nowack_Lab.Procedures.daqspectrum import DaqSpectrum
+from Nowack_Lab.Procedures.daqspectrum import DaqSpectrum, SQUIDSpectrum
 from Nowack_Lab.Procedures.heightsweep import Heightsweep
 from Nowack_Lab.Procedures.mod2D import Mod2D
 from Nowack_Lab.Procedures.mutual_inductance import MutualInductance
