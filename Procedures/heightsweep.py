@@ -53,8 +53,6 @@ class Heightsweep(Measurement):
 
         self.plot()
 
-        self.save()
-
 
     def plot(self):
         super().plot()

@@ -30,7 +30,6 @@ class MutualInductance(Measurement):
                 self.V[i,j] = self.lockin_squid.X
                 self.I[i,j] = self.lockin_I.X/self.Rmeas
                 self.plot()
-        self.save()
 
 
     def plot(self):

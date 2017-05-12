@@ -102,7 +102,6 @@ class Scanspectra(Measurement):
 
         self.piezos.V = 0
         del self.daqspectrum
-        self.save()
 
 
     def setup_preamp(self):

@@ -118,18 +118,6 @@ class Scanplane(Measurement):
         # Scan in X direction by default
         self.fast_axis = 'x'
 
-    def run(self, **kwargs):
-        '''
-        Wrapper function for do() that catches keyboard interrrupts
-        without leaving open DAQ tasks running. Allows scans to be
-        interrupted without restarting the python instance afterwards
-
-        '''
-        try:
-            self.do(**kwargs)
-        except KeyboardInterrupt:
-            self.interrupt = True
-
     def do(self, fast_axis = 'x', surface=False):
         '''
         Routine to perform a scan over a plane.
@@ -142,9 +130,6 @@ class Scanplane(Measurement):
             piezos.sweep_surface is used during the scan
         '''
         self.fast_axis = fast_axis
-        # Record start time for the scan
-        tstart = time.time()
-        self.setup_plots()
 
         # Check if points in the scan are within the voltage limits of
         # Piezos
@@ -281,11 +266,6 @@ class Scanplane(Measurement):
             self.plot()
 
         self.piezos.V = 0
-        self.save()
-
-        tend = time.time()
-        print('Scan took %f minutes' %((tend-tstart)/60))
-        return
 
     def plot(self):
         '''

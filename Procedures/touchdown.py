@@ -303,7 +303,6 @@ class Touchdown(Measurement):
         self.piezos.z.V = 0 # bring the piezo back to zero
 
         self.Vtd = Vtd
-        self.save()
 
         return Vtd
 

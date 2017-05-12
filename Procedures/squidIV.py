@@ -82,14 +82,12 @@ class SquidIV(Measurement):
         self.plot(dvdi = False)
         self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
 
-        self.notes = input('Notes for this IV (r to redo, q to quit): ')
+        self.notes = input('Notes for this IV (r to redo): ')
         if self.notes == 'r':
             self.notes = ''
             display.clear_output()
             self.do()
-        elif self.notes != 'q':
-            self.ax.set_title(self.filename+'\n'+self.notes)
-            self.save()
+        self.ax.set_title(self.filename+'\n'+self.notes)
 
 
     def do_IV(self):

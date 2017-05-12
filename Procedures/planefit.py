@@ -124,7 +124,6 @@ class Planefit(Measurement):
         self.Z -= (c_fit-self.c) # c was lowered by the correction, so we lower the plane.
 
         self.plot()
-        self.save()
 
 
     @classmethod

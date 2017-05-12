@@ -3,7 +3,7 @@ import json, os, pickle, bz2, jsonpickle as jsp, numpy as np, re
 from datetime import datetime
 jspnp.register_handlers()
 from copy import copy
-import h5py, glob, matplotlib, inspect, platform, hashlib, shutil
+import h5py, glob, matplotlib, inspect, platform, hashlib, shutil, time
 import matplotlib.pyplot as plt
 from . import utilities
 
@@ -69,43 +69,6 @@ class Measurement:
         `state` is a dictionary.
         '''
         self.__dict__.update(state)
-
-
-    @classmethod
-    def load(cls, filename=None, instruments={}, unwanted_keys=[]):
-        '''
-        Basic load method. Calls _load_json, not loading instruments, then loads from HDF5, then loads instruments.
-        Overwrite this for each subclass if necessary.
-        Pass in an array of the names of things you don't want to load.
-        By default, we won't load any instruments, but you can pass in an instruments dictionary to load them.
-        '''
-
-        if filename is None: # tries to find the last saved object; not guaranteed to work
-            try:
-                filename =  max(glob.iglob(os.path.join(get_local_data_path(), get_todays_data_dir(),'*_%s.json' %cls.__name__)),
-                                        key=os.path.getctime)
-            except: # we must have taken one during the previous day's work
-                folders = list(glob.iglob(os.path.join(get_local_data_path(), get_todays_data_dir(),'..','*')))
-                # -2 should be the previous day (-1 is today)
-                filename =  max(glob.iglob(os.path.join(folders[-2],'*_%s.json' %cls.__name__)),
-                                        key=os.path.getctime)
-        elif os.path.dirname(filename) == '': # if no path specified
-            os.path.join(get_local_data_path(), get_todays_data_dir(), filename)
-
-        # Remove file extensions
-        # This is done somewhat manually in case filename has periods in it for some reason.
-        if filename[-5:] == '.json': # ends in .json
-            filename = filename[:-5] # strip extension
-        elif filename[-3:] == '.h5': # ends in .h5
-            filename = filename[:-3] # strip extension
-        elif filename[-4:] == '.pdf': # ends in .pdf
-            filename = filename[:-4] # strip extension
-
-        obj = Measurement._load_json(filename+'.json', unwanted_keys)
-        obj._load_hdf5(filename+'.h5')
-        obj._load_instruments(instruments)
-        return obj
-
 
     def _load_hdf5(self, filename, unwanted_keys = []):
         '''
@@ -176,32 +139,6 @@ class Measurement:
         obj = jsp.decode(obj_string)
 
         return obj
-
-
-    def make_timestamp_and_filename(self):
-        '''
-        Makes a timestamp and filename from the current time.
-        '''
-        now = datetime.now()
-        self.timestamp = now.strftime("%Y-%m-%d %I:%M:%S %p")
-        self.filename = now.strftime('%Y-%m-%d_%H%M%S')
-        self.filename += '_' + self.__class__.__name__
-
-
-    def plot(self):
-        '''
-        Update all plots.
-        '''
-        if self.fig is None:
-            self.setup_plots()
-
-
-    def save(self, filename=None, savefig=True):
-        '''
-        Basic save method. Just calls _save. Overwrite this for each subclass.
-        '''
-        self._save(filename, savefig=True)
-
 
     def _save(self, filename=None, savefig=True, ignored = []):
         '''
@@ -352,12 +289,110 @@ class Measurement:
             with open(filename+'.json', 'w', encoding='utf-8') as f:
                 json.dump(obj_dict, f, sort_keys=True, indent=4)
 
+    def do(self):
+        '''
+        Do the main part of the measurement.
+        This function is wrapped by run() to enable keyboard interrupts.
+        run() also includes saving and elapsed time logging.
+        '''
+        pass
+
+
+    @classmethod
+    def load(cls, filename=None, instruments={}, unwanted_keys=[]):
+        '''
+        Basic load method. Calls _load_json, not loading instruments, then loads from HDF5, then loads instruments.
+        Overwrite this for each subclass if necessary.
+        Pass in an array of the names of things you don't want to load.
+        By default, we won't load any instruments, but you can pass in an instruments dictionary to load them.
+        '''
+
+        if filename is None: # tries to find the last saved object; not guaranteed to work
+            try:
+                filename =  max(glob.iglob(os.path.join(get_local_data_path(), get_todays_data_dir(),'*_%s.json' %cls.__name__)),
+                                        key=os.path.getctime)
+            except: # we must have taken one during the previous day's work
+                folders = list(glob.iglob(os.path.join(get_local_data_path(), get_todays_data_dir(),'..','*')))
+                # -2 should be the previous day (-1 is today)
+                filename =  max(glob.iglob(os.path.join(folders[-2],'*_%s.json' %cls.__name__)),
+                                        key=os.path.getctime)
+        elif os.path.dirname(filename) == '': # if no path specified
+            os.path.join(get_local_data_path(), get_todays_data_dir(), filename)
+
+        # Remove file extensions
+        # This is done somewhat manually in case filename has periods in it for some reason.
+        if filename[-5:] == '.json': # ends in .json
+            filename = filename[:-5] # strip extension
+        elif filename[-3:] == '.h5': # ends in .h5
+            filename = filename[:-3] # strip extension
+        elif filename[-4:] == '.pdf': # ends in .pdf
+            filename = filename[:-4] # strip extension
+
+        obj = Measurement._load_json(filename+'.json', unwanted_keys)
+        obj._load_hdf5(filename+'.h5')
+        obj._load_instruments(instruments)
+        return obj
+
+    def make_timestamp_and_filename(self):
+        '''
+        Makes a timestamp and filename from the current time.
+        '''
+        now = datetime.now()
+        self.timestamp = now.strftime("%Y-%m-%d %I:%M:%S %p")
+        self.filename = now.strftime('%Y-%m-%d_%H%M%S')
+        self.filename += '_' + self.__class__.__name__
+
+
+    def plot(self):
+        '''
+        Update all plots.
+        '''
+        if self.fig is None:
+            self.setup_plots()
+
+
+    def run(self, plot=True, **kwargs):
+        '''
+        Wrapper function for do() that catches keyboard interrrupts
+        without leaving open DAQ tasks running. Allows scans to be
+        interrupted without restarting the python instance afterwards
+
+        Keyword arguments:
+            plot: boolean; to plot or not to plot?
+
+        Check the do() function for additional available kwargs.
+        '''
+        ## Before the do.
+        if plot:
+            self.setup_plots()
+        time_start = time.time()
+
+        ## The do.
+        try:
+            self.do(**kwargs)
+        except KeyboardInterrupt:
+            self.interrupt = True
+
+        ## After the do.
+        time_end = time.time()
+        self.time_elapsed = time_end-time_start
+        print('%s took %.1f minutes' %(self.__class__.__name__, self.time_elapsed/60))
+        self.save()
+
+
+    def save(self, filename=None, savefig=True):
+        '''
+        Basic save method. Just calls _save. Overwrite this for each subclass.
+        '''
+        self._save(filename, savefig=True)
+
 
     def setup_plots(self):
         '''
         Set up all plots.
         '''
         self.fig, self.ax = plt.subplots() # example: just one figure
+
 
 
 def exists(filename):

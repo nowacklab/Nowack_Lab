@@ -9,6 +9,7 @@ h = 6.626e-34 # m^2*kg/s
 class IV(Measurement):
     '''
     UNDER CONSTRUCTION
+    WILL NOT WORK....
     '''
     instrument_list = ['lockin_V', 'lockin_I']
 #     I_compliance = 1e-6 # 1 uA
@@ -43,9 +44,6 @@ class IV(Measurement):
 
 
     def do(self):
-        if self.fig == None:
-            self.setup_plots()
-
         ## Sweep to Vstart
         self.lockin_V.sweep(self.lockin_V.amplitude, self.Vstart, .01, .1)
 
@@ -66,8 +64,6 @@ class IV(Measurement):
             self.Iy[i] = self.lockin_I.Y
 
             self.plot()
-
-        self.save()
 
 
     def plot(self):
@@ -105,6 +101,9 @@ class IV(Measurement):
 
 
 class IVvsVg(Measurement):
+    '''
+    UNDER CONSTRUCTION; WILL NOT WORK
+    '''
     instrument_list = ['keithley', 'lockin_V', 'lockin_I']
     I_compliance = 1e-6 # 1 uA
 
@@ -153,7 +152,6 @@ class IVvsVg(Measurement):
 
         ## Sweep back to zero at 1V/s
         self.keithley.zero_V(1)
-        self.save()
 
     def setup_keithley(self):
 #         self.keithley.zero_V(1) # 1V/s
@@ -221,8 +219,6 @@ class RvsSomething(Measurement):
         Duration and delay both in seconds.
         Use do_measurement() for each resistance measurement.
         '''
-        self.do_before(plot)
-
         if duration is None:
             try:
                 while True:
@@ -236,37 +232,6 @@ class RvsSomething(Measurement):
                 self.do_measurement(delay, num_avg, delay_avg, plot)
                 if self.time[-1] >= duration:
                     break
-
-        self.do_after()
-
-
-    def do_before(self, plot=True):
-        '''
-        Standard things to do before the loop.
-        '''
-
-        self.setup_label()
-
-        if plot:
-            self.setup_plots()
-        self.time_start = time.time()
-
-
-    def do_after(self):
-        '''
-        Standard things to do after the loop.
-        '''
-
-        # # Make sure arrays in ascending order
-        # if getattr(self, self.something)[-1] < getattr(self, self.something)[0]:
-        #      getattr(self, self.something) = getattr(self, self.something)[-1]
-        #      for j in range(self.num_lockins):
-        #         self.R[str(j)] = self.R[str(j)][-1]
-
-        time_end = time.time()
-        self.time_elapsed = time_end-self.time_start
-        print('%s took %.1f minutes' %(self.__class__.__name__, self.time_elapsed/60))
-        self.save()
 
 
     def do_measurement(self, delay=0, num_avg = 1, delay_avg = 0, all_positive=False, plot=True):
@@ -328,6 +293,15 @@ class RvsSomething(Measurement):
 
         self.fig.tight_layout()
         self.fig.canvas.draw()
+
+
+    def run(self, plot=True, **kwargs):
+        '''
+        Run the measurement. Sets up plot label then uses Measurement.run
+        '''
+        self.setup_label()
+        super().run(plot=plot, **kwargs)
+
 
     def setup_label(self):
         '''
@@ -400,8 +374,6 @@ class RvsT(RvsSomething):
         self.sweep_rate = sweep_rate
 
     def do(self, plot=True):
-        self.do_before(plot)
-
         ## Set initial field if not already there
         if abs(self.ppms.temperature - self.Tstart) > 1: # different by more than 1 K
             self.ppms.temperature_rate = 20 # sweep as fast as possible
@@ -426,8 +398,6 @@ class RvsT(RvsSomething):
         while self.ppms.temperature_status not in ('Near', 'Stable'):
             self.T = np.append(self.T, self.ppms.temperature) # Oe to T
             self.do_measurement(delay=self.delay, plot=plot)
-
-        self.do_after()
 
 
 class RvsVg(RvsSomething):
@@ -454,8 +424,6 @@ class RvsVg(RvsSomething):
         self.setup_keithley()
 
     def do(self, num_avg = 1, delay_avg = 0, zero=False, all_positive=False, plot=True):
-        self.do_before(plot)
-
 #         self.keithley.output = 'on' #NO! will cause a spike!
 
         ## Sweep to Vstart
@@ -471,8 +439,6 @@ class RvsVg(RvsSomething):
         ## Sweep back to zero at 1V/s
         if zero:
             self.keithley.zero_V(1)
-
-        self.do_after()
 
 
     def calc_mobility(self, num_squares=1):
@@ -648,9 +614,6 @@ class FourProbeResSweep(Measurement):
         return (self.sumR)/self.Vs.shape
 
 
-        # self.save()
-
-
     def plot(self):
         super().plot()
 
@@ -757,9 +720,6 @@ class FourProbeRes(Measurement):
             self.sumR = self.sumR + self.R[i]
 
         return (self.sumR-self.R[0])/4
-
-
-        # self.save()
 
 
     def plot(self):

@@ -42,7 +42,6 @@ class Scanline(Measurement):
         self.Vout = np.nan
 
     def do(self):
-        tstart = time.time()
         self.temp_start = self.montana.temperature['platform']
 
         ## Start and end points
@@ -83,11 +82,6 @@ class Scanline(Measurement):
 
         if self.return_to_zero:
             self.piezos.V = 0
-        self.save()
-
-        tend = time.time()
-        print('Scan took %f minutes' %((tend-tstart)/60))
-
 
     def plot(self):
         '''

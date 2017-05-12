@@ -63,9 +63,7 @@ class Mod2D(Measurement):
             self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
         self.IV.daq.zero() # zero everything
 
-        self.notes = input('Notes for this mod2D (q to quit without saving): ')
-        if self.notes != 'q':
-            self.save()
+        self.notes = input('Notes for this mod2D: ')
 
 
     def param_prompt(self):

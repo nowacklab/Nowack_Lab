@@ -33,7 +33,6 @@ class DaqSpectrum(Measurement):
         self.psdAve = self.get_spectrum()
 
         self.plot()
-        self.save()
 
 
     def get_spectrum(self):
