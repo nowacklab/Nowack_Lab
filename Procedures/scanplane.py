@@ -317,7 +317,7 @@ class Scanplane(Measurement):
         ## Do not flush events for inline or notebook backends
         if matplotlib.get_backend() in ('nbAgg','module://ipykernel.pylab.backend_inline'):
             return
-            
+
         self.fig.canvas.flush_events()
 
     def setup_plots(self):
@@ -352,10 +352,10 @@ class Scanplane(Measurement):
                  'afmhot',
                  'magma',
                  'magma']
-        clabels = ['DC Flux ($\Phi_o$)',
+        clabels = ['DC Flux ($\Phi_0$)',
                    "Capacitance (F)",
-                   'AC X ($\Phi_o$)',
-                   'AC Y ($\Phi_o$)']
+                   'AC X ($\Phi_0$)',
+                   'AC Y ($\Phi_0$)']
 
         self.im = AttrDict()
         self.cbars = AttrDict()

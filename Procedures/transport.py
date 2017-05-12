@@ -53,7 +53,7 @@ class IV(Measurement):
         for i, Vs in enumerate(self.Vs):
             self.lockin_V.amplitude = Vs
             #while self.lockin_V.is_OL():
-                #self.lockin_V.sensitivity = 
+                #self.lockin_V.sensitivity =
             # if self.lockin_V.is_OL() or i==0: # only do auto gain if we're overloading or if it's the first measurement
             #     self.lockin_V.auto_gain()
             # if self.lockin_I.is_OL() or i==0:
@@ -185,7 +185,7 @@ class RvsSomething(Measurement):
         self.Vy = {str(i): np.array([]) for i in range(self.num_lockins)} # use a dictionary to enable saving
         self.Ix = np.array([])
         self.Iy = np.array([])
-        self.R = {str(i): np.array([]) for i in range(self.num_lockins)} 
+        self.R = {str(i): np.array([]) for i in range(self.num_lockins)}
         setattr(self, self.something, np.array([]))
 
         self.setup_lockins()
@@ -261,7 +261,7 @@ class RvsSomething(Measurement):
 
         time_end = time.time()
         self.time_elapsed = time_end-self.time_start
-        print('Measurement took %.1f minutes' %(self.time_elapsed/60))
+        print('%s took %.1f minutes' %(self.__class__.__name__, self.time_elapsed/60))
         self.save()
 
 
@@ -273,7 +273,7 @@ class RvsSomething(Measurement):
         num_avg is the number of data points to be averaged
         delay_avg is the time delay (seconds) between averages
 
-        Doesn't make a whole lot of sense to average for a measurement vs time, 
+        Doesn't make a whole lot of sense to average for a measurement vs time,
         but the averaging could be useful for a subclass.
         '''
 
