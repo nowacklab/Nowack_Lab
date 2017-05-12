@@ -1,4 +1,4 @@
-_daq_inputsfrom IPython import display
+from IPython import display
 from scipy.stats import linregress
 from scipy.optimize import curve_fit
 from datetime import datetime
