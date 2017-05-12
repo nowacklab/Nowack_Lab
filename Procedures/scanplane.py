@@ -348,12 +348,15 @@ class Scanplane(Measurement):
                                            figsize=(width, height))
         self.fig_cuts, self.axes_cuts = plt.subplots(4, 1, figsize=(6,8),
                                                      sharex=True)
+        # Convert the axis numpy arrays to list so they aren't saved as data.
+        self.axes = list(self.axes)
+        self.axes_cuts = list(self.axes_cuts)
         cmaps = ['RdBu',
                  'afmhot',
                  'magma',
                  'magma']
         clabels = ['DC Flux ($\Phi_0$)',
-                   "Capacitance (F)",
+                   'Capacitance (F)',
                    'AC X ($\Phi_0$)',
                    'AC Y ($\Phi_0$)']
 
@@ -449,16 +452,7 @@ class Scanplane(Measurement):
             return
 
         self.fig_cuts.canvas.flush_events()
-
-    def save(self):
-        '''
-        Saves the Scanplane object
-
-        Remove the objects axes and axes_cuts from the object which are
-        misinterpreted as arrays by the _save_hdf5 routine
-        '''
-        ignored = ["axes_cuts", "axes"]
-        self._save(self.filename, ignored = ignored)
+        
 
     def save_line(self, i, Vstart):
         '''

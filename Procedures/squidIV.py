@@ -24,7 +24,7 @@ class SquidIV(Measurement):
 
     notes = ''
 
-    def __init__(self, instruments={}, rate=90):
+    def __init__(self, instruments={}, rate=9):
         '''
         Example: SquidIV({'daq': daq, 'preamp': preamp}, 0, 0, None, 90)
         To make an empty object, then just call SquidIV(). You can do this if you want to plot previously collected data.
@@ -40,7 +40,7 @@ class SquidIV(Measurement):
 
         try:
             for pa in [self.preamp, self.preamp_I]:
-                pa.gain = 500
+                pa.gain = 5000
                 pa.filter_mode('low',6)
                 pa.filter = (0, rate) # Hz
                 pa.dc_coupling()
@@ -78,7 +78,7 @@ class SquidIV(Measurement):
         self.daq.zero() # zero everything
 
         self.setup_plots()
-        self.plot()
+        self.plot(dvdi = False)
         self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
 
         self.notes = input('Notes for this IV (r to redo, q to quit): ')
@@ -139,7 +139,7 @@ class SquidIV(Measurement):
                 display.clear_output()
                 print('Invalid command\n')
 
-    def plot(self, ax=None, ax2=None):
+    def plot(self, ax=None, ax2=None, dvdi = True):
         if ax == None: # if plotting on Mod2D's axis
             super().plot()
             ax = self.ax
@@ -155,13 +155,14 @@ class SquidIV(Measurement):
         ax.ticklabel_format(style='sci', axis='y', scilimits=(-3,3))
 
         ## To plot dVdI
-        if ax2 is not None:
-            dx = np.diff(self.I)[0]*3 # all differences are the same, so take the 0th. Made this 3 times larger to accentuate peaks
-            dvdi = np.gradient(self.V, dx)
-            ax2.plot(self.I*1e6, dvdi, 'r-')
-            ax2.set_ylabel(r'$dV_{squid}/dI_{bias}$ (Ohm)', fontsize=20, color='r')
-            for tl in ax2.get_yticklabels():
-                tl.set_color('r')
+        if (dvdi == True):
+            if ax2 is not None:
+                dx = np.diff(self.I)[0]*3 # all differences are the same, so take the 0th. Made this 3 times larger to accentuate peaks
+                dvdi = np.gradient(self.V, dx)
+                ax2.plot(self.I*1e6, dvdi, 'r-')
+                ax2.set_ylabel(r'$dV_{squid}/dI_{bias}$ (Ohm)', fontsize=20, color='r')
+                for tl in ax2.get_yticklabels():
+                    tl.set_color('r')
 
         if self.fig is not None:
             self.fig.tight_layout()

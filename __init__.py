@@ -15,6 +15,10 @@ rcParams.update({'figure.autolayout': False}) # If set to True, will autoformat 
 # warnings.filterwarnings("ignore") # This was to hide nanmin warnings, maybe not so good to have in general.
 
 ## Set experiment data path
+try:
+    print('Current experiment: %s' %save.get_experiment_data_dir())
+except:
+    pass
 inp = input('New experiment? y/(n): ')
 if inp in ('y', 'Y'):
     while True:
@@ -57,7 +61,7 @@ from Nowack_Lab.Procedures.scanplane import Scanplane
 from Nowack_Lab.Procedures.scanspectra import Scanspectra
 from Nowack_Lab.Procedures.squidIV import SquidIV
 from Nowack_Lab.Procedures.touchdown import Touchdown
-from Nowack_Lab.Procedures.transport import RvsVg, RvsSomething, IV, IVvsVg, FourProbeRes
+from Nowack_Lab.Procedures.transport import RvsVg, RvsTime, IV, IVvsVg, FourProbeRes, RvsT
 from Nowack_Lab.Procedures.magnetotransport import RvsB, RvsVg_B
 from Nowack_Lab.Instruments.attocube import Attocube
 from Nowack_Lab.Instruments.keithley import Keithley2400, Keithley2600, KeithleyPPMS
@@ -68,4 +72,5 @@ from Nowack_Lab.Instruments.preamp import SR5113
 from Nowack_Lab.Instruments.squidarray import SquidArray
 from Nowack_Lab.Instruments.lockin import SR830
 from Nowack_Lab.Instruments.ppms import PPMS
+#from Nowack_Lab.Fun.callme import call
 ''');

@@ -39,7 +39,8 @@ class IV(Measurement):
         self.Iy = np.full(self.Vs.shape, np.nan)
         self.R = np.full(self.Vs.shape, np.nan)
 
-        self.setup_lockins()
+        if instruments != {}:
+            self.setup_lockins()
 
 
     def do(self):
@@ -176,19 +177,21 @@ class RvsSomething(Measurement):
     instrument_list = ['lockin_V', 'lockin_I']
     something='time'
     something_units = 's'
+    legendtitle=None
 
     def __init__(self, instruments = {}):
         super().__init__()
         self._load_instruments(instruments)
 
-        self.Vx = {str(i): np.array([]) for i in range(self.num_lockins)} # one for each voltage channel
-        self.Vy = {str(i): np.array([]) for i in range(self.num_lockins)} # use a dictionary to enable saving
+        self.Vx = {i: np.array([]) for i in range(self.num_lockins)} # one for each voltage channel
+        self.Vy = {i: np.array([]) for i in range(self.num_lockins)} # use a dictionary to enable saving
         self.Ix = np.array([])
         self.Iy = np.array([])
-        self.R = {str(i): np.array([]) for i in range(self.num_lockins)}
+        self.R = {i: np.array([]) for i in range(self.num_lockins)}
         setattr(self, self.something, np.array([]))
 
-        self.setup_lockins()
+        if instruments != {}:
+            self.setup_lockins()
 
     def _load_instruments(self, instruments={}):
         '''
@@ -197,11 +200,7 @@ class RvsSomething(Measurement):
         This is unique for this class because you can supply up to two
         additional lockins to monitor inputs from.
         '''
-        for instrument in self.instrument_list:
-            if instrument in instruments:
-                setattr(self, instrument, instruments[instrument])
-            else:
-                setattr(self, instrument, None)
+        super()._load_instruments(instruments)
         for name, handle in instruments.items():
             if name[:-1] == 'lockin_V': # e.g. lockin_V2, cut off the "2"
                 setattr(self, name, handle)
@@ -212,6 +211,11 @@ class RvsSomething(Measurement):
         for name, handle in self.__dict__.items():
             if name[:-1] == 'lockin_V': # e.g. lockin_V2, cut off the "2"
                 num_lockins += 1
+        if num_lockins == 0:
+            try:
+                num_lockins = len(self.R) # if you give this class data without instruments.
+            except:
+                pass # if you haven't yet given data.
         self._num_lockins = num_lockins
         return self._num_lockins
 
@@ -243,6 +247,9 @@ class RvsSomething(Measurement):
         '''
         Standard things to do before the loop.
         '''
+
+        self.setup_label()
+
         if plot:
             self.setup_plots()
         self.time_start = time.time()
@@ -265,7 +272,7 @@ class RvsSomething(Measurement):
         self.save()
 
 
-    def do_measurement(self, delay=0, num_avg = 1, delay_avg = 0, plot=True):
+    def do_measurement(self, delay=0, num_avg = 1, delay_avg = 0, all_positive=False, plot=True):
         '''
         Take a resistance measurement. Usually this will happen in a loop.
         Optional argument to set a delay before the measurement happens.
@@ -283,23 +290,26 @@ class RvsSomething(Measurement):
         self.Ix = np.append(self.Ix, self.lockin_I.X)
         self.Iy = np.append(self.Iy, self.lockin_I.Y)
         for j in range(self.num_lockins):
-            J = j # J is int, j is string (for dictionary)
-            j = str(j)
 
             ## Take as many measurements as requested and average them
             vx = 0
             vy = 0
             r = 0
             for i in range(num_avg):
-                getattr(self, 'lockin_V%i' %(J+1)).fix_sensitivity() # make sure we aren't overloading or underloading.
-                vx += getattr(self, 'lockin_V%i' %(J+1)).X
-                vy += getattr(self, 'lockin_V%i' %(J+1)).Y
+                getattr(self, 'lockin_V%i' %(j+1)).fix_sensitivity() # make sure we aren't overloading or underloading.
+                self.lockin_I.fix_sensitivity()
+                vx += getattr(self, 'lockin_V%i' %(j+1)).X
+                vy += getattr(self, 'lockin_V%i' %(j+1)).Y
+
                 r += vx/self.Ix[-1]
                 if i != num_avg-1: # no reason to sleep the last time!
                     time.sleep(delay_avg)
             vx /= num_avg
             vy /= num_avg
             r /= num_avg
+
+            if all_positive:
+                r = abs(r)
 
             self.Vx[j] = np.append(self.Vx[j], vx)
             self.Vy[j] = np.append(self.Vy[j], vy)
@@ -322,6 +332,31 @@ class RvsSomething(Measurement):
         self.fig.tight_layout()
         self.fig.canvas.draw()
 
+    def setup_label(self):
+        '''
+        Add info about PPMS or Keithley status, if relevant.
+        Fixed variables (e.g. temperature, field for a gatesweep) will show up
+        in the plot legend as the legend title.
+        '''
+        self.legendtitle = None
+
+        def add_text_to_legend(text):
+            if self.legendtitle is None:
+                self.legendtitle = text
+            else:
+                self.legendtitle += '\n'+text
+
+        if hasattr(self, 'ppms'):
+            if self.ppms is not None:
+                if self.something != 'T': # if we're measuring vs many temperatures
+                    add_text_to_legend('T = %.2f K' %self.ppms.temperature)
+                if self.something != 'B':
+                    add_text_to_legend('B = %.2f T' %(self.ppms.field/10000))
+
+        if hasattr(self, 'keithley'):
+            if self.keithley is not None:
+                if self.something != 'Vg':
+                    add_text_to_legend('Vg = %.1f V' %self.keithley.V)
 
     def setup_lockins(self):
         self.lockin_V1.input_mode = 'A-B'
@@ -339,12 +374,63 @@ class RvsSomething(Measurement):
         ## plot all the resistances
         self.lines = {}
         for j in range(self.num_lockins):
-            j = str(j)
             line =  self.ax.plot(getattr(self, self.something), self.R[j])
             self.lines[j] = line[0]
 
-        self.ax.legend(['R%i' %(i+1) for i in range(self.num_lockins)], loc='best')
+        l = self.ax.legend(['R%i' %(i+1) for i in range(self.num_lockins)], loc='best', title=self.legendtitle)
         self.ax.set_title(self.filename)
+
+class RvsTime(RvsSomething):
+    '''
+    Alias for RvsSomething
+    '''
+    pass
+
+class RvsT(RvsSomething):
+    instrument_list = ['ppms', 'lockin_V', 'lockin_I']
+    something='T'
+    something_units = 'K'
+
+    def __init__(self, instruments = {}, Tstart = 300, Tend = 10, delay=1, sweep_rate=10):
+        '''
+        Sweep rate and temperature in K. Delay is in seconds. Rate is K/min
+        '''
+        super().__init__(instruments)
+
+        self.Tstart = Tstart
+        self.Tend = Tend
+        self.delay = delay
+        self.sweep_rate = sweep_rate
+
+    def do(self, plot=True):
+        self.do_before(plot)
+
+        ## Set initial field if not already there
+        if abs(self.ppms.temperature - self.Tstart) > 1: # different by more than 1 K
+            self.ppms.temperature_rate = 20 # sweep as fast as possible
+            self.ppms.temperature = self.Tstart
+            time.sleep(5) # let the temperature start ramping to Tstart
+            print('Waiting for temperature to sweep to Tstart...')
+            while self.ppms.temperature_status not in ('Stable'): # wait until stabilized
+                time.sleep(5)
+
+        if abs(self.Tstart-self.Tend) < 1:
+            return # sweeping between the same two temperatures, no point in doing the measurement
+
+        print('Starting temperature sweep...')
+
+        ## Set sweep to final temperature
+        self.ppms.temperature_rate = self.sweep_rate
+        self.ppms.temperature_approach = 'FastSettle'
+        self.ppms.temperature = self.Tend # T to Oe
+
+        time.sleep(5) # wait for ppms to process command
+        ## Measure while sweeping
+        while self.ppms.temperature_status not in ('Near', 'Stable'):
+            self.T = np.append(self.T, self.ppms.temperature) # Oe to T
+            self.do_measurement(delay=self.delay, plot=plot)
+
+        self.do_after()
 
 
 class RvsVg(RvsSomething):
@@ -370,7 +456,7 @@ class RvsVg(RvsSomething):
 
         self.setup_keithley()
 
-    def do(self, num_avg = 1, delay_avg = 0, zero=False, plot=True):
+    def do(self, num_avg = 1, delay_avg = 0, zero=False, all_positive=False, plot=True):
         self.do_before(plot)
 
 #         self.keithley.output = 'on' #NO! will cause a spike!
@@ -383,7 +469,7 @@ class RvsVg(RvsSomething):
             self.Vg = np.append(self.Vg, Vg)
             self.keithley.Vout = Vg
             self.Ig = np.append(self.Ig, self.keithley.I)
-            self.do_measurement(self.delay, num_avg, delay_avg, plot)
+            self.do_measurement(self.delay, num_avg, delay_avg, all_positive=all_positive, plot=plot)
 
         ## Sweep back to zero at 1V/s
         if zero:
@@ -453,7 +539,7 @@ class RvsVg(RvsSomething):
         '''
         Finds the index of gate voltage corresponding to charge neutrality point
         '''
-        return np.where(self.R[0]==self.R[0].max())[0] # find CNP
+        return np.where(self.R[0]==np.nanmax(self.R[0]))[0] # find CNP
 
 
     def plot(self):
@@ -473,6 +559,25 @@ class RvsVg(RvsSomething):
         # self.keithley.source = 'V'
         # self.keithley.I_compliance = 1e-6
         # self.keithley.Vout_range = max(abs(self.Vstart), abs(self.Vend))
+
+    def setup_label(self):
+        '''
+        Add sweep step size and delay to legend
+        '''
+        super().setup_label()
+
+        def add_text_to_legend(text):
+            if self.legendtitle is None:
+                self.legendtitle = text
+            else:
+                self.legendtitle += '\n'+text
+
+        add_text_to_legend('Vstep = %.2f V' %self.Vstep)
+        add_text_to_legend('delay = %.2f s' %self.delay)
+        if self.Vstart < self.Vend:
+            add_text_to_legend(r'sweep $\longrightarrow$')
+        else:
+            add_text_to_legend(r'sweep $\longleftarrow$')
 
     def setup_plots(self):
         super().setup_plots()

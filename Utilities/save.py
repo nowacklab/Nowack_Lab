@@ -27,7 +27,7 @@ class Measurement:
     instrument_list = []
     fig = None
 
-    def __init__(self):
+    def __init__(self, instruments = {}):
         self.timestamp = ''
 
         self.make_timestamp_and_filename()
@@ -102,12 +102,9 @@ class Measurement:
         elif filename[-4:] == '.pdf': # ends in .pdf
             filename = filename[:-4] # strip extension
 
-        unwanted_keys += cls.instrument_list # don't load instruments
-
         obj = Measurement._load_json(filename+'.json', unwanted_keys)
         obj._load_hdf5(filename+'.h5')
         obj._load_instruments(instruments)
-
         return obj
 
 
@@ -126,10 +123,19 @@ class Measurement:
                                 walk(d[key[1:]].__dict__, f[key])
                                 # [:1] strips the !; walks through the subobject
                             else: # it's a dictionary
-                            # walk through the subdictionary
+                                # walk through the subdictionary
                                 walk(d[key], f[key])
                         else:
                             d[key] = f[key][:] # we've arrived at a dataset
+
+                    ## If a dictionary key was an int, convert it back
+                    try:
+                        newkey = int(key) # test if can convert to an integer
+                        value = d.pop(key) # replace the key with integer version
+                        d[newkey] = value # do this all stepwise in case of error
+                    except:
+                        pass
+
                 return d
 
             walk(self.__dict__, f) # start walkin'
@@ -138,18 +144,13 @@ class Measurement:
     def _load_instruments(self, instruments={}):
         '''
         Loads instruments from a dictionary.
-        Specify instruments needed using self.instrument_list.
         '''
-        for instrument in self.instrument_list:
-            if instrument in instruments:
-                setattr(self, instrument, instruments[instrument])
-                if instrument == 'daq':
-                    for ch in self._chan_labels:
-                        if ch not in self.daq.outputs and ch not in self.daq.inputs:
-                            raise Exception('Need to set daq channel labels! Need a %s' %ch)
-            else:
-                setattr(self, instrument, None)
-
+        for instrument in instruments:
+            setattr(self, instrument, instruments[instrument])
+            if instrument == 'daq':
+                for ch in self._chan_labels:
+                    if ch not in self.daq.outputs and ch not in self.daq.inputs:
+                        raise Exception('Need to set daq channel labels! Need a %s' %ch)
 
 
     @staticmethod
@@ -314,6 +315,8 @@ class Measurement:
                     # If the key is in ignored then skip over it
                     if key in ignored:
                         continue
+                    if type(key) is int:
+                        key = str(key) # convert int keys to string. Will be converted back when loading
                     # If a numpy array is found
                     if type(value) is np.ndarray:
                         # Save the numpy array as a dataset

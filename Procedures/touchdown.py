@@ -52,7 +52,7 @@ class Touchdown(Measurement):
         Vz_max -- the maximum voltage that can be applied to the Z piezo.
 
         Required instruments:
-        daq, lockin_cap, attocubes, peizos, montana
+        daq, lockin_cap, attocubes, piezos, montana
 
         Required daq inputs:
         'cap', 'capx', 'capy' 'theta'
@@ -145,7 +145,7 @@ class Touchdown(Measurement):
     def configure_lockin(self):
         '''Set up lockin_cap amplifier for a touchdown.'''
         self.lockin_cap.amplitude = 1
-        self.lockin_cap.frequency = 26751
+        self.lockin_cap.frequency = 26759 # prime number
         self.lockin_cap.set_out(1, 'R')
         self.lockin_cap.set_out(2, 'theta')
         self.lockin_cap.sensitivity = 20e-6
