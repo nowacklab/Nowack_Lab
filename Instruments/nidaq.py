@@ -63,7 +63,7 @@ class NIDAQ(Instrument):
     def accel_function(self, start,end, numpts):
         """ Does an x**2-like ramp. Code looks weird but test it if you want! ^_^ """
         '''
-        NO THIS IS ACTUALLY CRAP DON'T USE THIS
+        NO THIS IS ACTUALLY CRAP DON'T USE THIS <-- LOL
         '''
         if start == end:
             return [start]*numpts*2 # just return array of the same value

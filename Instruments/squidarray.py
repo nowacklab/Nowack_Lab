@@ -107,6 +107,9 @@ class PFL102(Instrument):
         return self._save_dict
 
     def __setstate__(self, state):
+        '''
+        NOTE: this will load the real instrument. Load with caution!
+        '''
         state['_A_bias'] = state.pop('Array bias')
         state['_A_flux'] = state.pop('Array flux')
         state['_S_bias'] = state.pop('SQUID bias')

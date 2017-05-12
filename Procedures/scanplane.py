@@ -324,8 +324,8 @@ class Scanplane(Measurement):
         self.fig_cuts, self.axes_cuts = plt.subplots(4, 1, figsize=(6,8),
                                                      sharex=True)
         # Convert the axis numpy arrays to list so they aren't saved as data.
-        self.axes = list(self.axes)
-        self.axes_cuts = list(self.axes_cuts)
+        self.axes = list(self.axes.flatten()) # Change these back to dicts eventually.
+        self.axes_cuts = list(self.axes_cuts.flatten())
         cmaps = ['RdBu',
                  'afmhot',
                  'magma',
@@ -341,7 +341,7 @@ class Scanplane(Measurement):
         self.lines_interp = AttrDict()
 
         # Plot the DC signal, capactitance and AC signal on 2D colorplots
-        for ax, chan, cmap, clabel in zip(self.axes.flatten(),
+        for ax, chan, cmap, clabel in zip(self.axes,
                                           self._daq_inputs,
                                           cmaps,
                                           clabels):

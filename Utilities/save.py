@@ -48,14 +48,19 @@ class Measurement:
                     d[var] = None
 
                 ## Don't save matplotlib objects to JSON
-                try:
+                if hasattr(d[var], '__module__'): # built-in types won't have __module__
                     m = d[var].__module__
-                    m = m[:m.find('.')] # will strip out "matplotlib"
+                    m = m[:m.find('.')] # will strip out "matplotlib", if there
                     if m == 'matplotlib':
                         d[var] = None
-                except:
-                    pass # built-in types won't have __module__
+                elif type(d[var]) is list: # check for lists of mpl objects
+                    if hasattr(d[var][0], '__module__'): # built-in types won't have __module__
+                        m = d[var][0].__module__
+                        m = m[:m.find('.')] # will strip out "matplotlib"
+                        if m == 'matplotlib':
+                            d[var] = None
 
+                ## Walk through dictionaries
                 if 'dict' in utilities.get_superclasses(d[var]):
                     d[var] = walk(d[var]) # This unfortunately erases the dictionary...
 
@@ -128,14 +133,26 @@ class Measurement:
             obj_dict = json.load(f)
 
         def walk(d):
+            '''
+            Walk through dictionary to prune out Instruments
+            '''
             for key in list(d.keys()): # convert to list because dictionary changes size
                 if key in unwanted_keys: # get rid of keys you don't want to load
                     d[key] = None
-                elif 'dict' in utilities.get_superclasses(d[key]):
-                    walk(d[key])
+                elif 'py/' in key:
+                    if 'py/object' in d:
+                        if 'Instruments' in d['py/object']: # if this is an instrument
+                            d = None # Don't load it.
+                            break
+                    elif 'py/id' in d: # This is probably another instance of an Instrument.
+                        d = None # Don't load it.
+                        break
+                if 'dict' in utilities.get_superclasses(d[key]):
+                    d[key] = walk(d[key])
+            return d
 
-        walk(obj_dict)
 
+        obj_dict = walk(obj_dict)
         obj_string = json.dumps(obj_dict)
         obj = jsp.decode(obj_string)
 
