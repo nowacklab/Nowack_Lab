@@ -10,7 +10,6 @@ class MutualInductance(Measurement):
     def __init__(self, instruments = {}, Rmeas=3172, Istart=5e-6, Iend=30e-6,
                  numamps=10, fstart = 100, fend = 20000, numf= 10):
         super().__init__()
-        self._load_instruments(instruments)
         self.Rmeas = Rmeas
         self.amps = np.linspace(Istart, Iend, numamps)*Rmeas
         self.freqs = np.logspace(np.log10(fstart), np.log10(fend), numf) # 10 Hz to 20 kHz
@@ -74,6 +73,8 @@ class MutualInductance(Measurement):
 
 class ArraylessMI(Measurement):
     '''
+    ### NEEDS CLEANUP ###
+
     Map out the response of the SQUID in the mod current / field coil current
     parameter space.
 
@@ -89,15 +90,15 @@ class ArraylessMI(Measurement):
     example:
 
     '''
-    instrument_list = ["daq", "preamp"]
-    _chan_labels = ["squid_out", "squid_bias", "mod_source", "field_source"]
+    instrument_list = ['daq', 'preamp']
+    _daq_inputs = ['squid_out']
+    _daq_outputs = ['squid_bias', 'mod_source', 'field_source']
 
     def __init__(self, s_bias, r_bias_squid, r_bias_mod, r_bias_field,
                  instruments = {}, I_mod_i = 0, I_mod_f = 0, num_mod = 100,
                  I_field_i = 0, I_field_f = 0, num_field = 10, rate = 100):
 
         super().__init__()
-        self._load_instruments(instruments)
         self.s_bias = float(s_bias) * 1e-6
         self.r_bias_squid = r_bias_squid
         self.I_mod_i = I_mod_i * 1e-6
@@ -108,7 +109,7 @@ class ArraylessMI(Measurement):
         self.r_bias_mod = r_bias_mod
         self.r_bias_field = r_bias_field
         self.V = np.full((num_mod, len(self.field_current)),
-                         np.NaN)
+                         np.nan)
 
     def do(self):
         '''
@@ -116,19 +117,19 @@ class ArraylessMI(Measurement):
         '''
         # Bias the SQUID to the desired working point
         _,_ = self.daq.sweep(
-            {"squid_bias": self.daq.outputs["squid_bias"].V},
-            {"squid_bias": self.s_bias * self.r_bias_squid},
+            {'squid_bias': self.daq.outputs['squid_bias'].V},
+            {'squid_bias': self.s_bias * self.r_bias_squid},
             sample_rate=10000, numsteps = 10000)
         for i, f in enumerate(self.field_current):
             # Source a current to the field coil
             _,_ = self.daq.sweep(
-                {"field_source": self.daq.outputs["field_source"].V},
-                {"field_source": f * self.r_bias_field},
+                {'field_source': self.daq.outputs['field_source'].V},
+                {'field_source': f * self.r_bias_field},
                 sample_rate = 10000, numsteps = 10000)
             # Now sweep the current in the mod coil
             output_data, recieved = self.daq.sweep(
-                {"mod_source": self.I_mod_i * self.r_bias_mod},
-                {"mod_source": self.I_mod_f * self.r_bias_mod},
-                chan_in = ["squid_out"], sample_rate = self.rate,
+                {'mod_source': self.I_mod_i * self.r_bias_mod},
+                {'mod_source': self.I_mod_f * self.r_bias_mod},
+                chan_in = ['squid_out'], sample_rate = self.rate,
                 numsteps = self.num_mod)
-            self.V[:, i] = np.array(recieved["squid_out"])/self.preamp.gain
+            self.V[:, i] = np.array(recieved['squid_out'])/self.preamp.gain

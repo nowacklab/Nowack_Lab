@@ -11,7 +11,8 @@ from ..Utilities.save import Measurement
 from ..Utilities.utilities import AttrDict
 
 class Mod2D(Measurement):
-    _chan_labels = ['squidout','squidin','modout']
+    _daq_inputs = ['squidin']
+    _daq_outputs = ['squidout', 'modout']
     notes = ''
     instrument_list = SquidIV.instrument_list
 

@@ -1,4 +1,4 @@
-from IPython import display
+_daq_inputsfrom IPython import display
 from scipy.stats import linregress
 from scipy.optimize import curve_fit
 from datetime import datetime
@@ -16,7 +16,7 @@ _Z_PIEZO_STEP_SLOW = 4 # V piezo
 _CAPACITANCE_THRESHOLD = 1 # fF
 
 class Touchdown(Measurement):
-    _chan_labels = ['cap', 'capx', 'capy', 'theta']
+    _daq_inputs = ['cap', 'capx', 'capy', 'theta']
     instrument_list = ['lockin_cap','atto','piezos','daq','montana']
 
     Vtd = None
@@ -61,8 +61,6 @@ class Touchdown(Measurement):
         'x', 'y', 'z'
         '''
         super().__init__()
-
-        self._load_instruments(instruments)
 
         if instruments:
             self.atto.z.freq = 200

@@ -23,15 +23,14 @@ as necessary) and populate the numpy arrays.
 
 
 class Measurement:
-    _chan_labels = [] # DAQ channel labels expected by this class
+    _daq_inputs = [] # DAQ input labels expected by this class
+    _daq_outputs = [] # DAQ input labels expected by this class
     instrument_list = []
     fig = None
 
     def __init__(self, instruments = {}):
-        self.timestamp = ''
-
         self.make_timestamp_and_filename()
-
+        self._load_instruments(instruments)
 
     def __getstate__(self):
         '''
@@ -148,9 +147,12 @@ class Measurement:
         for instrument in instruments:
             setattr(self, instrument, instruments[instrument])
             if instrument == 'daq':
-                for ch in self._chan_labels:
-                    if ch not in self.daq.outputs and ch not in self.daq.inputs:
-                        raise Exception('Need to set daq channel labels! Need a %s' %ch)
+                for ch in self._daq_inputs:
+                    if ch not in self.daq.inputs:
+                        raise Exception('Need to set daq input labels! Need a %s' %ch)
+                for ch in self._daq_outputs:
+                    if ch not in self.daq.outputs:
+                        raise Exception('Need to set daq output labels! Need a %s' %ch)
 
 
     @staticmethod

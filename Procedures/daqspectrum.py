@@ -10,7 +10,7 @@ from ..Utilities.utilities import AttrDict
 from ..Utilities import conversions
 
 class DaqSpectrum(Measurement):
-    _chan_labels = ['dc'] # DAQ channel labels expected by this class
+    _daq_inputs = ['dc'] # DAQ channel labels expected by this class
     instrument_list = ['daq','preamp']
     ## So plotting will work with no data
     f = 1
@@ -22,8 +22,6 @@ class DaqSpectrum(Measurement):
 
     def __init__(self, instruments={}, measure_time=0.5, measure_freq=256000, averages=30):
         super().__init__()
-
-        self._load_instruments(instruments)
 
         for arg in ['measure_time','measure_freq','averages']:
             setattr(self, arg, eval(arg))
@@ -89,7 +87,6 @@ class DaqSpectrum(Measurement):
         self.preamp.filter_mode('low',12)
 
 class SQUIDSpectrum(DaqSpectrum):
-    _chan_labels = ['dc'] # DAQ channel labels expected by this class
     instrument_list = ['daq', 'preamp', 'squidarray']
 
     def __init__(self, *args, **kwargs):

@@ -10,7 +10,7 @@ from ..Utilities.utilities import AttrDict
 
 
 class Scanline(Measurement):
-    _chan_labels = ['dc','cap','acx','acy']
+    _daq_inputs = ['dc','cap','acx','acy']
     _conversions = AttrDict({
         'dc': conversions.Vsquid_to_phi0,
         'cap': conversions.V_to_C,
@@ -22,8 +22,6 @@ class Scanline(Measurement):
 
     def __init__(self, instruments={}, plane=None, start=(-100,-100), end=(100,100), scanheight=15, scan_rate=120, return_to_zero=True):
         super().__init__()
-
-        self._load_instruments(instruments)
 
         self.start = start
         self.end = end
@@ -39,7 +37,7 @@ class Scanline(Measurement):
         self.scan_rate = scan_rate
 
         self.V = AttrDict({
-            chan: np.nan for chan in self._chan_labels + ['piezo']
+            chan: np.nan for chan in self._daq_inputs + ['piezo']
         })
         self.Vout = np.nan
 
@@ -63,7 +61,7 @@ class Scanline(Measurement):
         # time.sleep(3)
 
         ## Do the sweep
-        in_chans = self._chan_labels
+        in_chans = self._daq_inputs
         output_data, received = self.piezos.sweep(Vstart, Vend, chan_in=in_chans, sweep_rate=self.scan_rate) # sweep over Y
 
         for axis in ['x','y','z']:
@@ -74,7 +72,7 @@ class Scanline(Measurement):
 
         # Store this line's signals for Vdc, Vac x/y, and Cap
         # Convert from DAQ volts to lockin volts
-        for chan in self._chan_labels:
+        for chan in self._daq_inputs:
             self.V[chan] = received[chan]
 
         for chan in ['acx','acy']:
@@ -97,7 +95,7 @@ class Scanline(Measurement):
         '''
         super().plot()
 
-        for chan in self._chan_labels:
+        for chan in self._daq_inputs:
             self.ax[chan].plot(self.Vout*self._conversions['piezo'], self.V[chan], '-b')
 
         self.fig.tight_layout()

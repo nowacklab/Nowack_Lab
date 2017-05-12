@@ -15,11 +15,11 @@ from ..Procedures import DaqSpectrum
 from ..Utilities.utilities import AttrDict
 
 class Scanspectra(Measurement):
-    _chan_labels = ['dc','cap','acx','acy'] # DAQ channel labels expected by this class
+    _daq_inputs = ['dc','cap','acx','acy'] # DAQ channel labels expected by this class
     instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto','daq']
 
     Vavg = AttrDict({
-        chan: np.nan for chan in _chan_labels
+        chan: np.nan for chan in _daq_inputs
     })
 
     V = np.array([])
@@ -28,7 +28,6 @@ class Scanspectra(Measurement):
                         center=[0,0], numpts=[20,20], scanheight=15,
                         monitor_time=1, sample_rate=10000, num_averages=1):
         super().__init__()
-        self._load_instruments(instruments)
 
         self.monitor_time = monitor_time
         self.sample_rate = sample_rate
@@ -63,7 +62,7 @@ class Scanspectra(Measurement):
         self.psd = np.full(shape, np.nan)
         self.f = np.full(shape[2], np.nan)
 
-        for chan in self._chan_labels:
+        for chan in self._daq_inputs:
             self.Vavg[chan] = np.full(self.X.shape, np.nan) #initialize arrays
 
         self.daqspectrum = DaqSpectrum(instruments, monitor_time, sample_rate, num_averages) # object that handles taking spectra
@@ -97,7 +96,7 @@ class Scanspectra(Measurement):
 
                 # just single data points, like a single scan
                 self.Vavg['dc'][i,j] = self.daqspectrum.V.mean()
-                for chan in self._chan_labels:
+                for chan in self._daq_inputs:
                     if chan != 'dc':
                         self.Vavg[chan][i,j] = self.daq.inputs[chan].V
 
