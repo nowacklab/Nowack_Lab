@@ -33,7 +33,7 @@ class SquidIV(Measurement):
         Example: SquidIV({'daq': daq, 'preamp': preamp}, 0, 0, None, 90)
         To make an empty object, then just call SquidIV(). You can do this if you want to plot previously collected data.
         '''
-        super().__init__()
+        super().__init__(instruments=instruments)
 
         self.two_preamps = False
         if self.preamp_I is not None:

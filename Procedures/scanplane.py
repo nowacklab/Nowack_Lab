@@ -55,7 +55,7 @@ class Scanplane(Measurement):
                         center=[0,0], numpts=[20,20],
                         scanheight=15, scan_rate=120, raster=False):
 
-        super().__init__()
+        super().__init__(instruments=instruments)
 
         # Load the correct SAA sensitivity based on the SAA feedback
         # resistor
@@ -76,9 +76,6 @@ class Scanplane(Measurement):
         self.center = center
         self.numpts = numpts
         self.plane = plane
-
-        # Define interrupt variable that is used to detect interrupts
-        self.interrupt = False
 
         self.V = AttrDict({
            chan: np.nan for chan in self._daq_inputs + ['piezo']

@@ -21,7 +21,7 @@ class Scanline(Measurement):
     instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto']
 
     def __init__(self, instruments={}, plane=None, start=(-100,-100), end=(100,100), scanheight=15, scan_rate=120, return_to_zero=True):
-        super().__init__()
+        super().__init__(instruments=instruments)
 
         self.start = start
         self.end = end

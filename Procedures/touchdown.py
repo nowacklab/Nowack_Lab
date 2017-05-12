@@ -60,7 +60,7 @@ class Touchdown(Measurement):
         Required daq ouputs:
         'x', 'y', 'z'
         '''
-        super().__init__()
+        super().__init__(instruments=instruments)
 
         if instruments:
             self.atto.z.freq = 200
@@ -199,6 +199,8 @@ class Touchdown(Measurement):
             )
             # Inner loop to sweep z-piezo
             for i in range(self.numsteps):
+                if self.interrupt:
+                    break
                 # Determine starting voltage
                 if start is not None:
                     if self.V[i] < start:
@@ -303,8 +305,6 @@ class Touchdown(Measurement):
         self.piezos.z.V = 0 # bring the piezo back to zero
 
         self.Vtd = Vtd
-
-        return Vtd
 
     def get_touchdown_voltage(self):
         '''

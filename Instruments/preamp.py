@@ -18,6 +18,8 @@ class SR5113(Instrument):
         Driver for the Signal Recovery 5113 preamplifier.
         e.g. preamp = SR5113('COM1')
         '''
+        if type(port) is int:
+            port = 'COM%i' %port
         self.connect(port)
         self._gain = self.gain
         self._filter = self.filter

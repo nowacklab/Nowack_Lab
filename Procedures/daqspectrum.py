@@ -21,7 +21,7 @@ class DaqSpectrum(Measurement):
     conversion = 1
 
     def __init__(self, instruments={}, measure_time=0.5, measure_freq=256000, averages=30):
-        super().__init__()
+        super().__init__(instruments=instruments)
 
         for arg in ['measure_time','measure_freq','averages']:
             setattr(self, arg, eval(arg))

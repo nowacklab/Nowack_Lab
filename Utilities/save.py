@@ -27,6 +27,7 @@ class Measurement:
     _daq_outputs = [] # DAQ input labels expected by this class
     instrument_list = []
     fig = None
+    interrupt = False # boolean variable used to interrupt loops in the do.
 
     def __init__(self, instruments = {}):
         self.make_timestamp_and_filename()
@@ -369,7 +370,7 @@ class Measurement:
 
         ## The do.
         try:
-            self.do(**kwargs)
+            done = self.do(**kwargs)
         except KeyboardInterrupt:
             self.interrupt = True
 
@@ -379,6 +380,7 @@ class Measurement:
         print('%s took %.1f minutes' %(self.__class__.__name__, self.time_elapsed/60))
         self.save()
 
+        return done
 
     def save(self, filename=None, savefig=True):
         '''

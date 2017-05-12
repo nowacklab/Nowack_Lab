@@ -24,7 +24,7 @@ class IV(Measurement):
         Use one lockin to source a voltage to a bias resistor. This lockin also measures voltage.
         The second lockin is synced to the first and measures current.
         '''
-        super().__init__()
+        super().__init__(instruments=instruments)
 
         self.Vstart = Vstart
         self.Vend = Vend
@@ -122,7 +122,7 @@ class IVvsVg(Measurement):
         Use one lockin to source a voltage to a bias resistor. This lockin also measures voltage.
         The second lockin is synced to the first and measures current.
         '''
-        super().__init__()
+        super().__init__(instruments=instruments)
 
         self.IV = IV(instruments, Vstart, Vend, Vstep, delay)
 
@@ -148,7 +148,7 @@ class IVvsVg(Measurement):
             self.IV.Vx[:] = np.nan
 
             self.IV.line = self.IV.ax.plot(self.IV.Ix*1e6, self.IV.Vx*1e3, color=colors[i])[0]
-            self.IV.do()
+            self.IV.run()
 
         ## Sweep back to zero at 1V/s
         self.keithley.zero_V(1)
@@ -176,7 +176,7 @@ class RvsSomething(Measurement):
     legendtitle=None
 
     def __init__(self, instruments = {}):
-        super().__init__()
+        super().__init__(instruments=instruments)
 
         self.Vx = {i: np.array([]) for i in range(self.num_lockins)} # one for each voltage channel
         self.Vy = {i: np.array([]) for i in range(self.num_lockins)} # use a dictionary to enable saving
@@ -366,7 +366,7 @@ class RvsT(RvsSomething):
         '''
         Sweep rate and temperature in K. Delay is in seconds. Rate is K/min
         '''
-        super().__init__(instruments)
+        super().__init__(instruments=instruments)
 
         self.Tstart = Tstart
         self.Tend = Tend
@@ -411,7 +411,7 @@ class RvsVg(RvsSomething):
     something_units = 'V'
 
     def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1, delay=1):
-        super().__init__(instruments)
+        super().__init__(instruments=instruments)
 
         self.Vstart = Vstart
         self.Vend = Vend
@@ -564,7 +564,7 @@ class FourProbeResSweep(Measurement):
 
     def __init__(self, instruments = {},Vbi = 0.1, delay=1):
 
-        super().__init__()
+        super().__init__(instruments=instruments)
 
         self.Vs = Vbi;
         self.Vx = np.full(self.Vs.shape, np.nan)
@@ -674,7 +674,7 @@ class FourProbeRes(Measurement):
 
     def __init__(self, instruments = {},Vbi = 0.1, delay=1):
 
-        super().__init__()
+        super().__init__(instruments=instruments)
 
         self.Vs = Vbi;
         self.Vx = np.full(5, np.nan)

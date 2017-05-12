@@ -19,7 +19,7 @@ class Heightsweep(Measurement):
 
 
     def __init__(self, instruments = {}, plane=None, x=0, y=0, z0=0, scan_rate=120):
-        super().__init__()
+        super().__init__(instruments=instruments)
 
         self.x = x
         self.y = y

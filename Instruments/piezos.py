@@ -4,10 +4,9 @@ from ..Utilities.logging import log
 from .instrument import Instrument
 import time
 try:
-    from PyDAQmx import *
+    import PyDAQmx as mx
 except:
     print('PyDAQmx not imported in piezos.py!')
-from ctypes import *
 
 class Piezos(Instrument):
     '''
@@ -17,7 +16,7 @@ class Piezos(Instrument):
     '''
     _label = 'piezos'
     # DAQ channel labels expected by this class
-    _chan_labels = ['x','y','z']
+    _daq_outputs = ['x','y','z']
     _piezos = ['x','y','z']
     _gain = [40, 40, 40]
     # maximum allowed total voltage across piezo
@@ -40,9 +39,9 @@ class Piezos(Instrument):
         self._daq = daq
         if daq is None:
             print('Daq not loaded... piezos will not work until you give them a daq!')
-        for ch in self._chan_labels:
-            if ch not in daq.outputs and ch not in daq.inputs:
-                raise Exception('Need to set daq channel labels! Need a %s' %ch)
+        for ch in self._daq_outputs:
+            if ch not in daq.outputs:
+                raise Exception('Need to set daq channel outputs! Need a %s' %ch)
 
         for (i,p) in enumerate(self._piezos):
             setattr(self, p, Piezo(self._daq, label=p,
@@ -328,7 +327,7 @@ class Piezos(Instrument):
         readArray = np.ones(arraySize, dtype=np.uint8)
         loadArray = np.ones(sampsPerChanToAcquire, dtype=np.uint8)
         loadArray[1] = 0; # Create trigger
-        LP_c_double = POINTER(c_long);
+        LP_c_double = mx.POINTER(mx.c_long);
         actRead = LP_c_double()
         numBytes = LP_c_double()
         rate = 100000 # Communication rate, should be set as high as possible
@@ -336,35 +335,35 @@ class Piezos(Instrument):
         sampsPerChanWritten = LP_c_double()
 
         # Create tasks
-        taskIn = Task()
-        taskOut = Task()
-        taskClock = Task()
+        taskIn = mx.Task()
+        taskOut = mx.Task()
+        taskClock = mx.Task()
 
         # Creates input and output
         taskIn.CreateDIChan("/Dev1/port0/line4","dIn",
-                            DAQmx_Val_ChanPerLine)
+                            mx.DAQmx_Val_ChanPerLine)
         taskOut.CreateDOChan("/Dev1/port0/line5","Load",
-                             DAQmx_Val_ChanPerLine)
+                             mx.DAQmx_Val_ChanPerLine)
 
         # Creates a counter to use as a clock
         taskClock.CreateCOPulseChanFreq("/Dev1/ctr0", "clock",
-                                        DAQmx_Val_Hz,DAQmx_Val_Low,0,rate,.5)
-        taskClock.CfgImplicitTiming(DAQmx_Val_ContSamps,17)
+                                        mx.DAQmx_Val_Hz,mx.DAQmx_Val_Low,0,rate,.5)
+        taskClock.CfgImplicitTiming(mx.DAQmx_Val_ContSamps,17)
 
         #Set both input and output to use the counter we created as clock
         taskIn.CfgSampClkTiming ("/Dev1/Ctr0InternalOutput",
-                                 rate,DAQmx_Val_Rising,DAQmx_Val_FiniteSamps,
+                                 rate,mx.DAQmx_Val_Rising,mx.DAQmx_Val_FiniteSamps,
                                  sampsPerChanToAcquire);
         taskOut.CfgSampClkTiming ("/Dev1/Ctr0InternalOutput",rate,
-                                  DAQmx_Val_Rising,DAQmx_Val_ContSamps,
+                                  mx.DAQmx_Val_Rising,mx.DAQmx_Val_ContSamps,
                                   sampsPerChanToAcquire);
 
         # Syncs input to external connection from counter
-        taskIn.CfgDigEdgeStartTrig("/Dev1/PFI1",DAQmx_Val_Rising)
+        taskIn.CfgDigEdgeStartTrig("/Dev1/PFI1",mx.DAQmx_Val_Rising)
 
         # Loads data to be written
         taskOut.WriteDigitalLines(sampsPerChanToAcquire,False,.9,
-                                  DAQmx_Val_GroupByChannel,loadArray,
+                                  mx.DAQmx_Val_GroupByChannel,loadArray,
                                   sampsPerChanWritten,None)
 
         #Start tasks
@@ -372,7 +371,7 @@ class Piezos(Instrument):
         taskOut.StartTask()
         time.sleep(.01)
         taskIn.StartTask()
-        taskIn.ReadDigitalLines(-1,.9,DAQmx_Val_GroupByChannel,readArray,80,
+        taskIn.ReadDigitalLines(-1,.9,mx.DAQmx_Val_GroupByChannel,readArray,80,
                                 numRead,numBytes,None)
         time.sleep(.01)
         taskIn.StopTask()

@@ -9,7 +9,7 @@ class MutualInductance(Measurement):
 
     def __init__(self, instruments = {}, Rmeas=3172, Istart=5e-6, Iend=30e-6,
                  numamps=10, fstart = 100, fend = 20000, numf= 10):
-        super().__init__()
+        super().__init__(instruments=instruments)
         self.Rmeas = Rmeas
         self.amps = np.linspace(Istart, Iend, numamps)*Rmeas
         self.freqs = np.logspace(np.log10(fstart), np.log10(fend), numf) # 10 Hz to 20 kHz
@@ -97,7 +97,7 @@ class ArraylessMI(Measurement):
                  instruments = {}, I_mod_i = 0, I_mod_f = 0, num_mod = 100,
                  I_field_i = 0, I_field_f = 0, num_field = 10, rate = 100):
 
-        super().__init__()
+        super().__init__(instruments=instruments)
         self.s_bias = float(s_bias) * 1e-6
         self.r_bias_squid = r_bias_squid
         self.I_mod_i = I_mod_i * 1e-6

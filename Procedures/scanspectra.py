@@ -27,7 +27,7 @@ class Scanspectra(Measurement):
     def __init__(self, instruments = {}, plane = None, span=[800,800],
                         center=[0,0], numpts=[20,20], scanheight=15,
                         monitor_time=1, sample_rate=10000, num_averages=1):
-        super().__init__()
+        super().__init__(instruments=instruments)
 
         self.monitor_time = monitor_time
         self.sample_rate = sample_rate
