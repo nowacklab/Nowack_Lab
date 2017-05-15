@@ -1,0 +1,27 @@
+To do:
+
+Write common functions for plotting (e.g. colorbar)
+
+plot_before and plot_after in a plot function. 
+so
+def plot(self, *args, **kwargs):
+    plot_before()
+    update_plots()
+    plot_after()
+
+Or better:
+    plot_update()
+    plot_draw()
+
+A bunch of drawing things can go into plot_draw, esp. flush_events for non-notebook plotting
+
+Reinstate _chan_labels as _daq_inputs and add _daq_outputs
+
+
+Figure out why plots too big for notebook
+
+Check for outliers/detect unlock
+
+
+Test:
+Check if numpts correct for scan direction and print warning?

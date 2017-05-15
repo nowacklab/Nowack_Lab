@@ -60,9 +60,11 @@ class ANC350(Instrument):
 
     def __del__(self):
         try:
-            print('Disconnecting ANC')
-            self.anc.disconnect()
-            del self.anc
+            if hasattr(self, 'anc'):
+                if self.anc is not None:
+                    print('Disconnecting ANC')
+                    self.anc.disconnect()
+                    del self.anc
         except:
             pass
 

@@ -309,8 +309,8 @@ class Measurement:
 
     def do(self):
         '''
-        Do the main part of the measurement.
-        This function is wrapped by run() to enable keyboard interrupts.
+        Do the main part of the measurement. Write this function for subclasses.
+        run() wraps this function to enable keyboard interrupts.
         run() also includes saving and elapsed time logging.
         '''
         pass
@@ -380,6 +380,9 @@ class Measurement:
 
         Check the do() function for additional available kwargs.
         '''
+        self.interrupt = False
+        done = None
+
         ## Before the do.
         if plot:
             self.setup_plots()
@@ -393,8 +396,19 @@ class Measurement:
 
         ## After the do.
         time_end = time.time()
-        self.time_elapsed = time_end-time_start
-        print('%s took %.1f minutes' %(self.__class__.__name__, self.time_elapsed/60))
+        self.time_elapsed_s = time_end-time_start
+
+        if self.time_elapsed_s < 60: # less than a minute
+            t = self.time_elapsed_s
+            t_unit = 'seconds'
+        elif self.time_elapsed_s < 3600: # less than an hour
+            t = self.time_elapsed_s/60
+            t_unit = 'minutes'
+        else:
+            t = self.time_elapsed_s/3600
+            t_unit = 'hours'
+        # Print elapsed time e.g. "Scanplane took 2.3 hours."
+        print('%s took %.1f %s.' %(self.__class__.__name__, t, t_unit))
         self.save()
 
         return done

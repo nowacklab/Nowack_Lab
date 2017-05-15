@@ -137,10 +137,20 @@ class Scanplane(Measurement):
 
         # Loop over Y values if fast_axis is x,
         # Loop over X values if fast_axis is y
+        ## Print a warning if the fast_axis has fewer points than the slow.
+        def slow_axis_alert():
+            print('Slow axis has more points than fast axis!')
+            import winsound
+            winsound.Beep(int(440*2**(1/2)),200) # play a tone
+            winsound.Beep(440,200) # play a tone
         if fast_axis == 'x':
             num_lines = int(self.X.shape[0]) # loop over Y
+            if num_lines > int(self.X.shape[1]): # if more Y points than X
+                slow_axis_alert()
         elif fast_axis == 'y':
             num_lines = int(self.X.shape[1]) # loop over X
+            if num_lines > int(self.X.shape[0]): # if more X points than Y
+                slow_axis_alert()
         else:
             raise Exception('Specify x or y as fast axis!')
 
@@ -380,9 +390,9 @@ class Scanplane(Measurement):
             # Take the line object - not the list containing the line
             self.lines_full[chan] = ax.plot(self.Vfull['piezo'],
                                             self.Vfull[chan],
-                                            'k')[0]
+                                            '-')[0]
             self.lines_interp[chan] = ax.plot(self.Vinterp['piezo'],
-                                              self.Vinterp[chan], 'o',
+                                              self.Vinterp[chan], 'ok',
                                               markersize=3)[0]
             ax.set_ylabel(clabel)
             ## Scientific notation for <10^-2, >10^2
