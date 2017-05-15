@@ -107,20 +107,29 @@ class SR5113(Instrument):
         '''
         Closes connection to preamp
         '''
-        self.inst.close()
+        self._inst.close()
 
 
     def connect(self, port):
         '''
         Connects to preamp via serial port
         '''
-        self.rm = visa.ResourceManager()
-        self.inst = self.rm.open_resource(port)
+        rm = visa.ResourceManager()
+        self._inst = rm.open_resource(port)
 
 
     def id(self):
         msg = self.write('ID', True)
         print(msg)
+
+
+    def is_OL(self):
+        status = self.write('ST', read=True)
+        status = int(status) # returned a string
+        if ((status >> 3) & 1): # if third bit is 1
+            return True
+        else:
+            return False
 
     def dc_coupling(self, dc=True):
         self.write('CP%i' %(dc)) # 0 = ac, 1=dc
@@ -161,11 +170,11 @@ class SR5113(Instrument):
         '''
 
         time.sleep(0.1) # Make sure we've had enough time to make connection.
-        self.inst.write(cmd+'\r')
-        self.inst.read()
+        self._inst.write(cmd+'\r')
+        self._inst.read()
         if read:
-            response = self.inst.read()
-        self.inst.read()
+            response = self._inst.read()
+        self._inst.read()
 
         if read:
             return response.rstrip() #rstrip gets rid of \n

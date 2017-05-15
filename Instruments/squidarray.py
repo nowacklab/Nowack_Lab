@@ -324,6 +324,10 @@ class PFL102(Instrument):
             json_file = os.path.join(os.path.dirname(__file__),'squidarray_params.json')
         with open(json_file, encoding='utf-8') as f:
             obj_dict = json.load(f)
+
+        if 'SquidArray' not in obj_dict['py/object']: # we have loaded something else
+            obj_dict = obj_dict['py/state']['squidarray'] # find the squidarray dict
+
         obj_string = json.dumps(obj_dict)
         obj = jsp.decode(obj_string)
 
