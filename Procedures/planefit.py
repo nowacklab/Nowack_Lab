@@ -189,16 +189,24 @@ class Planefit(Measurement):
         return f(x,y)
 
 
-    def update_c(self, Vx=0, Vy=0, start=None):
+    def update_c(self, Vx=0, Vy=0, start=None, move_attocubes=False):
         '''
         Does a single touchdown to find the plane again (at a given (Vx, Vy) point).
-        Do this after moving the attocubes.
+        Do this after moving the attocubes for best results.
+
+        Attributes:
+            Vx, Vy: piezo voltages at which to do the touchdown
+            start: Z piezo voltage at which to start the touchdown sweep
+            move_attocubes: boolean, whether or not to move the attocubes
         '''
         super().__init__(instruments=self.instruments)
 
         old_c = self.c
         self.piezos.V = {'x': Vx, 'y': Vy, 'z': 0}
-        td = Touchdown(self.instruments, Vz_max = self.Vz_max, planescan=True) # planefit=True prevents attocubes from moving
+        td = Touchdown(self.instruments,
+                       Vz_max = self.Vz_max,
+                       planescan=(not move_attocubes) # planescan = True means don't move attocubes
+                   )
         td.run(start=start)
         center_z_value = td.Vtd
         self.c = center_z_value - self.a*Vx - self.b*Vy
