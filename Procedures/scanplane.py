@@ -11,7 +11,7 @@ from IPython import display
 from numpy import ma
 from ..Utilities.plotting import plot_mpl
 from ..Instruments import piezos, montana, squidarray
-from ..Utilities.save import Measurement, get_todays_data_dir
+from ..Utilities.save import Measurement, get_todays_data_dir, get_local_data_path
 from ..Utilities import conversions
 from ..Utilities.utilities import AttrDict
 
@@ -331,7 +331,7 @@ class Scanplane(Measurement):
                  'magma',
                  'magma']
         clabels = ['DC Flux ($\Phi_0$)',
-                   'Capacitance (F)',
+                   'Capacitance (fF)',
                    'AC X ($\Phi_0$)',
                    'AC Y ($\Phi_0$)']
 
@@ -385,6 +385,8 @@ class Scanplane(Measurement):
                                               self.Vinterp[chan], 'o',
                                               markersize=3)[0]
             ax.set_ylabel(clabel)
+            ## Scientific notation for <10^-2, >10^2
+            ax.yaxis.get_major_formatter().set_powerlimits((-2,2))
         # Label the X axis of only the bottom plot
         self.axes_cuts[-1].set_xlabel("Position (V)")
         # Title the top plot with the timestamp
@@ -394,6 +396,10 @@ class Scanplane(Measurement):
         # First call tight layout to prevent axis label overlap.
         self.fig.tight_layout()
         self.fig_cuts.tight_layout()
+
+        ## Show the (now empty) figures
+        self.fig.canvas.draw()
+        self.fig_cuts.canvas.draw()
 
 
     def plot_line(self):
@@ -448,4 +454,5 @@ class Line(Measurement):
         super().__init__()
 
     def save(self):
-        self._save(os.path.join('extras', self.filename))
+        filename_in_extras = os.path.join(get_local_data_path(), get_todays_data_dir(), 'extras', self.filename)
+        self._save(filename_in_extras)
