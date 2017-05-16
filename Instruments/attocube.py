@@ -115,16 +115,26 @@ class Positioner(Instrument):
 
     def __getstate__(self):
         self._save_dict = {
-            'stepping voltage': self.V,
-            'stepping frequency': self.freq,
             'capacitance': self._C,
-            'position': self.pos,
             'position tolerance': self._pos_tolerance,
             'V_lim': self.V_lim,
             'pos_lim': self.pos_lim,
             'num': self.num,
             'label': self.label
         }
+        try:
+            self._save_dict.update({
+                    'stepping voltage': self.V,
+                    'stepping frequency': self.freq,
+                    'position': self.pos,
+                    })
+        except Exception as e: # If ANC disconnected, e.g.
+            print(e)
+            self._save_dict.update({
+                    'stepping voltage': self._V,
+                    'stepping frequency': self._freq,
+                    'position': self._pos,
+                    })
         return self._save_dict
 
 
