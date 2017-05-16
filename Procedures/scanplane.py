@@ -3,7 +3,6 @@ import time, os
 from scipy.interpolate import interp1d
 import matplotlib
 import matplotlib.pyplot as plt
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 from ..Utilities.plotting import plot_mpl
 from ..Instruments import piezos, montana, squidarray
 from ..Utilities.save import Measurement, get_todays_data_dir, get_local_data_path
@@ -263,36 +262,23 @@ class Scanplane(Measurement):
 
         self.piezos.V = 0
 
-    def plot(self):
+    def plot_update(self):
         '''
-        Update all plots.
+        Update the data for all plots.
         '''
-        super().plot()
-
-        # Update the line plot
+        # Update the line plot as well.
         self.plot_line()
 
         # Iterate over the color plots and update data with new line
         for chan in self._daq_inputs:
+            # Convert None in data to NaN
             data_nan = np.array(self.V[chan]*self._conversions[chan],
                                 dtype=np.float)
+            # Create masked array where data is NaN
             data_masked = np.ma.masked_where(np.isnan(data_nan), data_nan)
 
             # Set a new image for the plot
             self.im[chan].set_data(data_masked)
-            # Adjust colorbar limits for new data
-            self.cbars[chan].set_clim([data_masked.min(),
-                                       data_masked.max()])
-            # Update the colorbars
-            self.cbars[chan].draw_all()
-
-        self.fig.canvas.draw()
-
-        ## Do not flush events for inline or notebook backends
-        if matplotlib.get_backend() in ('nbAgg','module://ipykernel.pylab.backend_inline'):
-            return
-
-        self.fig.canvas.flush_events()
 
     def setup_plots(self):
         '''
@@ -335,73 +321,55 @@ class Scanplane(Measurement):
         )
 
         self.im = AttrDict()
-        self.cbars = AttrDict()
         self.lines_full = AttrDict()
         self.lines_interp = AttrDict()
 
         for chan in self._daq_inputs:
             ax = self.ax[chan]
-            cmap = cmaps[chan]
-            clabel = clabels[chan]
 
             ## Plot the DC signal, capactitance and AC signal on 2D colorplots
-
-            # Convert None in data to NaN
-            nan_data = np.array(self.V[chan]*self._conversions[chan])
-            # Create masked array where data is NaN
-            masked_data = np.ma.masked_where(np.isnan(nan_data), nan_data)
-
             # Plot masked data on the appropriate axis with imshow
-            image = ax.imshow(masked_data, cmap=cmap, origin="lower",
+            # self.V[chan] as initialized is just a 2D array of nans.
+            image = ax.imshow(self.V[chan], cmap=cmaps[chan], origin="lower",
                               extent = [self.X.min(), self.X.max(),
                                         self.Y.min(), self.Y.max()])
-
-            # Create a colorbar that matches the image height
-            d = make_axes_locatable(ax)
-            cax = d.append_axes("right", size=0.1, pad=0.1)
-            cbar = plt.colorbar(image, cax=cax)
-            cbar.set_label(clabel, rotation=270, labelpad=12)
-            cbar.formatter.set_powerlimits((-2,2))
             self.im[chan] = image
-            self.cbars[chan] = cbar
+
+            ## Add a colorbar.
+            self.add_colorbar(ax, label=clabels[chan])
 
             # Label the axes - including a timestamp
             ax.set_xlabel("X Position (V)")
             ax.set_ylabel("Y Position (V)")
-            title = ax.set_title(self.timestamp, size="medium", y=1.02)
+            title = ax.set_title(self.timestamp, size=10, y=1.02)
+
             # If the title intersects the exponent label from the colorbar
             # shift the title up and center it
             # TODO
 
             ## Plot the last linecut for DC, AC and capacitance signals
-
             ax = self.ax_cuts[chan]
 
             # ax.plot returns a list containing the line
             # Take the line object - not the list containing the line
-            self.lines_full[chan] = ax.plot(self.Vfull['piezo'],
-                                            self.Vfull[chan],
-                                            '-')[0]
-            self.lines_interp[chan] = ax.plot(self.Vinterp['piezo'],
-                                              self.Vinterp[chan], 'ok',
-                                              markersize=3)[0]
-            ax.set_ylabel(clabel)
+            self.lines_full[chan] = ax.plot(np.nan, np.nan, '-')[0]
+            self.lines_interp[chan] = ax.plot(np.nan, np.nan, 'ok', ms=3)[0]
+            ax.set_ylabel(clabels[chan])
             ## Scientific notation for <10^-2, >10^2
             ax.yaxis.get_major_formatter().set_powerlimits((-2,2))
 
         # Label the X axis of only the bottom plot
         self.ax_cuts[self._daq_inputs[-1]].set_xlabel("Position (V)")
         # Title the top plot with the timestamp
-        self.ax_cuts[self._daq_inputs[0]].set_title(self.timestamp, size="medium")
+        self.ax_cuts[self._daq_inputs[0]].set_title(self.timestamp, size=10)
 
         # Adjust subplot layout so all labels are visible
         # First call tight layout to prevent axis label overlap.
         self.fig.tight_layout()
         self.fig_cuts.tight_layout()
 
-        ## Show the (now empty) figures
-        self.fig.canvas.draw()
-        self.fig_cuts.canvas.draw()
+        ## Update plots with actual data
+        self.plot()
 
 
     def plot_line(self):
@@ -426,14 +394,6 @@ class Scanplane(Measurement):
             # Rescale axes for newly plotted data
             ax.relim()
             ax.autoscale_view()
-        # Update the figure
-        self.fig_cuts.canvas.draw()
-
-        ## Do not flush events for inline or notebook backends
-        if matplotlib.get_backend() in ('nbAgg','module://ipykernel.pylab.backend_inline'):
-            return
-
-        self.fig_cuts.canvas.flush_events()
 
 
     def save_line(self, i, Vstart):
