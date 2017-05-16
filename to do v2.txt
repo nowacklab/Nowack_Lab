@@ -16,12 +16,3 @@ Or better:
 A bunch of drawing things can go into plot_draw, esp. flush_events for non-notebook plotting
 
 Reinstate _chan_labels as _daq_inputs and add _daq_outputs
-
-
-Figure out why plots too big for notebook
-
-Check for outliers/detect unlock
-
-
-Test:
-Check if numpts correct for scan direction and print warning?
