@@ -392,7 +392,7 @@ class Scanplane(Measurement):
         # Label the X axis of only the bottom plot
         self.ax_cuts[self._daq_inputs[-1]].set_xlabel("Position (V)")
         # Title the top plot with the timestamp
-        self.ax_cuts[0].set_title(self.timestamp, size="medium")
+        self.ax_cuts[self._daq_inputs[0]].set_title(self.timestamp, size="medium")
 
         # Adjust subplot layout so all labels are visible
         # First call tight layout to prevent axis label overlap.
