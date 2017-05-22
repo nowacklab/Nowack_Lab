@@ -408,7 +408,12 @@ class RvsVg(RvsSomething):
     something = 'Vg'
     something_units = 'V'
 
-    def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1, delay=1):
+    def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1, delay=1, fine_range=None):
+        '''
+        fine_range - [Vmin, Vmax], a list of two voltages that define a range
+        in which we will take N times as many data points. N=5.
+        Note that Vmin is closer to Vstart and Vmax is closer to Vend.
+        '''
         super().__init__(instruments=instruments)
 
         self.Vstart = Vstart
@@ -416,8 +421,23 @@ class RvsVg(RvsSomething):
         self.Vstep = Vstep
         self.delay = delay
 
-        self.Vg_values = np.linspace(Vstart, Vend, round(abs(Vend-Vstart)/Vstep)+1)
+        if fine_range is None:
+            self.Vg_values = np.linspace(Vstart, Vend, round(abs(Vend-Vstart)/Vstep)+1)
+        else: # Use more points if a fine range specified
+            Vmin = fine_range[0]
+            Vmax = fine_range[1]
+            numpts_sm = round(abs(Vmin-Vstart)/Vstep)+1
+            numpts_mm = round(abs(Vmin-Vmax)/Vstep*10)+1
+            numpts_me = round(abs(Vmax-Vend)/Vstep)+1
+            self.Vg_values = np.concatenate((
+                    np.linspace(Vstart, Vmin, numpts_sm, endpoint=False),
+                    np.linspace(Vmin, Vmax, numpts_mm, endpoint=False),
+                    np.linspace(Vmax, Vend, numpts_me)
+                )
+            )
+
         self.Ig = np.array([])
+        self.T = np.array([])
 
         self.setup_keithley()
 
@@ -432,6 +452,11 @@ class RvsVg(RvsSomething):
             self.Vg = np.append(self.Vg, Vg)
             self.keithley.Vout = Vg
             self.Ig = np.append(self.Ig, self.keithley.I)
+            if hasattr(self, 'montana'):
+                self.T = np.append(self.T, self.montana.temperature['platform'])
+            elif hasattr(self, 'ppms'):
+                self.T = np.append(self.T, self.ppms.temperature)
+
             self.do_measurement(self.delay, num_avg, delay_avg, all_positive=all_positive, plot=plot, auto_gain=auto_gain)
 
         ## Sweep back to zero at 1V/s

@@ -67,7 +67,7 @@ class Montana(Instrument):
     @temperature.setter
     def temperature(self, value):
         self._temperature['setpoint'] = value
-        response = self.ask('STSP'+str(value))
+        response = self.ask('STSP'+str(value), to_float=False)
         print(response)
 
     @property
