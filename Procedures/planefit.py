@@ -15,7 +15,6 @@ class Planefit(Measurement):
     '''
     For fitting to the plane of the sample. Will do a series of touchdowns in a grid of size specified by numpts. Vz_max sets the maximum voltage the Z piezo will reach. If None, will use the absolute max safe voltage set in the Piezos class.
     '''
-    _chan_labels = ['daq']
     instrument_list = ['piezos','montana']
 
     a = np.nan
@@ -23,9 +22,8 @@ class Planefit(Measurement):
     c = np.nan
 
     def __init__(self, instruments={}, span=[400,400], center=[0,0], numpts=[4,4], Vz_max = None):
-        super().__init__()
+        super().__init__(instruments=instruments)
 
-        self._load_instruments(instruments)
         self.instruments = instruments
 
         self.span = span
@@ -75,7 +73,8 @@ class Planefit(Measurement):
         self.piezos.V = {'x': self.center[0], 'y':self.center[1], 'z':-self.Vz_max}
         print('...done.')
         td = Touchdown(self.instruments, Vz_max = self.Vz_max)
-        center_z_value = td.do() # Will do initial touchdown at center of plane to (1) find the plane (2) make touchdown voltage near center of piezo's positive voltage range
+        td.run() # Will do initial touchdown at center of plane to (1) find the plane (2) make touchdown voltage near center of piezo's positive voltage range
+        center_z_value = td.Vtd
 
         #check_td = input('Does the initial touchdown look good? Enter \'q\' to abort.')
         #if check_td == 'q':
@@ -110,7 +109,8 @@ class Planefit(Measurement):
                 td = Touchdown(self.instruments, Vz_max = self.Vz_max, planescan=True) # new touchdown at this point
                 td.title = '(%i, %i). TD# %i' %(i,j, counter)
 
-                self.Z[i,j] = td.do() # Do the touchdown, starting 200 V below the location of the surface at the center of the plane. Hopefully planes are not more tilted than this.
+                td.run()# Do the touchdown, starting 200 V below the location of the surface at the center of the plane. Hopefully planes are not more tilted than this.
+                self.Z[i,j] = td.Vtd
 
                 self.piezos.V = 0 # return to zero between points
 
@@ -126,7 +126,6 @@ class Planefit(Measurement):
         self.Z -= (c_fit-self.c) # c was lowered by the correction, so we lower the plane.
 
         self.plot()
-        self.save()
 
 
     @classmethod
@@ -190,17 +189,26 @@ class Planefit(Measurement):
         return f(x,y)
 
 
-    def update_c(self, Vx=0, Vy=0, start=None):
+    def update_c(self, Vx=0, Vy=0, start=None, move_attocubes=False):
         '''
         Does a single touchdown to find the plane again (at a given (Vx, Vy) point).
-        Do this after moving the attocubes.
+        Do this after moving the attocubes for best results.
+
+        Attributes:
+            Vx, Vy: piezo voltages at which to do the touchdown
+            start: Z piezo voltage at which to start the touchdown sweep
+            move_attocubes: boolean, whether or not to move the attocubes
         '''
-        super().__init__()
+        super().__init__(instruments=self.instruments)
 
         old_c = self.c
         self.piezos.V = {'x': Vx, 'y': Vy, 'z': 0}
-        td = Touchdown(self.instruments, Vz_max = self.Vz_max, planescan=True) # planefit=True prevents attocubes from moving
-        center_z_value = td.do(start=start)
+        td = Touchdown(self.instruments,
+                       Vz_max = self.Vz_max,
+                       planescan=(not move_attocubes) # planescan = True means don't move attocubes
+                   )
+        td.run(start=start)
+        center_z_value = td.Vtd
         self.c = center_z_value - self.a*Vx - self.b*Vy
 
         for x in [-self.piezos.x.Vmax, self.piezos.x.Vmax]:

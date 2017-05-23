@@ -1,23 +1,10 @@
-# import Nowack_Lab.Procedures, Nowack_Lab.Instruments, Nowack_Lab.Utilities, os
+import time
 import os
+# Workaround for scipy altering KeyboardInterrupt behavior
+os.environ['FOR_DISABLE_CONSOLE_CTRL_HANDLER'] = '1'
+
 from IPython import get_ipython, display
 ip = get_ipython()
-
-def in_ipynb():
-    import sys
-    if 'ipykernel' in sys.modules:
-        return True
-    else:
-        return False
-
-# Interactive notebook plots
-## For interactive matplotlib plots
-if in_ipynb():
-    ip.magic('matplotlib notebook') # matplotlib notebook....
-    # ip.magic('matplotlib inline')
-else:
-    ip.magic('matplotlib qt') # if not in a notebook
-
 
 from Nowack_Lab.Utilities import save
 
@@ -63,7 +50,7 @@ import sys, os
 from Nowack_Lab.Utilities import utilities, save, logging, conversions, anim
 from Nowack_Lab.Utilities.plotting import plot_mpl
 from Nowack_Lab.Utilities.save import Measurement
-from Nowack_Lab.Procedures.daqspectrum import DaqSpectrum
+from Nowack_Lab.Procedures.daqspectrum import DaqSpectrum, SQUIDSpectrum
 from Nowack_Lab.Procedures.heightsweep import Heightsweep
 from Nowack_Lab.Procedures.mod2D import Mod2D
 from Nowack_Lab.Procedures.mutual_inductance import MutualInductance

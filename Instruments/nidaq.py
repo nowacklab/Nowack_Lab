@@ -9,7 +9,7 @@ import numpy as np
 try:
     import PyDAQmx as mx
 except:
-    print('PyDAQmx not imported!')
+    print('PyDAQmx not imported in nidaq.py!')
 import time
 from copy import copy
 from ..Utilities import logging
@@ -63,7 +63,7 @@ class NIDAQ(Instrument):
     def accel_function(self, start,end, numpts):
         """ Does an x**2-like ramp. Code looks weird but test it if you want! ^_^ """
         '''
-        NO THIS IS ACTUALLY CRAP DON'T USE THIS
+        NO THIS IS ACTUALLY CRAP DON'T USE THIS <-- LOL
         '''
         if start == end:
             return [start]*numpts*2 # just return array of the same value
@@ -159,7 +159,8 @@ class NIDAQ(Instrument):
     @property
     def output_names(self):
         '''
-        Returns a dictionary mapping output channel labels (keys) to the real channel names (values).
+        Returns a dictionary mapping output channel labels (keys) to the
+        real channel names (values).
         '''
         self._output_names = {}
         for chan in self._outs:
@@ -169,15 +170,24 @@ class NIDAQ(Instrument):
 
     def monitor(self, chan_in, duration, sample_rate=100):
         '''
-        Monitor any number of channels for a given duration, sampling at sample_rate.
-        Default 100 Hz sample rate.
-        Returns a dictionary of received data from each channel, including time.
+        Monitor any number of channels for a given duration.
+
+        Example:
+
+        Arguments:
+            chan_in (list): channels for DAQ to monitor
+            duration (float): acquisition time in seconds
+            sample_rate (float): frequency of measurement
+
+        Returns:
+            dict: Voltages and measurement times for each channel
         '''
         if np.isscalar(chan_in):
             chan_in = [chan_in]
 
-        ## Prepare "data" for the Task. We'll just send the current value of ao0
-        ## and tell the DAQ to output that value of ao0 for every data point.
+        # Prepare "data" for the Task. Send the current value of ao0
+        # and tell the DAQ to output that value of ao0 for every data
+        # point.
         numsteps = int(duration*sample_rate)
         current_ao0 = self.ao0.V
         data = {'ao0': np.array([current_ao0]*numsteps)}
@@ -197,7 +207,7 @@ class NIDAQ(Instrument):
         '''
 
 
-        ## Make everything a numpy array
+        # Make everything a numpy array
         data = data.copy() # so we don't modify original data
         for key, value in data.items():
             value = value.copy() # so we don't modify original data
@@ -206,32 +216,32 @@ class NIDAQ(Instrument):
             elif type(value) is list:
                 value = np.array(value)
 
-            ## Make sure daq does not go out of range
+            # Make sure daq does not go out of range
             absmax = abs(value).max()
             if absmax > self._output_range:
                 value = np.clip(value, -self._output_range, self._output_range)
                 print('%s is out of range for DAQ with output range %s! Set to max output.' %(absmax,self._output_range))
 
-            ## Repeat the last data point.
-            ## The DAQ for some reason gives data points late by 1. (see later)
+            # Repeat the last data point.
+            # The DAQ for some reason gives data points late by 1. (see later)
             value = np.append(value, value[-1])
 
-            ## Add units for Instrumental
+            # Add units for Instrumental
             value = value * u.V
 
             data[key] = value
 
 
-        ## Make sure there's at least one input channel (or DAQmx complains)
+        # Make sure there's at least one input channel (or DAQmx complains)
         if chan_in is None:
             chan_in = ['ai23'] # just a random channel
         elif np.isscalar(chan_in):
             chan_in = [chan_in]
 
-        ## Need to copy chan_in to ensure names don't change!
+        # Need to copy chan_in to ensure names don't change!
         chan_in = chan_in.copy()
 
-        ## Convert to real channel names
+        # Convert to real channel names
         output_labels = list(data.keys())
         for label in output_labels:
             if label in self.output_names: # this means we've labeled it something other than the channel name
@@ -243,7 +253,7 @@ class NIDAQ(Instrument):
                 chan_in.remove(label)
                 chan_in.append(self.input_names[label])
 
-        ## prepare a NIDAQ Task
+        # prepare a NIDAQ Task
         taskargs = tuple([getattr(self._daq, ch) for ch in list(data.keys()) + chan_in])
         task = ni.Task(*taskargs)
         some_data = next(iter(data.values())) # All data must be equal length, so just choose one.

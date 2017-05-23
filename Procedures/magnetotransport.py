@@ -16,7 +16,7 @@ class RvsB(RvsSomething):
         '''
         Sweep rate and field in T. PPMS uses Oe. Delay is in seconds. Rate is T/second
         '''
-        super().__init__(instruments)
+        super().__init__(instruments=instruments)
 
         self.Bstart = Bstart
         self.Bend = Bend
@@ -24,8 +24,6 @@ class RvsB(RvsSomething):
         self.sweep_rate = sweep_rate
 
     def do(self, plot=True):
-        self.do_before(plot)
-
         ## Set initial field if not already there
         if abs(self.ppms.field - self.Bstart*10000) > 0.1: # different by more than 0.1 Oersted = 10 uT.
             self.ppms.field = self.Bstart*10000 # T to Oe
@@ -52,8 +50,6 @@ class RvsB(RvsSomething):
         while self.ppms.field_status in ('Iterating', 'Charging'):
             self.B = np.append(self.B, self.ppms.field/10000) # Oe to T
             self.do_measurement(delay=self.delay, plot=plot)
-
-        self.do_after()
 
     def plot_quantized_conductance(self, nu=1, Rxy_channel=1, Rxx_channel=0):
         '''
@@ -109,7 +105,7 @@ class RvsVg_B(RvsVg):
         sweep_rate: field sweep rate (Tesla/s)
         Vg_sweep: gate voltage at which to do the field sweep (V). Leave at None if you don't care.
         '''
-        super().__init__(instruments, Vstart, Vend, Vstep, delay)
+        super().__init__(instruments=instruments, Vstart=Vstart, Vend=Vend, Vstep=Vstep, delay=delay)
         self.__dict__.update(locals()) # cute way to set attributes from arguments
         del self.self # but includes self, get rid of this!
 
@@ -134,8 +130,6 @@ class RvsVg_B(RvsVg):
         return np.where(self.R2D[Rxx_channel][0]==self.R2D[Rxx_channel][0].max())[0][0] # find CNP
 
     def do(self, ):
-        self.do_before()
-
         for i, B in enumerate(self.B):
             if self.Vg_sweep is not None:
                 self.keithley.sweep_V(self.keithley.V, self.Vg_sweep, .1, 1) # set desired gate voltage for the field sweep
@@ -144,7 +138,7 @@ class RvsVg_B(RvsVg):
 
             ## reset field sweep
             self.fs = RvsB(self.instruments, self.ppms.field/10000, B, 1, self.sweep_rate)
-            self.fs.do(plot=False)
+            self.fs.run(plot=False)
 
             # store full field sweep data
             self.Bfull = np.append(self.Bfull, self.fs.B)
@@ -154,7 +148,7 @@ class RvsVg_B(RvsVg):
 
             ## reset arrays for gatesweep
             self.gs = RvsVg(self.instruments, self.Vstart, self.Vend, self.Vstep, self.delay)
-            self.gs.do()
+            self.gs.run()
 
             for j in range(self.num_lockins):
                 if self.Vstart > self.Vend:
@@ -162,8 +156,6 @@ class RvsVg_B(RvsVg):
                 else:
                     self.R2D[j][i, :] = self.gs.R[j] # first index is voltage channel, second is B, third is Vg. Reve
             self.plot()
-
-        self.do_after()
 
     def mask_CNP(self, numpts=5):
         '''

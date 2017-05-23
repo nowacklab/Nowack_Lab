@@ -7,4 +7,8 @@ Vy_to_um = 1/3.5 # 2016-10-05, very rough; using 3.5 V/um from 9/21 cooldown wit
 Vxy_to_um = 1/3.5 # implemented in scanline. This will be the assumption until we're sure calibrations differ substantially.
 Vz_to_um = .14 # based on "atto um"  atto micron/ V piezo for attocube's LUTs
 
-Vsquid_to_phi0 = 1/14.4 # 144 uA/Phi0 * 100 kOhm = 14.4 V/Phi0 on high sensitivity
+# Conversion from SAA voltage to flux with SQUID locked
+## NOTE: probably possible to load previous array settings without messing up the array
+Vsquid_to_phi0 = {'High': 1/14.4,
+                  'Med': 1/1.44,
+                  'Low': 1/0.144}

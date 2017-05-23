@@ -11,7 +11,8 @@ from ..Utilities.save import Measurement
 from ..Utilities.utilities import AttrDict
 
 class Mod2D(Measurement):
-    _chan_labels = ['squidout','squidin','modout']
+    _daq_inputs = ['squidin']
+    _daq_outputs = ['squidout', 'modout']
     notes = ''
     instrument_list = SquidIV.instrument_list
 
@@ -21,7 +22,7 @@ class Mod2D(Measurement):
         To make an empty object, then just call Mod2D().
         You can do this if you want to plot previously collected data.
         '''
-        super().__init__()
+        super().__init__(instruments=instruments)
 
         self.IV = SquidIV(instruments, rate=rate)
 
@@ -62,9 +63,7 @@ class Mod2D(Measurement):
             self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
         self.IV.daq.zero() # zero everything
 
-        self.notes = input('Notes for this mod2D (q to quit without saving): ')
-        if self.notes != 'q':
-            self.save()
+        self.notes = input('Notes for this mod2D: ')
 
 
     def param_prompt(self):

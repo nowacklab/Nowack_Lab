@@ -10,6 +10,9 @@ except:
 from .instrument import Instrument
 
 ''' *** Use the Attocube class, definition is at the bottom *** '''
+'''
+Careful! Can only initialize one attocube Object at a time.
+'''
 
 class ANC350(Instrument):
     '''
@@ -23,6 +26,7 @@ class ANC350(Instrument):
     _label = 'atto'
     _stages = ['x','y','z'] # order of axis controllers
     _pos_lims = [20000, 20000, 20000] # um (temporary until LUT calibrated)
+    _instances = []
 
     def __init__(self, montana=None):
         '''
@@ -30,6 +34,14 @@ class ANC350(Instrument):
         This will check the temperature to see if it is safe to go to 60 V.
         Else, we stay at 45 V.
         '''
+
+        ## Use self._instances to keep track of instances of the attocube class
+        ## This is necessary to delete the ANC before we make a new one.
+        if len(self._instances) > 0:
+            for i in self._instances:
+                i.__del__() # call the __del__ method of the old instance when creating a new instance
+            self._instances = []
+
         self.anc = ANC350Pos()
 
         V_lim = 45 # room temperature
@@ -43,10 +55,16 @@ class ANC350(Instrument):
             setattr(self, s, Positioner(self.anc, i, V_lim=V_lim, pos_lim=self._pos_lims[i], label=s)) # makes positioners x, y, and z
             getattr(self,s).check_voltage()
 
+        self._instances.append(self) # Add a reference to this object to the
+
 
     def __del__(self):
         try:
-            del self.anc
+            if hasattr(self, 'anc'):
+                if self.anc is not None:
+                    print('Disconnecting ANC')
+                    self.anc.disconnect()
+                    del self.anc
         except:
             pass
 
@@ -97,16 +115,26 @@ class Positioner(Instrument):
 
     def __getstate__(self):
         self._save_dict = {
-            'stepping voltage': self.V,
-            'stepping frequency': self.freq,
             'capacitance': self._C,
-            'position': self.pos,
             'position tolerance': self._pos_tolerance,
             'V_lim': self.V_lim,
             'pos_lim': self.pos_lim,
             'num': self.num,
             'label': self.label
         }
+        try:
+            self._save_dict.update({
+                    'stepping voltage': self.V,
+                    'stepping frequency': self.freq,
+                    'position': self.pos,
+                    })
+        except Exception as e: # If ANC disconnected, e.g.
+            print(e)
+            self._save_dict.update({
+                    'stepping voltage': self._V,
+                    'stepping frequency': self._freq,
+                    'position': self._pos,
+                    })
         return self._save_dict
 
 

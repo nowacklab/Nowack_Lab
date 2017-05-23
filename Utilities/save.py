@@ -3,7 +3,7 @@ import json, os, pickle, bz2, jsonpickle as jsp, numpy as np, re
 from datetime import datetime
 jspnp.register_handlers()
 from copy import copy
-import h5py, glob, matplotlib, inspect, platform, hashlib, shutil
+import h5py, glob, matplotlib, inspect, platform, hashlib, shutil, time
 import matplotlib.pyplot as plt
 from . import utilities
 
@@ -23,15 +23,15 @@ as necessary) and populate the numpy arrays.
 
 
 class Measurement:
-    _chan_labels = [] # DAQ channel labels expected by this class
+    _daq_inputs = [] # DAQ input labels expected by this class
+    _daq_outputs = [] # DAQ input labels expected by this class
     instrument_list = []
     fig = None
+    interrupt = False # boolean variable used to interrupt loops in the do.
 
     def __init__(self, instruments = {}):
-        self.timestamp = ''
-
         self.make_timestamp_and_filename()
-
+        self._load_instruments(instruments)
 
     def __getstate__(self):
         '''
@@ -48,14 +48,19 @@ class Measurement:
                     d[var] = None
 
                 ## Don't save matplotlib objects to JSON
-                try:
+                if hasattr(d[var], '__module__'): # built-in types won't have __module__
                     m = d[var].__module__
-                    m = m[:m.find('.')] # will strip out "matplotlib"
+                    m = m[:m.find('.')] # will strip out "matplotlib", if there
                     if m == 'matplotlib':
                         d[var] = None
-                except:
-                    pass # built-in types won't have __module__
+                elif type(d[var]) is list: # check for lists of mpl objects
+                    if hasattr(d[var][0], '__module__'): # built-in types won't have __module__
+                        m = d[var][0].__module__
+                        m = m[:m.find('.')] # will strip out "matplotlib"
+                        if m == 'matplotlib':
+                            d[var] = None
 
+                ## Walk through dictionaries
                 if 'dict' in utilities.get_superclasses(d[var]):
                     d[var] = walk(d[var]) # This unfortunately erases the dictionary...
 
@@ -70,43 +75,6 @@ class Measurement:
         `state` is a dictionary.
         '''
         self.__dict__.update(state)
-
-
-    @classmethod
-    def load(cls, filename=None, instruments={}, unwanted_keys=[]):
-        '''
-        Basic load method. Calls _load_json, not loading instruments, then loads from HDF5, then loads instruments.
-        Overwrite this for each subclass if necessary.
-        Pass in an array of the names of things you don't want to load.
-        By default, we won't load any instruments, but you can pass in an instruments dictionary to load them.
-        '''
-
-        if filename is None: # tries to find the last saved object; not guaranteed to work
-            try:
-                filename =  max(glob.iglob(os.path.join(get_local_data_path(), get_todays_data_dir(),'*_%s.json' %cls.__name__)),
-                                        key=os.path.getctime)
-            except: # we must have taken one during the previous day's work
-                folders = list(glob.iglob(os.path.join(get_local_data_path(), get_todays_data_dir(),'..','*')))
-                # -2 should be the previous day (-1 is today)
-                filename =  max(glob.iglob(os.path.join(folders[-2],'*_%s.json' %cls.__name__)),
-                                        key=os.path.getctime)
-        elif os.path.dirname(filename) == '': # if no path specified
-            os.path.join(get_local_data_path(), get_todays_data_dir(), filename)
-
-        ## Remove file extensions is given.
-        ## This is done somewhat manually in case filename has periods in it for some reason.
-        if filename[-5:] == '.json': # ends in .json
-            filename = filename[:-5] # strip extension
-        elif filename[-3:] == '.h5': # ends in .h5
-            filename = filename[:-3] # strip extension
-        elif filename[-4:] == '.pdf': # ends in .pdf
-            filename = filename[:-4] # strip extension
-
-        obj = Measurement._load_json(filename+'.json', unwanted_keys)
-        obj._load_hdf5(filename+'.h5')
-        obj._load_instruments(instruments)
-        return obj
-
 
     def _load_hdf5(self, filename, unwanted_keys = []):
         '''
@@ -148,9 +116,12 @@ class Measurement:
         for instrument in instruments:
             setattr(self, instrument, instruments[instrument])
             if instrument == 'daq':
-                for ch in self._chan_labels:
-                    if ch not in self.daq.outputs and ch not in self.daq.inputs:
-                        raise Exception('Need to set daq channel labels! Need a %s' %ch)
+                for ch in self._daq_inputs:
+                    if ch not in self.daq.inputs:
+                        raise Exception('Need to set daq input labels! Need a %s' %ch)
+                for ch in self._daq_outputs:
+                    if ch not in self.daq.outputs:
+                        raise Exception('Need to set daq output labels! Need a %s' %ch)
 
 
     @staticmethod
@@ -162,64 +133,62 @@ class Measurement:
             obj_dict = json.load(f)
 
         def walk(d):
+            '''
+            Walk through dictionary to prune out Instruments
+            '''
             for key in list(d.keys()): # convert to list because dictionary changes size
                 if key in unwanted_keys: # get rid of keys you don't want to load
                     d[key] = None
-                elif 'dict' in utilities.get_superclasses(d[key]):
-                    walk(d[key])
+                elif 'py/' in key:
+                    if 'py/object' in d:
+                        if 'Instruments' in d['py/object']: # if this is an instrument
+                            d = None # Don't load it.
+                            break
+                    elif 'py/id' in d: # This is probably another instance of an Instrument.
+                        d = None # Don't load it.
+                        break
+                if 'dict' in utilities.get_superclasses(d[key]):
+                    d[key] = walk(d[key])
+            return d
 
-        walk(obj_dict)
 
+        obj_dict = walk(obj_dict)
         obj_string = json.dumps(obj_dict)
         obj = jsp.decode(obj_string)
 
         return obj
 
-
-    def make_timestamp_and_filename(self):
+    def _save(self, filename=None, savefig=True, ignored = []):
         '''
-        Makes a timestamp and filename from the current time.
-        '''
-        now = datetime.now()
-        self.timestamp = now.strftime("%Y-%m-%d %I:%M:%S %p")
-        self.filename = now.strftime('%Y-%m-%d_%H%M%S')
-        self.filename += '_' + self.__class__.__name__
+        Saves data. numpy arrays are saved to one file as hdf5, everything else
+        is saved to JSON
 
+        Keyword arguments:
+        filename -- The path where the datafile will be saved. One hdf5 file and
+        one JSON file with the specified filename will be saved. If no filename
+        is supplied then the filename is generated from the timestamp
 
-    def plot(self):
-        '''
-        Update all plots.
-        '''
-        if self.fig is None:
-            self.setup_plots()
+        savefig -- If "True" figures are saved. If "False" only data and config
+        are saved
 
+        ignored -- Array of objects to be ignored during saving. Passed to
+        _save_hdf5 and _save_json.
 
-    def save(self, filename=None, savefig=True):
-        '''
-        Basic save method. Just calls _save. Overwrite this for each subclass.
-        '''
-        self._save(filename, savefig=True)
-
-
-    def _save(self, filename=None, savefig=True):
-        '''
-        Saves data. numpy arrays are saved to one file as hdf5,
-        everything else is saved to JSON
         Saved data stored locally but also copied to the data server.
-        If you specify no filename, one will be automatically generated based on
-        this object's filename and the object will be saved in this experiment's data folder.
-        If you specify a filename with no preceding path, it will save
-        automatically to the correct folder for this experiment with the custom filename.
+        If you specify no filename, one will be automatically generated.
+
         Locally, saves to ~/data/; remotely, saves to /labshare/data/
+
         If you specify a relative (partial) path, the data will still be saved
         in the data directory, but in subdirectories specified in the filename.
         For example, if the filename is 'custom/custom_filename', the data will
         be saved in (today's data directory)/custom/custom_filename.
+
         If you specify a full path, the object will save to that path locally
         and to [get_data_server_path()]/[get_computer_name()]/other/[hirearchy past root directory]
         '''
 
-        ## Saving to the experiment-specified directory
+        # Saving to the experiment-specified directory
         if filename is None:
             if not hasattr(self, 'filename'): # if you forgot to make a filename
                 self.make_timestamp_and_filename()
@@ -229,17 +198,17 @@ class Measurement:
             local_path = os.path.join(get_local_data_path(), get_todays_data_dir(), filename)
             remote_path = os.path.join(get_remote_data_path(), get_todays_data_dir(), filename)
 
-        ## Saving to a custom path
+        # Saving to a custom path
         else: # you specified some sort of path
             local_path = filename
             remote_path = os.path.join(get_remote_data_path(), '..', 'other', *filename.replace('\\', '/').split('/')[1:]) # removes anything before the first slash. e.g. ~/data/stuff -> data/stuff
             # All in all, remote_path should look something like: .../labshare/data/bluefors/other/
 
-        ## Save locally:
+        # Save locally:
         local_dir = os.path.split(local_path)[0]
         if not os.path.exists(local_dir):
             os.makedirs(local_dir)
-        self._save_hdf5(local_path)
+        self._save_hdf5(local_path, ignored = ignored)
         self._save_json(local_path)
 
         nopdf = True
@@ -247,7 +216,7 @@ class Measurement:
             self.fig.savefig(local_path+'.pdf', bbox_inches='tight')
             nopdf = False
 
-        ## Save remotely
+        # Save remotely
         if os.path.exists(get_data_server_path()):
             try:
                 # Make sure directories exist
@@ -255,7 +224,7 @@ class Measurement:
                 if not os.path.exists(remote_dir):
                     os.makedirs(remote_dir)
 
-                ## Loop over filetypes
+                # Loop over filetypes
                 for ext in ['.h5','.json','.pdf']:
                     if ext == '.pdf' and nopdf:
                         continue
@@ -287,7 +256,7 @@ class Measurement:
             raise Exception('Reloading failed, but object was saved!')
 
 
-    def _save_hdf5(self, filename):
+    def _save_hdf5(self, filename, ignored = []):
         '''
         Save numpy arrays to h5py. Walks through the object's dictionary
         and any subdictionaries and subobjects, picks out numpy arrays,
@@ -297,20 +266,28 @@ class Measurement:
         '''
 
         with h5py.File(filename+'.h5', 'w') as f:
-            def walk(d, group): # walk through a dictionary
+            # Walk through the dictionary
+            def walk(d, group):
                 for key, value in d.items():
+                    # If the key is in ignored then skip over it
+                    if key in ignored:
+                        continue
                     if type(key) is int:
                         key = str(key) # convert int keys to string. Will be converted back when loading
-                    if type(value) is np.ndarray: # found a numpy array
+                    # If a numpy array is found
+                    if type(value) is np.ndarray:
+                        # Save the numpy array as a dataset
                         d = group.create_dataset(key, value.shape,
-                            compression = 'gzip', compression_opts=9
-                        ) # save the numpy array as a dataset
+                            compression = 'gzip', compression_opts=9)
                         d.set_fill_value = np.nan
-                        d[...] = value # fill it with data
-                    elif 'dict' in utilities.get_superclasses(value): # found a dictionary
+                        # Fill the dataset with the corresponding value
+                        d[...] = value
+                    # If a dictionary is found
+                    elif 'dict' in utilities.get_superclasses(value):
                         new_group = group.create_group(key) # make a group with the dictionary name
                         walk(value, new_group) # walk through the dictionary
-                    elif hasattr(value, '__dict__'): # found an object of some sort
+                    # If the there is some other object
+                    elif hasattr(value, '__dict__'):
                         if 'Measurement' in utilities.get_superclasses(value): # restrict saving Measurements.
                             new_group = group.create_group('!'+key) # make a group with !(object name)
                             walk(value.__dict__, new_group) # walk through the object dictionary
@@ -330,12 +307,125 @@ class Measurement:
             with open(filename+'.json', 'w', encoding='utf-8') as f:
                 json.dump(obj_dict, f, sort_keys=True, indent=4)
 
+    def do(self):
+        '''
+        Do the main part of the measurement. Write this function for subclasses.
+        run() wraps this function to enable keyboard interrupts.
+        run() also includes saving and elapsed time logging.
+        '''
+        pass
+
+
+    @classmethod
+    def load(cls, filename=None, instruments={}, unwanted_keys=[]):
+        '''
+        Basic load method. Calls _load_json, not loading instruments, then loads from HDF5, then loads instruments.
+        Overwrite this for each subclass if necessary.
+        Pass in an array of the names of things you don't want to load.
+        By default, we won't load any instruments, but you can pass in an instruments dictionary to load them.
+        '''
+
+        if filename is None: # tries to find the last saved object; not guaranteed to work
+            try:
+                filename =  max(glob.iglob(os.path.join(get_local_data_path(), get_todays_data_dir(),'*_%s.json' %cls.__name__)),
+                                        key=os.path.getctime)
+            except: # we must have taken one during the previous day's work
+                folders = list(glob.iglob(os.path.join(get_local_data_path(), get_todays_data_dir(),'..','*')))
+                # -2 should be the previous day (-1 is today)
+                filename =  max(glob.iglob(os.path.join(folders[-2],'*_%s.json' %cls.__name__)),
+                                        key=os.path.getctime)
+        elif os.path.dirname(filename) == '': # if no path specified
+            os.path.join(get_local_data_path(), get_todays_data_dir(), filename)
+
+        # Remove file extensions
+        # This is done somewhat manually in case filename has periods in it for some reason.
+        if filename[-5:] == '.json': # ends in .json
+            filename = filename[:-5] # strip extension
+        elif filename[-3:] == '.h5': # ends in .h5
+            filename = filename[:-3] # strip extension
+        elif filename[-4:] == '.pdf': # ends in .pdf
+            filename = filename[:-4] # strip extension
+
+        obj = Measurement._load_json(filename+'.json', unwanted_keys)
+        obj._load_hdf5(filename+'.h5')
+        obj._load_instruments(instruments)
+        return obj
+
+    def make_timestamp_and_filename(self):
+        '''
+        Makes a timestamp and filename from the current time.
+        '''
+        now = datetime.now()
+        self.timestamp = now.strftime("%Y-%m-%d %I:%M:%S %p")
+        self.filename = now.strftime('%Y-%m-%d_%H%M%S')
+        self.filename += '_' + self.__class__.__name__
+
+
+    def plot(self):
+        '''
+        Update all plots.
+        '''
+        if self.fig is None:
+            self.setup_plots()
+
+
+    def run(self, plot=True, **kwargs):
+        '''
+        Wrapper function for do() that catches keyboard interrrupts
+        without leaving open DAQ tasks running. Allows scans to be
+        interrupted without restarting the python instance afterwards
+
+        Keyword arguments:
+            plot: boolean; to plot or not to plot?
+
+        Check the do() function for additional available kwargs.
+        '''
+        self.interrupt = False
+        done = None
+
+        ## Before the do.
+        if plot:
+            self.setup_plots()
+        time_start = time.time()
+
+        ## The do.
+        try:
+            done = self.do(**kwargs)
+        except KeyboardInterrupt:
+            self.interrupt = True
+
+        ## After the do.
+        time_end = time.time()
+        self.time_elapsed_s = time_end-time_start
+
+        if self.time_elapsed_s < 60: # less than a minute
+            t = self.time_elapsed_s
+            t_unit = 'seconds'
+        elif self.time_elapsed_s < 3600: # less than an hour
+            t = self.time_elapsed_s/60
+            t_unit = 'minutes'
+        else:
+            t = self.time_elapsed_s/3600
+            t_unit = 'hours'
+        # Print elapsed time e.g. "Scanplane took 2.3 hours."
+        print('%s took %.1f %s.' %(self.__class__.__name__, t, t_unit))
+        self.save()
+
+        return done
+
+    def save(self, filename=None, savefig=True):
+        '''
+        Basic save method. Just calls _save. Overwrite this for each subclass.
+        '''
+        self._save(filename, savefig=True)
+
 
     def setup_plots(self):
         '''
         Set up all plots.
         '''
         self.fig, self.ax = plt.subplots() # example: just one figure
+
 
 
 def exists(filename):

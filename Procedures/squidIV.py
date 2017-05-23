@@ -1,4 +1,7 @@
-""" Procedure to take an IV curve for a SQUID. By default, assumes -100 uA to 100 uA sweep (0.5 uA step) over a 2kOhm bias resistor and zero mod current. Can change these values when prompted. """
+''' Procedure to take an IV curve for a SQUID.
+By default, assumes -100 uA to 100 uA sweep (0.5 uA step) over a 2kOhm bias
+resistor and zero mod current. Can change these values when prompted.
+'''
 
 # TO DO:    - Try sweep vs individual points
 #           - Build in acceleration to daq sweep to and from zero?
@@ -16,7 +19,8 @@ from ..Utilities.utilities import AttrDict
 
 
 class SquidIV(Measurement):
-    _chan_labels = ['squidout', 'modout', 'squidin', 'currentin']
+    _daq_inputs = ['squidin', 'currentin']
+    _daq_outputs = ['squidout', 'modout']
     instrument_list = ['daq','preamp','montana','preamp_I']
 
     V = np.array([0]*2) # to make plotting happy with no real data
@@ -29,12 +33,9 @@ class SquidIV(Measurement):
         Example: SquidIV({'daq': daq, 'preamp': preamp}, 0, 0, None, 90)
         To make an empty object, then just call SquidIV(). You can do this if you want to plot previously collected data.
         '''
-        super().__init__()
+        super().__init__(instruments=instruments)
 
         self.two_preamps = False
-
-        self._load_instruments(instruments)
-
         if self.preamp_I is not None:
             self.two_preamps = True
 
@@ -81,24 +82,21 @@ class SquidIV(Measurement):
         self.plot(dvdi = False)
         self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
 
-        self.notes = input('Notes for this IV (r to redo, q to quit): ')
+        self.notes = input('Notes for this IV (r to redo): ')
         if self.notes == 'r':
             self.notes = ''
             display.clear_output()
             self.do()
-        elif self.notes != 'q':
-            self.ax.set_title(self.filename+'\n'+self.notes)
-            self.save()
+        self.ax.set_title(self.filename+'\n'+self.notes)
 
 
     def do_IV(self):
         """ Wrote this for mod2D so it doesn't plot """
         self.daq.outputs['modout'].V = self.Imod*self.Rbias_mod # Set mod current
         # Collect data
-        in_chans = ['squidin','currentin']
         output_data, received = self.daq.sweep({'squidout': self.Vbias[0]},
                                                {'squidout': self.Vbias[-1]},
-                                               chan_in=in_chans,
+                                               chan_in=self._daq_inputs,
                                                sample_rate=self.rate,
                                                numsteps=self.numpts
                                            )

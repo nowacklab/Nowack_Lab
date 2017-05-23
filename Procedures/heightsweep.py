@@ -8,7 +8,7 @@ from ..Utilities import conversions
 from ..Utilities.utilities import AttrDict
 
 class Heightsweep(Measurement):
-    _chan_labels = ['dc','acx','acy']
+    _daq_inputs = ['dc','acx','acy']
     _conversions = AttrDict({
         'dc': conversions.Vsquid_to_phi0,
         'acx': conversions.Vsquid_to_phi0,
@@ -19,9 +19,7 @@ class Heightsweep(Measurement):
 
 
     def __init__(self, instruments = {}, plane=None, x=0, y=0, z0=0, scan_rate=120):
-        super().__init__()
-
-        self._load_instruments(instruments)
+        super().__init__(instruments=instruments)
 
         self.x = x
         self.y = y
@@ -29,7 +27,7 @@ class Heightsweep(Measurement):
         self.plane = plane
         self.scan_rate = scan_rate
         self.V = AttrDict({
-            chan: np.nan for chan in self._chan_labels + ['piezo', 'z']
+            chan: np.nan for chan in self._daq_inputs + ['piezo', 'z']
         })
 
     def do(self):
@@ -44,10 +42,10 @@ class Heightsweep(Measurement):
         time.sleep(10) # wait at the surface
 
         output_data, received = self.piezos.sweep(Vstart, Vend,
-                                        chan_in = self._chan_labels,
+                                        chan_in = self._daq_inputs,
                                         sweep_rate = self.scan_rate)
 
-        for chan in self._chan_labels:
+        for chan in self._daq_inputs:
             self.V[chan] = received[chan]
         self.V['z'] = self.plane.plane(self.x, self.y)-np.array(output_data['z'])-self.z0
 
@@ -55,13 +53,11 @@ class Heightsweep(Measurement):
 
         self.plot()
 
-        self.save()
-
 
     def plot(self):
         super().plot()
 
-        for chan in self._chan_labels:
+        for chan in self._daq_inputs:
             self.ax[chan].plot(self.V['z'], self.V[chan]*self._conversions[chan], '.k', markersize=6, alpha=0.5)
 
 

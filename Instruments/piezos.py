@@ -1,6 +1,12 @@
 import numpy as np
+from scipy.interpolate import interp1d
 from ..Utilities.logging import log
 from .instrument import Instrument
+import time
+try:
+    import PyDAQmx as mx
+except:
+    print('PyDAQmx not imported in piezos.py!')
 
 class Piezos(Instrument):
     '''
@@ -9,11 +15,14 @@ class Piezos(Instrument):
     Sweeps between voltages smoothly.
     '''
     _label = 'piezos'
-    _chan_labels = ['x','y','z'] # DAQ channel labels expected by this class
+    # DAQ channel labels expected by this class
+    _daq_outputs = ['x','y','z']
     _piezos = ['x','y','z']
     _gain = [40, 40, 40]
-    _Vmax = [400, 400, 400] # maximum allowed total voltage across piezo
-    _bipolar = [2, 2, 2] # multiplier for whether piezos are biased +V/-V or not.
+    # maximum allowed total voltage across piezo
+    _Vmax = [400, 400, 400]
+    # multiplier for whether piezos are biased +V/-V or not.
+    _bipolar = [2, 2, 2]
     _V = {}
     _daq = None
     _max_sweep_rate = 180 # Vpiezo/s
@@ -30,9 +39,9 @@ class Piezos(Instrument):
         self._daq = daq
         if daq is None:
             print('Daq not loaded... piezos will not work until you give them a daq!')
-        for ch in self._chan_labels:
-            if ch not in daq.outputs and ch not in daq.inputs:
-                raise Exception('Need to set daq channel labels! Need a %s' %ch)
+        for ch in self._daq_outputs:
+            if ch not in daq.outputs:
+                raise Exception('Need to set daq channel outputs! Need a %s' %ch)
 
         for (i,p) in enumerate(self._piezos):
             setattr(self, p, Piezo(self._daq, label=p,
@@ -41,6 +50,8 @@ class Piezos(Instrument):
                                 max_sweep_rate = self._max_sweep_rate,
                                 max_step_size=self._max_step_size))
                                 # makes benders x, y, and z
+
+        self.checkHVAStatus()
 
         if zero:
             self.zero()
@@ -83,9 +94,9 @@ class Piezos(Instrument):
 
         for k in value.keys():
             getattr(self,k).check_lim(value[k])
-        ## Sweep to the desired voltage
+        # Sweep to the desired voltage
         self.sweep(self.V, value)
-        ## Store the desired voltage
+        # Store the desired voltage
         for key in self._piezos:
             try:
                 self._V[key] = value[key]
@@ -115,15 +126,17 @@ class Piezos(Instrument):
          Sampling faster will decrease the step size.
          Lowering the sweep rate open ups smaller measure rates
         '''
-        ## Make copies of start and end dictionaries so we can mess them up
+        # Make copies of start and end dictionaries so we can mess them up
         Vstart = Vstart.copy()
         Vend = Vend.copy()
 
-        ## Sweep to Vstart first if we aren't already there. self.V calls this function, but recursion should only go one level deep.
+        # Sweep to Vstart.
+        # self.V calls this function.
+        # Recursion should only go one level deep.
         if Vstart != self._V:
             self.V = Vstart
 
-        ## Make sure to only have the piezos we want to sweep over
+        # Make sure to only have the piezos we want to sweep over
         all_keys = list(set(Vstart) & set(Vend)) # keys in common
         for v in Vstart, Vend:
             keys = list(v.keys()) # keys in each one
@@ -132,7 +145,7 @@ class Piezos(Instrument):
                     v.pop(key) # get rid of unwanted items
         all_keys.sort()
 
-        ## Figuring out how fast to sweep
+        # Determine sweep rate
         if sweep_rate > self._max_sweep_rate:
             raise Exception('Sweeping piezos too fast! Max is 180 V/s!')
 
@@ -144,14 +157,16 @@ class Piezos(Instrument):
         msg = 'Sweeping piezos! '
         for key in all_keys:
             msg = msg + '\n%s: %.1f to %.1f ' %(key, Vstart[key], Vend[key])
-        log(msg)
 
-        ## Calculate number of steps. This is max(|(Whole voltage range)/(step size)|).
-        ## Add 1 so there is at least 1 step
-        ## All piezos use the same numsteps. This is based on which piezo needs to move the furthest.
-        numsteps = max([int(abs(Vstart[k]-Vend[k])/step_size)+1 for k in Vstart])
+        # Calculate number of steps using.
+        # max(|(Whole voltage range)/(step size)|).
+        # Add 1 so there is at least 1 step
+        # All piezos use the same numsteps, Based on which piezo needs to
+        # move the furthest.
+        numsteps = max(
+            [int(abs(Vstart[k]-Vend[k])/step_size)+1 for k in Vstart])
 
-        ## Check voltage limits and remove gain
+        # Check voltage limits and remove gain
         for k in Vstart.keys():
             getattr(self,k).check_lim(Vstart[k])
             Vstart[k] = getattr(self,k).remove_gain(Vstart[k])
@@ -159,12 +174,8 @@ class Piezos(Instrument):
             getattr(self,k).check_lim(Vend[k])
             Vend[k] = getattr(self,k).remove_gain(Vend[k])
 
-        # ## Convert keys to the channel names that the daq expects
-        # for k in list(Vstart.keys()): # need this a list so that new keys aren't iterated over
-        #     Vstart[getattr(self,k).label] = Vstart.pop(k) # changes key to daq output channel name
-        #     Vend[getattr(self,k).label] = Vend.pop(k)
-
-        ## If for some reason you give extra keys, get rid of them.
+        # Convert keys to the channel names that the daq expects
+        # Remove extra keys
         all_keys = list(set(Vstart) & set(Vend))
         for key in Vstart.keys():
             if key not in all_keys:
@@ -173,30 +184,16 @@ class Piezos(Instrument):
             if key not in all_keys:
                 Vend.pop(key)
 
-        output_data, received = self._daq.sweep(Vstart, Vend, chan_in = chan_in,
-                                sample_rate=meas_rate, numsteps=numsteps
+        output_data, received = self._daq.sweep(Vstart, Vend,
+                                                chan_in = chan_in,
+                                                sample_rate=meas_rate,
+                                                numsteps=numsteps
                             )
-
-        # ## Go back to piezo keys
-        # for k in self._piezos:
-        #     try:
-        #         output_data[k] = output_data.pop(getattr(self,k).label)
-        #     except:
-        #         pass
-        #     try:
-        #         Vend[k] = Vend.pop(getattr(self,k).label) # need to convert Vend back for later
-        #     except: # in case one or more keys is not used
-        #         pass
-        #     try:
-        #         self._V.pop(getattr(self,k).label) # was keeping daq keys for some reason
-        #     except:
-        #         pass
-
-        ## reapply gain
+        # Reapply gain
         for k in output_data.keys():
             output_data[k] = getattr(self,k).apply_gain(output_data[k])
 
-        ## Keep track of current voltage
+        # Keep track of current voltage
         for k in output_data:
             self._V[k] = Vend[k] # end of sweep, for keeping track of voltage
 
@@ -240,7 +237,6 @@ class Piezos(Instrument):
             raise Exception('Sweeping piezos too choppily! Decrease sweep_rate or increase meas_rate to increase the step size!')
 
         ## Figure out the number of steps we need to take to get this average step size
-        from scipy.interpolate import interp1d
         numsteps = []
         for k in voltages.keys():
             diffs = abs(np.diff(voltages[k])) # step sizes
@@ -294,10 +290,134 @@ class Piezos(Instrument):
     def zero(self):
         self.V = 0
 
+    def HVALookup(self,readArray,chan_1,chan_2):
+        '''
+        Calculates gain from AO and A1 channels on HVA bitstream. Channel
+        numbers start with zero
+
+        readArray: array returned by digital read from HVA
+        chan_1: AO in HVA manual, offset by -1 from HVA manual numbering
+        convention
+        chan_2: A1 in HVA manual, offset by -1 from HVA manual numbering
+        convention
+
+        returns the gain calculated
+        '''
+        if readArray[chan_1] == 1:
+            if readArray[chan_2] == 1:
+                output = 40
+            else:
+                output = 4
+        else:
+            if readArray[chan_2] == 1:
+                output = 15
+            else:
+                output = 1
+        return output
+
+
+    def checkHVAStatus(self):
+        '''
+        Checks high voltage amplifier for overheat and high temp as well as
+        checking if all parameters equal those in code
+
+        Raises exceptions for mismatches in code and hardware, or if there is
+        fault condition in the HVA.
+        '''
+        arraySize = 16; # Length of serial word
+        sampsPerChanToAcquire = arraySize + 1
+        readArray = np.ones(arraySize, dtype=np.uint8)
+        loadArray = np.ones(sampsPerChanToAcquire, dtype=np.uint8)
+        loadArray[1] = 0; # Create trigger
+        LP_c_double = mx.POINTER(mx.c_long);
+        actRead = LP_c_double()
+        numBytes = LP_c_double()
+        rate = 100000 # Communication rate, should be set as high as possible
+        numRead = LP_c_double()
+        sampsPerChanWritten = LP_c_double()
+
+        # Create tasks
+        taskIn = mx.Task()
+        taskOut = mx.Task()
+        taskClock = mx.Task()
+
+        # Creates input and output
+        taskIn.CreateDIChan("/Dev1/port0/line4","dIn",
+                            mx.DAQmx_Val_ChanPerLine)
+        taskOut.CreateDOChan("/Dev1/port0/line5","Load",
+                             mx.DAQmx_Val_ChanPerLine)
+
+        # Creates a counter to use as a clock
+        taskClock.CreateCOPulseChanFreq("/Dev1/ctr0", "clock",
+                                        mx.DAQmx_Val_Hz,mx.DAQmx_Val_Low,0,rate,.5)
+        taskClock.CfgImplicitTiming(mx.DAQmx_Val_ContSamps,17)
+
+        #Set both input and output to use the counter we created as clock
+        taskIn.CfgSampClkTiming ("/Dev1/Ctr0InternalOutput",
+                                 rate,mx.DAQmx_Val_Rising,mx.DAQmx_Val_FiniteSamps,
+                                 sampsPerChanToAcquire);
+        taskOut.CfgSampClkTiming ("/Dev1/Ctr0InternalOutput",rate,
+                                  mx.DAQmx_Val_Rising,mx.DAQmx_Val_ContSamps,
+                                  sampsPerChanToAcquire);
+
+        # Syncs input to external connection from counter
+        taskIn.CfgDigEdgeStartTrig("/Dev1/PFI1",mx.DAQmx_Val_Rising)
+
+        # Loads data to be written
+        taskOut.WriteDigitalLines(sampsPerChanToAcquire,False,.9,
+                                  mx.DAQmx_Val_GroupByChannel,loadArray,
+                                  sampsPerChanWritten,None)
+
+        #Start tasks
+        taskClock.StartTask()
+        taskOut.StartTask()
+        time.sleep(.01)
+        taskIn.StartTask()
+        taskIn.ReadDigitalLines(-1,.9,mx.DAQmx_Val_GroupByChannel,readArray,80,
+                                numRead,numBytes,None)
+        time.sleep(.01)
+        taskIn.StopTask()
+        taskClock.StopTask()
+        taskOut.StopTask()
+
+        #throw exceptions for errors
+        if readArray[0] == 0:
+             raise Exception("The aux output is not enabled!")
+        if readArray[1] == 0:
+             raise Exception("The Z output is not enabled!")
+        if readArray[2] == 0:
+             raise Exception("The X&Y outputs are not enabled!")
+        if readArray[3] == 0:
+             print("The output connector is not plugged in!")
+        if readArray[5] == 1:
+             raise Exception("HVA High Temperature!")
+        if readArray[6] == 0:
+             raise Exception("HV Supply error")
+        if readArray[7] == 1:
+             raise Exception("Overheated!")
+        if readArray[8] == 1:
+             raise Exception("the polarity of aux is positive")
+        if readArray[11] == 0:
+             raise Exception("the polarity of Z is negative")
+        if self.HVALookup(readArray, 10,9) != self.z.gain:
+            raise Exception("the gain of aux should be " + str(self.z.gain) # aux channel is our z-
+                            + " but it is set to "
+                            + str(self.HVALookup(readArray, 10,9)))
+        if self.HVALookup(readArray, 14,15) != self.z.gain:
+            raise Exception("the gain of z should be " + str(self.z.gain)
+                            + " but it is set to "
+                            + str(self.HVALookup(readArray, 14,15)))
+        if self.HVALookup(readArray, 12,13) != self.x.gain:
+            raise Exception("the gain of x should be " + str(self.x.gain)
+                            + " but it is set to "
+                            + str(self.HVALookup(readArray, 12,13)))
+
+
 
 class Piezo(Instrument):
     _V = None
-    def __init__(self, daq, label=None, gain=15, Vmax=200, bipolar=2, max_sweep_rate=180, max_step_size=.2):
+    def __init__(self, daq, label=None, gain=15, Vmax=200, bipolar=2,
+                 max_sweep_rate=180, max_step_size=.2):
         self._daq = daq
         self.label = label
         self.gain = gain
@@ -333,7 +453,8 @@ class Piezo(Instrument):
         Voltage property. Set or read piezo voltage
         '''
         try:
-            self._V = self._daq.outputs[self.label].V*self.gain*self.bipolar # convert daq volts to piezo volts
+            # Convert daq volts to piezo volts
+            self._V = self._daq.outputs[self.label].V*self.gain*self.bipolar
         except:
             print('Couldn\'t communicate with daq! Current %s piezo voltage unknown!' %self.label)
         return self._V
@@ -347,7 +468,8 @@ class Piezo(Instrument):
 
     def apply_gain(self, value):
         '''
-        Converts DAQ volts to piezo volts by multiplying a voltage by the gain and bipolar factor
+        Converts DAQ volts to piezo volts by multiplying a voltage by the
+        gain and bipolar factor
         '''
         if np.isscalar(value):
             return value*self.gain*self.bipolar
@@ -357,7 +479,8 @@ class Piezo(Instrument):
 
     def remove_gain(self, value):
         '''
-        Converts piezo volts to DAQ volts by dividing a voltage by the gain and bipolar factor
+        Converts piezo volts to DAQ volts by dividing a voltage by the
+        gain and bipolar factor
         '''
         if np.isscalar(value):
             return value/self.gain/self.bipolar
@@ -367,7 +490,8 @@ class Piezo(Instrument):
 
     def check_lim(self, V):
         '''
-        checks voltage list V = [...] to see if it is out of range for the piezo
+        checks voltage list V = [...] to see if it is out of range for the
+        piezo
         '''
         if np.isscalar(V):
             Vtemp = [V]
@@ -375,7 +499,8 @@ class Piezo(Instrument):
             Vtemp = V
         if type(Vtemp) is not np.ndarray:
             Vtemp = np.array(Vtemp)
-        if Vtemp.max()-1 > self.Vmax or Vtemp.min()+1 < -self.Vmax:# +/- 1 is tolerance, daq noise was throwing it off
+        # +/- 1 is tolerance, daq noise was throwing it off
+        if Vtemp.max()-1 > self.Vmax or Vtemp.min()+1 < -self.Vmax:
             raise Exception('Voltage out of range for %s piezo! Max is %s' %(self.label, self.Vmax))
 
 
@@ -391,9 +516,11 @@ class Piezo(Instrument):
          Sampling faster will decrease the step size.
          Lowering the sweep rate open ups smaller measure rates
         '''
-        ## Sweep to Vstart first if we aren't already there.
-        ## Self.V calls this function, but recursion should only go one level deep.
-        if Vstart != self._V: #Need self._V or else it will do a measurement and loop forever!
+        # Sweep to Vstart first if we aren't already there.
+        # Self.V calls this function, but recursion should only go one
+        # level deep.
+        # Need self._V or else it will do a measurement and loop forever!
+        if Vstart != self._V:
             self.V = Vstart
 
         ## Check voltage limits
@@ -409,11 +536,11 @@ class Piezo(Instrument):
         if step_size > self.max_step_size:
             raise Exception('Sweeping piezos too choppily! Decrease sweep_rate or increase meas_rate to increase the step size!')
 
-        ## Calculate number of steps. This is |(Whole voltage range)/(step size)|.
-        ## Add 1 so there is at least 1 step
+        # Calculate number of steps. This is |(Whole voltage range)/(step size)|.
+        # Add 1 so there is at least 1 step
         numsteps = int(abs(Vstart-Vend)/step_size)+1
 
-        ## Remove gain
+        # Remove gain
         Vstart = self.remove_gain(Vstart)
         Vend = self.remove_gain(Vend)
 
