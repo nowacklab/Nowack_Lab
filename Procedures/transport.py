@@ -215,7 +215,7 @@ class RvsSomething(Measurement):
         self._num_lockins = num_lockins
         return self._num_lockins
 
-    def do(self, duration=None, delay=1, num_avg = 1, delay_avg = 0, plot=True, auto_gain=True):
+    def do(self, duration=None, delay=1, num_avg = 1, delay_avg = 0, plot=True, auto_gain=False):
         '''
         Duration and delay both in seconds.
         Use do_measurement() for each resistance measurement.
@@ -441,11 +441,12 @@ class RvsVg(RvsSomething):
 
         self.setup_keithley()
 
-    def do(self, num_avg = 1, delay_avg = 0, zero=False, all_positive=False, plot=True, auto_gain=True):
+    def do(self, num_avg = 1, delay_avg = 0, zero=False, all_positive=False, plot=True, auto_gain=False):
 #         self.keithley.output = 'on' #NO! will cause a spike!
 
         ## Sweep to Vstart
         self.keithley.sweep_V(self.keithley.V, self.Vstart, .1, 1)
+        time.sleep(self.delay*3)
 
         ## Do the measurement sweep
         for i, Vg in enumerate(self.Vg_values):
