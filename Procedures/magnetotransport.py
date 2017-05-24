@@ -2,6 +2,8 @@ import time, numpy as np, matplotlib.pyplot as plt
 from ..Utilities.save import Measurement
 from .transport import RvsSomething, RvsVg
 from ..Utilities.plotting import plot_mpl
+import peakutils
+from scipy.interpolate import interp1d
 
 ## Constants here
 e = 1.60217662e-19 #coulombs
@@ -50,6 +52,50 @@ class RvsB(RvsSomething):
         while self.ppms.field_status in ('Iterating', 'Charging'):
             self.B = np.append(self.B, self.ppms.field/10000) # Oe to T
             self.do_measurement(delay=self.delay, plot=plot)
+
+    def calc_n(self, nu=2,Rxx_channel=0, thres=0.1, min_dist=100, Brange = [1,13]):
+        '''
+        Calculate the carrier density using the spacing between Landau levels.
+        This will only work if there are clear peaks in Rxx.
+        nu: total spin/valley degeneracy (spacing between LL's in
+        conductance quanta)
+        Rxx_channel: which lockin measured Rxx
+        thres: float between [0., 1.]. Normalized threshold.
+        Only peaks with amplitudes higher than the threshold will be detected.
+        (see peakutils.indexes)
+        min_dist: Minimum distance between each detected peak.
+        The peak with the highest amplitude is preferred to satisfy this constraint. (see peakutils.indexes)
+        Brange: [Bmin, Bmax] field range over which to look for peaks
+        '''
+        ## Calculate 1/B and generate equally spaced array in 1/B space.
+        Bmin = Brange[0]
+        Bmax = Brange[1]
+        oneoverB = np.linspace(1/Bmax, 1/Bmin,5000)
+        f = interp1d(1/self.B, self.R[Rxx_channel])
+        R = f(oneoverB)
+
+        ## Find peaks in Rxx
+        peaks = peakutils.indexes(R, thres=thres, min_dist=min_dist)
+
+        ## Plot it to check
+        fig, (ax, ax2) = plt.subplots(2)
+        ax.plot(oneoverB, R)
+        ax.plot(oneoverB[peaks], R[peaks], '.')
+        ax.set_xlabel(r'1/B (T$^{-1}$)', fontsize=20)
+        ax.set_ylabel(r'R$_{xx}$ ($\Omega$)', fontsize=20)
+
+        deltaoneoverB = np.mean(np.diff(oneoverB[peaks]))
+
+        ax2.plot(np.diff(oneoverB[peaks]))
+        ax2.plot([deltaoneoverB for i in range(len(peaks))], '-k')
+        ax2.set_xlabel('Peak number', fontsize=20)
+        ax2.set_ylabel('$\Delta(1/B)$ (T$^{-1}$)', fontsize=20)
+
+        fig.tight_layout()
+
+        ## Calculate carrier density from average peak spacing
+        self.n = nu*e/h/deltaoneoverB/100**2 # conver to cm^-2
+
 
     def plot_quantized_conductance(self, nu=1, Rxy_channel=1, Rxx_channel=0):
         '''
