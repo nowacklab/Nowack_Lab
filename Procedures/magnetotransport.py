@@ -186,6 +186,47 @@ class RvsVg_B(RvsVg):
         for j in range(self.num_lockins):
             setattr(self, 'R%ifull' %j, np.array([]))
 
+    def calc_n(self, Rxy_channel=1, Vg_range=[-40, 40]):
+        '''
+        Calculate carrier density from the slopes of all cuts of Rxy vs B.
+        Returns conversion factor between gate voltage and density. (in cm^-2/V)
+        Vg_range: interval of Vgs over which to get carrier density conversion.
+        '''
+        from scipy.stats import linregress as lr
+        slopes = np.array([])
+        n = np.array([])
+        Vgs = np.array([])
+        Rxy = self.R2D[Rxy_channel]
+        fig, ax =plt.subplots()
+        for i in range(Rxy.shape[1]):
+            slope, intercept, r, _, _ = lr(self.B, Rxy[:,i])
+
+            ax.plot(self.B, Rxy[:,i],'.')
+            if r**2 > .99:
+                ax.plot(self.B, slope*self.B+intercept,'-')
+                Vgs = np.append(Vgs, self.Vg[i])
+                slopes = np.append(slopes, slope)
+                n = np.append(n, 1/(slope*e))
+        fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(10,4))
+        ax1.plot(Vgs, slopes,'.')
+        ax2.plot(Vgs, n/100**2,'.')
+
+        Vgmin = Vg_range[0]
+        Vgmax = Vg_range[1]
+        where = np.where(np.logical_and(Vgs >= Vgmin,Vgs <= Vgmax))
+        slope, intercept, _, _, _ = lr(Vgs[where], n[where]/100**2) # find carrier density conversion
+        ax2.plot(Vgs[where], Vgs[where]*slope+intercept, '-')
+        ax1.set_xlabel('Vg (V)',fontsize=20)
+        ax1.set_ylabel(r'Hall Coefficient ($\rm \Omega/T$)', fontsize=16)
+        ax2.set_ylabel(r'Carrier density ($\rm{cm^{-2}}$)', fontsize=16)
+
+        fig.tight_layout()
+
+        self.Hall_coefficient = slopes
+        self.n = n/100**2
+
+        return abs(slope) # this will be a conversion in cm^-2/V from gate voltage to carrier density.
+
     def find_CNP(self, Rxx_channel=0):
         '''
         Finds the index of gate voltage corresponding to charge neutrality point.
