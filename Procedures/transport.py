@@ -481,6 +481,13 @@ class RvsVg(RvsSomething):
         sigma = 1/Rs
         self.mobility = abs(sigma/(self.n*e))
 
+    def calc_n_conversion(self, c):
+        '''
+        Converts gate voltage to carrier density using a conversion, given in
+        cm^-2/V. Centers CNP at 0.
+        '''
+        CNP = self.find_CNP()
+        self.n = c*(self.Vg-self.Vg[CNP])
 
     def calc_n_geo(self, t_ox = 300, center_CNP=True):
         '''
@@ -496,7 +503,6 @@ class RvsVg(RvsSomething):
         if center_CNP:
             CNP = self.find_CNP()
             self.n -= self.n[CNP] # set CNP = 0 carrier density
-
 
     def calc_n_LL(self, B_LL, nu, Vg=0):
         '''
@@ -517,10 +523,20 @@ class RvsVg(RvsSomething):
         n_at_Vg = np.mean(nu*e*B_LL/h/100**2) # convert to cm^2
 
         CNP = self.find_CNP()
-        if Vg < CNP:
+        if Vg < CNP: ## TYPO??
             n_at_Vg *= -1 # fix the sign if we are below CNP
         self.n = n_at_Vg*(self.Vg-self.Vg[CNP])/(Vg-self.Vg[CNP])
 
+    def calc_n_QHE(self, Vg, n):
+        '''
+        Calibrate carrier density using density determined via QHE (vs. B) at
+        a particular gate voltage.
+        '''
+        CNP = self.find_CNP()
+        VgCNP = self.Vg[CNP]
+
+        self.n = n*(self.Vg-VgCNP)/(Vg-VgCNP)
+        return n/(Vg-VgCNP)
 
     def find_CNP(self):
         '''

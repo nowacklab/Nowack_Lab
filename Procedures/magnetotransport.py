@@ -4,6 +4,7 @@ from .transport import RvsSomething, RvsVg
 from ..Utilities.plotting import plot_mpl
 import peakutils
 from scipy.interpolate import interp1d
+from scipy.stats import linregress
 
 ## Constants here
 e = 1.60217662e-19 #coulombs
@@ -53,7 +54,24 @@ class RvsB(RvsSomething):
             self.B = np.append(self.B, self.ppms.field/10000) # Oe to T
             self.do_measurement(delay=self.delay, plot=plot)
 
-    def calc_n(self, nu=2,Rxx_channel=0, thres=0.1, min_dist=100, Brange = [1,13]):
+    def calc_n_Hall(self, Bmax=2, Rxy_channel=1):
+        '''
+        Calculate the carrier density using the Hall coefficient at low field.
+        R_H = B/ne
+        '''
+        where = np.where(self.B < Bmax)
+        m, b, _, _, _ = linregress(self.B[where], self.R[Rxy_channel][where])
+
+        fig, ax = plt.subplots()
+        ax.plot(self.B[where], self.R[Rxy_channel][where], '.')
+        ax.plot(self.B[where], m*self.B[where]+b, '-')
+        ax.set_xlabel('B (T)', fontsize=20)
+        ax.set_ylabel('R$_{xy}$ ($\Omega$)', fontsize=20)
+
+        self.n = 1/(m*e)/100**2 # convert to cm^-2
+
+
+    def calc_n_QHE(self, nu=2,Rxx_channel=0, thres=0.1, min_dist=100, Brange = [1,13]):
         '''
         Calculate the carrier density using the spacing between Landau levels.
         This will only work if there are clear peaks in Rxx.
