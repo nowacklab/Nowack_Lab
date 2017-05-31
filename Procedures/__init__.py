@@ -9,4 +9,3 @@ from .touchdown import Touchdown
 from .heightsweep import Heightsweep
 from .scanspectra import Scanspectra
 from .transport import RvsVg
-from .transport import FourProbeRes
