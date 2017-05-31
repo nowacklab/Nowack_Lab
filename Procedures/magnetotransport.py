@@ -6,9 +6,7 @@ import peakutils
 from scipy.interpolate import interp1d
 from scipy.stats import linregress
 
-## Constants here
-e = 1.60217662e-19 #coulombs
-h = 6.626e-34 # m^2*kg/s
+from ..Utilities.constants import e, h
 
 class RvsB(RvsSomething):
     instrument_list = ['ppms', 'lockin_V', 'lockin_I']
