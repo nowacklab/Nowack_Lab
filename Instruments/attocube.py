@@ -44,7 +44,7 @@ class ANC350(Instrument):
 
         self.anc = ANC350Pos()
 
-        V_lim = 45 # room temperature
+        V_lim = 60 # room temperature
         if montana:
             if montana.temperature['platform'] < 30:
                 V_lim = 60 # low temperature requires more voltage to step
