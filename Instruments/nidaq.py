@@ -302,9 +302,9 @@ class NIDAQ(Instrument):
         return output_data, received
 
 
-    def zero(self):
+    def zero(self, rate=100000, numsteps=100000):
         for chan in self.outputs.values(): # loop over output channel objects
-            self.sweep({chan.label: chan.V}, {chan.label: 0}, sample_rate=100000, numsteps=100000)
+            self.sweep({chan.label: chan.V}, {chan.label: 0}, sample_rate=rate, numsteps=numsteps)
         print('Zeroed DAQ outputs.')
         logging.log('Zeroed DAQ outputs.')
 
