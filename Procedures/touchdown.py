@@ -2,7 +2,8 @@ from IPython import display
 from scipy.stats import linregress
 from scipy.optimize import curve_fit
 from datetime import datetime
-import time, os
+import time
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 from ..Instruments import nidaq, preamp, montana
@@ -11,13 +12,14 @@ from ..Utilities import conversions, logging
 from ..Utilities.utilities import AttrDict
 
 
-_Z_PIEZO_STEP = 4 # V piezo
-_Z_PIEZO_STEP_SLOW = 4 # V piezo
-_CAPACITANCE_THRESHOLD = 1 # fF
+_Z_PIEZO_STEP = 4  # V piezo
+_Z_PIEZO_STEP_SLOW = 4  # V piezo
+_CAPACITANCE_THRESHOLD = 1  # fF
+
 
 class Touchdown(Measurement):
     _daq_inputs = ['cap', 'capx', 'capy', 'theta']
-    instrument_list = ['lockin_cap','atto','piezos','daq','montana']
+    instrument_list = ['lockin_cap', 'atto', 'piezos', 'daq', 'montana']
 
     Vtd = None
     touchdown = False
@@ -27,21 +29,21 @@ class Touchdown(Measurement):
     C0 = 0
 
     lines_data = AttrDict(
-        V_app = np.array([]),
-        C_app = np.array([]),
-        V_td = np.array([]),
-        C_td = np.array([])
+        V_app=np.array([]),
+        C_app=np.array([]),
+        V_td=np.array([]),
+        C_td=np.array([])
     )
     good_r_index = None
     title = ''
 
     numsteps = 100
-    numfit = 5 # number of points to fit line to while collecting data
-    attoshift = 40 # move 20 um if no touchdown detected
+    numfit = 5  # number of points to fit line to while collecting data
+    attoshift = 40  # move 20 um if no touchdown detected
     Vz_max = 400
     start_offset = 0
 
-    def __init__(self, instruments={}, planescan=False, Vz_max = None):
+    def __init__(self, instruments={}, planescan=False, Vz_max=None):
         '''
         Approach the sample to the SQUID while recording the capacitance 
         of the cantelever in a lockin measurement to detect touchdown.
@@ -74,28 +76,27 @@ class Touchdown(Measurement):
             if instruments:
                 self.Vz_max = self.piezos.z.Vmax
             else:
-                self.Vz_max = 200 # just for the sake of having something
+                self.Vz_max = 200  # just for the sake of having something
 
         self._init_arrays()
 
         self.planescan = planescan
 
-
     def _init_arrays(self):
         ''' Generate arrays of NaN with the correct length for the touchdown'''
-        self.numsteps = int(2*self.Vz_max/self.z_piezo_step)
+        self.numsteps = int(2 * self.Vz_max / self.z_piezo_step)
         self.V = np.linspace(-self.Vz_max, self.Vz_max, self.numsteps)
 
         # Capacitance (fF) - read as "R" from the lockin
-        self.C = np.array([np.nan]*self.numsteps)
+        self.C = np.array([np.nan] * self.numsteps)
 
         # Also record the X, Y and theta measurements on the lockin
-        self.Cx = np.array([np.nan]*self.numsteps)
-        self.Cy = np.array([np.nan]*self.numsteps)
-        self.theta = np.array([np.nan]*self.numsteps)
+        self.Cx = np.array([np.nan] * self.numsteps)
+        self.Cy = np.array([np.nan] * self.numsteps)
+        self.theta = np.array([np.nan] * self.numsteps)
 
         # Correlation coefficients of each fit
-        self.rs = np.array([np.nan]*self.numsteps)
+        self.rs = np.array([np.nan] * self.numsteps)
 
     def check_balance(self, V_unbalanced=2e-6):
         '''
@@ -109,7 +110,7 @@ class Touchdown(Measurement):
         if Vcap > V_unbalanced:
             inp = input(
                 'Balance capacitance bridge. Press enter to continue, q to quit'
-                )
+            )
             if inp == 'q':
                 raise Exception('quit by user')
 
@@ -127,25 +128,25 @@ class Touchdown(Measurement):
         False -- when the condition above is not satisfied OR numfit 
         points have not been collected
         '''
-        i = np.where(~np.isnan(self.C))[0][-1] # index of last data point taken
+        i = np.where(~np.isnan(self.C))[
+            0][-1]  # index of last data point taken
         # Chcek that enough data has been collected to do a linear fit
         if i > self.numfit + self.start_offset:
-        # Check if the capacitance has been high enough (above 3 fF)
-            if self.C[i-self.numfit] > _CAPACITANCE_THRESHOLD:
+            # Check if the capacitance has been high enough (above 3 fF)
+            if self.C[i - self.numfit] > _CAPACITANCE_THRESHOLD:
                 # Check that the last numfit points are monotonically increasing
-                for j in range(i-self.numfit, i):
-                    if self.C[j+1] - self.C[j] < 0:
+                for j in range(i - self.numfit, i):
+                    if self.C[j + 1] - self.C[j] < 0:
                         return False
                 # If the for loop passed, then touchdown
-                return True 
+                return True
         # If we haven't taken enough points
-        return False 
-
+        return False
 
     def configure_lockin(self):
         '''Set up lockin_cap amplifier for a touchdown.'''
         self.lockin_cap.amplitude = 1
-        self.lockin_cap.frequency = 26759 # prime number
+        self.lockin_cap.frequency = 26759  # prime number
         self.lockin_cap.set_out(1, 'R')
         self.lockin_cap.set_out(2, 'theta')
         self.lockin_cap.sensitivity = 20e-6
@@ -180,35 +181,34 @@ class Touchdown(Measurement):
         while not self.touchdown:
             # Determine where to start sweeping
             if slow_scan:
-                start = Vtd-50 
+                start = Vtd - 50
                 self.z_piezo_step = _Z_PIEZO_STEP_SLOW
                 self._init_arrays()
                 self.setup_plots()
-                
+
             # Specify a starting voltage for the Z bender.
             # If the surface location is unknown, sweep all the way down
             if start is not None:
                 self.piezos.z.V = start
             else:
-                self.piezos.z.V = -self.Vz_max 
-
+                self.piezos.z.V = -self.Vz_max
 
             # Check balance of capacitance bridge
-            time.sleep(2) # wait for capacitance to stabilize
+            time.sleep(2)  # wait for capacitance to stabilize
             self.check_balance()
 
             # Reset capacitance and correlation coefficient values
-            self.C = np.array([np.nan]*self.numsteps)
-            self.rs = np.array([np.nan]*self.numsteps)
-            self.Cx = np.array([np.nan]*self.numsteps)
-            self.Cy = np.array([np.nan]*self.numsteps)
-            self.theta = np.array([np.nan]*self.numsteps)
-            self.C0 = None # offset: will take on value of the first point
+            self.C = np.array([np.nan] * self.numsteps)
+            self.rs = np.array([np.nan] * self.numsteps)
+            self.Cx = np.array([np.nan] * self.numsteps)
+            self.Cy = np.array([np.nan] * self.numsteps)
+            self.theta = np.array([np.nan] * self.numsteps)
+            self.C0 = None  # offset: will take on value of the first point
             self.lines_data = AttrDict(
-                V_app = np.array([]),
-                C_app = np.array([]),
-                V_td = np.array([]),
-                C_td = np.array([])
+                V_app=np.array([]),
+                C_app=np.array([]),
+                V_td=np.array([]),
+                C_td=np.array([])
             )
             # Inner loop to sweep z-piezo
             for i in range(self.numsteps):
@@ -219,13 +219,13 @@ class Touchdown(Measurement):
                     if self.V[i] < start:
                         self.C[i] = np.inf
                         # In the end, this is how many points we skipped
-                        self.start_offset = i 
-                        continue # skip all of these
+                        self.start_offset = i
+                        continue  # skip all of these
 
                 # Set the current voltage and wait
-                self.piezos.z.V = self.V[i] # Set the current voltage
+                self.piezos.z.V = self.V[i]  # Set the current voltage
                 if slow_scan:
-                    time.sleep(2) # wait a long time
+                    time.sleep(2)  # wait a long time
 
                 # Get capacitance
                 if self.C0 == None:
@@ -235,10 +235,10 @@ class Touchdown(Measurement):
                 Vcap = self.daq.inputs['cap'].V
                 # convert to a real capacitance
                 Vcap = self.lockin_cap.convert_output(Vcap)
-                Cap = Vcap*conversions.V_to_C
+                Cap = Vcap * conversions.V_to_C
                 if self.C0 == None:
-                    self.C0 = Cap # Sets the offset datum
-                self.C[i] = Cap - self.C0 # remove offset
+                    self.C0 = Cap  # Sets the offset datum
+                self.C[i] = Cap - self.C0  # remove offset
                 # Record the X, Y and theta voltages
                 self.Cx[i] = self.daq.inputs['capx'].V
                 self.Cy[i] = self.daq.inputs['capy'].V
@@ -247,13 +247,13 @@ class Touchdown(Measurement):
                 # gotta cheat and take care of the infs by making them the same
                 # as the first real data point... this is because we skipped them
                 if start is not None:
-                    if self.C[0] == np.inf: # set at beginning of loop
+                    if self.C[0] == np.inf:  # set at beginning of loop
                         if self.C[i] not in (np.inf, np.nan):
                             for j in range(len(self.C)):
                                 if self.C[j] == np.inf:
-                                    self.C[j] = self.C[i] # replace
+                                    self.C[j] = self.C[i]  # replace
 
-                self.plot() # plot the new point
+                self.plot()  # plot the new point
                 self.touchdown = self.check_touchdown()
 
                 if self.touchdown:
@@ -264,30 +264,32 @@ class Touchdown(Measurement):
 
                     # Added 11/1/2016 to try to handle exceptions in calculating
                     # td voltage
-                    if Vtd == -1: 
+                    if Vtd == -1:
                         self.touchdown = False
                         continue
 
-                    self.title = 'Touchdown detected at %.2f V!' %Vtd
+                    self.title = 'Touchdown detected at %.2f V!' % Vtd
                     logging.log(self.title)
                     self.plot()
 
                     # Don't want to move attos during planescan
-                    if not self.planescan: 
+                    if not self.planescan:
                         # Specify a percentage of the peizo range that the
                         # touchdown must fall within.
                         if slow_scan:
-                            u = 0.55 
+                            u = 0.55
                             l = 0.35
                         else:
-                            u = 0.85 # touchdown is at a higher voltage for a not-slow scan
+                            u = 0.85  # touchdown is at a higher voltage for a not-slow scan
                             l = 0.45
-                        if Vtd > u*self.Vz_max or Vtd < l*self.Vz_max:
+                        if Vtd > u * self.Vz_max or Vtd < l * self.Vz_max:
                             self.touchdown = False
-                            start = -self.Vz_max # because we don't know where the td will be
-                            self.title = 'Found touchdown, centering near %i Vpiezo' %int(self.Vz_max/2)
+                            start = -self.Vz_max  # because we don't know where the td will be
+                            self.title = 'Found touchdown, centering near %i Vpiezo' % int(
+                                self.Vz_max / 2)
                             self.plot()
-                            self.attoshift = (Vtd-self.Vz_max/2)*conversions.Vz_to_um
+                            self.attoshift = (
+                                Vtd - self.Vz_max / 2) * conversions.Vz_to_um
                             self.lines_data['V_app'] = []
                             self.lines_data['C_app'] = []
                             self.lines_data['V_td'] = []
@@ -298,32 +300,32 @@ class Touchdown(Measurement):
                                 self._init_arrays()
                                 self.setup_plots()
 
-                    break # stop approaching
+                    break  # stop approaching
 
             # end of inner loop
 
-            # Move the attocubes 
-            if not self.planescan: 
+            # Move the attocubes
+            if not self.planescan:
                 if not self.touchdown:
-                    # Sweep the pizeos away from the sample before 
-                    self.piezos.z.V = -self.Vz_max 
-                    start = -self.Vz_max # we should start here next time
-                    self.check_balance() # make sure we didn't crash
+                    # Sweep the pizeos away from the sample before
+                    self.piezos.z.V = -self.Vz_max
+                    start = -self.Vz_max  # we should start here next time
+                    self.check_balance()  # make sure we didn't crash
                     self.atto.z.move(self.attoshift)
                     # Let lockin measurement stabalize
                     time.sleep(2)
-                    
+
                     # If the lockin is overloading after moving then we
                     # probably crashed - back off with attocubes and
                     # check again
-                    while self.daq.inputs['cap'].V > 10: # overloading
-                        self.atto.z.move(-self.attoshift/2) 
+                    while self.daq.inputs['cap'].V > 10:  # overloading
+                        self.atto.z.move(-self.attoshift / 2)
                         time.sleep(2)
 
             # Do a slow scan next
-            if self.touchdown: # if this is a true touchdown
-                if not self.planescan: # but not a planescan
-                    if not slow_scan: 
+            if self.touchdown:  # if this is a true touchdown
+                if not self.planescan:  # but not a planescan
+                    if not slow_scan:
                         # slow_scan = True
                         # self.touchdown = False
                         slow_scan = False
@@ -332,9 +334,9 @@ class Touchdown(Measurement):
 
         # Ask the user to confirm the touchdown voltage
         if user:
-            self.touchdown  = input("Touchdown voltage: ")
+            self.touchdown = input("Touchdown voltage: ")
 
-        self.piezos.z.V = 0 # bring the piezo back to zero
+        self.piezos.z.V = 0  # bring the piezo back to zero
 
         self.Vtd = Vtd
 
@@ -351,35 +353,39 @@ class Touchdown(Measurement):
         '''
         try:
             # Find the location of the first nan (i.e. the last point taken)
-            i3 = np.where(np.isnan(self.C))[0][0] 
+            i3 = np.where(np.isnan(self.C))[0][0]
             V = self.V[:i3]
             C = self.C[:i3]
 
             # How many lines to try to fit
-            N2 = len(C)+1-5 # last number is minimum number of points to fit
-            r2 = np.array([np.nan]*N2) # correlation coefficients go here
+            # last number is minimum number of points to fit
+            N2 = len(C) + 1 - 5
+            r2 = np.array([np.nan] * N2)  # correlation coefficients go here
 
             # Loop over fits of the touchdown curve
             start = 1
             for i in range(start, N2):
                 _, _, r2[i], _, _ = linregress(V[i:], C[i:])
 
-            # find touchdown index and perform final fit
-            i = np.nanargmax(r2)-2 # this is where touchdown probably is, gave it a couple of extra points; it always seemed to need them
+            # Find touchdown index and perform final fit
+            # this is where touchdown probably is,
+            # gave it a couple of extra points; it always seemed to need them
+            i = np.nanargmax(r2) - 2
 
             # Figure out how many lines to try to fit for approach curve
-            N1 = i+1-3 # last number is minimum number of points to fit for the approach curve
-            r1 = np.array([np.nan]*N1) # correlation coefficients go here
-            m1 = np.array([np.nan]*N1) # slopes go here
+            N1 = i + 1 - 3  # last number is minimum number of points to fit for the approach curve
+            r1 = np.array([np.nan] * N1)  # correlation coefficients go here
+            m1 = np.array([np.nan] * N1)  # slopes go here
 
             # Approach curve
-            k = i-3 # fit the approach curve ending this 2 points away from the touchdown curve
-            N1 = N1-3 # must adjust N1 by this same amount
+            k = i - 3  # fit the approach curve ending this 2 points away from the touchdown curve
+            N1 = N1 - 3  # must adjust N1 by this same amount
             for j in range(start, N1):
                 m1[j], b1, r1[j], _, _ = linregress(V[j:k], C[j:k])
 
             # Determine best approach curve
-            minimize_this = (1-r1)*1 + abs(m1)*100 # Two weight factors: how much we care that it's a good fit, how much we care that the slope is near zero.
+            # Two weight factors: how much we care that it's a good fit, how much we care that the slope is near zero.
+            minimize_this = (1 - r1) * 1 + abs(m1) * 100
             j = np.nanargmin(minimize_this)
 
             # Recalculate slopes and intercepts
@@ -387,13 +393,13 @@ class Touchdown(Measurement):
             m1, b1, r1, _, _ = linregress(V[j:k], C[j:k])
 
             self.lines_data['V_app'] = V[j:k]
-            self.lines_data['C_app'] = m1*V[j:k] + b1
+            self.lines_data['C_app'] = m1 * V[j:k] + b1
             self.lines_data['V_td'] = V[i:]
-            self.lines_data['C_td'] = m2*V[i:] + b2
+            self.lines_data['C_td'] = m2 * V[i:] + b2
 
-            Vtd = -(b2 - b1)/(m2 - m1) # intersection point of two lines
+            Vtd = -(b2 - b1) / (m2 - m1)  # intersection point of two lines
 
-            self.title = '%s\nTouchdown at %.2f V' %(self.filename, Vtd)
+            self.title = '%s\nTouchdown at %.2f V' % (self.filename, Vtd)
 
             return Vtd
         except Exception as e:
@@ -402,12 +408,11 @@ class Touchdown(Measurement):
             time.sleep(3)
             return -1
 
-
     def plot(self):
         super().plot()
 
         # Update plot with new capacitance values
-        self.line.set_ydata(self.C) 
+        self.line.set_ydata(self.C)
         self.ax.set_ylim(-1, max(np.nanmax(self.C), 10))
 
         self.line_app.set_xdata(self.lines_data['V_app'])
@@ -419,7 +424,6 @@ class Touchdown(Measurement):
         self.ax.set_title(self.title, fontsize=20)
 
         self.fig.canvas.draw()
-
 
     def save(self, savefig=True):
         '''
@@ -433,7 +437,6 @@ class Touchdown(Measurement):
                                           self.filename)
         self._save(filename_in_extras, savefig)
 
-
     def setup_plots(self):
         display.clear_output(wait=True)
         self.fig, self.ax = plt.subplots()
@@ -446,11 +449,11 @@ class Touchdown(Measurement):
 
         plt.xlim(self.V.min(), self.V.max())
 
-        ## Two lines for fitting
+        # Two lines for fitting
         orange = '#F18C22'
         blue = '#47C3D3'
 
         line_td = self.ax.plot([], [], blue, lw=2)
         line_app = self.ax.plot([], [], orange, lw=2)
-        self.line_td = line_td[0] # plot gives us back an array
+        self.line_td = line_td[0]  # plot gives us back an array
         self.line_app = line_app[0]

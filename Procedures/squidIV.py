@@ -10,7 +10,8 @@ resistor and zero mod current. Can change these values when prompted.
 from IPython import display
 import matplotlib.pyplot as plt
 import numpy as np
-import time, os
+import time
+import os
 from datetime import datetime
 from ..Utilities import dummy
 from ..Instruments import nidaq, preamp
@@ -21,10 +22,10 @@ from ..Utilities.utilities import AttrDict
 class SquidIV(Measurement):
     _daq_inputs = ['squidin', 'currentin']
     _daq_outputs = ['squidout', 'modout']
-    instrument_list = ['daq','preamp','montana','preamp_I']
+    instrument_list = ['daq', 'preamp', 'montana', 'preamp_I']
 
-    V = np.array([0]*2) # to make plotting happy with no real data
-    I = np.array([0]*2)
+    V = np.array([0] * 2)  # to make plotting happy with no real data
+    I = np.array([0] * 2)
 
     notes = ''
 
@@ -42,69 +43,71 @@ class SquidIV(Measurement):
         try:
             for pa in [self.preamp, self.preamp_I]:
                 pa.gain = 5000
-                pa.filter_mode('low',6)
-                pa.filter = (0, rate) # Hz
+                pa.filter_mode('low', 6)
+                pa.filter = (0, rate)  # Hz
                 pa.dc_coupling()
                 pa.diff_input()
-            self.preamp_I.gain = 50 # was overloading
+            self.preamp_I.gain = 50  # was overloading
         except:
-            pass # if we have no instruments, or maybe just one preamp
+            pass  # if we have no instruments, or maybe just one preamp
 
-        self.rate = rate # Hz # measurement rate of the daq
+        self.rate = rate  # Hz # measurement rate of the daq
 
         self.Rbias = 2000
-        self.Rmeas = 0 # Ohm # determined by squid testing box
-        self.Rbias_mod = 2e3 # Ohm # Inside SQUID testing box
-        self.Imod = 0 # A # constant mod current
+        self.Rmeas = 0  # Ohm # determined by squid testing box
+        self.Rbias_mod = 2e3  # Ohm # Inside SQUID testing box
+        self.Imod = 0  # A # constant mod current
 
         self.Irampcenter = 0
-        self.Irampspan = 200e-6 # A # Will sweep from -Irampspan/2 to +Irampspan/2
-        self.Irampstep = 0.5e-6 # A # Step size
+        self.Irampspan = 200e-6  # A # Will sweep from -Irampspan/2 to +Irampspan/2
+        self.Irampstep = 0.5e-6  # A # Step size
 
         self.calc_ramp()
 
         display.clear_output()
 
-
     def calc_ramp(self):
-        self.numpts = int(self.Irampspan/self.Irampstep)
-        Ibias = np.linspace(self.Irampcenter-self.Irampspan/2, self.Irampcenter+self.Irampspan/2, self.numpts) # Desired current ramp
-        self.Vbias = Ibias*(self.Rbias+self.Rmeas) # SQUID bias voltage
-
+        self.numpts = int(self.Irampspan / self.Irampstep)
+        Ibias = np.linspace(self.Irampcenter - self.Irampspan / 2, self.Irampcenter +
+                            self.Irampspan / 2, self.numpts)  # Desired current ramp
+        self.Vbias = Ibias * (self.Rbias + self.Rmeas)  # SQUID bias voltage
 
     def do(self):
-        self.param_prompt() # Check parameters
+        self.param_prompt()  # Check parameters
 
         self.do_IV()
-        self.daq.zero() # zero everything
+        self.daq.zero()  # zero everything
 
         self.setup_plots()
-        self.plot(dvdi = False)
-        self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
+        self.plot(dvdi=False)
+        self.fig.canvas.draw()  # draws the plot; needed for %matplotlib notebook
 
         self.notes = input('Notes for this IV (r to redo): ')
         if self.notes == 'r':
             self.notes = ''
             display.clear_output()
             self.do()
-        self.ax.set_title(self.filename+'\n'+self.notes)
-
+        self.ax.set_title(self.filename + '\n' + self.notes)
 
     def do_IV(self):
         """ Wrote this for mod2D so it doesn't plot """
-        self.daq.outputs['modout'].V = self.Imod*self.Rbias_mod # Set mod current
+        self.daq.outputs['modout'].V = self.Imod * \
+            self.Rbias_mod  # Set mod current
         # Collect data
         output_data, received = self.daq.sweep({'squidout': self.Vbias[0]},
                                                {'squidout': self.Vbias[-1]},
                                                chan_in=self._daq_inputs,
                                                sample_rate=self.rate,
                                                numsteps=self.numpts
-                                           )
-        self.V = np.array(received['squidin'])/self.preamp.gain
+                                               )
+        self.V = np.array(received['squidin']) / self.preamp.gain
         if self.two_preamps:
-            self.I = np.array(received['currentin'])/self.preamp_I.gain/self.Rmeas # Measure current from series resistor
+            # Measure current from series resistor
+            self.I = np.array(received['currentin']) / \
+                self.preamp_I.gain / self.Rmeas
         else:
-            self.I = self.Vbias/(self.Rbias + self.Rmeas) # estimate current by assuming Rbias >> Rsquid
+            # estimate current by assuming Rbias >> Rsquid
+            self.I = self.Vbias / (self.Rbias + self.Rmeas)
 
     def param_prompt(self):
         """ Check and confirm values of parameters """
@@ -112,10 +115,11 @@ class SquidIV(Measurement):
         while not correct:
             for param in ['rate', 'Rbias', 'Rmeas', 'Rbias_mod', 'Imod', 'Irampspan', 'Irampcenter', 'Irampstep']:
                 print(param, ':', getattr(self, param))
-            for paramamp in ['gain','filter']:
+            for paramamp in ['gain', 'filter']:
                 print('preamp', paramamp, ':', getattr(self.preamp, paramamp))
                 if self.two_preamps:
-                    print('preamp_I', paramamp, ':', getattr(self.preamp_I, paramamp))
+                    print('preamp_I', paramamp, ':',
+                          getattr(self.preamp_I, paramamp))
 
             if self.rate >= self.preamp.filter[1]:
                 print("You're filtering out your signal... fix the preamp cutoff\n")
@@ -123,49 +127,55 @@ class SquidIV(Measurement):
                 if self.rate >= self.preamp_I.filter[1]:
                     print("You're filtering out your signal... fix the preamp cutoff\n")
             if self.Irampspan > 200e-6:
-                print("You want the SQUID biased above 100 uA?... don't kill the SQUID!\n")
+                print(
+                    "You want the SQUID biased above 100 uA?... don't kill the SQUID!\n")
 
             try:
-                inp = input('Are these parameters correct?\n Enter a command to change parameters, or press enter to continue (e.g. preamp.gain = 100): \n')
+                inp = input(
+                    'Are these parameters correct?\n Enter a command to change parameters, or press enter to continue (e.g. preamp.gain = 100): \n')
                 if inp == '':
                     correct = True
                 else:
-                    exec('self.'+inp)
-                    self.calc_ramp() # recalculate daq output
+                    exec('self.' + inp)
+                    self.calc_ramp()  # recalculate daq output
                     display.clear_output()
             except:
                 display.clear_output()
                 print('Invalid command\n')
 
-    def plot(self, ax=None, ax2=None, dvdi = True):
-        if ax == None: # if plotting on Mod2D's axis
+    def plot(self, ax=None, ax2=None, dvdi=True):
+        if ax == None:  # if plotting on Mod2D's axis
             super().plot()
             ax = self.ax
             ax2 = ax.twinx()
 
-        ax.plot(self.I*1e6, self.V, 'k-')
-        ax.set_title(self.filename+'\n'+self.notes) # NEED DESCRIPTIVE TITLE
+        ax.plot(self.I * 1e6, self.V, 'k-')
+        # NEED DESCRIPTIVE TITLE
+        ax.set_title(self.filename + '\n' + self.notes)
         if self.two_preamps:
-            ax.set_xlabel(r'$I_{\rm{bias}} = V_{\rm{meas}}/R_{\rm{meas}}$ ($\mu \rm A$)', fontsize=20)
+            ax.set_xlabel(
+                r'$I_{\rm{bias}} = V_{\rm{meas}}/R_{\rm{meas}}$ ($\mu \rm A$)', fontsize=20)
         else:
-            ax.set_xlabel(r'$I_{\rm{bias}} = V_{\rm{bias}}/R_{\rm{bias}}$ ($\mu \rm A$)', fontsize=20)
+            ax.set_xlabel(
+                r'$I_{\rm{bias}} = V_{\rm{bias}}/R_{\rm{bias}}$ ($\mu \rm A$)', fontsize=20)
         ax.set_ylabel(r'$V_{\rm{squid}}$ (V)', fontsize=20)
-        ax.ticklabel_format(style='sci', axis='y', scilimits=(-3,3))
+        ax.ticklabel_format(style='sci', axis='y', scilimits=(-3, 3))
 
-        ## To plot dVdI
+        # To plot dVdI
         if (dvdi == True):
             if ax2 is not None:
-                dx = np.diff(self.I)[0]*3 # all differences are the same, so take the 0th. Made this 3 times larger to accentuate peaks
+                # all differences are the same, so take the 0th. Made this 3 times larger to accentuate peaks
+                dx = np.diff(self.I)[0] * 3
                 dvdi = np.gradient(self.V, dx)
-                ax2.plot(self.I*1e6, dvdi, 'r-')
-                ax2.set_ylabel(r'$dV_{squid}/dI_{bias}$ (Ohm)', fontsize=20, color='r')
+                ax2.plot(self.I * 1e6, dvdi, 'r-')
+                ax2.set_ylabel(
+                    r'$dV_{squid}/dI_{bias}$ (Ohm)', fontsize=20, color='r')
                 for tl in ax2.get_yticklabels():
                     tl.set_color('r')
 
         if self.fig is not None:
             self.fig.tight_layout()
         return ax
-
 
     def setup_plots(self):
         self.fig, self.ax = plt.subplots()
