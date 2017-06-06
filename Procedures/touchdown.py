@@ -10,6 +10,11 @@ from ..Utilities.save import Measurement, get_todays_data_dir, get_local_data_pa
 from ..Utilities import conversions, logging
 from ..Utilities.utilities import AttrDict
 
+# TODO:
+#   - add timestamp to all saved plots
+#
+#
+
 
 _Z_PIEZO_STEP = 4 # V piezo
 _Z_PIEZO_STEP_SLOW = 4 # V piezo
@@ -161,7 +166,7 @@ class Touchdown(Measurement):
         self.lockin_cap.set_out(1, 'R')
         self.lockin_cap.set_out(2, 'theta')
         self.lockin_cap.sensitivity = 20e-6
-        self.lockin_cap.time_constant = 0.100
+        self.lockin_cap.time_constant = 0.300
         self.lockin_cap.reserve = 'Low Noise'
         self.lockin_cap.ac_coupling()
         self.lockin_cap.auto_phase

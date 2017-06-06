@@ -108,7 +108,7 @@ class SR830(Instrument):
                 index -= 1 # highest sensitivity
             value = _sensitivity_options[index]
         elif value == 'down':
-            index = int(self.ask('SENS?')) - 1 
+            index = int(self.ask('SENS?')) - 1
             if index == -1:
                 index += 1 # lowest sensitivity
             value = _sensitivity_options[index]
@@ -203,14 +203,14 @@ class SR830(Instrument):
     def Y(self):
         self._Y = float(self.ask('OUTP?2'))
         if self._Y == 0:
-            self._Y = self.sensitivity/1e12 # so we don't have zeros        
+            self._Y = self.sensitivity/1e12 # so we don't have zeros
         return self._Y
 
     @property
     def R(self):
         self._R = float(self.ask('OUTP?3'))
         if self._R == 0:
-            self._R = self.sensitivity/1e12 # so we don't have zeros     
+            self._R = self.sensitivity/1e12 # so we don't have zeros
         return self._R
 
     @property
@@ -267,6 +267,11 @@ class SR830(Instrument):
     def reserve(self, value):
         i = _reserve_options.index(value)
         self.write('RMOD%i' %i)
+
+    @property
+    def lias(self):
+        lias = int(self.ask('LIAS?'));
+        return lias;
 
     def ask(self, cmd, timeout=3000):
         '''
@@ -331,7 +336,7 @@ class SR830(Instrument):
         table.append(['theta', snapped[3]])
         return tabulate(table, headers = ['Parameter', 'Value'])
 
-        
+
     def init_visa(self):
         self._visa_handle = visa.ResourceManager().open_resource(self.gpib_address)
         self._visa_handle.read_termination = '\n'
@@ -341,7 +346,7 @@ class SR830(Instrument):
         '''
         Looks at the magnitude and x and y components to determine whether or not we are overloading the lockin.
         There is a status byte that you can read that will supposedly tell you this as well, but it wasn't working reliably.
-        
+
         Set the threshold for changing the gain. Note that each sensitivity does allow
         inputs to be slightly higher than the nominal sensitivity.
         '''
@@ -354,7 +359,7 @@ class SR830(Instrument):
     def is_UL(self, thresh=1e-2):
         '''
         Looks at the magnitude of the larger of the x and y components to determine
-        whether or not the lockin is "underloading". This is defined by the given 
+        whether or not the lockin is "underloading". This is defined by the given
         threshold, which is by default signal/sensitivity < 0.01
         '''
         m = max(abs(np.array([self.R, self.X, self.Y]))/self.sensitivity)
