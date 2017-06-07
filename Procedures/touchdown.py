@@ -15,6 +15,24 @@ from ..Utilities.utilities import AttrDict
 _Z_PIEZO_STEP = 4  # V piezo
 _Z_PIEZO_STEP_SLOW = 4  # V piezo
 _CAPACITANCE_THRESHOLD = 1  # fF
+_VAR_THRESHOLD = 0.006
+
+def piecewise_linear(x, x0, y0, m1, m2):
+        '''A continuous piecewise linear function
+
+        Args
+        x (array-like): the domain of the function.
+        x0 (float): the x-coordinate where the function changes slope.
+        y0 (float): the y-coordinage where the function changes slope.
+        m1 (float): the slope of the function for x < x0.
+        m2 (float): the slope of the function for x > x0.
+
+        Returns
+        '''
+        return np.piecewise(x,
+                            [x < x0],
+                            [lambda x: m1*x + y0 - m1*x0,
+                             lambda x: m2*x + y0 - m2*x0])
 
 
 class Touchdown(Measurement):
@@ -44,8 +62,7 @@ class Touchdown(Measurement):
     start_offset = 0
 
     def __init__(self, instruments={}, planescan=False, Vz_max=None):
-        '''
-        Approach the sample to the SQUID while recording the capacitance 
+        '''Approach the sample to the SQUID while recording the capacitance 
         of the cantelever in a lockin measurement to detect touchdown.
 
         Arguments:
@@ -115,8 +132,7 @@ class Touchdown(Measurement):
                 raise Exception('quit by user')
 
     def check_touchdown(self):
-        '''
-        Checks for a touchdown.
+        '''Checks for a touchdown.
 
         If the last numfit points are monotically increasing and the 
         capacitance increases by an ammount larger than 
@@ -124,14 +140,16 @@ class Touchdown(Measurement):
         touchdown is detected
 
         Returns:
-        True -- when the condition above is satisfied
-        False -- when the condition above is not satisfied OR numfit 
-        points have not been collected
+        bool : True when touchdown is detected
         '''
-        i = np.where(~np.isnan(self.C))[
-            0][-1]  # index of last data point taken
-        # Chcek that enough data has been collected to do a linear fit
+        # i is the index of last data point taken
+        i = np.where(~np.isnan(self.C))[0][-1]  
+        # Check that enough data has been collected to do a linear fit
         if i > self.numfit + self.start_offset:
+            # Check if the variance of the capacitance trace is high enough.
+            if np.var(self.C[~np.isnan(self.C)]) > _VAR_THRESHOLD:
+                print("variance condition")
+                return True
             # Check if the capacitance has been high enough (above 3 fF)
             if self.C[i - self.numfit] > _CAPACITANCE_THRESHOLD:
                 # Check that the last numfit points are monotonically increasing
@@ -139,9 +157,10 @@ class Touchdown(Measurement):
                     if self.C[j + 1] - self.C[j] < 0:
                         return False
                 # If the for loop passed, then touchdown
+                print("level condition")
                 return True
         # If we haven't taken enough points
-        return False
+        return False            
 
     def configure_lockin(self):
         '''Set up lockin_cap amplifier for a touchdown.'''
@@ -165,10 +184,6 @@ class Touchdown(Measurement):
         start (float) -- Starting position (in voltage) of Z peizo.
         user (bool) -- If True, the user is asked to determine the
         touchdown voltage from the capacitance vs. position plot.
-
-        Returns:
-        voltage (float) -- position (in voltage over Z piezo) of the 
-        touchdown.
         '''
 
         Vtd = None
@@ -257,10 +272,14 @@ class Touchdown(Measurement):
                 self.touchdown = self.check_touchdown()
 
                 if self.touchdown:
-                    Vtd = self.get_touchdown_voltage()
+                    p, e = self.get_td_v()
+                    Vtd = p[0]
+                    #Vtd = self.get_touchdown_voltage()
                     td_array.append([self.atto.z.pos, Vtd])
                     print("Z attocube:" + str(self.atto.z.pos),
                           "Touchdown Voltage:" + str(Vtd))
+                    self.ax.plot(self.V, piecewise_linear(self.V, *p))
+                    self.ax.axvline(p[0], color='r')
 
                     # Added 11/1/2016 to try to handle exceptions in calculating
                     # td voltage
@@ -340,6 +359,22 @@ class Touchdown(Measurement):
 
         self.Vtd = Vtd
 
+    
+    def get_td_v(self):
+        '''Determine the touchdown voltage
+        
+        Fit a continuous piecewise linear function to the capacitance trace. The
+        point where the function transitions between the two lines is recorded
+        as the touchdown voltage.
+
+        Returns
+        p (array): Best fit parameters x0, y0, m1 and m2 (see piecewise_linear)
+        '''
+        C = self.C[~np.isnan(self.C)]
+        V = self.V[~np.isnan(self.C)]
+        p, e = curve_fit(piecewise_linear, V, C)
+        return p, e
+
     def get_touchdown_voltage(self):
         '''
         Determines the touchdown voltage.
@@ -384,7 +419,8 @@ class Touchdown(Measurement):
                 m1[j], b1, r1[j], _, _ = linregress(V[j:k], C[j:k])
 
             # Determine best approach curve
-            # Two weight factors: how much we care that it's a good fit, how much we care that the slope is near zero.
+            # Two weight factors: how much we care that it's a good fit
+            # and how much we care that the slope is near zero.
             minimize_this = (1 - r1) * 1 + abs(m1) * 100
             j = np.nanargmin(minimize_this)
 
@@ -413,7 +449,7 @@ class Touchdown(Measurement):
 
         # Update plot with new capacitance values
         self.line.set_ydata(self.C)
-        self.ax.set_ylim(-1, max(np.nanmax(self.C), 10))
+        self.ax.set_ylim(-1, max(np.nanmax(self.C), 1))
 
         self.line_app.set_xdata(self.lines_data['V_app'])
         self.line_app.set_ydata(self.lines_data['C_app'])
@@ -421,7 +457,7 @@ class Touchdown(Measurement):
         self.line_td.set_xdata(self.lines_data['V_td'])
         self.line_td.set_ydata(self.lines_data['C_td'])
 
-        self.ax.set_title(self.title, fontsize=20)
+        self.ax.set_title(self.title, fontsize=12)
 
         self.fig.canvas.draw()
 
@@ -443,7 +479,7 @@ class Touchdown(Measurement):
         line = self.ax.plot(self.V, self.C, 'k.')
         self.line = line[0]
 
-        self.ax.set_title(self.title, fontsize=20)
+        self.ax.set_title(self.title, fontsize=12)
         plt.xlabel('Piezo voltage (V)')
         plt.ylabel(r'$C - C_{balance}$ (fF)')
 
