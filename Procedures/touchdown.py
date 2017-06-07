@@ -15,7 +15,7 @@ from ..Utilities.utilities import AttrDict
 _Z_PIEZO_STEP = 4  # V piezo
 _Z_PIEZO_STEP_SLOW = 4  # V piezo
 _CAPACITANCE_THRESHOLD = 1  # fF
-_VAR_THRESHOLD = 0.006
+_VAR_THRESHOLD = 0.007
 
 def piecewise_linear(x, x0, y0, m1, m2):
         '''A continuous piecewise linear function
@@ -84,11 +84,8 @@ class Touchdown(Measurement):
         if instruments:
             self.atto.z.freq = 200
             self.configure_lockin()
-
         self.z_piezo_step = _Z_PIEZO_STEP
-
         self.Vz_max = Vz_max
-
         if Vz_max is None:
             if instruments:
                 self.Vz_max = self.piezos.z.Vmax
@@ -96,8 +93,8 @@ class Touchdown(Measurement):
                 self.Vz_max = 200  # just for the sake of having something
 
         self._init_arrays()
-
         self.planescan = planescan
+        self.flagged = False
 
     def _init_arrays(self):
         ''' Generate arrays of NaN with the correct length for the touchdown'''
@@ -148,7 +145,6 @@ class Touchdown(Measurement):
         if i > self.numfit + self.start_offset:
             # Check if the variance of the capacitance trace is high enough.
             if np.var(self.C[~np.isnan(self.C)]) > _VAR_THRESHOLD:
-                print("variance condition")
                 return True
             # Check if the capacitance has been high enough (above 3 fF)
             if self.C[i - self.numfit] > _CAPACITANCE_THRESHOLD:
@@ -272,14 +268,18 @@ class Touchdown(Measurement):
                 self.touchdown = self.check_touchdown()
 
                 if self.touchdown:
-                    p, e = self.get_td_v()
-                    Vtd = p[0]
-                    #Vtd = self.get_touchdown_voltage()
+                    # Extract the touchdown voltage.
+                    self.p, self.e = self.get_td_v()
+                    Vtd = self.p[0]
+                    self.err = np.sqrt(np.diag(self.e))
+
+                    # Check if the fit is "good" if not, flag the touchdown.
+                    if self.err[0] > 4.:
+                        self.flagged = True
+                    
                     td_array.append([self.atto.z.pos, Vtd])
-                    print("Z attocube:" + str(self.atto.z.pos),
-                          "Touchdown Voltage:" + str(Vtd))
-                    self.ax.plot(self.V, piecewise_linear(self.V, *p))
-                    self.ax.axvline(p[0], color='r')
+                    self.ax.plot(self.V, piecewise_linear(self.V, *self.p))
+                    self.ax.axvline(self.p[0], color='r')
 
                     # Added 11/1/2016 to try to handle exceptions in calculating
                     # td voltage
@@ -287,8 +287,7 @@ class Touchdown(Measurement):
                         self.touchdown = False
                         continue
 
-                    self.title = 'Touchdown detected at %.2f V!' % Vtd
-                    logging.log(self.title)
+                    self.title = 'touchdown: %.2f V, error: %.2f' % (Vtd, self.err[0])
                     self.plot()
 
                     # Don't want to move attos during planescan
@@ -449,7 +448,7 @@ class Touchdown(Measurement):
 
         # Update plot with new capacitance values
         self.line.set_ydata(self.C)
-        self.ax.set_ylim(-1, max(np.nanmax(self.C), 1))
+        self.ax.set_ylim(-0.5, max(np.nanmax(self.C), 1))
 
         self.line_app.set_xdata(self.lines_data['V_app'])
         self.line_app.set_ydata(self.lines_data['C_app'])
@@ -493,3 +492,14 @@ class Touchdown(Measurement):
         line_app = self.ax.plot([], [], orange, lw=2)
         self.line_td = line_td[0]  # plot gives us back an array
         self.line_app = line_app[0]
+
+    def gridplot(self, axes):
+        '''Compact plot of touchdown for use when taking planes'''
+        C = self.C[~np.isnan(self.C)]
+        V = self.V[~np.isnan(self.C)]
+        axes.plot(V, C, '.', color='k', markersize=2)
+        axes.plot(V, piecewise_linear(V, *self.p))
+        axes.axvline(self.p[0], color='r')
+        axes.annotate("{0:.2f}".format(self.p[0]), xy=(0.05, 0.90),
+                      xycoords="axes fraction", fontsize=8)
+        

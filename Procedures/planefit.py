@@ -34,17 +34,17 @@ class Planefit(Measurement):
         instruments (dict) -- must contain the instruments required for
         the touchdown.
 
-        span (list) -- Specifices the size [X span, Y span] of the plane
+        span (list): Specifices the size [X span, Y span] of the plane
         in voltage applied to the X and Y peizos.
 
-        center (list) -- Specifies the center of the plane 
+        center (list): Specifies the center of the plane 
         [X center, Y center] in voltage applied to the X and Y peizos.
 
-        numpts (list) -- The numper of touchdowns to take on each axis 
+        numpts (list): The numper of touchdowns to take on each axis 
         [X number, Y number]. 
 
-        Vz_max (float) -- Maximum voltage that can be applied to the Z
-        piezo. If None then the the max voltage for the piezo is used.
+        Vz_max (float):Maximum voltage that can be applied to the Zpiezo.
+        If None then the the max voltage for the piezo is used.
 
         Required instruments:
         daq, lockin_cap, attocubes, piezos, montana
@@ -97,33 +97,35 @@ class Planefit(Measurement):
 
         self.a, self.b, self.c = fit_plane(self.X, self.Y, Z)
 
-    def do(self, edges_only=False, user=False):
+    def do(self, edges_only=False):
         '''
         Do the planefit.
 
         Args:
-        edges_only (bool) -- If True touchdowns are taken only around the
+        edges_only (bool): If True touchdowns are taken only around the
         edges of the grid.
-        user (bool) -- Passed to Touchdown. Will as user to check the
+        user (bool): Passed to Touchdown. Will as user to check the
         calculated voltage after each touchdown
         '''
-
-        self.piezos.x.check_lim(self.X)
         # make sure we won't scan outside X, Y piezo ranges!
+        self.piezos.x.check_lim(self.X)
         self.piezos.y.check_lim(self.Y)
 
-        # Initial touchdown
-        print('Sweeping z piezo down...')
+        # Initial touchdown at center of plane
         self.piezos.V = {'x': self.center[0],
                          'y': self.center[1], 'z': -self.Vz_max}
-        print('...done.')
-        td = Touchdown(self.instruments, Vz_max=self.Vz_max)
-        # Initial touchdown at center of plane
+        td = Touchdown(self.instruments, Vz_max=self.Vz_max, planescan=True)
         td.run(user=user)
+        # If the initial touchdown generates a poor fit, try again
+        n = 0
+        while td.flagged and n < 5:
+            td = Touchdown(self.instruments, Vz_max=self.Vz_max, planescan=True)
+            td.run()
+            n = n + 1
         # Use the results of the first touchdown to find center of Z
         # piezo range.
         center_z_value = td.Vtd
-
+        
         # If only taking plane from edges, make masked array
         if edges_only:
             mask = np.full(self.X.shape, True)
@@ -134,11 +136,12 @@ class Planefit(Measurement):
 
             self.X = np.ma.masked_array(self.X, mask)
             self.Y = np.ma.masked_array(self.Y, mask)
-
+            
         # Loop over points sampled from plane.
         counter = 0
         for i in range(self.X.shape[0]):
             for j in range(self.X.shape[1]):
+                # If this point is masked, like in edges only, skip it
                 if np.ma.is_masked(self.X[i, j]):
                     continue
 
@@ -146,24 +149,33 @@ class Planefit(Measurement):
                 display.clear_output(wait=True)
 
                 # Go to location of next touchdown
-                logging.log('Start moving to (%.2f, %.2f)...' %
-                            (self.X[i, j], self.Y[i, j]))
                 self.piezos.V = {'x': self.X[i, j],
                                  'y': self.Y[i, j],
                                  'z': 0}
-                logging.log('Done moving to (%.2f, %.2f).' %
-                            (self.X[i, j], self.Y[i, j]))
 
-                # new touchdown at this point
+                # New touchdown at this point
+                # Take touchdowns until the fitting algorithm gives a
+                # good result, up to 5 touchdowns
                 td = Touchdown(self.instruments,
                                Vz_max=self.Vz_max, planescan=True)
                 td.title = '(%i, %i). TD# %i' % (i, j, counter)
-
-                # Do the touchdown
                 td.run(user = user)
+                plt.close(td.fig)
+                n = 0
+                while td.flagged is True and n < 5:
+                    print("Redo")
+                    td = Touchdown(self.instruments,
+                                   Vz_max = self.Vz_max, planescan=True)
+                    td.title = '(%i, %i). TD# %i' % (i, j, counter)
+                    td.run()
+                    n = i + 1
+                    plt.close(td.fig)
+                # Record the touchdown voltage and update the gridplot
                 self.Z[i, j] = td.Vtd
+                td.gridplot(self.axes[-(i+1),j])
+                self.fig.canvas.draw()
                 
-                # return to zero between points
+                # Return to zero between points.
                 self.piezos.V = 0
 
         if edges_only:
@@ -181,6 +193,7 @@ class Planefit(Measurement):
         self.Z -= (c_fit - self.c)
 
         self.plot()
+        self.axes = list(self.axes.flatten())
 
     @classmethod
     def load(cls, json_file=None, instruments={}, unwanted_keys=[]):
@@ -200,15 +213,23 @@ class Planefit(Measurement):
         Given points x and y, calculates a point z on the plane.
         '''
         return self.a * x + self.b * y + self.c
+        
 
-    def plot(self):
-        super().plot()
-
-        self.ax.scatter(self.X, self.Y, self.Z)
-
-        Zfit = self.plane(self.X, self.Y)
-        self.ax.plot_surface(self.X, self.Y, Zfit, alpha=0.2, color=[0, 1, 0])
-
+    def colorplot(self):
+        fig, ax = plt.subplots(figsize=(6,6))
+        im = ax.matshow(self.Z, origin="lower")
+        ax.xaxis.set_ticks_position("bottom")
+        # Label the axes in voltage applied to piezos
+        ax.set_xticks([0,1,2,3])
+        ax.set_yticks([0,1,2,3])
+        ax.set_xticklabels(['{:.0f}'.format(x) for x in self.X[0,:]])
+        ax.set_yticklabels(['{:.0f}'.format(y) for y in self.Y[:,0]])
+        ax.xaxis.set_ticks_position("both")
+        ax.set_xlabel("X Position (V)")
+        ax.set_ylabel("Y Position (V)")
+        plt.tight_layout()
+        return fig, ax
+        
     def save(self, savefig=True):
         '''
         Saves the planefit object to json.
@@ -220,15 +241,17 @@ class Planefit(Measurement):
         self._save(self.filename, savefig)
 
     def setup_plots(self):
-        from mpl_toolkits.mplot3d import Axes3D
-        self.fig = plt.figure()
-        self.ax = self.fig.add_subplot(111, projection='3d')
-
-        self.ax.set_xlabel('x')
-        self.ax.set_ylabel('y')
-        self.ax.set_zlabel('z')
-        plt.title(self.filename, fontsize=15)
-
+        numX, numY = self.numpts
+        self.fig = plt.figure(figsize=(numX*2,numY*2))
+        axes = []
+        for i in range(numX*numY):
+            ax = self.fig.add_subplot(numX, numY, i+1)
+            ax.set_xticks([])
+            ax.set_yticks([])
+            axes.append(ax)
+        self.fig.subplots_adjust(wspace=0, hspace=0)
+        self.axes = np.reshape(axes, self.numpts)
+    
     def surface(self, x, y):
         '''
         Does an interpolation on the surface to give an array of z values
@@ -247,10 +270,10 @@ class Planefit(Measurement):
         exceed the limits set for the voltage on the Z piezo.
 
         Args:
-        Vx (float) -- X peizo voltage for the touchdown
-        Vy (float) -- Y piezo voltage for the thouchdown
-        start (float) -- Z piezo voltage where touchdown sweep starts
-        move_attocubes (bool) -- If False attocube motion is disabled
+        Vx (float): X peizo voltage for the touchdown
+        Vy (float): Y piezo voltage for the thouchdown
+        start (float): Z piezo voltage where touchdown sweep starts
+        move_attocubes (bool): If False attocube motion is disabled
         '''
         super().__init__(instruments=self.instruments)
 
