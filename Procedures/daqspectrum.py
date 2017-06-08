@@ -20,10 +20,11 @@ class DaqSpectrum(Measurement):
     units = 'V'
     conversion = 1
 
-    def __init__(self, instruments={}, measure_time=0.5, measure_freq=256000, averages=30):
+    def __init__(self, instruments={}, measure_time=0.5, measure_freq=256000, 
+                 averages=30, annotate_notes=False):
         super().__init__(instruments=instruments)
 
-        for arg in ['measure_time','measure_freq','averages']:
+        for arg in ['measure_time','measure_freq','averages','annotate_notes']:
             setattr(self, arg, eval(arg))
 
 
@@ -58,6 +59,7 @@ class DaqSpectrum(Measurement):
         super().plot()
         self.ax['loglog'].loglog(self.f, self.psdAve*self.conversion)
         self.ax['semilog'].semilogy(self.f, self.psdAve*self.conversion)
+        self.ax['semilog'].set_xlim([self.f[0],1e3]);
 
 
     def setup_plots(self):
@@ -73,6 +75,13 @@ class DaqSpectrum(Measurement):
             ax.annotate(self.timestamp, xy=(0.02,.98), xycoords='axes fraction',
                 fontsize=10, ha='left', va = 'top', family='monospace'
             )
+            if self.annotate_notes:
+                ax.annotate(self.notes, xy=(0.02,.90), xycoords='axes fraction',
+                            fontsize=8, ha='left', va='top', family='monospace'
+                );
+        self.fig.canvas.draw();
+        plt.pause(0.01);
+
 
 
     def setup_preamp(self):

@@ -524,6 +524,7 @@ class Touchdown(Measurement):
         self.ax.set_title(self.title, fontsize=20)
 
         #self.fig.tight_layout()
+        plt.pause(0.01)
         self.fig.canvas.draw()
 
 
