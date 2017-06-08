@@ -104,8 +104,6 @@ class Planefit(Measurement):
         Args:
         edges_only (bool): If True touchdowns are taken only around the
         edges of the grid.
-        user (bool): Passed to Touchdown. Will as user to check the
-        calculated voltage after each touchdown
         '''
         # make sure we won't scan outside X, Y piezo ranges!
         self.piezos.x.check_lim(self.X)
@@ -115,16 +113,18 @@ class Planefit(Measurement):
         self.piezos.V = {'x': self.center[0],
                          'y': self.center[1], 'z': -self.Vz_max}
         td = Touchdown(self.instruments, Vz_max=self.Vz_max, planescan=True)
-        td.run(user=user)
+        td.run()
         # If the initial touchdown generates a poor fit, try again
         n = 0
         while td.flagged and n < 5:
             td = Touchdown(self.instruments, Vz_max=self.Vz_max, planescan=True)
             td.run()
             n = n + 1
-        # Use the results of the first touchdown to find center of Z
-        # piezo range.
-        center_z_value = td.Vtd
+
+        if td.flagged:
+            raise Exception("Can't fit capacitance signal.")
+        else:
+            center_z_value = td.Vtd
         
         # If only taking plane from edges, make masked array
         if edges_only:
@@ -159,7 +159,7 @@ class Planefit(Measurement):
                 td = Touchdown(self.instruments,
                                Vz_max=self.Vz_max, planescan=True)
                 td.title = '(%i, %i). TD# %i' % (i, j, counter)
-                td.run(user = user)
+                td.run()
                 plt.close(td.fig)
                 n = 0
                 while td.flagged is True and n < 5:
