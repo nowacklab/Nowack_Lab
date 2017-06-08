@@ -2,10 +2,13 @@
 # Belongs in jupyter_path = os.path.join(home, '.jupyter', 'jupyter_notebook_config.py')
 
 ## Use firefox (if Chrome runs out of memory))
-import webbrowser
-ffpath = 'C:\\Program Files (x86)\\Mozilla Firefox\\firefox.exe'
-webbrowser.register('firefox', None, webbrowser.BackgroundBrowser(ffpath), 1)
-c.NotebookApp.browser = 'firefox'
+try:
+    import webbrowser
+    ffpath = 'C:\\Program Files (x86)\\Mozilla Firefox\\firefox.exe'
+    webbrowser.register('firefox', None, webbrowser.BackgroundBrowser(ffpath), 1)
+    c.NotebookApp.browser = 'firefox'
+except:
+    pass
 
 
 import io, os, sys

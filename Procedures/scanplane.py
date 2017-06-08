@@ -1,6 +1,7 @@
 import numpy as np
 from numpy.linalg import lstsq
-import time, os
+import time
+import os
 from datetime import datetime
 from scipy.interpolate import interp1d
 import matplotlib
@@ -15,6 +16,7 @@ from ..Utilities.save import Measurement, get_todays_data_dir, get_local_data_pa
 from ..Utilities import conversions
 from ..Utilities.utilities import AttrDict
 
+
 class Scanplane(Measurement):
     """Scan over a plane while monitoring signal on DAQ
 
@@ -25,9 +27,10 @@ class Scanplane(Measurement):
             order to be initialized.
     """
     # DAQ channel labels required for this class.
-    _daq_inputs = ['dc','cap','acx','acy']
+    _daq_inputs = ['dc', 'cap', 'acx', 'acy']
     _conversions = AttrDict({
-        'dc': conversions.Vsquid_to_phi0['High'], # Assume high; changed in init when array loaded
+        # Assume high; changed in init when array loaded
+        'dc': conversions.Vsquid_to_phi0['High'],
         'cap': conversions.V_to_C,
         'acx': conversions.Vsquid_to_phi0['High'],
         'acy': conversions.Vsquid_to_phi0['High'],
@@ -51,19 +54,21 @@ class Scanplane(Measurement):
                        'atto',
                        'daq']
 
-    def __init__(self, instruments={}, plane=None, span=[800,800],
-                        center=[0,0], numpts=[20,20],
-                        scanheight=15, scan_rate=120, raster=False):
+    def __init__(self, instruments={}, plane=None, span=[800, 800],
+                 center=[0, 0], numpts=[20, 20],
+                 scanheight=15, scan_rate=120, raster=False):
 
         super().__init__(instruments=instruments)
 
         # Load the correct SAA sensitivity based on the SAA feedback
         # resistor
-        try: # try block enables creating object without instruments
+        try:  # try block enables creating object without instruments
             Vsquid_to_phi0 = conversions.Vsquid_to_phi0[self.squidarray.sensitivity]
             self._conversions['acx'] = Vsquid_to_phi0
             self._conversions['acy'] = Vsquid_to_phi0
-            self._conversions['dc'] = Vsquid_to_phi0 # doesn't consider preamp gain. If preamp communication fails, then this will be recorded
+            # doesn't consider preamp gain. If preamp communication fails, then
+            # this will be recorded
+            self._conversions['dc'] = Vsquid_to_phi0
             # Divide out the preamp gain for the DC channel
             self._conversions['dc'] /= self.preamp.gain
         except:
@@ -78,22 +83,22 @@ class Scanplane(Measurement):
         self.plane = plane
 
         self.V = AttrDict({
-           chan: np.nan for chan in self._daq_inputs + ['piezo']
+            chan: np.nan for chan in self._daq_inputs + ['piezo']
         })
         self.Vfull = AttrDict({
-           chan: np.nan for chan in self._daq_inputs + ['piezo']
+            chan: np.nan for chan in self._daq_inputs + ['piezo']
         })
         self.Vinterp = AttrDict({
-           chan: np.nan for chan in self._daq_inputs + ['piezo']
+            chan: np.nan for chan in self._daq_inputs + ['piezo']
         })
 
         self.scanheight = scanheight
 
-        x = np.linspace(center[0]-span[0]/2,
-                        center[0]+span[0]/2,
+        x = np.linspace(center[0] - span[0] / 2,
+                        center[0] + span[0] / 2,
                         numpts[0])
-        y = np.linspace(center[1]-span[1]/2,
-                        center[1]+span[1]/2,
+        y = np.linspace(center[1] - span[1] / 2,
+                        center[1] + span[1] / 2,
                         numpts[1])
 
         self.X, self.Y = np.meshgrid(x, y)
@@ -115,7 +120,7 @@ class Scanplane(Measurement):
         # Scan in X direction by default
         self.fast_axis = 'x'
 
-    def do(self, fast_axis = 'x', surface=False):
+    def do(self, fast_axis='x', surface=False):
         '''
         Routine to perform a scan over a plane.
 
@@ -131,25 +136,25 @@ class Scanplane(Measurement):
         # Check if points in the scan are within the voltage limits of
         # Piezos
         for i in range(self.X.shape[0]):
-            self.piezos.x.check_lim(self.X[i,:])
-            self.piezos.y.check_lim(self.Y[i,:])
-            self.piezos.z.check_lim(self.Z[i,:])
+            self.piezos.x.check_lim(self.X[i, :])
+            self.piezos.y.check_lim(self.Y[i, :])
+            self.piezos.z.check_lim(self.Z[i, :])
 
         # Loop over Y values if fast_axis is x,
         # Loop over X values if fast_axis is y
-        ## Print a warning if the fast_axis has fewer points than the slow.
+        # Print a warning if the fast_axis has fewer points than the slow.
         def slow_axis_alert():
             print('Slow axis has more points than fast axis!')
             import winsound
-            winsound.Beep(int(440*2**(1/2)),200) # play a tone
-            winsound.Beep(440,200) # play a tone
+            winsound.Beep(int(440 * 2**(1 / 2)), 200)  # play a tone
+            winsound.Beep(440, 200)  # play a tone
         if fast_axis == 'x':
-            num_lines = int(self.X.shape[0]) # loop over Y
-            if num_lines > int(self.X.shape[1]): # if more Y points than X
+            num_lines = int(self.X.shape[0])  # loop over Y
+            if num_lines > int(self.X.shape[1]):  # if more Y points than X
                 slow_axis_alert()
         elif fast_axis == 'y':
-            num_lines = int(self.X.shape[1]) # loop over X
-            if num_lines > int(self.X.shape[0]): # if more X points than Y
+            num_lines = int(self.X.shape[1])  # loop over X
+            if num_lines > int(self.X.shape[0]):  # if more X points than Y
                 slow_axis_alert()
         else:
             raise Exception('Specify x or y as fast axis!')
@@ -172,32 +177,32 @@ class Scanplane(Measurement):
                 break
             k = 0
             if self.raster:
-                if i%2 == 0: # if even
+                if i % 2 == 0:  # if even
                     # k keeps track of sweeping forward vs. backwards
                     k = 0
-                else: # if odd
+                else:  # if odd
                     k = -1
             # if not rastering, k=0, meaning always forward sweeps
 
             # Starting and ending piezo voltages for the line
             # for forward, starts at 0,i; backward: -1, i
             if fast_axis == 'x':
-                Vstart = {'x': self.X[i,k],
-                          'y': self.Y[i,k],
-                          'z': self.Z[i,k]}
+                Vstart = {'x': self.X[i, k],
+                          'y': self.Y[i, k],
+                          'z': self.Z[i, k]}
                 # for forward, ends at -1,i; backward: 0, i
-                Vend = {'x': self.X[i,-(k+1)],
-                        'y': self.Y[i,-(k+1)],
-                        'z': self.Z[i,-(k+1)]}
+                Vend = {'x': self.X[i, -(k + 1)],
+                        'y': self.Y[i, -(k + 1)],
+                        'z': self.Z[i, -(k + 1)]}
             elif fast_axis == 'y':
                 # for forward, starts at i,0; backward: i,-1
-                Vstart = {'x': self.X[k,i],
-                          'y': self.Y[k,i],
-                          'z': self.Z[k,i]}
+                Vstart = {'x': self.X[k, i],
+                          'y': self.Y[k, i],
+                          'z': self.Z[k, i]}
                 # for forward, ends at i,-1; backward: i,0
-                Vend = {'x': self.X[-(k+1),i],
-                        'y': self.Y[-(k+1),i],
-                        'z': self.Z[-(k+1),i]}
+                Vend = {'x': self.X[-(k + 1), i],
+                        'y': self.Y[-(k + 1), i],
+                        'z': self.Z[-(k + 1), i]}
 
             # Go to first point of scan
             self.piezos.sweep(self.piezos.V, Vstart)
@@ -207,29 +212,29 @@ class Scanplane(Measurement):
             if not surface:
                 # Sweep over X
                 output_data, received = self.piezos.sweep(Vstart, Vend,
-                                            chan_in = self._daq_inputs,
-                                            sweep_rate=self.scan_rate
-                                        )
+                                                          chan_in=self._daq_inputs,
+                                                          sweep_rate=self.scan_rate
+                                                          )
             else:
                 # 50 points should be good for giving this to
                 # piezos.sweep_surface
                 x = np.linspace(Vstart['x'], Vend['x'])
                 y = np.linspace(Vstart['y'], Vend['y'])
                 if fast_axis == 'x':
-                    Z = self.plane.surface(x,y)[:,i]
+                    Z = self.plane.surface(x, y)[:, i]
                 else:
-                    Z = self.plane.surface(x,y)[i,:]
-                output_data = {'x': x, 'y':y, 'z': Z}
+                    Z = self.plane.surface(x, y)[i, :]
+                output_data = {'x': x, 'y': y, 'z': Z}
                 output_data, received = self.piezos.sweep_surface(
                     output_data,
-                    chan_in = self._daq_inputs,
-                    sweep_rate = self.scan_rate
+                    chan_in=self._daq_inputs,
+                    sweep_rate=self.scan_rate
                 )
             # Flip the backwards sweeps
-            if k == -1: # flip only the backwards sweeps
+            if k == -1:  # flip only the backwards sweeps
                 for d in output_data, received:
                     for key, value in d.items():
-                        d[key] = value[::-1] # flip the 1D array
+                        d[key] = value[::-1]  # flip the 1D array
 
             # Return to zero for a couple of seconds:
             self.piezos.V = 0
@@ -238,10 +243,9 @@ class Scanplane(Measurement):
             # Interpolate to the number of lines
             self.Vfull['piezo'] = output_data[fast_axis]
             if fast_axis == 'x':
-                self.Vinterp['piezo'] = self.X[i,:]
+                self.Vinterp['piezo'] = self.X[i, :]
             elif fast_axis == 'y':
-                self.Vinterp['piezo'] = self.Y[:,i]
-
+                self.Vinterp['piezo'] = self.Y[:, i]
 
             # Store this line's signals for Vdc, Vac x/y, and Cap
             for chan in self._daq_inputs:
@@ -260,14 +264,14 @@ class Scanplane(Measurement):
                     self.Vinterp[chan] = interp1d(
                         self.Vfull['piezo'],
                         self.Vfull[chan])(self.Vinterp['piezo']
-                        )
-                    self.V[chan][i,:] = self.Vinterp[chan]
+                                          )
+                    self.V[chan][i, :] = self.Vinterp[chan]
                 else:
                     self.Vinterp[chan] = interp1d(
                         self.Vfull['piezo'],
                         self.Vfull[chan])(self.Vinterp['piezo']
-                        )
-                    self.V[chan][:,i] = self.Vinterp[chan]
+                                          )
+                    self.V[chan][:, i] = self.Vinterp[chan]
 
             self.save_line(i, Vstart)
             self.plot()
@@ -285,7 +289,7 @@ class Scanplane(Measurement):
 
         # Iterate over the color plots and update data with new line
         for chan in self._daq_inputs:
-            data_nan = np.array(self.V[chan]*self._conversions[chan],
+            data_nan = np.array(self.V[chan] * self._conversions[chan],
                                 dtype=np.float)
             data_masked = np.ma.masked_where(np.isnan(data_nan), data_nan)
 
@@ -299,8 +303,9 @@ class Scanplane(Measurement):
 
         self.fig.canvas.draw()
 
-        ## Do not flush events for inline or notebook backends
-        if matplotlib.get_backend() in ('nbAgg','module://ipykernel.pylab.backend_inline'):
+        # Do not flush events for inline or notebook backends
+        if matplotlib.get_backend() in ('nbAgg',
+                                        'module://ipykernel.pylab.backend_inline'):
             return
 
         self.fig.canvas.flush_events()
@@ -311,30 +316,31 @@ class Scanplane(Measurement):
         '''
         # Use the aspect ratio of the image set subplot size.
         # The aspect ratio is Xspan/Yspan
-        aspect = self.span[0]/self.span[1]
+        aspect = self.span[0] / self.span[1]
         numplots = 4
         # If X is longer than Y we want 2 columns of wide plots
         if aspect > 1:
-            num_row = int(np.ceil(numplots/2))
+            num_row = int(np.ceil(numplots / 2))
             num_col = 2
             width = 14
             # Add 1 to height for title/axis labels
-            height = min(width, width/aspect) + 1
+            height = min(width, width / aspect) + 1
         # If Y is longer than X we want 2 rows of tall plots
         else:
             num_row = 2
-            num_col = int(np.ceil(numplots/2))
+            num_col = int(np.ceil(numplots / 2))
             height = 10
             # Pad the plots for the colorbars/axis labels
-            width = min(height, height*aspect) + 4
+            width = min(height, height * aspect) + 4
 
         self.fig, self.axes = plt.subplots(num_row,
                                            num_col,
                                            figsize=(width, height))
-        self.fig_cuts, self.axes_cuts = plt.subplots(4, 1, figsize=(6,8),
+        self.fig_cuts, self.axes_cuts = plt.subplots(4, 1, figsize=(6, 8),
                                                      sharex=True)
         # Convert the axis numpy arrays to list so they aren't saved as data.
-        self.axes = list(self.axes.flatten()) # Change these back to dicts eventually.
+        # Change these back to dicts eventually.
+        self.axes = list(self.axes.flatten())
         self.axes_cuts = list(self.axes_cuts.flatten())
         cmaps = ['RdBu',
                  'afmhot',
@@ -356,21 +362,21 @@ class Scanplane(Measurement):
                                           cmaps,
                                           clabels):
             # Convert None in data to NaN
-            nan_data = np.array(self.V[chan]*self._conversions[chan])
+            nan_data = np.array(self.V[chan] * self._conversions[chan])
             # Create masked array where data is NaN
             masked_data = np.ma.masked_where(np.isnan(nan_data), nan_data)
 
             # Plot masked data on the appropriate axis with imshow
             image = ax.imshow(masked_data, cmap=cmap, origin="lower",
-                              extent = [self.X.min(), self.X.max(),
-                                        self.Y.min(), self.Y.max()])
+                              extent=[self.X.min(), self.X.max(),
+                                      self.Y.min(), self.Y.max()])
 
             # Create a colorbar that matches the image height
             d = make_axes_locatable(ax)
             cax = d.append_axes("right", size=0.1, pad=0.1)
             cbar = plt.colorbar(image, cax=cax)
             cbar.set_label(clabel, rotation=270, labelpad=12)
-            cbar.formatter.set_powerlimits((-2,2))
+            cbar.formatter.set_powerlimits((-2, 2))
             self.im[chan] = image
             self.cbars[chan] = cbar
 
@@ -380,12 +386,11 @@ class Scanplane(Measurement):
             title = ax.set_title(self.timestamp, size="medium", y=1.02)
             # If the title intersects the exponent label from the colorbar
             # shift the title up and center it
-            # TODO
 
         # Plot the last linecut for DC, AC and capacitance signals
-        for ax, chan, clabel in zip (self.axes_cuts,
-                                     self._daq_inputs,
-                                     clabels):
+        for ax, chan, clabel in zip(self.axes_cuts,
+                                    self._daq_inputs,
+                                    clabels):
             # ax.plot returns a list containing the line
             # Take the line object - not the list containing the line
             self.lines_full[chan] = ax.plot(self.Vfull['piezo'],
@@ -395,8 +400,8 @@ class Scanplane(Measurement):
                                               self.Vinterp[chan], 'ok',
                                               markersize=3)[0]
             ax.set_ylabel(clabel)
-            ## Scientific notation for <10^-2, >10^2
-            ax.yaxis.get_major_formatter().set_powerlimits((-2,2))
+            # Scientific notation for <10^-2, >10^2
+            ax.yaxis.get_major_formatter().set_powerlimits((-2, 2))
         # Label the X axis of only the bottom plot
         self.axes_cuts[-1].set_xlabel("Position (V)")
         # Title the top plot with the timestamp
@@ -407,10 +412,9 @@ class Scanplane(Measurement):
         self.fig.tight_layout()
         self.fig_cuts.tight_layout()
 
-        ## Show the (now empty) figures
+        # Show the (now empty) figures
         self.fig.canvas.draw()
         self.fig_cuts.canvas.draw()
-
 
     def plot_line(self):
         '''
@@ -418,9 +422,9 @@ class Scanplane(Measurement):
 
         '''
         clabels = ['DC Flux ($\Phi_o$)',
-                    'Capacitance (F)',
-                    'AC X ($\Phi_o$)',
-                    'AC Y ($\Phi_o$)']
+                   'Capacitance (F)',
+                   'AC X ($\Phi_o$)',
+                   'AC Y ($\Phi_o$)']
         for ax, chan, clabel in zip(self.axes_cuts, self._daq_inputs, clabels):
             # Update X and Y data for the "full data"
             self.lines_full[chan].set_xdata(self.Vfull['piezo'] *
@@ -429,21 +433,21 @@ class Scanplane(Measurement):
                                             self._conversions[chan])
             # Update X and Y data for the interpolated data
             self.lines_interp[chan].set_xdata(self.Vfull['piezo'] *
-                                            self._conversions[self.fast_axis])
+                                              self._conversions[self.fast_axis])
             self.lines_interp[chan].set_ydata(self.Vfull[chan] *
-                                            self._conversions[chan])
+                                              self._conversions[chan])
             # Rescale axes for newly plotted data
             ax.relim()
             ax.autoscale_view()
         # Update the figure
         self.fig_cuts.canvas.draw()
 
-        ## Do not flush events for inline or notebook backends
-        if matplotlib.get_backend() in ('nbAgg','module://ipykernel.pylab.backend_inline'):
+        # Do not flush events for inline or notebook backends
+        if matplotlib.get_backend() in ('nbAgg',
+                                        'module://ipykernel.pylab.backend_inline'):
             return
 
         self.fig_cuts.canvas.flush_events()
-
 
     def save_line(self, i, Vstart):
         '''
@@ -464,5 +468,9 @@ class Line(Measurement):
         super().__init__()
 
     def save(self):
-        filename_in_extras = os.path.join(get_local_data_path(), get_todays_data_dir(), 'extras', self.filename)
+        filename_in_extras = os.path.join(
+            get_local_data_path(),
+            get_todays_data_dir(),
+            'extras',
+            self.filename)
         self._save(filename_in_extras)
