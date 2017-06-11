@@ -164,7 +164,7 @@ class SR830(Instrument):
 
     @property
     def input_mode(self):
-        self._input_mode = _input_modes[int(self.ask('ISRC?'))]
+        self._input_mode = self._input_modes[int(self.ask('ISRC?'))]
         return self._input_mode
 
     @input_mode.setter

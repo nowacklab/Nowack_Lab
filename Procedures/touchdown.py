@@ -359,7 +359,7 @@ class Touchdown(Measurement):
 
         Vtd = None
         slow_scan = False
-        # td_array = []
+        # td_array = [] # looks like we never used this...
 
         # start = {None          if you are planescanning /
         #                        if attocubes never moved
@@ -432,7 +432,6 @@ class Touchdown(Measurement):
                     if self.err[0] > 4.:
                         self.flagged = True
                     
-                    td_array.append([self.atto.z.pos, Vtd])
                     self.ax.plot(self.V, piecewise_linear(self.V, *self.p))
                     self.ax.axvline(self.p[0], color='r')
 
@@ -446,7 +445,7 @@ class Touchdown(Measurement):
                     self.plot()
 
                     # Don't want to move attos during planescan
-                     if not self.planescan:
+                    if not self.planescan:
                         # Check if touchdown near center of z piezo +V range
                         [slow_scan, start] = self._cntr_td_w_atto(slow_scan,
                                                                   Vtd, start);

@@ -301,6 +301,7 @@ class Scanplane(Measurement):
             # Update the colorbars
             self.cbars[chan].draw_all()
 
+        plt.pause(0.01) #non notebook non-responsive fig bug
         self.fig.canvas.draw()
 
         # Do not flush events for inline or notebook backends
@@ -413,6 +414,7 @@ class Scanplane(Measurement):
         self.fig_cuts.tight_layout()
 
         # Show the (now empty) figures
+        plt.pause(0.01) #non notebook non-responsive fig bug
         self.fig.canvas.draw()
         self.fig_cuts.canvas.draw()
 
@@ -440,6 +442,7 @@ class Scanplane(Measurement):
             ax.relim()
             ax.autoscale_view()
         # Update the figure
+        plt.pause(0.01) #non notebook non-responsive fig bug
         self.fig_cuts.canvas.draw()
 
         # Do not flush events for inline or notebook backends

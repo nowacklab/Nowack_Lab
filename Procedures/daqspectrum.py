@@ -43,6 +43,10 @@ class DaqSpectrum(Measurement):
                     'annotate_notes']:
             setattr(self, arg, eval(arg))
 
+        # set default values so DaqSpectrum works
+        self.units = 'V';
+        self.conversion = 1;
+
     def do(self):
         """Do the DaqSpectrum measurment."""
         self.setup_preamp()
