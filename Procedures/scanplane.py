@@ -339,7 +339,6 @@ class Scanplane(Measurement):
         self.fig_cuts, self.axes_cuts = plt.subplots(4, 1, figsize=(6, 8),
                                                      sharex=True)
         # Convert the axis numpy arrays to list so they aren't saved as data.
-        # Change these back to dicts eventually.
         self.axes = list(self.axes.flatten())
         self.axes_cuts = list(self.axes_cuts.flatten())
         cmaps = ['RdBu',
@@ -427,19 +426,18 @@ class Scanplane(Measurement):
                    'AC Y ($\Phi_o$)']
         for ax, chan, clabel in zip(self.axes_cuts, self._daq_inputs, clabels):
             # Update X and Y data for the "full data"
-            self.lines_full[chan].set_xdata(self.Vfull['piezo'] *
-                                            self._conversions[self.fast_axis])
+            self.lines_full[chan].set_xdata(self.Vfull['piezo'])
             self.lines_full[chan].set_ydata(self.Vfull[chan] *
                                             self._conversions[chan])
             # Update X and Y data for the interpolated data
-            self.lines_interp[chan].set_xdata(self.Vfull['piezo'] *
-                                              self._conversions[self.fast_axis])
+            self.lines_interp[chan].set_xdata(self.Vfull['piezo'])
             self.lines_interp[chan].set_ydata(self.Vfull[chan] *
                                               self._conversions[chan])
             # Rescale axes for newly plotted data
             ax.relim()
             ax.autoscale_view()
         # Update the figure
+        plt.pause(0.01)
         self.fig_cuts.canvas.draw()
 
         # Do not flush events for inline or notebook backends

@@ -6,6 +6,7 @@ import os
 import glob
 from datetime import datetime
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from ..Utilities import logging
 from ..Instruments import piezos, montana
 from IPython import display
@@ -197,11 +198,11 @@ class Planefit(Measurement):
 
     @classmethod
     def load(cls, json_file=None, instruments={}, unwanted_keys=[]):
-        '''
+        """
         Plane load method.
         If no json_file specified, will load the last plane taken.
         Useful if you lose the object while scanning.
-        '''
+        """
         unwanted_keys.append('preamp')
         obj = super(Planefit, cls).load(json_file, instruments, unwanted_keys)
         obj.instruments = instruments
@@ -216,19 +217,47 @@ class Planefit(Measurement):
         
 
     def colorplot(self):
-        fig, ax = plt.subplots(figsize=(6,6))
-        im = ax.matshow(self.Z, origin="lower")
-        ax.xaxis.set_ticks_position("bottom")
-        # Label the axes in voltage applied to piezos
-        ax.set_xticks([0,1,2,3])
-        ax.set_yticks([0,1,2,3])
-        ax.set_xticklabels(['{:.0f}'.format(x) for x in self.X[0,:]])
-        ax.set_yticklabels(['{:.0f}'.format(y) for y in self.Y[:,0]])
-        ax.xaxis.set_ticks_position("both")
-        ax.set_xlabel("X Position (V)")
-        ax.set_ylabel("Y Position (V)")
+        """Visualize a plane and compare to touchdown voltages.
+
+        Generates two colorplots:
+        1. Plots the touchdown voltages in a grid.
+        2. Plots the difference between the measured touchdown voltage
+        and the fit plane.
+        """
+        # Compute the difference between the fit plane and the touchdowns
+        Z_diff = self.Z - self.plane(self.X, self.Y)
+
+        # Set up figure and plot Z and Z_diff
+        fig, axes = plt.subplots(1, 2, figsize=(6,3))
+        im0 = axes[0].matshow(self.Z, origin="lower")
+        im1 = axes[1].matshow(Z_diff, origin="lower", cmap="RdBu")
+        ims = [im0, im1]
+        axes[0].set_title("Touchdown Voltages", size="medium")
+        axes[1].set_title(r"$V_{td} - V_{fit}$", size="medium")
+
+        # Reformat the axes
+        for ax, im in zip(axes, ims):
+            ax.xaxis.set_ticks_position("bottom")
+            # Label the axes in voltage applied to piezos
+            ax.set_xticks([0,1,2,3])
+            ax.set_yticks([0,1,2,3])
+            ax.set_xticklabels(['{:.0f}'.format(x) for x in self.X[0,:]])
+            ax.xaxis.set_ticks_position("both")
+            ax.set_xlabel("X Position (V)")
+
+            # Add colorbars
+            d = make_axes_locatable(ax)
+            cax = d.append_axes("right", 0.1, 0.1)
+            print(type(im))
+            cbar = plt.colorbar(im, cax)
+
+        # Label the Y axis of only the left-most plot
+        axes[0].set_yticklabels(['{:.0f}'.format(y) for y in self.Y[:,0]])
+        axes[1].set_yticklabels([])
+        axes[0].set_ylabel("Y Position (V)")
+        
         plt.tight_layout()
-        return fig, ax
+        return fig, axes
         
     def save(self, savefig=True):
         '''
