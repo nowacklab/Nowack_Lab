@@ -61,6 +61,10 @@ class DaqSpectrum(Measurement):
         self.units = 'V';
         self.conversion = 1;
 
+        self.V = np.zeros( 
+            ( self.averages, int(self.measure_time * self.measure_freq) )
+        );
+
     def do(self):
         """Do the DaqSpectrum measurment."""
         self.setup_preamp()
@@ -84,10 +88,9 @@ class DaqSpectrum(Measurement):
                                         )
             # Unpack data recieved from daq.
             # Divide out any preamp gain applied.
-            # TODO: save each voltage, find out what is saved in h5
-            self.V = received['dc'] / self.preamp.gain
+            self.V[i] = received['dc'] / self.preamp.gain
             self.t = received['t']
-            self.f, psd = signal.periodogram(self.V, self.measure_freq,
+            self.f, psd = signal.periodogram(self.V[i], self.measure_freq,
                                              'blackmanharris')
             psdAve = psdAve + psd
             
