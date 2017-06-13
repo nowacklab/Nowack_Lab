@@ -56,7 +56,10 @@ class PFL102(Instrument):
     A_flux_lim = 200
     offset_lim = 9.8
     amplifierGain = 5040.0
-    param_filename = os.path.join(os.path.dirname(__file__),'squidarray_params.json')
+
+    #fixme: save to somewhere in the data path, not in the code's path
+    param_filename = os.path.join(os.path.dirname(__file__),'squidarray_params.json') 
+
 
 
     def __init__(self, channel, pci):
@@ -316,7 +319,7 @@ class PFL102(Instrument):
 
 
     @staticmethod
-    def load(json_file=None):
+    def load(json_file=None, visaResource='COM3'):
         '''
         Load last saved parameters for the array from a file.
         '''
@@ -331,7 +334,8 @@ class PFL102(Instrument):
         obj_string = json.dumps(obj_dict)
         obj = jsp.decode(obj_string)
 
-        obj.pci = PCI100()
+        
+        obj.pci = PCI100(visaResource=visaResource)
         return obj
 
 
@@ -459,6 +463,7 @@ class SquidArray(PFL102):
     _label = 'squidarray'
     def __init__(self, visaResource='COM3'):
         super().__init__(1, PCI100(visaResource=visaResource))
+        self._visaResource = visaResource;
 
     def tune(self):
         '''

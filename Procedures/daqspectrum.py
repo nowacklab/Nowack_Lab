@@ -25,7 +25,14 @@ class DaqSpectrum(Measurement):
             measure_time=0.5,
             measure_freq=256000,
             averages=30,
-            annotate_notes=False):
+            annotate_notes=False,
+            preamp_gain_override = True,
+            preamp_gain = 1,
+            preamp_filter_override = False,
+            preamp_filter = (0,100e3),
+            preamp_dccouple_override = False,
+            preamp_dccouple=True,
+            ):
         """Create a DaqSpectrum object
         
         Args:
@@ -40,7 +47,14 @@ class DaqSpectrum(Measurement):
         for arg in ['measure_time', 
                     'measure_freq', 
                     'averages',
-                    'annotate_notes']:
+                    'annotate_notes',
+                    'preamp_gain',
+                    'preamp_gain_override',
+                    'preamp_filter',
+                    'preamp_filter_override',
+                    'preamp_dccouple',
+                    'preamp_dccouple_override'
+                    ]:
             setattr(self, arg, eval(arg))
 
         # set default values so DaqSpectrum works
@@ -70,6 +84,7 @@ class DaqSpectrum(Measurement):
                                         )
             # Unpack data recieved from daq.
             # Divide out any preamp gain applied.
+            # TODO: save each voltage, find out what is saved in h5
             self.V = received['dc'] / self.preamp.gain
             self.t = received['t']
             self.f, psd = signal.periodogram(self.V, self.measure_freq,
@@ -117,8 +132,13 @@ class DaqSpectrum(Measurement):
         if not hasattr(self, 'preamp') or self.preamp is None:
             print('No preamp!')
             return
-        self.preamp.filter = (0, 100e3)
-        self.preamp.dc_coupling()
+        if not self.preamp_gain_override:
+            self.preamp.gain = self.preamp_gain;
+        if not self.preamp_filter_override:
+            self.preamp.filter = self.preamp_filter;
+        if not self.preamp_dccouple_override:
+            self.preamp.dc_coupling(self.preamp_dccouple)
+
         self.preamp.diff_input(False)
         self.preamp.filter_mode('low', 12)
 
