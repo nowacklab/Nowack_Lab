@@ -2,7 +2,7 @@ To do:
 
 Write common functions for plotting (e.g. colorbar)
 
-plot_before and plot_after in a plot function. 
+plot_before and plot_after in a plot function.
 so
 def plot(self, *args, **kwargs):
     plot_before()
@@ -16,3 +16,15 @@ Or better:
 A bunch of drawing things can go into plot_draw, esp. flush_events for non-notebook plotting
 
 Reinstate _chan_labels as _daq_inputs and add _daq_outputs
+
+Figure out notebook shared secret to avoid "untrusted" notebooks.
+
+Add time estimates to procedures somehow
+
+Batch file to run PPMS server
+
+Reminder in init to set a backend
+
+Possible to control lockins from secondary kernel?
+
+Connect to data server remotely.

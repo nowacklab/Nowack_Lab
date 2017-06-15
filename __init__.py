@@ -20,7 +20,6 @@ try:
 except:
     pass
 print('Use save.set_experiment_data_dir to change experiments')
-
 # inp = input('New experiment? y/(n): ')
 # if inp in ('y', 'Y'):
 #     while True:
