@@ -19,15 +19,17 @@ try:
     print('Current experiment: %s' %save.get_experiment_data_dir())
 except:
     pass
-inp = input('New experiment? y/(n): ')
-if inp in ('y', 'Y'):
-    while True:
-        inp2 = input('Enter description of experiment: ')
-        if inp2.find(' ') != -1:
-            print('This is going to be a folder name. Please don\'t use spaces!')
-        else:
-            break
-    save.set_experiment_data_dir(inp2)
+print('Use save.set_experiment_data_dir to change experiments')
+
+# inp = input('New experiment? y/(n): ')
+# if inp in ('y', 'Y'):
+#     while True:
+#         inp2 = input('Enter description of experiment: ')
+#         if inp2.find(' ') != -1:
+#             print('This is going to be a folder name. Please don\'t use spaces!')
+#         else:
+#             break
+#     save.set_experiment_data_dir(inp2)
 
 ## Check for remote data server connection
 if not os.path.exists(save.get_data_server_path()):
@@ -47,7 +49,7 @@ from time import sleep
 import sys, os
 
 ## Because I don't know how to do this otherwise, importing all functions and modules that we want in the namespace.
-from Nowack_Lab.Utilities import utilities, save, logging, conversions, anim
+from Nowack_Lab.Utilities import utilities, save, logging, conversions, anim, constants
 from Nowack_Lab.Utilities.plotting import plot_mpl
 from Nowack_Lab.Utilities.save import Measurement
 from Nowack_Lab.Procedures.daqspectrum import DaqSpectrum, SQUIDSpectrum

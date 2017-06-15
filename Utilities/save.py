@@ -151,8 +151,14 @@ class Measurement:
                     d[key] = walk(d[key])
             return d
 
-
         obj_dict = walk(obj_dict)
+
+        # If the class of the object is custom defined in __main__, then just
+        # load it as a measurement.
+        if '__main__' in obj_dict['py/object']:
+            obj_dict['py/object'] = 'Nowack_Lab.Utilities.save.Measurement'
+
+        # Decode with jsonpickle.
         obj_string = json.dumps(obj_dict)
         obj = jsp.decode(obj_string)
 
