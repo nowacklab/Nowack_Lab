@@ -10,9 +10,10 @@ for cg in COARSE_GAIN:
 FILTER = [0, 0.03, 0.1, 0.3, 1, 3, 10, 30, 100, 300, 1000, 3000, 10000, 30000, 100000, 300000]
 
 class SR5113(Instrument):
-    _label = 'preamp'
-    _gain = None
-    _filter = None
+    _label = 'preamp' 
+
+    #Put the gains as class variable tuples
+
     def __init__(self, port='COM1'):
         '''
         Driver for the Signal Recovery 5113 preamplifier.
@@ -30,7 +31,10 @@ class SR5113(Instrument):
         #might be better to save "gain" and "filter" in the Measurement, since
         #they are chosen in the Measurement
         self._save_dict = {"gain": self.gain,
-                          "filter": self.filter}
+                          "filter": self.filter,
+                          "dccoupled": self.is_dc_coupled(),
+                          "overloaded": self.is_OL()
+                          }
         return self._save_dict
 
 
@@ -132,7 +136,21 @@ class SR5113(Instrument):
             return False
 
     def dc_coupling(self, dc=True):
+        '''
+        Sets the preamp ac/dc coupling
+        '''
         self.write('CP%i' %(dc)) # 0 = ac, 1=dc
+
+    def is_dc_coupled(self):
+        '''
+        Reads the ac/dc coupling.  Returns true if dc coupled and false
+        if ac coupled.
+        '''
+        msg = self.write('CP?', read=True);
+        if int(msg) == 1:
+            return True;
+        return False;
+
 
     def dr_high(self, high=True):
         self.write('DR%i' %(high)) # 0 = low noise, 1=high reserve

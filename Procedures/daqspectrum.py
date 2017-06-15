@@ -8,6 +8,7 @@ from ..Instruments import nidaq, preamp
 from ..Utilities.save import Measurement
 from ..Utilities.utilities import AttrDict
 from ..Utilities import conversions
+import time
 
 
 class DaqSpectrum(Measurement):
@@ -32,6 +33,7 @@ class DaqSpectrum(Measurement):
             preamp_filter = (0,100e3),
             preamp_dccouple_override = False,
             preamp_dccouple=True,
+            preamp_autoOL=True
             ):
         """Create a DaqSpectrum object
         
@@ -41,6 +43,19 @@ class DaqSpectrum(Measurement):
             channel
         measure_freq (int?): frequency that the DAQ measures the output channel
         averages (int): number of time traces averaged before computing the FFT
+
+        annotate_notes           Boolean, turns on and off the notes on the plot
+        preamp_gain_override     Boolean, if True, code won't change gain
+        preamp_gain              int, value to set the preamp gain
+        preamp_filter_override   Boolean, if true, code won't change filter
+        preamp_filter            two-ple of ints, (0,100e3), sets filter freq
+        preamp_dccouple_override Boolean, if true, code won't change dc/ac 
+                                 couple.  This persists in the auto overload
+                                 functionality
+        preamp_autoOL            Boolean, if true, allows the code to try and
+                                 adjust the ac/dc coupling (disable with 
+                                 preamp_dccouple_override=True) and the gain to
+                                 prevent the preamp from overloading
         """
         super().__init__(instruments=instruments)
         
@@ -53,7 +68,8 @@ class DaqSpectrum(Measurement):
                     'preamp_filter',
                     'preamp_filter_override',
                     'preamp_dccouple',
-                    'preamp_dccouple_override'
+                    'preamp_dccouple_override',
+                    'preamp_autoOL'
                     ]:
             setattr(self, arg, eval(arg))
 
@@ -105,6 +121,11 @@ class DaqSpectrum(Measurement):
         self.ax['loglog'].loglog(self.f, self.psdAve*self.conversion)
         self.ax['semilog'].semilogy(self.f, self.psdAve*self.conversion)
         self.ax['semilog'].set_xlim([self.f[0],1e3]);
+        for ax in [self.ax['loglog'], self.ax['semilog']]:
+            if self.annotate_notes:
+                ax.annotate(self.notes, xy=(0.02,.90), xycoords='axes fraction',
+                        fontsize=8, ha='left', va='top', family='monospace'
+                );
 
 
     def setup_plots(self):
@@ -123,10 +144,7 @@ class DaqSpectrum(Measurement):
             ax.annotate(self.timestamp, xy=(0.02,.98), xycoords='axes fraction',
                 fontsize=10, ha='left', va = 'top', family='monospace'
             )
-            if self.annotate_notes:
-                ax.annotate(self.notes, xy=(0.02,.90), xycoords='axes fraction',
-                            fontsize=8, ha='left', va='top', family='monospace'
-                );
+
         self.fig.canvas.draw();
         plt.pause(0.01);
 
@@ -145,6 +163,55 @@ class DaqSpectrum(Measurement):
         self.preamp.diff_input(False)
         self.preamp.filter_mode('low', 12)
 
+        if self.preamp.is_OL() and self.preamp_autoOL:
+            self.preamp_OL();
+
+    def preamp_OL(self):
+        '''
+        Try to fix overloading preamp
+        '''
+        if self.preamp_dccouple_override: #cannot change dccouple
+            self._preamp_OL_changegain();
+        else:
+            # If not AC coupling, AC couple
+            if self.preamp_dccouple is True:
+                self.preamp_dccouple = False;
+                self.preamp.dc_coupling(self.preamp_dccouple);
+                self._preamp_OL_changegain();
+
+        # Now I've done all we can do.  Set to minimum and record if its bad
+        if self.preamp.is_OL():
+            self.preamp_gain = 1;
+            self.preamp.gain=self.preamp_gain;
+            self.preamp.recover();
+            time.sleep(12);
+            if self.preamp.is_OL():
+                self.preamp_OL = True;
+        self.preamp_OL = False;
+
+    def _preamp_OL_changegain(self):
+        '''
+        Lower preamp gain until no longer overloading
+        Waits 10 s (max AC couple time constant) if ac coupled
+        '''
+        GAIN = np.array([1,2,3,4,5,10,25,50,100,250]);
+        while self.preamp.is_OL() and self.preamp.gain > 1:
+            thisgainindex = np.abs(GAIN-self.preamp.gain).argmin();
+            if thisgainindex == 0:
+                self.preamp.gain=1;
+                return;
+            self.preamp_gain = GAIN[thisgainindex-1];
+            self.preamp.gain = self.preamp_gain;
+            self.preamp.recover();
+            if self.preamp_dccouple is False:
+                time.sleep(12) # >10, in case slow communication
+
+
+
+
+
+
+
 
 class SQUIDSpectrum(DaqSpectrum):
     """Wrapper for DAQSpectrum that converts from V to Phi_o."""
@@ -154,3 +221,61 @@ class SQUIDSpectrum(DaqSpectrum):
         super().__init__(*args, **kwargs)
         self.units = '\phi_0'
         self.conversion = conversions.Vsquid_to_phi0[self.squidarray.sensitivity]
+
+class AnnotatedSpectrum(DaqSpectrum):
+    instrument_list=['lockin_cap','preamp','squidarray', 'piezos'];
+
+    def __init__(self, CAP_I, *args, 
+        notes='Annotated Spectrum',**kwargs
+    ):
+        '''
+        '''
+        super().__init__(*args, annotate_notes=True, **kwargs)
+        self.notes = notes;
+        self.CAP_I = CAP_I
+
+    def plot(self, *args, **kwargs):
+        '''
+        Overloaded plot to force the generation of notes
+        '''
+        # Stupid order because I want the notes to be changed before any one
+        # has a chance to plot anything
+        self.notes = self.notes + (
+        "\n"+
+        "[x,y,z] = [{0:d},{1:d},{2:d}]\n".format(
+                int(self.piezos.V['x']), 
+                int(self.piezos.V['y']), 
+                int(self.piezos.V['z'])
+            )+
+        "[c, c0] = [{0:2.2e}, {1:2.2e}]\n".format(
+                self.lockin_cap.R,
+                self.CAP_I
+            )+
+        "[gain, filter f, dc couple?, OL?] = [{0:d}, {1:2.2e}, {2}, {3}]\n".format(
+                self.preamp.gain,
+                self.preamp.filter[1],
+                self.preamp.is_dc_coupled(),
+                self.preamp.is_OL()
+            )+
+        "[time, averages] = [{0:2.2f}, {1:d}]\n".format(
+                self.measure_time,
+                self.averages
+            )+
+        "[A_bias, A_flux, S_bias, S_flux] = "
+        "[{0:2.2f}, {1:2.2f}, {3:2.2f}, {3:2.2f}]\n".format(
+                self.squidarray.A_bias,
+                self.squidarray.A_flux,
+                self.squidarray.S_bias,
+                self.squidarray.S_flux
+            )+
+        "[Alocked, Slocked, sensitivity] = [{0}, {1}, {2}]\n".format(
+                self.squidarray.__getstate__()['Array locked'],
+                self.squidarray.__getstate__()['SQUID locked'],
+                self.squidarray.__getstate__()['sensitivity']
+            )+
+        "[units, conversion] = [{0},{1:2.4f}]".format(
+                self.units,
+                self.conversion
+            )
+        )
+        super().plot(*args, **kwargs);
