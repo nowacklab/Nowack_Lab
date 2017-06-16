@@ -328,11 +328,15 @@ class RvsSomething(Measurement):
                     add_text_to_legend('Vg = %.1f V' %self.keithley.V)
 
     def setup_lockins(self):
-        self.lockin_V1.input_mode = 'A-B'
-        self.lockin_I.input_mode = 'I (10^8)'
-        self.lockin_V1.reference = 'internal'
-#         self.lockin_V.frequency = 53.01
-        self.lockin_I.reference = 'external'
+        '''
+        Set up lockins manually instead.
+        '''
+        pass
+#         self.lockin_V1.input_mode = 'A-B'
+#         self.lockin_I.input_mode = 'I (10^8)'
+#         self.lockin_V1.reference = 'internal'
+# #         self.lockin_V.frequency = 53.01
+#         self.lockin_I.reference = 'external'
 
 
     def setup_plots(self):
@@ -407,6 +411,7 @@ class RvsVg(RvsSomething):
     instrument_list = ['keithley', 'lockin_V', 'lockin_I']
     something = 'Vg'
     something_units = 'V'
+    Igwarning = None
 
     def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1, delay=1, fine_range=None):
         '''
@@ -426,9 +431,9 @@ class RvsVg(RvsSomething):
         else: # Use more points if a fine range specified
             Vmin = fine_range[0]
             Vmax = fine_range[1]
-            numpts_sm = round(abs(Vmin-Vstart)/Vstep)+1
-            numpts_mm = round(abs(Vmin-Vmax)/Vstep*10)+1
-            numpts_me = round(abs(Vmax-Vend)/Vstep)+1
+            numpts_sm = round(abs(Vmin-Vstart)/Vstep)+1 # sm = "start min"
+            numpts_mm = round(abs(Vmin-Vmax)/Vstep*10)+1 # mm = "min max"
+            numpts_me = round(abs(Vmax-Vend)/Vstep)+1 # me = "max end"
             self.Vg_values = np.concatenate((
                     np.linspace(Vstart, Vmin, numpts_sm, endpoint=False),
                     np.linspace(Vmin, Vmax, numpts_mm, endpoint=False),
@@ -530,15 +535,18 @@ class RvsVg(RvsSomething):
 
 
     def plot(self):
+        '''
+        Plots using superclass function and adds warning for Ig > 0.5 nA
+        '''
         super().plot()
-
-        self.lineIg.set_xdata(self.Vg)
-        self.lineIg.set_ydata(self.Ig*1e9)
-        self.axIg.relim()
-        self.axIg.autoscale_view(True,True,True)
-
-        self.fig.tight_layout()
-        self.fig.canvas.draw()
+        if self.Igwarning is None: # if no warning
+            if len(self.Ig)>0: # if have data
+                if self.Ig.max() >= 0.5e-9: # if should be warning
+                    self.Igwarning = self.ax.text(.02,.95, 
+                                        r'$I_g \geq 0.5$ nA!', 
+                                        transform=self.ax.transAxes,
+                                        color = 'C3'
+                                    ) # warning
 
     def setup_keithley(self):
         pass
@@ -546,6 +554,7 @@ class RvsVg(RvsSomething):
         # self.keithley.source = 'V'
         # self.keithley.I_compliance = 1e-6
         # self.keithley.Vout_range = max(abs(self.Vstart), abs(self.Vend))
+
 
     def setup_label(self):
         '''
@@ -568,12 +577,6 @@ class RvsVg(RvsSomething):
 
     def setup_plots(self):
         super().setup_plots()
-
-        self.axIg = self.ax.twinx()
-        self.axIg.set_ylabel('Ig (nA)', fontsize=20, color='r', alpha=0.2)
-
-        lineIg = self.axIg.plot(self.Vg, self.Ig*1e9, 'r', alpha=0.2)
-        self.lineIg = lineIg[0]
 
 
 class FourProbeResSweep(Measurement):
