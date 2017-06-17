@@ -6,7 +6,7 @@ os.environ['FOR_DISABLE_CONSOLE_CTRL_HANDLER'] = '1'
 from IPython import get_ipython, display
 ip = get_ipython()
 
-from Nowack_Lab.Utilities import save
+from .Utilities import save
 
 from matplotlib import rcParams
 rcParams.update({'figure.autolayout': False}) # If set to True, will autoformat layout and prevent axis labels from getting cut off.
@@ -19,7 +19,7 @@ try:
     print('Current experiment: %s' %save.get_experiment_data_dir())
 except:
     pass
-print('Use save.set_experiment_data_dir to change experiments')
+print('Use save.set_experiment_data_dir to change experiments\n')
 # inp = input('New experiment? y/(n): ')
 # if inp in ('y', 'Y'):
 #     while True:
@@ -32,7 +32,7 @@ print('Use save.set_experiment_data_dir to change experiments')
 
 ## Check for remote data server connection
 if not os.path.exists(save.get_data_server_path()):
-    print('''SAMBASHARE not connected. Could not find path %s. If you want to change the expected path, modify the get_data_server_path function in Nowack_Lab/Utilities/save.py''' %save.get_data_server_path())
+    print('''SAMBASHARE not connected. Could not find path %s.''' %save.get_data_server_path())
 
 
 

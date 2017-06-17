@@ -21,10 +21,14 @@ Figure out notebook shared secret to avoid "untrusted" notebooks.
 
 Add time estimates to procedures somehow
 
-Batch file to run PPMS server
-
-Reminder in init to set a backend
-
-Possible to control lockins from secondary kernel?
-
 Connect to data server remotely.
+
+**kwargs for everything - with warning for unused ones?
+RC params
+
+Figure out keyboard interrupt. I added this at the end of run(), but needs more testing.
+if self.interrupt:
+            raise KeyboardInterrupt # So we actually terminate with an interrupt.
+
+
+
