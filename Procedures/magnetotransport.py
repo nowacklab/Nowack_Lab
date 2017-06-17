@@ -24,7 +24,7 @@ class RvsB(RvsSomething):
         self.delay = delay
         self.sweep_rate = sweep_rate
 
-    def do(self, plot=True):
+    def do(self, plot=True, auto_gain=False):
         ## Set initial field if not already there
         if abs(self.ppms.field - self.Bstart*10000) > 0.1: # different by more than 0.1 Oersted = 10 uT.
             self.ppms.field = self.Bstart*10000 # T to Oe
@@ -50,7 +50,7 @@ class RvsB(RvsSomething):
         ## Measure while sweeping
         while self.ppms.field_status in ('Iterating', 'Charging'):
             self.B = np.append(self.B, self.ppms.field/10000) # Oe to T
-            self.do_measurement(delay=self.delay, plot=plot)
+            self.do_measurement(delay=self.delay, plot=plot, auto_gain=auto_gain)
 
     def calc_n_Hall(self, Bmax=2, Rxy_channel=1):
         '''
@@ -232,7 +232,7 @@ class RvsVg_B(RvsVg):
         '''
         return np.where(self.R2D[Rxx_channel][0]==self.R2D[Rxx_channel][0].max())[0][0] # find CNP
 
-    def do(self, ):
+    def do(self, auto_gain=False):
         for i, B in enumerate(self.B):
             if self.Vg_sweep is not None:
                 self.keithley.sweep_V(self.keithley.V, self.Vg_sweep, .1, 1) # set desired gate voltage for the field sweep
@@ -251,7 +251,7 @@ class RvsVg_B(RvsVg):
 
             ## reset arrays for gatesweep
             self.gs = RvsVg(self.instruments, self.Vstart, self.Vend, self.Vstep, self.delay)
-            self.gs.run()
+            self.gs.run(auto_gain=auto_gain)
 
             for j in range(self.num_lockins):
                 if self.Vstart > self.Vend:
