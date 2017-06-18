@@ -21,6 +21,7 @@ _Z_PIEZO_STEP = 4  # V piezo
 _Z_PIEZO_STEP_SLOW = 4  # V piezo
 _CAPACITANCE_THRESHOLD = 1  # fF
 _VAR_THRESHOLD = 0.007
+_ATTO_TOWARDS_SAMPLE = -1
 
 def piecewise_linear(x, x0, y0, m1, m2):
         '''A continuous piecewise linear function
@@ -76,7 +77,7 @@ class Touchdown(Measurement):
 
     numsteps = 100
     numfit = 5       # number of points to fit line to while collecting data
-    attoshift = -40 # move 20 um if no touchdown detected
+    attoshift = _ATTO_TOWARDS_SAMPLE*40 # move 20 um if no touchdown detected
     Vz_max = 400
     start_offset = 0
 
@@ -295,7 +296,9 @@ class Touchdown(Measurement):
             self.title = 'Found touchdown, centering near %i Vpiezo' %int(
                 self.Vz_max/2)
             self.plot()
-            self.attoshift = -(Vtd-self.Vz_max/2)*conversions.Vz_to_um
+            self.attoshift = (
+                _ATTO_TOWARDS_SAMPLE * (Vtd-self.Vz_max/2)*conversions.Vz_to_um
+            )
             self.lines_data['V_app'] = []
             self.lines_data['C_app'] = []
             self.lines_data['V_td'] = []
@@ -331,6 +334,10 @@ class Touchdown(Measurement):
         # make sure we didn't crash
         self.check_balance()
 
+        msg = input("Ok to move {0} ums? q to quit".format(self.attoshift));
+        if (msg is 'q'):
+            raise KeyboardInterrupt;
+
         self.atto.z.move(self.attoshift)
 
         # wait until capacitance settles
@@ -339,7 +346,11 @@ class Touchdown(Measurement):
         # While capacitance measurement is overloading:
         while self.daq.inputs['cap'].V > 10:
             # we probably moved too far
-            self.atto.z.move(-self.attoshift/2)
+            move = -_ATTO_TOWARDS_SAMPLE*self.attoshift/2
+            msg = input("Ok to move {0} um? q to quit".format(move));
+            if (msg is 'q'):
+                raise KeyboardInterrupt;
+            self.atto.z.move(move)
 
             # wait until capacitance settles
             time.sleep(self._T_UNTIL_BAL)

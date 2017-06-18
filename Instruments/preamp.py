@@ -82,6 +82,7 @@ class SR5113(Instrument):
                 self._gain = int(COARSE_GAIN[int(cg)]*FINE_GAIN[int(fg)])
         except:
             print('Couldn\'t communicate with SR5113! Gain may be wrong!')
+            self._gain=1 # no communication, default 1 gain?
         return self._gain
 
     @gain.setter
@@ -196,6 +197,60 @@ class SR5113(Instrument):
 
         if read:
             return response.rstrip() #rstrip gets rid of \n
+
+class FakeSR5113(Instrument):
+    _label = 'preamp' 
+    def __init__(self, port='COM1', gain=1, filter=(0,100e3), dc_coupling=True):
+        self.gain = gain;
+        self.filter = filter;
+        self._dc_coupling = True;
+        return;
+
+    def __getstate__(self):
+        self._save_dict = {"gain": self.gain,
+                          "filter": self.filter,
+                          "dccoupled": self.is_dc_coupled(),
+                          "overloaded": self.is_OL()
+                          }
+        return self._save_dict
+
+    def close(self):
+        return;
+
+    def connect(self):
+        return;
+
+    def is_OL(self):
+        return False;
+
+    def dc_coupling(self, dc=True):
+        self._dc_coupling=dc;
+
+    def is_dc_coupled(self):
+        return self._dc_coupling;
+
+    def dr_high(self, high=True):
+        return;
+
+    def filter_mode(self, pass_type, rolloff=0):
+        return;
+
+    def diff_input(self, AminusB=True):
+        return;
+
+    def recover(self):
+        return;
+
+    def time_const(self, tensec):
+        return;
+
+    def write(self, cmd, read=False):
+        return;
+
+
+
+
+
 
 
 if __name__ == '__main__':

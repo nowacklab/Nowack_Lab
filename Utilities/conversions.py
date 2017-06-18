@@ -12,3 +12,6 @@ Vz_to_um = .14 # based on "atto um"  atto micron/ V piezo for attocube's LUTs
 Vsquid_to_phi0 = {'High': 1/14.4,
                   'Med': 1/1.44,
                   'Low': 1/0.144}
+Varray_to_phi0 = {'High': 1/(15.47 * 100 * 1e-3),
+                  'Med':  1/(15.47 * 10  * 1e-3),
+                  'Low':  1/(15.47 * 1   * 1e-3)}

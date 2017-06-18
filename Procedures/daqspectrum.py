@@ -223,7 +223,7 @@ class SQUIDSpectrum(DaqSpectrum):
         self.conversion = conversions.Vsquid_to_phi0[self.squidarray.sensitivity]
 
 class AnnotatedSpectrum(DaqSpectrum):
-    instrument_list=['lockin_cap','preamp','squidarray', 'piezos'];
+    instrument_list=['daq','lockin_cap','preamp','squidarray', 'piezos'];
 
     def __init__(self, CAP_I, *args, 
         notes='Annotated Spectrum',**kwargs
@@ -233,6 +233,20 @@ class AnnotatedSpectrum(DaqSpectrum):
         super().__init__(*args, annotate_notes=True, **kwargs)
         self.notes = notes;
         self.CAP_I = CAP_I
+
+    def squidspectra(self):
+        self.units = '\phi_0';
+        self.conversion = conversions.Vsquid_to_phi0[self.squidarray.sensitivity]
+
+    def vspectra(self):
+        self.units = 'V';
+        self.conversion = 1;
+
+    def arrayspectra(self):
+        self.units = '\phi_0';
+        self.conversion = conversions.Varray_to_phi0[self.squidarray.sensitivity]
+        return;
+
 
     def plot(self, *args, **kwargs):
         '''
