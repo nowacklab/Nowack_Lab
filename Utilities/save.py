@@ -152,8 +152,14 @@ class Measurement:
                     d[key] = walk(d[key])
             return d
 
-
         obj_dict = walk(obj_dict)
+
+        # If the class of the object is custom defined in __main__, then just
+        # load it as a measurement.
+        if '__main__' in obj_dict['py/object']:
+            obj_dict['py/object'] = 'Nowack_Lab.Utilities.save.Measurement'
+
+        # Decode with jsonpickle.
         obj_string = json.dumps(obj_dict)
         obj = jsp.decode(obj_string)
 
@@ -352,13 +358,7 @@ class Measurement:
             os.path.join(get_local_data_path(), get_todays_data_dir(), filename)
 
         # Remove file extensions
-        # This is done somewhat manually in case filename has periods in it for some reason.
-        if filename[-5:] == '.json': # ends in .json
-            filename = filename[:-5] # strip extension
-        elif filename[-3:] == '.h5': # ends in .h5
-            filename = filename[:-3] # strip extension
-        elif filename[-4:] == '.pdf': # ends in .pdf
-            filename = filename[:-4] # strip extension
+        filename = os.path.splitext(filename)[0]
 
         obj = Measurement._load_json(filename+'.json', unwanted_keys)
         obj._load_hdf5(filename+'.h5')

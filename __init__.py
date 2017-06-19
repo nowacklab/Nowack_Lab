@@ -6,7 +6,7 @@ os.environ['FOR_DISABLE_CONSOLE_CTRL_HANDLER'] = '1'
 from IPython import get_ipython, display
 ip = get_ipython()
 
-from Nowack_Lab.Utilities import save
+from .Utilities import save
 
 from matplotlib import rcParams
 rcParams.update({'figure.autolayout': False}) # If set to True, will autoformat layout and prevent axis labels from getting cut off.
@@ -19,19 +19,20 @@ try:
     print('Current experiment: %s' %save.get_experiment_data_dir())
 except:
     pass
-inp = input('New experiment? y/(n): ')
-if inp in ('y', 'Y'):
-    while True:
-        inp2 = input('Enter description of experiment: ')
-        if inp2.find(' ') != -1:
-            print('This is going to be a folder name. Please don\'t use spaces!')
-        else:
-            break
-    save.set_experiment_data_dir(inp2)
+print('Use save.set_experiment_data_dir to change experiments\n')
+# inp = input('New experiment? y/(n): ')
+# if inp in ('y', 'Y'):
+#     while True:
+#         inp2 = input('Enter description of experiment: ')
+#         if inp2.find(' ') != -1:
+#             print('This is going to be a folder name. Please don\'t use spaces!')
+#         else:
+#             break
+#     save.set_experiment_data_dir(inp2)
 
 ## Check for remote data server connection
 if not os.path.exists(save.get_data_server_path()):
-    print('''SAMBASHARE not connected. Could not find path %s. If you want to change the expected path, modify the get_data_server_path function in Nowack_Lab/Utilities/save.py''' %save.get_data_server_path())
+    print('''SAMBASHARE not connected. Could not find path %s.''' %save.get_data_server_path())
 
 
 
@@ -47,7 +48,7 @@ from time import sleep
 import sys, os
 
 ## Because I don't know how to do this otherwise, importing all functions and modules that we want in the namespace.
-from Nowack_Lab.Utilities import utilities, save, logging, conversions, anim
+from Nowack_Lab.Utilities import utilities, save, logging, conversions, anim, constants
 from Nowack_Lab.Utilities.plotting import plot_mpl
 from Nowack_Lab.Utilities.save import Measurement
 from Nowack_Lab.Procedures.daqspectrum import DaqSpectrum, SQUIDSpectrum
@@ -61,7 +62,7 @@ from Nowack_Lab.Procedures.scanplane import Scanplane
 from Nowack_Lab.Procedures.scanspectra import Scanspectra
 from Nowack_Lab.Procedures.squidIV import SquidIV
 from Nowack_Lab.Procedures.touchdown import Touchdown
-from Nowack_Lab.Procedures.transport import RvsVg, RvsTime, IV, IVvsVg, FourProbeRes, RvsT
+from Nowack_Lab.Procedures.transport import RvsVg, RvsTime, RvsT
 from Nowack_Lab.Procedures.magnetotransport import RvsB, RvsVg_B
 from Nowack_Lab.Instruments.attocube import Attocube
 from Nowack_Lab.Instruments.keithley import Keithley2400, Keithley2600, KeithleyPPMS

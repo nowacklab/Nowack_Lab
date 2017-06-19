@@ -2,7 +2,7 @@ To do:
 
 Write common functions for plotting (e.g. colorbar)
 
-plot_before and plot_after in a plot function. 
+plot_before and plot_after in a plot function.
 so
 def plot(self, *args, **kwargs):
     plot_before()
@@ -17,11 +17,18 @@ A bunch of drawing things can go into plot_draw, esp. flush_events for non-noteb
 
 Reinstate _chan_labels as _daq_inputs and add _daq_outputs
 
+Figure out notebook shared secret to avoid "untrusted" notebooks.
 
-Figure out why plots too big for notebook
+Add time estimates to procedures somehow
 
-Check for outliers/detect unlock
+Connect to data server remotely.
+
+**kwargs for everything - with warning for unused ones?
+RC params
+
+Figure out keyboard interrupt. I added this at the end of run(), but needs more testing.
+if self.interrupt:
+            raise KeyboardInterrupt # So we actually terminate with an interrupt.
 
 
-Test:
-Check if numpts correct for scan direction and print warning?
+

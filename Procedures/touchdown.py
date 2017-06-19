@@ -136,8 +136,10 @@ class Touchdown(Measurement):
                 for j in range(i-self.numfit, i):
                     if self.C[j+1] - self.C[j] < 0:
                         return False
-                return True # if the for loop passed, then touchdown
-        return False # if we haven't taken enough points
+                # if the for loop passed, then touchdown
+                return True 
+        # if we haven't taken enough points
+        return False 
 
 
     def configure_lockin(self):

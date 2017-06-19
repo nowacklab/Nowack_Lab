@@ -2,10 +2,11 @@ import time, numpy as np, matplotlib.pyplot as plt
 from ..Utilities.save import Measurement
 from .transport import RvsSomething, RvsVg
 from ..Utilities.plotting import plot_mpl
+import peakutils
+from scipy.interpolate import interp1d
+from scipy.stats import linregress
 
-## Constants here
-e = 1.60217662e-19 #coulombs
-h = 6.626e-34 # m^2*kg/s
+from ..Utilities.constants import e, h
 
 class RvsB(RvsSomething):
     instrument_list = ['ppms', 'lockin_V', 'lockin_I']
@@ -23,7 +24,7 @@ class RvsB(RvsSomething):
         self.delay = delay
         self.sweep_rate = sweep_rate
 
-    def do(self, plot=True):
+    def do(self, plot=True, auto_gain=False):
         ## Set initial field if not already there
         if abs(self.ppms.field - self.Bstart*10000) > 0.1: # different by more than 0.1 Oersted = 10 uT.
             self.ppms.field = self.Bstart*10000 # T to Oe
@@ -49,7 +50,68 @@ class RvsB(RvsSomething):
         ## Measure while sweeping
         while self.ppms.field_status in ('Iterating', 'Charging'):
             self.B = np.append(self.B, self.ppms.field/10000) # Oe to T
-            self.do_measurement(delay=self.delay, plot=plot)
+            self.do_measurement(delay=self.delay, plot=plot, auto_gain=auto_gain)
+
+    def calc_n_Hall(self, Bmax=2, Rxy_channel=1):
+        '''
+        Calculate the carrier density using the Hall coefficient at low field.
+        R_H = B/ne
+        '''
+        where = np.where(self.B < Bmax)
+        m, b, _, _, _ = linregress(self.B[where], self.R[Rxy_channel][where])
+
+        fig, ax = plt.subplots()
+        ax.plot(self.B[where], self.R[Rxy_channel][where], '.')
+        ax.plot(self.B[where], m*self.B[where]+b, '-')
+        ax.set_xlabel('B (T)', fontsize=20)
+        ax.set_ylabel('R$_{xy}$ ($\Omega$)', fontsize=20)
+
+        self.n = 1/(m*e)/100**2 # convert to cm^-2
+
+
+    def calc_n_QHE(self, nu=2,Rxx_channel=0, thres=0.1, min_dist=100, Brange = [1,13]):
+        '''
+        Calculate the carrier density using the spacing between Landau levels.
+        This will only work if there are clear peaks in Rxx.
+        nu: total spin/valley degeneracy (spacing between LL's in
+        conductance quanta)
+        Rxx_channel: which lockin measured Rxx
+        thres: float between [0., 1.]. Normalized threshold.
+        Only peaks with amplitudes higher than the threshold will be detected.
+        (see peakutils.indexes)
+        min_dist: Minimum distance between each detected peak.
+        The peak with the highest amplitude is preferred to satisfy this constraint. (see peakutils.indexes)
+        Brange: [Bmin, Bmax] field range over which to look for peaks
+        '''
+        ## Calculate 1/B and generate equally spaced array in 1/B space.
+        Bmin = Brange[0]
+        Bmax = Brange[1]
+        oneoverB = np.linspace(1/Bmax, 1/Bmin,5000)
+        f = interp1d(1/self.B, self.R[Rxx_channel])
+        R = f(oneoverB)
+
+        ## Find peaks in Rxx
+        peaks = peakutils.indexes(R, thres=thres, min_dist=min_dist)
+
+        ## Plot it to check
+        fig, (ax, ax2) = plt.subplots(2)
+        ax.plot(oneoverB, R)
+        ax.plot(oneoverB[peaks], R[peaks], '.')
+        ax.set_xlabel(r'1/B (T$^{-1}$)', fontsize=20)
+        ax.set_ylabel(r'R$_{xx}$ ($\Omega$)', fontsize=20)
+
+        deltaoneoverB = np.mean(np.diff(oneoverB[peaks]))
+
+        ax2.plot(np.diff(oneoverB[peaks]))
+        ax2.plot([deltaoneoverB for i in range(len(peaks))], '-k')
+        ax2.set_xlabel('Peak number', fontsize=20)
+        ax2.set_ylabel('$\Delta(1/B)$ (T$^{-1}$)', fontsize=20)
+
+        fig.tight_layout()
+
+        ## Calculate carrier density from average peak spacing
+        self.n = nu*e/h/deltaoneoverB/100**2 # conver to cm^-2
+
 
     def plot_quantized_conductance(self, nu=1, Rxy_channel=1, Rxx_channel=0):
         '''
@@ -122,6 +184,47 @@ class RvsVg_B(RvsVg):
         for j in range(self.num_lockins):
             setattr(self, 'R%ifull' %j, np.array([]))
 
+    def calc_n(self, Rxy_channel=1, Vg_range=[-40, 40]):
+        '''
+        Calculate carrier density from the slopes of all cuts of Rxy vs B.
+        Returns conversion factor between gate voltage and density. (in cm^-2/V)
+        Vg_range: interval of Vgs over which to get carrier density conversion.
+        '''
+        from scipy.stats import linregress as lr
+        slopes = np.array([])
+        n = np.array([])
+        Vgs = np.array([])
+        Rxy = self.R2D[Rxy_channel]
+        fig, ax =plt.subplots()
+        for i in range(Rxy.shape[1]):
+            slope, intercept, r, _, _ = lr(self.B, Rxy[:,i])
+
+            ax.plot(self.B, Rxy[:,i],'.')
+            if r**2 > .99:
+                ax.plot(self.B, slope*self.B+intercept,'-')
+                Vgs = np.append(Vgs, self.Vg[i])
+                slopes = np.append(slopes, slope)
+                n = np.append(n, 1/(slope*e))
+        fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(10,4))
+        ax1.plot(Vgs, slopes,'.')
+        ax2.plot(Vgs, n/100**2,'.')
+
+        Vgmin = Vg_range[0]
+        Vgmax = Vg_range[1]
+        where = np.where(np.logical_and(Vgs >= Vgmin,Vgs <= Vgmax))
+        slope, intercept, _, _, _ = lr(Vgs[where], n[where]/100**2) # find carrier density conversion
+        ax2.plot(Vgs[where], Vgs[where]*slope+intercept, '-')
+        ax1.set_xlabel('Vg (V)',fontsize=20)
+        ax1.set_ylabel(r'Hall Coefficient ($\rm \Omega/T$)', fontsize=16)
+        ax2.set_ylabel(r'Carrier density ($\rm{cm^{-2}}$)', fontsize=16)
+
+        fig.tight_layout()
+
+        self.Hall_coefficient = slopes
+        self.n = n/100**2
+
+        return abs(slope) # this will be a conversion in cm^-2/V from gate voltage to carrier density.
+
     def find_CNP(self, Rxx_channel=0):
         '''
         Finds the index of gate voltage corresponding to charge neutrality point.
@@ -129,7 +232,7 @@ class RvsVg_B(RvsVg):
         '''
         return np.where(self.R2D[Rxx_channel][0]==self.R2D[Rxx_channel][0].max())[0][0] # find CNP
 
-    def do(self, ):
+    def do(self, auto_gain=False):
         for i, B in enumerate(self.B):
             if self.Vg_sweep is not None:
                 self.keithley.sweep_V(self.keithley.V, self.Vg_sweep, .1, 1) # set desired gate voltage for the field sweep
@@ -148,7 +251,7 @@ class RvsVg_B(RvsVg):
 
             ## reset arrays for gatesweep
             self.gs = RvsVg(self.instruments, self.Vstart, self.Vend, self.Vstep, self.delay)
-            self.gs.run()
+            self.gs.run(auto_gain=auto_gain)
 
             for j in range(self.num_lockins):
                 if self.Vstart > self.Vend:
