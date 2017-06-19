@@ -20,19 +20,20 @@ class HF2LI(Instrument):
 
     # Create Zurich HF2LI object, either using passed serial number or
     # autodetect.
-    def __init__(self, device_serial = ''):
+    def __init__(self, server_address = 'localhost', server_port = 8005 , device_serial = ''):
         # Open a connection to the ziDAQServer (HF2LI must be powered on)
-        daq = zhinst.ziPython.ziDAQServer('localhost', 8005)
+        self.daq = zhinst.ziPython.ziDAQServer(server_address, server_port)
         # Detect device
-        deviceList = zhinst.utils.devices(daq)
+        deviceList = zhinst.utils.devices(self.daq)
+        result = ''
         if device_serial in deviceList :
             self.device_id = device_serial
             result = 'Using Zurich HF2LI with serial %s' % self.device_id
         elif device_serial != '' :
-            self.device_id = zhinst.utils.autoDetect(daq)
+            self.device_id = zhinst.utils.autoDetect(self.daq)
             result ='Requested device not found. Using %s' % self.device_id
         else:
-            self.device_id = zhinst.utils.autoDetect(daq)
+            self.device_id = zhinst.utils.autoDetect(self.daq)
         print(result)
 
     def freq_sweep(self, freq_start, freq_stop, num_steps, time_constant = 1e-3,
@@ -94,64 +95,59 @@ class HF2LI(Instrument):
         # - the device ID string that specifies the device branch in the server's node hierarchy.
         # - the device's discovery properties.
         err_msg = "This example only supports instruments with demodulators."
-        (daq, device, props) = zhinst.utils.create_api_session(self.device_id, apilevel_example,
-                                                               required_devtype='.*LI|.*IA|.*IS',
-                                                               required_err_msg=err_msg)
 
         # Create a base instrument configuration: disable all outputs, demods and scopes.
-        general_setting = [['/%s/demods/*/enable' % device, 0],
-                           ['/%s/demods/*/trigger' % device, 0],
-                           ['/%s/sigouts/*/enables/*' % device, 0],
-                           ['/%s/scopes/*/enable' % device, 0]]
-        if 'IA' in props['options']:
-            general_setting.append(['/%s/imps/*/enable' % device, 0])
-        daq.set(general_setting)
+        general_setting = [['/%s/demods/*/enable' % self.device_id, 0],
+                           ['/%s/demods/*/trigger' % self.device_id, 0],
+                           ['/%s/sigouts/*/enables/*' % self.device_id, 0],
+                           ['/%s/scopes/*/enable' % self.device_id, 0]]
+        self.daq.set(general_setting)
         # Perform a global synchronisation between the device and the data server:
         # Ensure that the settings have taken effect on the device before setting
         # the next configuration.
-        daq.sync()
+        self.daq.sync()
 
         # Now configure the instrument for this experiment. The following channels
         # and indices work on all device configurations. The values below may be
         # changed if the instrument has multiple input/output channels and/or either
         # the Multifrequency or Multidemodulator options installed.
         out_channel = outputchan - 1
-        out_mixer_channel = zhinst.utils.default_output_mixer_channel(props)
         in_channel = inputchan - 1
         demod_index = 0
         osc_index = outputchan-1
         demod_rate = 10e3
+        out_mixer_channel = int(self.daq.listNodes('/%s/sigouts/%d/amplitudes/' % (self.device_id, out_channel),0)[1])
         if couple == 'ac':
             acUse = 1
         else:
             acUse = 0
-        exp_setting = [['/%s/sigins/%d/ac'             % (device, in_channel), acUse],
-                       ['/%s/sigins/%d/range'          % (device, in_channel), 2*amplitude],
-                       ['/%s/demods/%d/enable'         % (device, demod_index), 1],
-                       ['/%s/demods/%d/rate'           % (device, demod_index), demod_rate],
-                       ['/%s/demods/%d/adcselect'      % (device, demod_index), in_channel],
-                       ['/%s/demods/%d/order'          % (device, demod_index), 4],
-                       ['/%s/demods/%d/timeconstant'   % (device, demod_index), time_constant],
-                       ['/%s/demods/%d/oscselect'      % (device, demod_index), osc_index],
-                       ['/%s/demods/%d/harmonic'       % (device, demod_index), 1],
-                       ['/%s/sigouts/%d/on'            % (device, out_channel), 1],
-                       ['/%s/sigouts/%d/enables/%d'    % (device, out_channel, out_mixer_channel), 1],
-                       ['/%s/sigouts/%d/range'         % (device, out_channel), 1],
-                       ['/%s/sigouts/%d/amplitudes/%d' % (device, out_channel, out_mixer_channel), amplitude]]
+        exp_setting = [['/%s/sigins/%d/ac'             % (self.device_id, in_channel), acUse],
+                       ['/%s/sigins/%d/range'          % (self.device_id, in_channel), 2*amplitude],
+                       ['/%s/demods/%d/enable'         % (self.device_id, demod_index), 1],
+                       ['/%s/demods/%d/rate'           % (self.device_id, demod_index), demod_rate],
+                       ['/%s/demods/%d/adcselect'      % (self.device_id, demod_index), in_channel],
+                       ['/%s/demods/%d/order'          % (self.device_id, demod_index), 4],
+                       ['/%s/demods/%d/timeconstant'   % (self.device_id, demod_index), time_constant],
+                       ['/%s/demods/%d/oscselect'      % (self.device_id, demod_index), osc_index],
+                       ['/%s/demods/%d/harmonic'       % (self.device_id, demod_index), 1],
+                       ['/%s/sigouts/%d/on'            % (self.device_id, out_channel), 1],
+                       ['/%s/sigouts/%d/enables/%d'    % (self.device_id, out_channel, out_mixer_channel), 1],
+                       ['/%s/sigouts/%d/range'         % (self.device_id, out_channel), 1],
+                       ['/%s/sigouts/%d/amplitudes/%d' % (self.device_id, out_channel, out_mixer_channel), amplitude],
+                       ['/%s/sigins/%d/diff'           % (self.device_id, in_channel), 0],
+                       ['/%s/sigouts/%d/add'           % (self.device_id, out_channel), 0],
+                       ]
         # Some other device-type dependent configuration may be required. For
         # example, disable the signal inputs `diff` and the signal outputs `add` for
         # HF2 instruments.
-        if props['devicetype'].startswith('HF2'):
-            exp_setting.append(['/%s/sigins/%d/diff'      % (device, in_channel), 0])
-            exp_setting.append(['/%s/sigouts/%d/add'      % (device, out_channel), 0])
-        daq.set(exp_setting)
+        self.daq.set(exp_setting)
 
         # Create an instance of the Sweeper Module (ziDAQSweeper class).
-        sweeper = daq.sweep()
+        sweeper = self.daq.sweep()
 
         # Configure the Sweeper Module's parameters.
         # Set the device that will be used for the sweep - this parameter must be set.
-        sweeper.set('sweep/device', device)
+        sweeper.set('sweep/device', self.device_id)
         # Specify the `gridnode`: The instrument node that we will sweep, the device
         # setting corresponding to this node path will be changed by the sweeper.
         sweeper.set('sweep/gridnode', 'oscs/%d/freq' % osc_index)
@@ -208,7 +204,7 @@ class HF2LI(Instrument):
         # Now subscribe to the nodes from which data will be recorded. Note, this is
         # not the subscribe from ziDAQServer; it is a Module subscribe. The Sweeper
         # Module needs to subscribe to the nodes it will return data for.x
-        path = '/%s/demods/%d/sample' % (device, demod_index)
+        path = '/%s/demods/%d/sample' % (self.device_id, demod_index)
         sweeper.subscribe(path)
 
         # Start the Sweeper's thread.
@@ -347,65 +343,61 @@ class HF2LI(Instrument):
         # - the device ID string that specifies the device branch in the server's node hierarchy.
         # - the device's discovery properties.
         err_msg = "This example only supports instruments with demodulators."
-        (daq, device, props) = zhinst.utils.create_api_session(self.device_id, apilevel_example,
-                                                               required_devtype='.*LI|.*IA|.*IS',
-                                                               required_err_msg=err_msg)
 
         # Create a base instrument configuration: disable all outputs, demods and scopes.
-        general_setting = [['/%s/demods/*/enable' % device, 0],
-                           ['/%s/demods/*/trigger' % device, 0],
-                           ['/%s/sigouts/*/enables/*' % device, 0],
-                           ['/%s/scopes/*/enable' % device, 0]]
-        if 'IA' in props['options']:
-            general_setting.append(['/%s/imps/*/enable' % device, 0])
-        daq.set(general_setting)
+        general_setting = [['/%s/demods/*/enable' % self.device_id, 0],
+                           ['/%s/demods/*/trigger' % self.device_id, 0],
+                           ['/%s/sigouts/*/enables/*' % self.device_id, 0],
+                           ['/%s/scopes/*/enable' % self.device_id, 0]]
+        self.daq.set(general_setting)
         # Perform a global synchronisation between the device and the data server:
         # Ensure that the settings have taken effect on the device before setting
         # the next configuration.
-        daq.sync()
+        self.daq.sync()
 
         # Now configure the instrument for this experiment. The following channels
         # and indices work on all device configurations. The values below may be
         # changed if the instrument has multiple input/output channels and/or either
         # the Multifrequency or Multidemodulator options installed.
         out_channel = outputchan - 1
-        out_mixer_channel = zhinst.utils.default_output_mixer_channel(props)
         in_channel = inputchan - 1
         aux_channel = auxchan - 1
         demod_index = 0
         osc_index = outputchan-1
+        out_mixer_channel = int(self.daq.listNodes('/%s/sigouts/%d/amplitudes/' % (self.device_id, out_channel),0)[1])
         demod_rate = 10e3
         if couple == 'ac':
             acUse = 1
         else:
             acUse = 0
-        exp_setting = [['/%s/sigins/%d/ac'             % (device, in_channel), acUse],
-                       ['/%s/sigins/%d/range'          % (device, in_channel), 2*amplitude],
-                       ['/%s/sigins/%d/diff'           % (device, in_channel), 0],
-                       ['/%s/demods/%d/enable'         % (device, demod_index), 1],
-                       ['/%s/demods/%d/rate'           % (device, demod_index), demod_rate],
-                       ['/%s/demods/%d/adcselect'      % (device, demod_index), in_channel],
-                       ['/%s/demods/%d/order'          % (device, demod_index), 4],
-                       ['/%s/demods/%d/timeconstant'   % (device, demod_index), time_constant],
-                       ['/%s/demods/%d/oscselect'      % (device, demod_index), osc_index],
-                       ['/%s/demods/%d/harmonic'       % (device, demod_index), 1],
-                       ['/%s/sigouts/%d/on'            % (device, out_channel), 1],
-                       ['/%s/sigouts/%d/enables/%d'    % (device, out_channel, out_mixer_channel), 1],
-                       ['/%s/sigouts/%d/range'         % (device, out_channel), 1],
-                       ['/%s/sigouts/%d/add'           % (device, out_channel), 1],
-                       ['/%s/sigouts/%d/amplitudes/%d' % (device, out_channel, out_mixer_channel), amplitude]]
-                       ['/%s/auxouts/%d/outputselect'   % (device, aux_channel),-1]]
-        daq.set(exp_setting)
+        exp_setting = [['/%s/sigins/%d/ac'             % (self.device_id, in_channel), acUse],
+                       ['/%s/sigins/%d/range'          % (self.device_id, in_channel), 2*amplitude],
+                       ['/%s/sigins/%d/diff'           % (self.device_id, in_channel), 0],
+                       ['/%s/demods/%d/enable'         % (self.device_id, demod_index), 1],
+                       ['/%s/demods/%d/rate'           % (self.device_id, demod_index), demod_rate],
+                       ['/%s/demods/%d/adcselect'      % (self.device_id, demod_index), in_channel],
+                       ['/%s/demods/%d/order'          % (self.device_id, demod_index), 4],
+                       ['/%s/demods/%d/timeconstant'   % (self.device_id, demod_index), time_constant],
+                       ['/%s/demods/%d/oscselect'      % (self.device_id, demod_index), osc_index],
+                       ['/%s/demods/%d/harmonic'       % (self.device_id, demod_index), 1],
+                       ['/%s/sigouts/%d/on'            % (self.device_id, out_channel), 1],
+                       ['/%s/sigouts/%d/enables/%d'    % (self.device_id, out_channel, out_mixer_channel), 1],
+                       ['/%s/sigouts/%d/range'         % (self.device_id, out_channel), 1],
+                       ['/%s/sigouts/%d/add'           % (self.device_id, out_channel), 1],
+                       ['/%s/sigouts/%d/amplitudes/%d' % (self.device_id, out_channel, out_mixer_channel), amplitude],
+                       ['/%s/auxouts/%d/outputselect'  % (self.device_id, aux_channel),-1]
+                      ]
+        self.daq.set(exp_setting)
 
         # Create an instance of the Sweeper Module (ziDAQSweeper class).
-        sweeper = daq.sweep()
+        sweeper = self.daq.sweep()
 
         # Configure the Sweeper Module's parameters.
         # Set the device that will be used for the sweep - this parameter must be set.
-        sweeper.set('sweep/device', device)
+        sweeper.set('sweep/device', self.device_id)
         # Specify the `gridnode`: The instrument node that we will sweep, the device
         # setting corresponding to this node path will be changed by the sweeper.
-        sweeper.set('sweep/gridnode', '/auxouts/%d/offset' % aux_channel)
+        sweeper.set('sweep/gridnode', '/%s/auxouts/%d/offset' % (self.device_id,aux_channel))
         # Set the `start` and `stop` values of the gridnode value interval we will use in the sweep.
         sweeper.set('sweep/start', aux_start)
         sweeper.set('sweep/stop', aux_stop)
@@ -459,7 +451,7 @@ class HF2LI(Instrument):
         # Now subscribe to the nodes from which data will be recorded. Note, this is
         # not the subscribe from ziDAQServer; it is a Module subscribe. The Sweeper
         # Module needs to subscribe to the nodes it will return data for.x
-        path = '/%s/demods/%d/sample' % (device, demod_index)
+        path = '/%s/demods/%d/sample' % (self.device_id, demod_index)
         sweeper.subscribe(path)
 
         # Start the Sweeper's thread.
