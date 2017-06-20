@@ -32,7 +32,7 @@ class Planefit(Measurement):
         surface.
 
         Args:
-        instruments (dict) -- must contain the instruments required for
+        instruments (dict): must contain the instruments required for
         the touchdown.
 
         span (list): Specifices the size [X span, Y span] of the plane
@@ -186,13 +186,14 @@ class Planefit(Measurement):
         self.piezos.V = 0
         self.calculate_plane()
 
+		
         # take the first slow touchdown as a more accurate center
-        c_fit = self.c
-        self.c = center_z_value - self.a * \
-            self.center[0] - self.b * self.center[1]
+        #c_fit = self.c
+        #self.c = center_z_value - self.a * \
+        #    self.center[0] - self.b * self.center[1]
         # c was lowered by the correction, so we lower the plane.
-        self.Z -= (c_fit - self.c)
-
+        #self.Z -= (c_fit - self.c)
+		
         self.plot()
         self.axes = list(self.axes.flatten())
 

@@ -20,7 +20,7 @@ from ..Utilities.utilities import AttrDict
 _Z_PIEZO_STEP = 4  # V piezo
 _Z_PIEZO_STEP_SLOW = 4  # V piezo
 _CAPACITANCE_THRESHOLD = 1  # fF
-_VAR_THRESHOLD = 0.007
+_VAR_THRESHOLD = 0.005
 
 def piecewise_linear(x, x0, y0, m1, m2):
         '''A continuous piecewise linear function
@@ -76,7 +76,7 @@ class Touchdown(Measurement):
 
     numsteps = 100
     numfit = 5       # number of points to fit line to while collecting data
-    attoshift = -40 # move 20 um if no touchdown detected
+    attoshift = 40 # move 20 um if no touchdown detected
     Vz_max = 400
     start_offset = 0
 
@@ -148,7 +148,7 @@ class Touchdown(Measurement):
                 raise Exception('quit by user')
 
     def check_touchdown(self):
-        '''Checks for a touchdown.
+        """Checks for a touchdown.
 
         If the last numfit points are monotically increasing and the 
         capacitance increases by an ammount larger than 
@@ -157,13 +157,14 @@ class Touchdown(Measurement):
 
         Returns:
         bool : True when touchdown is detected
-        '''
+        """
         # i is the index of last data point taken
         i = np.where(~np.isnan(self.C))[0][-1]  
         # Check that enough data has been collected to do a linear fit
         if i > self.numfit + self.start_offset:
             # Check if the variance of the capacitance trace is high enough.
-            if np.var(self.C[~np.isnan(self.C)]) > _VAR_THRESHOLD:
+            var_diff = np.var(self.C[~np.isnan(self.C)]) - self.baseline
+            if var_diff > _VAR_THRESHOLD:
                 return True
             # Check if the capacitance has been high enough (above 3 fF)
             if self.C[i - self.numfit] > _CAPACITANCE_THRESHOLD:
@@ -177,17 +178,33 @@ class Touchdown(Measurement):
         # If we haven't taken enough points
         return False            
 
+
+    def get_baseline(self):
+        """Get a baseline for noise in capacitance measurement."""
+        trace = []
+        # Compute the variance of 50 points
+        for i in range(50):
+            # Read the voltage from the daq
+            Vcap = self.daq.inputs['cap'].V
+            # convert to a real capacitance
+            Vcap = self.lockin_cap.convert_output(Vcap)
+            Cap = Vcap * conversions.V_to_C
+            trace.append(Cap)
+            time.sleep(0.3)
+        self.baseline = np.var(trace)
+
     def configure_lockin(self):
-        '''Set up lockin_cap amplifier for a touchdown.'''
-        self.lockin_cap.amplitude = 1
+        """Set up lockin_cap amplifier for a touchdown."""
+        self.lockin_cap.amplitude = 3
         self.lockin_cap.frequency = 26759  # prime number
         self.lockin_cap.set_out(1, 'R')
         self.lockin_cap.set_out(2, 'theta')
-        self.lockin_cap.sensitivity = 20e-6
+        self.lockin_cap.sensitivity = 2e-6
         self.lockin_cap.time_constant = 0.300
         self.lockin_cap.reserve = 'Low Noise'
         self.lockin_cap.ac_coupling()
         self.lockin_cap.auto_phase
+
 
     def _reset_cap_and_corr(self):
         '''
@@ -295,7 +312,7 @@ class Touchdown(Measurement):
             self.title = 'Found touchdown, centering near %i Vpiezo' %int(
                 self.Vz_max/2)
             self.plot()
-            self.attoshift = -(Vtd-self.Vz_max/2)*conversions.Vz_to_um
+            self.attoshift = (Vtd-self.Vz_max/2)*conversions.Vz_to_um
             self.lines_data['V_app'] = []
             self.lines_data['C_app'] = []
             self.lines_data['V_td'] = []
@@ -356,28 +373,14 @@ class Touchdown(Measurement):
         user (bool) -- If True, the user is asked to determine the
         touchdown voltage from the capacitance vs. position plot.
         '''
-
+        # Get a baseline measurement of the variance
+        self.get_baseline()
+        
         Vtd = None
-        slow_scan = False
-        # td_array = [] # looks like we never used this...
-
-        # start = {None          if you are planescanning /
-        #                        if attocubes never moved
-        #          some voltage  if you have previously scanned and are
-        #                           scanning slowly from a set point
-
-
         # Loop that does sweeps of z piezo
         # Z atto is moved up between iterations
         # Loop breaks when true touchdown detected.
         while not self.touchdown:
-            # Determine where to start sweeping
-            if slow_scan:
-                start = Vtd - 50
-                self.z_piezo_step = _Z_PIEZO_STEP_SLOW
-                self._init_arrays()
-                self.setup_plots()
-
             # Specify a starting voltage for the Z bender.
             # If the surface location is unknown, sweep all the way down
             if start is not None:
@@ -406,11 +409,7 @@ class Touchdown(Measurement):
 
                 # Set the current voltage and wait
                 self.piezos.z.V = self.V[i] # Set the current voltage
-
-                # If a slow_scan, wait between points
-                if slow_scan:
-                    time.sleep(self._T_UNTIL_BAL_SLOW)
-
+                time.sleep(0.5)
                 self._record_cap(i);
 
                 # gotta cheat and take care of the infs by making them the same
@@ -426,10 +425,11 @@ class Touchdown(Measurement):
                     # Extract the touchdown voltage.
                     self.p, self.e = self.get_td_v()
                     Vtd = self.p[0]
+					# Calculate one standard deviation errors in the fit parameters
                     self.err = np.sqrt(np.diag(self.e))
 
                     # Check if the fit is "good" if not, flag the touchdown.
-                    if self.err[0] > 4.:
+                    if self.err[0] > 10.:
                         self.flagged = True
                     
                     self.ax.plot(self.V, piecewise_linear(self.V, *self.p))
@@ -440,36 +440,33 @@ class Touchdown(Measurement):
                     if Vtd == -1:
                         self.touchdown = False
                         continue
-
+					# Plot the touchdown voltage with the 1 standard deviation error
                     self.title = 'touchdown: %.2f V, error: %.2f' % (Vtd, self.err[0])
                     self.plot()
 
                     # Don't want to move attos during planescan
-                    if not self.planescan:
+                    # Don't move attocubes if the fit to extract the touchdown voltage
+                    # is bad.
+                    if not self.planescan and not self.flagged:
                         # Check if touchdown near center of z piezo +V range
                         [slow_scan, start] = self._cntr_td_w_atto(slow_scan,
                                                                   Vtd, start);
 
-                    break  # stop approaching
+                    break  
 
-            # end of inner loop (sweep z piezo)
+            # End of inner loop (sweep z piezo)
 
-            # Move the attos;
-            # either we're too far away for a touchdown or TD voltage not centered
-            if (self.planescan is False and self.touchdown is False):
-                # don't want to move attos if in a planescan!
-                start = self._move_attocubes();
-
-            # Do a slow scan next
-            if (self.touchdown is True and  # this is a true touchdown
-                self.planescan is False and # this is not a planescan
-                slow_scan      is False ):  # we have not done a slow scan
-                slow_scan = True
-                self.touchdown = False
+            # Move the attocubes
+            # Either we're too far away for a touchdown or TD voltage not centered
+            if (self.planescan is False and
+                self.touchdown is False and
+                self.flagged is False):
+                # Confirm that the attocubes should move
+                inp = input("Move attocubes? [y]/n: ")
+                if inp == "y":
+                        start = self._move_attocubes()
 
         # Ask the user to confirm the touchdown voltage
-        if user:
-            self.touchdown = input("Touchdown voltage: ")
 
         self.piezos.z.V = 0  # bring the piezo back to zero
 
@@ -576,7 +573,6 @@ class Touchdown(Measurement):
         self.ax.set_title(self.title, fontsize=12)
 
         #self.fig.tight_layout()
-        plt.pause(0.01) #  helps with not responding plots outside notebooks
         self.fig.canvas.draw()
 
     def save(self, savefig=True):
