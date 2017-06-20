@@ -142,12 +142,6 @@ class Scanplane(Measurement):
 
         # Loop over Y values if fast_axis is x,
         # Loop over X values if fast_axis is y
-        # Print a warning if the fast_axis has fewer points than the slow.
-        def slow_axis_alert():
-            print('Slow axis has more points than fast axis!')
-            import winsound
-            winsound.Beep(int(440 * 2**(1 / 2)), 200)  # play a tone
-            winsound.Beep(440, 200)  # play a tone
         if fast_axis == 'x':
             num_lines = int(self.X.shape[0])  # loop over Y
             if num_lines > int(self.X.shape[1]):  # if more Y points than X
@@ -206,8 +200,8 @@ class Scanplane(Measurement):
 
             # Go to first point of scan
             self.piezos.sweep(self.piezos.V, Vstart)
-            self.squidarray.reset()
-            time.sleep(3)
+            #self.squidarray.reset()
+            #time.sleep(0.5)
             # Begin the sweep
             if not surface:
                 # Sweep over X
@@ -237,8 +231,12 @@ class Scanplane(Measurement):
                         d[key] = value[::-1]  # flip the 1D array
 
             # Return to zero for a couple of seconds:
-            self.piezos.V = 0
-            time.sleep(2)
+            #self.piezos.V = 0
+            #time.sleep(2)
+            
+            # Back off with the Z piezo before moving to the next line
+            self.piezos.V = {'z': 0}
+            self.squidarray.reset()
 
             # Interpolate to the number of lines
             self.Vfull['piezo'] = output_data[fast_axis]
@@ -272,10 +270,9 @@ class Scanplane(Measurement):
                         self.Vfull[chan])(self.Vinterp['piezo']
                                           )
                     self.V[chan][:, i] = self.Vinterp[chan]
-
+                    
             self.save_line(i, Vstart)
             self.plot()
-
         self.piezos.V = 0
 
     def plot(self):

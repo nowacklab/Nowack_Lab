@@ -373,8 +373,8 @@ class Touchdown(Measurement):
         user (bool) -- If True, the user is asked to determine the
         touchdown voltage from the capacitance vs. position plot.
         '''
-        # Get a baseline measurement of the variance
-        self.get_baseline()
+        
+        
         
         Vtd = None
         # Loop that does sweeps of z piezo
@@ -390,6 +390,8 @@ class Touchdown(Measurement):
             # Wait for capacitance to settle, then
             # check balance of capacitance bridge
             time.sleep(self._T_UNTIL_BAL)
+            # Get a baseline measurement of the variance
+            self.get_baseline()
             self.check_balance()
 
             # Reset capacitance and correlation coefficient values
