@@ -13,6 +13,10 @@ from .instrument import Instrument
 import numpy as np
 import zhinst.utils
 
+class gateVoltageError( Exception ):
+    pass
+
+
 class HF2LI(Instrument):
     ''' Testy test test test test'''
 
@@ -38,7 +42,7 @@ class HF2LI(Instrument):
 
     def freq_sweep(self, freq_start, freq_stop, num_steps, time_constant = 1e-3,
                  amplitude = .1, outputchan = 1, inputchan = 1, couple = 'ac',
-                 settleTCs = 10, avgTCs = 5, do_plot=False):
+                 settleTCs = 10, avgTCs = 5, loopcount = 1, do_plot=True):
         """
         Sweeps frequency of chosen oscillator, while recording chosen input.
 
@@ -211,7 +215,7 @@ class HF2LI(Instrument):
         sweeper.execute()
 
         start = time.time()
-        timeout = 60  # [s]
+        timeout = 2*(avgTCs + settleTCs)*time_constant*num_steps  # [s]
         print("Will perform", loopcount, "sweeps...")
         while not sweeper.finished():  # Wait until the sweep is complete, with timeout.
             time.sleep(0.2)
@@ -278,11 +282,14 @@ class HF2LI(Instrument):
 
     def aux_sweep(self, aux_start, aux_stop, num_steps, time_constant = 1e-3,
                  amplitude = .01, freq = 200,  auxchan = 1, outputchan = 1, inputchan = 1,
-                 couple = 'ac', settleTCs = 10, avgTCs = 5, do_plot=False):
+                 couple = 'ac', settleTCs = 10, avgTCs = 5, loopcount = 1, do_plot=True,
+                 gatesweep = False, keithley = None, compliance = 1E-9):
         """
         Sweeps the output of an aux channel, while recording chosen input.
         If the goal is to do a DC biased lock in measurement (i.e. AC Rds vs
-        Vds), auxchan should be connected to "add" of outputchan.
+        Vds), auxchan should be connected to "add" of outputchan. Additionally
+        has the ability to do the measurement multiple times with different
+        voltages on a passed Keithley 2400.
 
         Citation: Adapted from Zurich Instruments' "sweep" example.
 
@@ -382,6 +389,7 @@ class HF2LI(Instrument):
                        ['/%s/demods/%d/harmonic'       % (self.device_id, demod_index), 1],
                        ['/%s/sigouts/%d/on'            % (self.device_id, out_channel), 1],
                        ['/%s/sigouts/%d/enables/%d'    % (self.device_id, out_channel, out_mixer_channel), 1],
+                       ['/%s/oscs/%d/freq'         % (self.device_id, out_channel), freq],
                        ['/%s/sigouts/%d/range'         % (self.device_id, out_channel), 1],
                        ['/%s/sigouts/%d/add'           % (self.device_id, out_channel), 1],
                        ['/%s/sigouts/%d/amplitudes/%d' % (self.device_id, out_channel, out_mixer_channel), amplitude],
@@ -390,135 +398,140 @@ class HF2LI(Instrument):
         self.daq.set(exp_setting)
 
         # Create an instance of the Sweeper Module (ziDAQSweeper class).
-        sweeper = self.daq.sweep()
+        data = {}
+        #if gatesweep:
+        #    gatesweep.reverse()
+        try:
+            while True:
+                if  gatesweep:
 
-        # Configure the Sweeper Module's parameters.
-        # Set the device that will be used for the sweep - this parameter must be set.
-        sweeper.set('sweep/device', self.device_id)
-        # Specify the `gridnode`: The instrument node that we will sweep, the device
-        # setting corresponding to this node path will be changed by the sweeper.
-        sweeper.set('sweep/gridnode', '/%s/auxouts/%d/offset' % (self.device_id,aux_channel))
-        # Set the `start` and `stop` values of the gridnode value interval we will use in the sweep.
-        sweeper.set('sweep/start', aux_start)
-        sweeper.set('sweep/stop', aux_stop)
-        # Set the number of points to use for the sweep, the number of gridnode
-        # setting values will use in the interval (`start`, `stop`)
-        sweeper.set('sweep/samplecount', num_steps)
-        # Specify logarithmic spacing for the values in the sweep interval.
-        sweeper.set('sweep/xmapping', 1)
-        # Automatically control the demodulator bandwidth/time constants used.
-        # 0=manual, 1=fixed, 2=auto
-        # Note: to use manual and fixed, sweep/bandwidth has to be set to a value > 0.
-        sweeper.set('sweep/bandwidthcontrol', 0)
-        # Sets the bandwidth overlap mode (default 0). If enabled, the bandwidth of
-        # a sweep point may overlap with the frequency of neighboring sweep
-        # points. The effective bandwidth is only limited by the maximal bandwidth
-        # setting and omega suppression. As a result, the bandwidth is independent
-        # of the number of sweep points. For frequency response analysis bandwidth
-        # overlap should be enabled to achieve maximal sweep speed (default: 0). 0 =
-        # Disable, 1 = Enable.
-        sweeper.set('sweep/bandwidthoverlap', 0)
+                    keithley.I_compliance = compliance
+                    current_gate = gatesweep.pop(0)
+                    keithley.Vout = current_gate
+                    start_time = time.time()
+                    while abs(keithley.I) > .9*compliance:
+                        if time.time() - start_time > 240:
+                            raise gateVoltageError
 
-        # Sequential scanning mode (as opposed to binary or bidirectional).
-        sweeper.set('sweep/scan', 0)
-        # Specify the number of sweeps to perform back-to-back.
-        loopcount = 1
-        sweeper.set('sweep/loopcount', loopcount)
-        # We don't require a fixed sweep/settling/time since there is no DUT
-        # involved in this example's setup (only a simple feedback cable), so we set
-        # this to zero. We need only wait for the filter response to settle,
-        # specified via sweep/settling/inaccuracy.
-        sweeper.set('sweep/settling/time', settleTCs*time_constant)
-        # The sweep/settling/inaccuracy' parameter defines the settling time the
-        # sweeper should wait before changing a sweep parameter and recording the next
-        # sweep data point. The settling time is calculated from the specified
-        # proportion of a step response function that should remain. The value
-        # provided here, 0.001, is appropriate for fast and reasonably accurate
-        # amplitude measurements. For precise noise measurements it should be set to
-        # ~100n.
-        # Note: The actual time the sweeper waits before recording data is the maximum
-        # time specified by sweep/settling/time and defined by
-        # sweep/settling/inaccuracy.
-        sweeper.set('sweep/settling/inaccuracy', 0.001)
-        # Set the minimum time to record and average data to 10 demodulator
-        # filter time constants.
-        sweeper.set('sweep/averaging/tc', avgTCs)
-        # Minimal number of samples that we want to record and average is 100. Note,
-        # the number of samples used for averaging will be the maximum number of
-        # samples specified by either sweep/averaging/tc or sweep/averaging/sample.
-        sweeper.set('sweep/averaging/sample', 10)
+                else:
+                    current_gate = 'nogatesweep'
+                sweeper = self.daq.sweep()
 
-        # Now subscribe to the nodes from which data will be recorded. Note, this is
-        # not the subscribe from ziDAQServer; it is a Module subscribe. The Sweeper
-        # Module needs to subscribe to the nodes it will return data for.x
-        path = '/%s/demods/%d/sample' % (self.device_id, demod_index)
-        sweeper.subscribe(path)
+                # Configure the Sweeper Module's parameters.
+                # Set the device that will be used for the sweep - this parameter must be set.
+                sweeper.set('sweep/device', self.device_id)
+                # Specify the `gridnode`: The instrument node that we will sweep, the device
+                # setting corresponding to this node path will be changed by the sweeper.
+                sweeper.set('sweep/gridnode', '/%s/auxouts/%d/offset' % (self.device_id,aux_channel))
+                # Set the `start` and `stop` values of the gridnode value interval we will use in the sweep.
+                sweeper.set('sweep/start', aux_start)
+                sweeper.set('sweep/stop', aux_stop)
+                # Set the number of points to use for the sweep, the number of gridnode
+                # setting values will use in the interval (`start`, `stop`)
+                sweeper.set('sweep/samplecount', num_steps)
+                # Specify logarithmic spacing for the values in the sweep interval.
+                sweeper.set('sweep/xmapping', 1)
+                # Automatically control the demodulator bandwidth/time constants used.
+                # 0=manual, 1=fixed, 2=auto
+                # Note: to use manual and fixed, sweep/bandwidth has to be set to a value > 0.
+                sweeper.set('sweep/bandwidthcontrol', 0)
+                # Sets the bandwidth overlap mode (default 0). If enabled, the bandwidth of
+                # a sweep point may overlap with the frequency of neighboring sweep
+                # points. The effective bandwidth is only limited by the maximal bandwidth
+                # setting and omega suppression. As a result, the bandwidth is independent
+                # of the number of sweep points. For frequency response analysis bandwidth
+                # overlap should be enabled to achieve maximal sweep speed (default: 0). 0 =
+                # Disable, 1 = Enable.
+                sweeper.set('sweep/bandwidthoverlap', 0)
 
-        # Start the Sweeper's thread.
-        sweeper.execute()
+                # Sequential scanning mode (as opposed to binary or bidirectional).
+                sweeper.set('sweep/scan', 0)
+                # Specify the number of sweeps to perform back-to-back.
+                sweeper.set('sweep/loopcount', loopcount)
+                # We don't require a fixed sweep/settling/time since there is no DUT
+                # involved in this example's setup (only a simple feedback cable), so we set
+                # this to zero. We need only wait for the filter response to settle,
+                # specified via sweep/settling/inaccuracy.
+                sweeper.set('sweep/settling/time', settleTCs*time_constant)
+                # The sweep/settling/inaccuracy' parameter defines the settling time the
+                # sweeper should wait before changing a sweep parameter and recording the next
+                # sweep data point. The settling time is calculated from the specified
+                # proportion of a step response function that should remain. The value
+                # provided here, 0.001, is appropriate for fast and reasonably accurate
+                # amplitude measurements. For precise noise measurements it should be set to
+                # ~100n.
+                # Note: The actual time the sweeper waits before recording data is the maximum
+                # time specified by sweep/settling/time and defined by
+                # sweep/settling/inaccuracy.
+                sweeper.set('sweep/settling/inaccuracy', 0.001)
+                # Set the minimum time to record and average data to 10 demodulator
+                # filter time constants.
+                sweeper.set('sweep/averaging/tc', avgTCs)
+                # Minimal number of samples that we want to record and average is 100. Note,
+                # the number of samples used for averaging will be the maximum number of
+                # samples specified by either sweep/averaging/tc or sweep/averaging/sample.
+                sweeper.set('sweep/averaging/sample', 10)
 
-        start = time.time()
-        timeout = 60  # [s]
-        print("Will perform", loopcount, "sweeps...")
-        while not sweeper.finished():  # Wait until the sweep is complete, with timeout.
-            time.sleep(0.2)
-            progress = sweeper.progress()
-            print("Individual sweep progress: {:.2%}.".format(progress[0]), end="\r")
-            # Here we could read intermediate data via:
-            # data = sweeper.read(True)...
-            # and process it while the sweep is completing.
-            # if device in data:
-            # ...
-            if (time.time() - start) > timeout:
-                # If for some reason the sweep is blocking, force the end of the
-                # measurement.
-                print("\nSweep still not finished, forcing finish...")
-                sweeper.finish()
-        print("")
+                # Now subscribe to the nodes from which data will be recorded. Note, this is
+                # not the subscribe from ziDAQServer; it is a Module subscribe. The Sweeper
+                # Module needs to subscribe to the nodes it will return data for.x
+                path = '/%s/demods/%d/sample' % (self.device_id, demod_index)
+                sweeper.subscribe(path)
+                # Start the Sweeper's thread.
 
-        # Read the sweep data. This command can also be executed whilst sweeping
-        # (before finished() is True), in this case sweep data up to that time point
-        # is returned. It's still necessary still need to issue read() at the end to
-        # fetch the rest.
-        return_flat_dict = True
-        data = sweeper.read(return_flat_dict)
-        sweeper.unsubscribe(path)
+                sweeper.execute()
+                start = time.time()
+                timeout = 2*(avgTCs + settleTCs)*time_constant*num_steps + 10  # [s]
+                print("Will perform", loopcount, "sweeps...")
+                while not sweeper.finished():  # Wait until the sweep is complete, with timeout.
+                    try:
+                        time.sleep(0.2)
+                        progress = sweeper.progress()
+                        print("Individual sweep progress: {:.2%}.".format(progress[0]), end="\r")
+                        # Here we could read intermediate data via:
+                        # data = sweeper.read(True)...
+                        # and process it while the sweep is completing.
+                        # if device in data:
+                        # ...
+                        if (time.time() - start) > timeout:
+                            # If for some reason the sweep is blocking, force the end of the
+                            # measurement.
+                            print("\nSweep still not finished, forcing finish...")
+                            sweeper.finish()
+                        if (not gatesweep
+                            and abs(keithley.V - current_gate) > .1):
+                            print("Gate voltage could not be maintained, forcing finish...")
+                            sweeper.finish()
+                    except KeyboardInterrupt:
+                        sweeper.finish()
+                print("")
 
-        # Stop the sweeper thread and clear the memory.
-        sweeper.clear()
+                # Read the sweep data. This command can also be executed whilst sweeping
+                # (before finished() is True), in this case sweep data up to that time point
+                # is returned. It's still necessary still need to issue read() at the end to
+                # fetch the rest.
+                return_flat_dict = True
+                data[str(current_gate)] = sweeper.read(return_flat_dict)
+                sweeper.unsubscribe(path)
 
-        # Check the dictionary returned is non-empty.
-        assert data, "read() returned an empty data dictionary, did you subscribe to any paths?"
-        # Note: data could be empty if no data arrived, e.g., if the demods were
-        # disabled or had rate 0.
-        assert path in data, "No sweep data in data dictionary: it has no key '%s'" % path
-        samples = data[path]
-        print("Returned sweeper data contains", len(samples), "sweeps.")
-        assert len(samples) == loopcount, \
-            "The sweeper returned an unexpected number of sweeps: `%d`. Expected: `%d`." % (len(samples), loopcount)
+                # Stop the sweeper thread and clear the memory.
+                sweeper.clear()
 
-        if do_plot:
-            import matplotlib.pyplot as plt
-            plt.clf()
-            for i in range(0, len(samples)):
-                frequency = samples[i][0]['frequency']
-                R = np.abs(samples[i][0]['x'] + 1j*samples[i][0]['y'])
-                phi = np.angle(samples[i][0]['x'] + 1j*samples[i][0]['y'])
-                plt.subplot(2, 1, 1)
-                plt.semilogx(frequency, R)
-                plt.subplot(2, 1, 2)
-                plt.semilogx(frequency, phi)
-            plt.subplot(2, 1, 1)
-            plt.title('Results of %d sweeps.' % len(samples))
-            plt.grid(True)
-            plt.ylabel(r'Demodulator R ($V_\mathrm{RMS}$)')
-            plt.ylim(0.0, 0.1)
-            plt.subplot(2, 1, 2)
-            plt.grid(True)
-            plt.xlabel('Frequency ($Hz$)')
-            plt.ylabel(r'Demodulator Phi (radians)')
-            plt.autoscale()
-            plt.draw()
-            plt.show()
-
+                if not gatesweep:
+                    break
+            # Check the dictionary returned is non-empty.
+            assert data, "read() returned an empty data dictionary, did you subscribe to any paths?"
+            samples = {}
+            if 'nogatesweep' in data.keys():
+                data = data['nogatesweep']
+                assert path in data, "No sweep data in data dictionary: it has no key '%s'" % path
+                samples = data[path]
+            else:
+                for i in data.keys():
+                    assert path in data[i], "No sweep data in data dictionary: it has no key '%s'" % path
+                    samples[i] = data[i][path]
+            print("Returned sweeper data contains", len(samples), "sweeps.")
+        except gateVoltageError:
+            print("Could not reach requested gate voltage")
+            samples = {}
         return samples

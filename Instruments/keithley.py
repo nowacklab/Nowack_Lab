@@ -157,10 +157,12 @@ class Keithley2400(Instrument):
     @I_compliance.setter
     def I_compliance(self, value):
         '''
-        Set the compliance current (if in voltage source mode).
+        Set the compliance current (if in voltage source mode). Also sets
+        current measure range to an appropriate one for that compliance.
         '''
         if self.source != 'V':
             raise Exception('Cannot set current compliance if sourcing current!')
+        self.write(':SENS:CURR:RANG %s' %value)
         self.write(':SENS:CURR:PROT %s' %value)
         self._I_compliance = value
 
