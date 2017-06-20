@@ -73,5 +73,6 @@ from Nowack_Lab.Instruments.preamp import SR5113
 from Nowack_Lab.Instruments.squidarray import SquidArray
 from Nowack_Lab.Instruments.lockin import SR830
 from Nowack_Lab.Instruments.ppms import PPMS
+from Nowack_Lab.Instruments.magnet import AMI430
 #from Nowack_Lab.Fun.callme import call
 ''');

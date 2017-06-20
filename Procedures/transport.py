@@ -65,9 +65,10 @@ class RvsSomething(Measurement):
         Duration and delay both in seconds.
         Use do_measurement() for each resistance measurement.
         '''
+        time_start = time.time()
         if duration is None:
             while True:
-                self.time = np.append(self.time, time.time()-self.time_start)
+                self.time = np.append(self.time, time.time()-time_start)
                 self.do_measurement(delay, num_avg, delay_avg, plot, auto_gain=auto_gain)
                 if duration is not None:
                     if self.time[-1] >= duration:
@@ -402,9 +403,9 @@ class RvsVg(RvsSomething):
         super().plot()
         if self.Igwarning is None: # if no warning
             if len(self.Ig)>0: # if have data
-                if self.Ig.max() >= 0.5e-9: # if should be warning
-                    self.Igwarning = self.ax.text(.02,.95, 
-                                        r'$I_g \geq 0.5$ nA!', 
+                if abs(self.Ig).max() >= 0.5e-9: # if should be warning
+                    self.Igwarning = self.ax.text(.02,.95,
+                                        r'$|I_g| \geq 0.5$ nA!',
                                         transform=self.ax.transAxes,
                                         color = 'C3'
                                     ) # warning
