@@ -120,13 +120,13 @@ class HF2LI(Instrument):
         demod_index = 0
         osc_index = outputchan-1
         demod_rate = 10e3
-        out_mixer_channel = int(self.daq.listNodes('/%s/sigouts/%d/amplitudes/' % (self.device_id, out_channel),0)[1])
+        out_mixer_channel = int(self.daq.listNodes('/%s/sigouts/%d/amplitudes/' % (self.device_id, out_channel),0)[0])
         if couple == 'ac':
             acUse = 1
         else:
             acUse = 0
         exp_setting = [['/%s/sigins/%d/ac'             % (self.device_id, in_channel), acUse],
-                       ['/%s/sigins/%d/range'          % (self.device_id, in_channel), 2*amplitude],
+                       ['/%s/sigins/%d/range'          % (self.device_id, in_channel), 2],
                        ['/%s/demods/%d/enable'         % (self.device_id, demod_index), 1],
                        ['/%s/demods/%d/rate'           % (self.device_id, demod_index), demod_rate],
                        ['/%s/demods/%d/adcselect'      % (self.device_id, demod_index), in_channel],
@@ -136,7 +136,7 @@ class HF2LI(Instrument):
                        ['/%s/demods/%d/harmonic'       % (self.device_id, demod_index), 1],
                        ['/%s/sigouts/%d/on'            % (self.device_id, out_channel), 1],
                        ['/%s/sigouts/%d/enables/%d'    % (self.device_id, out_channel, out_mixer_channel), 1],
-                       ['/%s/sigouts/%d/range'         % (self.device_id, out_channel), 1],
+                       ['/%s/sigouts/%d/range'         % (self.device_id, out_channel),  1],
                        ['/%s/sigouts/%d/amplitudes/%d' % (self.device_id, out_channel, out_mixer_channel), amplitude],
                        ['/%s/sigins/%d/diff'           % (self.device_id, in_channel), 0],
                        ['/%s/sigouts/%d/add'           % (self.device_id, out_channel), 0],
@@ -279,11 +279,114 @@ class HF2LI(Instrument):
             plt.show()
 
         return samples
+    def aux_sweepND(self, auxchan, aux_stop, time = 5):
+        """
+        Sweeps the output of an aux channel from its current value to the
+        chosen one. Returns no data.
+
+        Arguments:
+
+        aux_channel: number (1-4) of aux out to sweep.
+
+        aux_stop: desired final aux voltage.
+
+        time (optional): time over which to do the sweep.
+
+        """
+        aux_channel = auxchan - 1
+        general_setting = [['/%s/demods/*/enable' % self.device_id, 0],
+                           ['/%s/demods/*/trigger' % self.device_id, 0],
+                           ['/%s/sigouts/*/enables/*' % self.device_id, 0],
+                           ['/%s/scopes/*/enable' % self.device_id, 0],
+                           ['/%s/auxouts/%d/outputselect'  % (self.device_id, aux_channel),-1],
+                           ['/%s/demods/0/enable'         % (self.device_id), 1],
+                           ['/%s/demods/0/timeconstant'         % (self.device_id), 1e-9]]
+        self.daq.set(general_setting)
+        # Perform a global synchronisation between the device and the data server:
+        # Ensure that the settings have taken effect on the device before setting
+        # the next configuration.
+        self.daq.sync()
+
+        # Now configure the instrument for this experiment. The following channels
+        # and indices work on all device configurations. The values below may be
+        # changed if the instrument has multiple input/output channels and/or either
+        # the Multifrequency or Multidemodulator options installed.
+
+        sweeperinitalize = self.daq.sweep()
+
+        # Configure the Sweeper Module's parameters.
+        # Set the device that will be used for the sweep - this parameter must be set.
+        sweeperinitalize.set('sweep/device', self.device_id)
+        # Specify the `gridnode`: The instrument node that we will sweep, the device
+        # setting corresponding to this node path will be changed by the sweeper.
+        sweeperinitalize.set('sweep/gridnode', '/%s/auxouts/%d/offset' % (self.device_id,aux_channel))
+        # Set the `start` and `stop` values of the gridnode value interval we will use in the sweep.
+        current_aux_value =  self.daq.get(
+                                '/%s/auxouts/%d/offset'
+                                % (self.device_id,aux_channel))\
+                                [self.device_id]['auxouts'][str(aux_channel)]\
+                                ['offset'][0]
+        if current_aux_value <= aux_stop:
+            sweeperinitalize.set('sweep/start', current_aux_value)
+            sweeperinitalize.set('sweep/stop', aux_stop)
+            sweeperinitalize.set('sweep/scan', 0)
+        else:
+            sweeperinitalize.set('sweep/start', aux_stop)
+            sweeperinitalize.set('sweep/stop', current_aux_value)
+            sweeperinitalize.set('sweep/scan', 3)
+
+        # Set the number of points to use for the sweep, the number of gridnode
+        # setting values will use in the interval (`start`, `stop`)
+        sweeperinitalize.set('sweep/samplecount', 100)
+        # Specify logarithmic spacing for the values in the sweep interval.
+        sweeperinitalize.set('sweep/xmapping', 1)
+        # Automatically control the demodulator bandwidth/time constants used.
+        # 0=manual, 1=fixed, 2=auto
+        # Note: to use manual and fixed, sweep/bandwidth has to be set to a value > 0.
+        sweeperinitalize.set('sweep/bandwidthcontrol', 0)
+        # Sets the bandwidth overlap mode (default 0). If enabled, the bandwidth of
+        # a sweep point may overlap with the frequency of neighboring sweep
+        # points. The effective bandwidth is only limited by the maximal bandwidth
+        # setting and omega suppression. As a result, the bandwidth is independent
+        # of the number of sweep points. For frequency response analysis bandwidth
+        # overlap should be enabled to achieve maximal sweep speed (default: 0). 0 =
+        # Disable, 1 = Enable.
+        sweeperinitalize.set('sweep/bandwidthoverlap', 0)
+        # Specify the number of sweeps to perform back-to-back.
+        sweeperinitalize.set('sweep/loopcount', 1)
+        # We don't require a fixed sweep/settling/time since there is no DUT
+        # involved in this example's setup (only a simple feedback cable), so we set
+        # this to zero. We need only wait for the filter response to settle,
+        # specified via sweep/settling/inaccuracy.
+        sweeperinitalize.set('sweep/settling/time', time/100)
+        # The sweep/settling/inaccuracy' parameter defines the settling time the
+        # sweeper should wait before changing a sweep parameter and recording the next
+        # sweep data point. The settling time is calculated from the specified
+        # proportion of a step response function that should remain. The value
+        # provided here, 0.001, is appropriate for fast and reasonably accurate
+        # amplitude measurements. For precise noise measurements it should be set to
+        # ~100n.
+        # Note: The actual time the sweeper waits before recording data is the maximum
+        # time specified by sweep/settling/time and defined by
+        # sweep/settling/inaccuracy.
+        sweeperinitalize.set('sweep/settling/inaccuracy', 0)
+        # Set the minimum time to record and average data to 10 demodulator
+        # filter time constants.
+        sweeperinitalize.set('sweep/averaging/tc', 0)
+        # Minimal number of samples that we want to record and average is 100. Note,
+        # the number of samples used for averaging will be the maximum number of
+        # samples specified by either sweep/averaging/tc or sweep/averaging/sample.
+        sweeperinitalize.set('sweep/averaging/sample', 0)
+        sweeperinitalize.subscribe('/%s/demods/0/sample' % self.device_id)
+        sweeperinitalize.execute()
+        while not sweeperinitalize.finished():
+            pass
+        sweeperinitalize.clear()
 
     def aux_sweep(self, aux_start, aux_stop, num_steps, time_constant = 1e-3,
                  amplitude = .01, freq = 200,  auxchan = 1, outputchan = 1, inputchan = 1,
-                 couple = 'ac', settleTCs = 10, avgTCs = 5, loopcount = 1, do_plot=True,
-                 gatesweep = False, keithley = None, compliance = 1E-9):
+                 couple = 'dc', settleTCs = 10, avgTCs = 5, loopcount = 1, do_plot=True,
+                 gatesweep = False, keithley = False, compliance = 1E-9, ta_gain = 1e8):
         """
         Sweeps the output of an aux channel, while recording chosen input.
         If the goal is to do a DC biased lock in measurement (i.e. AC Rds vs
@@ -371,14 +474,14 @@ class HF2LI(Instrument):
         aux_channel = auxchan - 1
         demod_index = 0
         osc_index = outputchan-1
-        out_mixer_channel = int(self.daq.listNodes('/%s/sigouts/%d/amplitudes/' % (self.device_id, out_channel),0)[1])
+        out_mixer_channel = int(self.daq.listNodes('/%s/sigouts/%d/amplitudes/' % (self.device_id, out_channel),0)[0])
         demod_rate = 10e3
         if couple == 'ac':
             acUse = 1
         else:
             acUse = 0
         exp_setting = [['/%s/sigins/%d/ac'             % (self.device_id, in_channel), acUse],
-                       ['/%s/sigins/%d/range'          % (self.device_id, in_channel), 2*amplitude],
+                       ['/%s/sigins/%d/range'          % (self.device_id, in_channel), 2],
                        ['/%s/sigins/%d/diff'           % (self.device_id, in_channel), 0],
                        ['/%s/demods/%d/enable'         % (self.device_id, demod_index), 1],
                        ['/%s/demods/%d/rate'           % (self.device_id, demod_index), demod_rate],
@@ -415,8 +518,11 @@ class HF2LI(Instrument):
 
                 else:
                     current_gate = 'nogatesweep'
-                sweeper = self.daq.sweep()
+                time.sleep(1)
 
+                self.aux_sweepND(auxchan,aux_start)
+
+                sweeper = self.daq.sweep()
                 # Configure the Sweeper Module's parameters.
                 # Set the device that will be used for the sweep - this parameter must be set.
                 sweeper.set('sweep/device', self.device_id)
@@ -482,28 +588,32 @@ class HF2LI(Instrument):
                 sweeper.execute()
                 start = time.time()
                 timeout = 2*(avgTCs + settleTCs)*time_constant*num_steps + 10  # [s]
-                print("Will perform", loopcount, "sweeps...")
-                while not sweeper.finished():  # Wait until the sweep is complete, with timeout.
-                    try:
-                        time.sleep(0.2)
-                        progress = sweeper.progress()
-                        print("Individual sweep progress: {:.2%}.".format(progress[0]), end="\r")
-                        # Here we could read intermediate data via:
-                        # data = sweeper.read(True)...
-                        # and process it while the sweep is completing.
-                        # if device in data:
-                        # ...
-                        if (time.time() - start) > timeout:
-                            # If for some reason the sweep is blocking, force the end of the
-                            # measurement.
-                            print("\nSweep still not finished, forcing finish...")
-                            sweeper.finish()
-                        if (not gatesweep
-                            and abs(keithley.V - current_gate) > .1):
-                            print("Gate voltage could not be maintained, forcing finish...")
-                            sweeper.finish()
-                    except KeyboardInterrupt:
-                        sweeper.finish()
+                print("Current gate voltage: ", current_gate, "V   Voltages Remaining:",
+                        len(gatesweep))
+                try:
+                    while not sweeper.finished():  # Wait until the sweep is complete, with timeout.
+
+                            time.sleep(0.2)
+                            # Here we could read intermediate data via:
+                            # data = sweeper.read(True)...
+                            # and process it while the sweep is completing.
+                            # if device in data:
+                            # ...
+                            if (time.time() - start) > timeout:
+                                # If for some reason the sweep is blocking, force the end of the
+                                # measurement.
+                                print("\nSweep still not finished, forcing finish...")
+                                sweeper.finish()
+                            if (bool(keithley)
+                                and abs(keithley.Vout - current_gate) > .1):
+                                print("Gate voltage could not be maintained, forcing finish...")
+                                raise gateVoltageError
+                except KeyboardInterrupt:
+                    sweeper.finish()
+                    break
+                except gateVoltageError:
+                    sweeper.finish()
+                    break
                 print("")
 
                 # Read the sweep data. This command can also be executed whilst sweeping
@@ -519,19 +629,32 @@ class HF2LI(Instrument):
 
                 if not gatesweep:
                     break
-            # Check the dictionary returned is non-empty.
-            assert data, "read() returned an empty data dictionary, did you subscribe to any paths?"
             samples = {}
-            if 'nogatesweep' in data.keys():
-                data = data['nogatesweep']
-                assert path in data, "No sweep data in data dictionary: it has no key '%s'" % path
-                samples = data[path]
-            else:
-                for i in data.keys():
-                    assert path in data[i], "No sweep data in data dictionary: it has no key '%s'" % path
-                    samples[i] = data[i][path]
+            for i in data.keys():
+                samples[i] = data[i][path]
             print("Returned sweeper data contains", len(samples), "sweeps.")
         except gateVoltageError:
             print("Could not reach requested gate voltage")
             samples = {}
+        if keithley:
+            keithley.I_compliance = 1e-9
+            keithley.Vout = 0
+            while abs(keithley.I) > .9*compliance:
+                pass
+        self.aux_sweepND(auxchan,0)
+        if samples:
+            import matplotlib.pyplot as plt
+            plt.clf()
+            for gate in samples.keys():
+                vds = samples[gate][0][0]['grid']
+                R = np.abs((samples[gate][0][0]['x'] + 1j*samples[gate][0][0]['y'])
+                            *1/(ta_gain  * amplitude)*1e9)
+                plt.plot(vds, R, label = 'Gate %s V' % gate)
+            ax = plt.gca()
+            plt.legend(bbox_to_anchor=(1.4, 1.0))
+            plt.grid(True)
+            plt.ylabel(r'Conductivity DS (nA/V)')
+            plt.xlabel('$V_\mathrm{ds}$ bias ($V$)')
+            plt.draw()
+            plt.show()
         return samples
