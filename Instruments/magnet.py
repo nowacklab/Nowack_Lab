@@ -1,11 +1,11 @@
 import visa, time, numpy as np, re
-from .instrument import Instrument
+from .instrument import Instrument, VISAInstrument
 
 _BMAX = {'x': 1, 'y': 1, 'z': 6} # T
 _IMAX = {'x': 50.73, 'y': 50.63, 'z': 50.76} # A
 _COILCONST = {'x': 0.01971, 'y': 0.01975, 'z': 0.1182} # T/A
-_IRAMPMAX = {'x': 0.067, 'y': 0.0579, 'z': 0.0357} # A/s
-_BRAMPMAX = {i: _IRAMPMAX[i]*_COILCONST[i] for i in ['x','y','z']} # T/s
+_IRATEMAX = {'x': 0.067, 'y': 0.0579, 'z': 0.0357} # A/s
+_BRATEMAX = {i: _IRATEMAX[i]*_COILCONST[i] for i in ['x','y','z']} # T/s
 _VMAX = {var: 2.2 for var in ('x','y','z')} # V #FIXME?
 _STATES = {
     1: "RAMPING",
@@ -20,7 +20,7 @@ _STATES = {
     10: "Cooling Persistent Switch"
 }
 
-class AMI430(Instrument):
+class AMI430(VISAInstrument):
     '''
     Control for the American Magnetics AMI430 Power Supply.
     The coil constant allows translation of current to field.
@@ -30,16 +30,24 @@ class AMI430(Instrument):
     readings/setpoints are always related by the coil constant.
     '''
     _label = 'ami430'
-    _Bmax = 6
-    _Imax = 50.63
     _params = ['B', 'Bset', 'Brate', 'I', 'Iset', 'Irate', 'Isupply',
                     'p_switch']
 
     def __init__(self, axis = 'z'):
-        resource_name = "TCPIP::ami430_%saxis.nowacklab.edu::7180::SOCKET" %axis
+        resource = 'TCPIP::ami430_%saxis.nowacklab.edu::7180::SOCKET' %axis
+        self._resource = resource
+        self._init_visa(resource)
+
+        self.write('CONF:FIELD:UNITS 1') # ensure units are in Tesla
+
         self.axis = axis
-        self._resource = resource_name
-        self._init_visa()
+
+        self._Bmax = _BMAX[axis]
+        self._Imax = _IMAX[axis]
+        self._coilconst = _COILCONST[axis]
+        self._Iratemax = _IRATEMAX[axis]
+        self._Bratemax = _BRATEMAX[axis]
+        self._Vmax = _VMAX[axis]
 
     def __getstate__(self):
         '''
@@ -58,12 +66,11 @@ class AMI430(Instrument):
 
         self.__dict__.update(state)
 
-    def _init_visa(self):
+    def _init_visa(self, resource):
         '''
         Initialize the visa handle.
         '''
-        self._visa_handle = visa.ResourceManager().open_resource(self._resource)
-        self._visa_handle.read_termination = '\n'
+        super()._init_visa(resource, termination = '\r\n')
         # Receive welcome and connect messages.
         self._visa_handle.read()
         self._visa_handle.read()
@@ -73,7 +80,7 @@ class AMI430(Instrument):
         '''
         Read the field in Tesla.
         '''
-        self._B = self.ask('FIELD:MAG?')/10 # kG to T
+        self._B = float(self.ask('FIELD:MAG?'))
         return self._B
 
     @B.setter
@@ -81,22 +88,35 @@ class AMI430(Instrument):
         '''
         Set the field setpoint in Tesla.
         '''
-        self.write('CONF:FIELD TARG %g' %value*10) # T to kG
+        self.Bset = value
 
     @property
     def Bset(self):
         '''
         Get the field setpoint.
         '''
-        self._Bset = self.ask('FIELD:TARG?')/10 # kG to T
+        self._Bset = float(self.ask('FIELD:TARG?'))
         return self._Bset
+
+    @Bset.setter
+    def Bset(self, value):
+        '''
+        Set the field setpoint in Tesla.
+        '''
+        if abs(value) > self._Bmax:
+            print('Warning! %g T setpoint too high! Setpoint set to %g T.'
+                                                        %(value, self._Bmax))
+            value = self._Bmax*np.sign(value)
+        self.write('CONF:FIELD TARG %g' %value)
 
     @property
     def Brate(self):
         '''
         Get the field ramp rate (T/s)
         '''
-        self._Brate = self.ask('RAMP:RATE:FIELD:1?')
+        s = self.ask('RAMP:RATE:FIELD:1?') # returns 'Brate,Bmax'
+        s = s.split(',') # now we have ['Brate','Bmax']
+        self._Brate = float(s[0])
         return self._Brate
 
     @Brate.setter
@@ -104,14 +124,18 @@ class AMI430(Instrument):
         '''
         Set the field ramp rate (T/s)
         '''
-        self.write('CONF:RAMP:RATE:FIELD 1,%g' %value*10) # T/s to kG/s
+        if value > self._Bratemax:
+            print('Warning! %g T/s ramp rate too high! Rate set to %g T/s.'
+                                                    %(value, self._Bratemax))
+            value = self._Bratemax
+        self.write('CONF:RAMP:RATE:FIELD 1,%g,%g' %(value, self._Bmax))
 
     @property
     def I(self):
         '''
         Read the current in Amperes.
         '''
-        self._I =self.ask('CURR:MAG?')
+        self._I = float(self.ask('CURR:MAG?'))
         return self._I
 
     @property
@@ -119,7 +143,7 @@ class AMI430(Instrument):
         '''
         Get the current setpoint.
         '''
-        self._Iset = self.ask('CURR:TARG?')
+        self._Iset = float(self.ask('CURR:TARG?'))
         return self._Iset
 
     @property
@@ -127,8 +151,21 @@ class AMI430(Instrument):
         '''
         Get the current ramp rate (A/s)
         '''
-        self._Irate = self.ask('RAMP:RATE:CURR:1?')
+        s = self.ask('RAMP:RATE:CURR:1?') # returns 'Irate,Imax'
+        s = s.split(',') # now we have ['Irate','Imax']
+        self._Irate = float(s[0])
         return self._Irate
+
+    @Irate.setter
+    def Irate(self, value):
+        '''
+        Set the current ramp rate (A/s)
+        '''
+        if value > self._Iratemax:
+            print('Warning! %g A/s ramp rate too high! Rate set to %g A/s.'
+                                                    %(value, self._Iratemax))
+            value = self._Iratemax
+        self.write('CONF:RAMP:RATE:FIELD 1,%g,%g' %(value, _IMAX[self.axis]))
 
     @property
     def Isupply(self):
@@ -217,8 +254,64 @@ class AMI430(Instrument):
 
 
 
-class Magnet(Instrument):
-    def __init__(self):
+class Magnet(AMI430):
+    _attrs = ('x', 'y', 'z', '_attrs') # attributes to get/set normally
+    _active_axis = None
+
+    def __init__(self, active_axis='z'):
+        '''
+        Creates objects for controlling each axis independently.
+        For safety, mark one axis as active and run from this object.
+        This object also enables a vector field, max 1 T.
+        '''
         self.x = AMI430('x')
         self.y = AMI430('y')
         self.z = AMI430('z')
+        self.set_active_axis(active_axis)
+
+    def __del__(self):
+        '''
+        Destroy the object and close the visa handle for each axis.
+        '''
+        self.x.close()
+        self.y.close()
+        self.z.close()
+
+    def __getattr__(self, attr):
+        '''
+        Custom getattr to run commands from the object corresponding to the
+        active axis.
+        '''
+        if attr in self._attrs:
+            return self.__dict__[attr] # avoid using getattr
+        axis_obj = self.__dict__[self._active_axis]
+        return getattr(axis_obj, attr)
+
+    def __setattr__(self, attr, value):
+        '''
+        Custom setattr to run commands from the object corresponding to the
+        active axis.
+        '''
+        if attr == '_active_axis':
+            raise Exception('Change active axis useing set_active_axis!')
+        if attr in self._attrs:
+            self.__dict__[attr] = value # avoid using setattr
+            return
+        axis_obj = self.__dict__[self._active_axis]
+        return setattr(axis_obj, attr, value)
+
+    def set_active_axis(self, axis):
+        '''
+        Set the active axis.
+        All commands from this object will control that axis only.
+        '''
+        if self._active_axis is not None:
+            if self.B != 0:
+                raise Exception('Must zero field before switching active axis!')
+        self.__dict__['_active_axis'] = axis
+
+    def vector(self, Bx, By, Bz):
+        '''
+        Program a sweep to a vector field
+        '''
+        pass #TODO

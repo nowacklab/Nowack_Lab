@@ -43,7 +43,7 @@ class SR830(VISAInstrument):
             gpib_address = 'GPIB::%02i::INSTR' %gpib_address
         self.gpib_address = gpib_address
 
-        self._init_visa()
+        self._init_visa(gpib_address)
         self._visa_handle.timeout = 3000 # default
 
     def __getstate__(self):
@@ -318,8 +318,8 @@ class SR830(VISAInstrument):
         return tabulate(table, headers = ['Parameter', 'Value'])
 
 
-    def __init_visa(self):
-        super().__init_visa()
+    def _init_visa(self, resource):
+        super()._init_visa(resource) # creates self._visa_handle
         self._visa_handle.write('OUTX 1') #1=GPIB
 
     def is_OL(self, thresh=1):

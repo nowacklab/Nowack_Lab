@@ -27,12 +27,20 @@ class VISAInstrument(Instrument):
         '''
         self.close()
 
-    def _init_visa(self):
-        '''
+    def _init_visa(self, resource, termination='\n'):
+        r'''
         Initialize the VISA connection.
+        Pass in the resource name. This can be:
+        - GPIB Address
+            GPIB::##::INSTR
+        - TCPIP Socket
+            TCPIP::host address::port::SOCKET
+        - Or many others...
+            See https://pyvisa.readthedocs.io/en/stable/names.html
+        termination: e.g. \r\n: read termination.
         '''
-        self._visa_handle = visa.ResourceManager().open_resource(self.gpib_address)
-        self._visa_handle.read_termination = '\n'
+        self._visa_handle = visa.ResourceManager().open_resource(resource)
+        self._visa_handle.read_termination = termination
         self._visa_handle.write('OUTX 1') #1=GPIB
 
     def ask(self, cmd, timeout=3000):
