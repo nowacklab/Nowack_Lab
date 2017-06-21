@@ -66,9 +66,10 @@ class HF2LI(Instrument):
             self.device_id = zhinst.utils.autoDetect(self.daq)
 
 
-    def freq_sweep(self, freq_start, freq_stop, num_steps, time_constant = 1e-3,
-                 amplitude = .1, outputchan = 1, inputchan = 1, couple = 'ac',
-                 settleTCs = 10, avgTCs = 5, loopcount = 1, do_plot=True):
+    def freq_sweep(self, freq_start, freq_stop, num_steps,
+                 time_constant = 1e-3, amplitude = .1, outputchan = 1,
+                 inputchan = 1, couple = 'ac', settleTCs = 10, avgTCs = 5,
+                 loopcount = 1, do_plot=True):
         """
         Sweeps frequency of chosen oscillator, while recording chosen input.
 
@@ -84,7 +85,8 @@ class HF2LI(Instrument):
 
           time_constant (float): demod timeconstant
 
-          amplitude (float, optional): The amplitude to set on the signal output.
+          amplitude (float, optional): The amplitude to set on the signal
+            output.
 
           inputchan (int, optional): input channel (1 or 2)
 
@@ -92,8 +94,8 @@ class HF2LI(Instrument):
 
           couple (string, optional): ac couple if str = 'ac', o.w. dc couple
 
-          settleTCs (int, optional): number of time constants to allow demod to
-            stabilize after sweep.
+          settleTCs (int, optional): number of time constants to allow demod
+            to stabilize after sweep.
 
           avgTCs (int, optional): number of time constants to average demod
             output for data point.
@@ -103,9 +105,9 @@ class HF2LI(Instrument):
 
         Returns:
 
-          sample (list of dict): A list of demodulator sample dictionaries. Each
-            entry in the list correspond to the result of a single sweep and is a
-            dict containing a demodulator sample.
+          sample (list of dict): A list of demodulator sample dictionaries.
+            Each entry in the list correspond to the result of a single sweep
+            and is a dict containing a demodulator sample.
 
         Raises:
 
@@ -119,87 +121,89 @@ class HF2LI(Instrument):
 
         """
 
-        apilevel_example = 5  # The API level supported by this example.
-        # Call a zhinst utility function that returns:
-        # - an API session `daq` in order to communicate with devices via the data server.
-        # - the device ID string that specifies the device branch in the server's node hierarchy.
-        # - the device's discovery properties.
-        err_msg = "This example only supports instruments with demodulators."
-
-        # Create a base instrument configuration: disable all outputs, demods and scopes.
+        # Create a base instrument configuration: disable all outputs, demods
+        # and scopes.
         general_setting = [['/%s/demods/*/enable' % self.device_id, 0],
                            ['/%s/demods/*/trigger' % self.device_id, 0],
                            ['/%s/sigouts/*/enables/*' % self.device_id, 0],
                            ['/%s/scopes/*/enable' % self.device_id, 0]]
         self.daq.set(general_setting)
-        # Perform a global synchronisation between the device and the data server:
-        # Ensure that the settings have taken effect on the device before setting
-        # the next configuration.
+        # Perform a global synchronisation between the device and the data
+        # server:
         self.daq.sync()
 
-        # Now configure the instrument for this experiment. The following channels
-        # and indices work on all device configurations. The values below may be
-        # changed if the instrument has multiple input/output channels and/or either
-        # the Multifrequency or Multidemodulator options installed.
+        # Now configure the instrument for this experiment. The following
+        # channels and indices work on all device configurations. The values
+        # below may be changed if the instrument has multiple input/output
+        # channels and/or either the Multifrequency or Multidemodulator
+        # options installed.
         out_channel = outputchan - 1
         in_channel = inputchan - 1
         demod_index = 0
         osc_index = outputchan-1
         demod_rate = 10e3
-        out_mixer_channel = int(self.daq.listNodes('/%s/sigouts/%d/amplitudes/' % (self.device_id, out_channel),0)[0])
+        out_mix_ch = int(self.daq.listNodes('/%s/sigouts/%d/amplitudes/'
+                                        % (self.device_id, out_channel),0)[0])
         if couple == 'ac':
             acUse = 1
         else:
             acUse = 0
-        exp_setting = [['/%s/sigins/%d/ac'             % (self.device_id, in_channel), acUse],
-                       ['/%s/sigins/%d/range'          % (self.device_id, in_channel), 2],
-                       ['/%s/demods/%d/enable'         % (self.device_id, demod_index), 1],
-                       ['/%s/demods/%d/rate'           % (self.device_id, demod_index), demod_rate],
-                       ['/%s/demods/%d/adcselect'      % (self.device_id, demod_index), in_channel],
-                       ['/%s/demods/%d/order'          % (self.device_id, demod_index), 4],
-                       ['/%s/demods/%d/timeconstant'   % (self.device_id, demod_index), time_constant],
-                       ['/%s/demods/%d/oscselect'      % (self.device_id, demod_index), osc_index],
-                       ['/%s/demods/%d/harmonic'       % (self.device_id, demod_index), 1],
-                       ['/%s/sigouts/%d/on'            % (self.device_id, out_channel), 1],
-                       ['/%s/sigouts/%d/enables/%d'    % (self.device_id, out_channel, out_mixer_channel), 1],
-                       ['/%s/sigouts/%d/range'         % (self.device_id, out_channel),  1],
-                       ['/%s/sigouts/%d/amplitudes/%d' % (self.device_id, out_channel, out_mixer_channel), amplitude],
-                       ['/%s/sigins/%d/diff'           % (self.device_id, in_channel), 0],
-                       ['/%s/sigouts/%d/add'           % (self.device_id, out_channel), 0],
+        exp_setting = [
+['/%s/sigins/%d/ac'             % (self.device_id, in_channel), acUse],
+['/%s/sigins/%d/range'          % (self.device_id, in_channel), 2],
+['/%s/demods/%d/enable'         % (self.device_id, demod_index), 1],
+['/%s/demods/%d/rate'           % (self.device_id, demod_index), demod_rate],
+['/%s/demods/%d/adcselect'      % (self.device_id, demod_index), in_channel],
+['/%s/demods/%d/order'          % (self.device_id, demod_index), 4],
+['/%s/demods/%d/timeconstant'   % (self.device_id, demod_index),
+                                                                time_constant],
+['/%s/demods/%d/oscselect'      % (self.device_id, demod_index), osc_index],
+['/%s/demods/%d/harmonic'       % (self.device_id, demod_index), 1],
+['/%s/sigouts/%d/on'            % (self.device_id, out_channel), 1],
+['/%s/sigouts/%d/enables/%d'    % (self.device_id, out_channel, out_mix_ch),
+                                                                            1],
+['/%s/sigouts/%d/range'         % (self.device_id, out_channel),  1],
+['/%s/sigouts/%d/amplitudes/%d' % (self.device_id, out_channel, out_mix_ch),
+                                                                    amplitude],
+['/%s/sigins/%d/diff'           % (self.device_id, in_channel), 0],
+['/%s/sigouts/%d/add'           % (self.device_id, out_channel), 0],
                        ]
-        # Some other device-type dependent configuration may be required. For
-        # example, disable the signal inputs `diff` and the signal outputs `add` for
-        # HF2 instruments.
+
         self.daq.set(exp_setting)
 
         # Create an instance of the Sweeper Module (ziDAQSweeper class).
         sweeper = self.daq.sweep()
 
         # Configure the Sweeper Module's parameters.
-        # Set the device that will be used for the sweep - this parameter must be set.
+        # Set the device that will be used for the sweep - this parameter
+        # must be set.
         sweeper.set('sweep/device', self.device_id)
-        # Specify the `gridnode`: The instrument node that we will sweep, the device
-        # setting corresponding to this node path will be changed by the sweeper.
+        # Specify the `gridnode`: The instrument node that we will sweep,
+        # the device setting corresponding to this node path will be changed
+        # by the sweeper.
         sweeper.set('sweep/gridnode', 'oscs/%d/freq' % osc_index)
-        # Set the `start` and `stop` values of the gridnode value interval we will use in the sweep.
+        # Set the `start` and `stop` values of the gridnode value interval
+        # we will use in the sweep.
         sweeper.set('sweep/start', freq_start)
         sweeper.set('sweep/stop', freq_stop)
-        # Set the number of points to use for the sweep, the number of gridnode
-        # setting values will use in the interval (`start`, `stop`)
+        # Set the number of points to use for the sweep, the number of
+        # gridnode setting values will use in the interval (`start`, `stop`)
         sweeper.set('sweep/samplecount', num_steps)
         # Specify logarithmic spacing for the values in the sweep interval.
         sweeper.set('sweep/xmapping', 1)
         # Automatically control the demodulator bandwidth/time constants used.
         # 0=manual, 1=fixed, 2=auto
-        # Note: to use manual and fixed, sweep/bandwidth has to be set to a value > 0.
+        # Note: to use manual and fixed, sweep/bandwidth has to be set to a
+        # value > 0.
         sweeper.set('sweep/bandwidthcontrol', 0)
-        # Sets the bandwidth overlap mode (default 0). If enabled, the bandwidth of
-        # a sweep point may overlap with the frequency of neighboring sweep
-        # points. The effective bandwidth is only limited by the maximal bandwidth
-        # setting and omega suppression. As a result, the bandwidth is independent
-        # of the number of sweep points. For frequency response analysis bandwidth
-        # overlap should be enabled to achieve maximal sweep speed (default: 0). 0 =
-        # Disable, 1 = Enable.
+        # Sets the bandwidth overlap mode (default 0). If enabled, the
+        # bandwidth of a sweep point may overlap with the frequency of
+        # neighboring sweep points. The effective bandwidth is only limited
+        # by the maximal bandwidth setting and omega suppression. As a result,
+        # the bandwidth is independent of the number of sweep points. For
+        # frequency response analysis bandwidth
+        # overlap should be enabled to achieve maximal sweep speed
+        # (default: 0). 0 = Disable, 1 = Enable.
         sweeper.set('sweep/bandwidthoverlap', 0)
 
         # Sequential scanning mode (as opposed to binary or bidirectional).
@@ -208,32 +212,34 @@ class HF2LI(Instrument):
         loopcount = 1
         sweeper.set('sweep/loopcount', loopcount)
         # We don't require a fixed sweep/settling/time since there is no DUT
-        # involved in this example's setup (only a simple feedback cable), so we set
-        # this to zero. We need only wait for the filter response to settle,
-        # specified via sweep/settling/inaccuracy.
+        # involved in this example's setup (only a simple feedback cable),
+        # so we set this to zero. We need only wait for the filter response
+        # to settle, specified via sweep/settling/inaccuracy.
         sweeper.set('sweep/settling/time', settleTCs*time_constant)
-        # The sweep/settling/inaccuracy' parameter defines the settling time the
-        # sweeper should wait before changing a sweep parameter and recording the next
-        # sweep data point. The settling time is calculated from the specified
-        # proportion of a step response function that should remain. The value
-        # provided here, 0.001, is appropriate for fast and reasonably accurate
-        # amplitude measurements. For precise noise measurements it should be set to
-        # ~100n.
-        # Note: The actual time the sweeper waits before recording data is the maximum
-        # time specified by sweep/settling/time and defined by
+        # The sweep/settling/inaccuracy' parameter defines the settling time
+        # the sweeper should wait before changing a sweep parameter and
+        # recording the next sweep data point. The settling time is calculated
+        # from the specified proportion of a step response function that
+        # should remain. The value provided here, 0.001, is appropriate for
+        # fast and reasonably accurate amplitude measurements. For precise
+        # noise measurements it should be set to ~100n.
+        # Note: The actual time the sweeper waits before recording data is
+        # the maximum  time specified by sweep/settling/time and defined by
         # sweep/settling/inaccuracy.
         sweeper.set('sweep/settling/inaccuracy', 0.001)
         # Set the minimum time to record and average data to 10 demodulator
         # filter time constants.
         sweeper.set('sweep/averaging/tc', avgTCs)
-        # Minimal number of samples that we want to record and average is 100. Note,
-        # the number of samples used for averaging will be the maximum number of
-        # samples specified by either sweep/averaging/tc or sweep/averaging/sample.
+        # Minimal number of samples that we want to record and average is
+        # 100. Note, the number of samples used for averaging will be the
+        # maximum number of samples specified by either sweep/averaging/tc
+        # or sweep/averaging/sample.
         sweeper.set('sweep/averaging/sample', 10)
 
-        # Now subscribe to the nodes from which data will be recorded. Note, this is
-        # not the subscribe from ziDAQServer; it is a Module subscribe. The Sweeper
-        # Module needs to subscribe to the nodes it will return data for.x
+        # Now subscribe to the nodes from which data will be recorded. Note,
+        # this is not the subscribe from ziDAQServer; it is a Module
+        # subscribe. The Sweeper Module needs to subscribe to the nodes it
+        # will return data for.
         path = '/%s/demods/%d/sample' % (self.device_id, demod_index)
         sweeper.subscribe(path)
 
@@ -243,26 +249,28 @@ class HF2LI(Instrument):
         start = time.time()
         timeout = 2*(avgTCs + settleTCs)*time_constant*num_steps  # [s]
         print("Will perform", loopcount, "sweeps...")
-        while not sweeper.finished():  # Wait until the sweep is complete, with timeout.
+        # Wait until the sweep is complete, with timeout.
+        while not sweeper.finished():
             time.sleep(0.2)
             progress = sweeper.progress()
-            print("Individual sweep progress: {:.2%}.".format(progress[0]), end="\r")
+            print("Individual sweep progress: {:.2%}.".format(progress[0]),
+                                                                    end="\r")
             # Here we could read intermediate data via:
             # data = sweeper.read(True)...
             # and process it while the sweep is completing.
             # if device in data:
             # ...
             if (time.time() - start) > timeout:
-                # If for some reason the sweep is blocking, force the end of the
-                # measurement.
+                # If for some reason the sweep is blocking, force the end of
+                # the measurement.
                 print("\nSweep still not finished, forcing finish...")
                 sweeper.finish()
         print("")
 
-        # Read the sweep data. This command can also be executed whilst sweeping
-        # (before finished() is True), in this case sweep data up to that time point
-        # is returned. It's still necessary still need to issue read() at the end to
-        # fetch the rest.
+        # Read the sweep data. This command can also be executed whilst
+        # sweeping (before finished() is True), in this case sweep data up
+        # to that time point is returned. It's still necessary still need
+        # to issue read() at the end to fetch the rest.
         return_flat_dict = True
         data = sweeper.read(return_flat_dict)
         sweeper.unsubscribe(path)
@@ -271,14 +279,9 @@ class HF2LI(Instrument):
         sweeper.clear()
 
         # Check the dictionary returned is non-empty.
-        assert data, "read() returned an empty data dictionary, did you subscribe to any paths?"
-        # Note: data could be empty if no data arrived, e.g., if the demods were
-        # disabled or had rate 0.
-        assert path in data, "No sweep data in data dictionary: it has no key '%s'" % path
+
         samples = data[path]
         print("Returned sweeper data contains", len(samples), "sweeps.")
-        assert len(samples) == loopcount, \
-            "The sweeper returned an unexpected number of sweeps: `%d`. Expected: `%d`." % (len(samples), loopcount)
 
         if do_plot:
             import matplotlib.pyplot as plt
@@ -327,13 +330,20 @@ class HF2LI(Instrument):
 
         # Disables all demods, scopes, sigouts. Enables demod 0.
         # Puts auxout 1 in manual mode (-1)
-        general_setting = [['/%s/demods/*/enable' % self.device_id, 0],
-                           ['/%s/demods/*/trigger' % self.device_id, 0],
-                           ['/%s/sigouts/*/enables/*' % self.device_id, 0],
-                           ['/%s/scopes/*/enable' % self.device_id, 0],
-                           ['/%s/auxouts/%d/outputselect'  % (self.device_id, aux_channel),-1],
-                           ['/%s/demods/0/enable'         % (self.device_id), 1],
-                           ['/%s/demods/0/timeconstant'         % (self.device_id), 1e-9]]
+        general_setting = [['/%s/demods/*/enable'
+                                        % self.device_id, 0],
+                           ['/%s/demods/*/trigger'
+                                        % self.device_id, 0],
+                           ['/%s/sigouts/*/enables/*'
+                                        % self.device_id, 0],
+                           ['/%s/scopes/*/enable'
+                                        % self.device_id, 0],
+                           ['/%s/auxouts/%d/outputselect'
+                                        % (self.device_id, aux_channel),-1],
+                           ['/%s/demods/0/enable'
+                                        % (self.device_id), 1],
+                           ['/%s/demods/0/timeconstant'
+                                        % (self.device_id), 1e-9]]
         # Applies those settings.
         self.daq.set(general_setting)
         # Perform a global sync between the device and the data server.
@@ -348,7 +358,8 @@ class HF2LI(Instrument):
         sweeperinitialize.set('sweep/device', self.device_id)
 
         # Specify the `gridnode`: The instrument node that we will sweep
-        sweeperinitialize.set('sweep/gridnode', '/%s/auxouts/%d/offset' % (self.device_id,aux_channel))
+        sweeperinitialize.set('sweep/gridnode', '/%s/auxouts/%d/offset'
+                                                % (self.device_id,aux_channel))
 
         # Gets the current value of the chosen aux port
         current_aux_value =  self.daq.get(
@@ -405,9 +416,10 @@ class HF2LI(Instrument):
         sweeperinitialize.clear()
 
     def aux_sweep(self, aux_start, aux_stop, num_steps, time_constant = 1e-3,
-                 amplitude = .01, freq = 200,  auxchan = 1, outputchan = 1, inputchan = 1,
-                 couple = 'dc', settleTCs = 10, avgTCs = 5, loopcount = 1,
-                 gatesweep = False, keithley = False, compliance = 1E-9, ta_gain = 1e8):
+                 amplitude = .01, freq = 200,  auxchan = 1, outputchan = 1,
+                 inputchan = 1, couple = 'dc', settleTCs = 10, avgTCs = 5,
+                 loopcount = 1, gatesweep = False, keithley = False,
+                 compliance = 1E-9, ta_gain = 1e8):
         """
         Sweeps the output of an aux channel, while recording chosen input.
         If the goal is to do a DC biased lock in measurement (i.e. AC Rds vs
@@ -428,11 +440,12 @@ class HF2LI(Instrument):
 
           time_constant (float, optional): demod timeconstant
 
-          amplitude (float, optional): The amplitude to set on the signal output.
+          amplitude (float, optional): The amplitude to set on the signal
+            output.
 
-          freq (float, optional): the frequency of the lock in measurement. If
-              ac couple is enabled (not default), it must be greater than 100 hz
-              (corner of ac highpass).
+          freq (float, optional): the frequency of the lock in measurement.
+            If ac couple is enabled (not default), it must be greater than
+            100 hz (corner of ac highpass).
 
           auxchan (int, optional): input channel (1 or 2)
 
@@ -443,8 +456,8 @@ class HF2LI(Instrument):
 
           couple (string, optional): ac couple if str = 'ac', o.w. dc couple
 
-          settleTCs (int, optional): number of time constants to allow demod to
-            stabilize after sweep.
+          settleTCs (int, optional): number of time constants to allow demod
+            to stabilize after sweep.
 
           avgTCs (int, optional): number of time constants to average demod
             output for data point.
@@ -469,14 +482,15 @@ class HF2LI(Instrument):
 
         Returns:
 
-          sample (list of dict): A list of demodulator sample dictionaries. Each
-            entry in the list correspond to the result of a single sweep and is a
-            dict containing a demodulator sample.
+          sample (list of dict): A list of demodulator sample dictionaries.
+            Each entry in the list correspond to the result of a single sweep
+            and is a dict containing a demodulator sample.
 
         """
 
 
-        # Create a base instrument configuration: disable all outputs, demods and scopes.
+        # Create a base instrument configuration:
+        # disable all outputs, demods and scopes.
         general_setting = [['/%s/demods/*/enable' % self.device_id, 0],
                            ['/%s/demods/*/trigger' % self.device_id, 0],
                            ['/%s/sigouts/*/enables/*' % self.device_id, 0],
@@ -494,7 +508,7 @@ class HF2LI(Instrument):
         # Uses the osc corresponding to the input channel.
         osc_index = in_channel
         # Detects the correct mixer channel.
-        out_mixer_channel = int(self.daq.listNodes('/%s/sigouts/%d/amplitudes/'
+        out_mix_ch = int(self.daq.listNodes('/%s/sigouts/%d/amplitudes/'
                                     % (self.device_id, out_channel),0)[0])
         # Sets the demod communication rate
         demod_rate = 10e3
@@ -506,28 +520,28 @@ class HF2LI(Instrument):
             # Disable AC couple (use DC couple)
             acUse = 0
 
-        # Sets up the experiment. Please excuse the long line length,
-        # I relax PEP8 here for clarity.
-        exp_setting = [['/%s/sigins/%d/ac'             % (self.device_id, in_channel), acUse],
-                       ['/%s/sigins/%d/range'          % (self.device_id, in_channel), 2],
-                       ['/%s/sigins/%d/diff'           % (self.device_id, in_channel), 0],
-                       ['/%s/demods/%d/enable'         % (self.device_id, demod_index), 1],
-                       ['/%s/demods/%d/rate'           % (self.device_id, demod_index), demod_rate],
-                       ['/%s/demods/%d/adcselect'      % (self.device_id, demod_index), in_channel],
-                       ['/%s/demods/%d/order'          % (self.device_id, demod_index), 4],
-                       ['/%s/demods/%d/timeconstant'   % (self.device_id, demod_index), time_constant],
-                       ['/%s/demods/%d/oscselect'      % (self.device_id, demod_index), osc_index],
-                       ['/%s/demods/%d/harmonic'       % (self.device_id, demod_index), 1],
-                       ['/%s/sigouts/%d/on'            % (self.device_id, out_channel), 1],
-                       ['/%s/sigouts/%d/enables/%d'    % (self.device_id, out_channel, out_mixer_channel), 1],
-                       ['/%s/oscs/%d/freq'             % (self.device_id, out_channel), freq],
-                       ['/%s/sigouts/%d/range'         % (self.device_id, out_channel), 1],
-                       ['/%s/sigouts/%d/add'           % (self.device_id, out_channel), 1],
-                       ['/%s/sigouts/%d/amplitudes/%d' % (self.device_id, out_channel, out_mixer_channel), amplitude],
-                       ['/%s/auxouts/%d/outputselect'  % (self.device_id, aux_channel),-1]
-                      ]
+        # Sets up the experiment.
+        exp_setting = [
+['/%s/sigins/%d/ac'            % (self.device_id, in_channel), acUse],
+['/%s/sigins/%d/range'         % (self.device_id, in_channel), 2],
+['/%s/sigins/%d/diff'          % (self.device_id, in_channel), 0],
+['/%s/demods/%d/enable'        % (self.device_id, demod_index), 1],
+['/%s/demods/%d/rate'          % (self.device_id, demod_index), demod_rate],
+['/%s/demods/%d/adcselect'     % (self.device_id, demod_index), in_channel],
+['/%s/demods/%d/order'         % (self.device_id, demod_index), 4],
+['/%s/demods/%d/timeconstant'  % (self.device_id, demod_index), time_constant],
+['/%s/demods/%d/oscselect'     % (self.device_id, demod_index), osc_index],
+['/%s/demods/%d/harmonic'      % (self.device_id, demod_index), 1],
+['/%s/sigouts/%d/on'           % (self.device_id, out_channel), 1],
+['/%s/sigouts/%d/enables/%d'   % (self.device_id, out_channel, out_mix_ch), 1],
+['/%s/oscs/%d/freq'            % (self.device_id, out_channel), freq],
+['/%s/sigouts/%d/range'        % (self.device_id, out_channel), 1],
+['/%s/sigouts/%d/add'          % (self.device_id, out_channel), 1],
+['/%s/sigouts/%d/amplitudes/%d'% (self.device_id, out_channel, out_mix_ch),
+                                                                    amplitude],
+['/%s/auxouts/%d/outputselect' % (self.device_id, aux_channel),-1]]
 
-        #Sets settings to ZI
+        #Sends settings to ZI
         self.daq.set(exp_setting)
 
         # Create empty dict in which to put data.
@@ -616,12 +630,12 @@ class HF2LI(Instrument):
                 # record start time for timeout purposes.
                 start = time.time()
                 # Calculates maximum allowed time
-                timeout = 2*(avgTCs + settleTCs)*time_constant*num_steps + 10  # [s]
+                timeout = 2*(avgTCs + settleTCs)*time_constant*num_steps + 10
                 # Informs the user where it is in the sweep, if there is a
                 # gate sweep
                 if current_gate != 'nogatesweep':
-                    print("Current gate voltage: ", current_gate, "V   Voltages Remaining:",
-                            len(gatesweep))
+                    print("Current gate voltage: ", current_gate,
+                            "V   Voltages Remaining:", len(gatesweep))
                 # Suspends evaluation while the sweeper runs
                 while not sweeper.finished():
                     # Wait until the sweep is complete, with timeout.
@@ -640,7 +654,8 @@ class HF2LI(Instrument):
                     if (bool(keithley)
                         and abs(keithley.Vout - current_gate) > .1):
                         # raises gatevoltageerror and tells user.
-                        print("Gate voltage could not be maintained, forcing finish...")
+                        print("Gate voltage could not be maintained,"
+                                                       + " forcing finish...")
                         sweeper.finish()
                         sweeper.clear()
                         raise gateVoltageError
@@ -692,8 +707,9 @@ class HF2LI(Instrument):
                 vds = samples[gate][0][0]['grid']
                 # set y axis to the calculated conductivity. Uses passed
                 # ta_gain and amplitude
-                R = np.abs((samples[gate][0][0]['x'] + 1j*samples[gate][0][0]['y'])
-                            *1/(ta_gain  * amplitude)*1e9)
+                R = np.abs((samples[gate][0][0]['x'] + 1j
+                                                *samples[gate][0][0]['y'])
+                                                *1/(ta_gain  * amplitude)*1e9)
                 plt.plot(vds, R, label = 'Gate %s V' % gate)
             # Get the current axis
             ax = plt.gca()
