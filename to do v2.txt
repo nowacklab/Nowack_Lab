@@ -27,8 +27,4 @@ Connect to data server remotely.
 
 RC params
 
-Figure out keyboard interrupt. I added this at the end of run(), but needs more testing.
-if self.interrupt:
-            raise KeyboardInterrupt # So we actually terminate with an interrupt.
-
-Load instruments.
+Load instruments with json. This would just load the saved private parameters for easy access.
