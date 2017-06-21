@@ -225,13 +225,6 @@ class RvsVg_B(RvsVg):
 
         return abs(slope) # this will be a conversion in cm^-2/V from gate voltage to carrier density.
 
-    def find_CNP(self, Rxx_channel=0):
-        '''
-        Finds the index of gate voltage corresponding to charge neutrality point.
-        Uses the gate sweep at minimum field.
-        '''
-        return np.where(self.R2D[Rxx_channel][0]==self.R2D[Rxx_channel][0].max())[0][0] # find CNP
-
     def do(self, auto_gain=False):
         for i, B in enumerate(self.B):
             if self.Vg_sweep is not None:
@@ -259,6 +252,13 @@ class RvsVg_B(RvsVg):
                 else:
                     self.R2D[j][i, :] = self.gs.R[j] # first index is voltage channel, second is B, third is Vg. Reve
             self.plot()
+
+    def find_CNP(self, Rxx_channel=0):
+        '''
+        Finds the index of gate voltage corresponding to charge neutrality point.
+        Uses the gate sweep at minimum field.
+        '''
+        return np.where(self.R2D[Rxx_channel][0]==self.R2D[Rxx_channel][0].max())[0][0] # find CNP
 
     def mask_CNP(self, numpts=5):
         '''

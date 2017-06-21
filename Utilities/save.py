@@ -319,7 +319,7 @@ class Measurement:
         run() wraps this function to enable keyboard interrupts.
         run() also includes saving and elapsed time logging.
         '''
-        pass
+        print('Doing stuff!')
 
 
     @classmethod
@@ -410,6 +410,11 @@ class Measurement:
         # Print elapsed time e.g. "Scanplane took 2.3 hours."
         print('%s took %.1f %s.' %(self.__class__.__name__, t, t_unit))
         self.save()
+
+        # If this run is in a loop, then we want to raise the KeyboardInterrupt
+        # to terminate the loop.
+        if self.interrupt:
+            raise KeyboardInterrupt
 
         return done
 
