@@ -94,7 +94,6 @@ class SquidIV(Measurement):
             Ibias = np.array(list(Ibias1) + list(Ibias2) + list(Ibias3))
             self.Vbias = Ibias*(self.Rbias+self.Rmeas) # SQUID bias voltage
             self.numpts= self.numpts * 2
-            print('hi')
         else:
             self.numpts = int(self.Irampspan/self.Irampstep)
             Ibias = np.linspace(self.Irampcenter-self.Irampspan/2,
@@ -135,8 +134,10 @@ class SquidIV(Measurement):
 
         repeat = True;
         while(repeat):
-            self.param_prompt(smooth) # Check parameters
-
+            stop = self.param_prompt(smooth) # Check parameters
+            if(stop):
+                repeat = False
+                break
             self.do_IV()
             self.daq.zero() # zero everything
 
@@ -167,7 +168,6 @@ class SquidIV(Measurement):
     def do_IV(self):
         """ Wrote this for mod2D so it doesn't plot """
         self.daq.outputs['modout'].V = self.Imod*self.Rbias_mod # Set mod current
-        print((self.Vbias[0], self.Vbias[-1]))
         # Collect data
         in_chans = ['squidin','currentin']
         #output_data, received = self.daq.sweep({'squidout': self.Vbias[0]},
@@ -208,6 +208,8 @@ class SquidIV(Measurement):
                 inp = input('Are these parameters correct?\n Enter a command to change parameters, or press enter to continue (e.g. preamp.gain = 100): \n')
                 if inp == '':
                     correct = True
+                elif inp =='q':
+                    return True
                 else:
                     exec('self.'+inp)
                     self.calc_ramp(smooth) # recalculate daq output
@@ -215,6 +217,7 @@ class SquidIV(Measurement):
             except:
                 display.clear_output()
                 print('Invalid command\n')
+        return False
 
     def plot(self, ax=None, ax2=None, dvdi = True):
         if ax == None: # if plotting on Mod2D's axis
