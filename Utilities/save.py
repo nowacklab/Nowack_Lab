@@ -94,11 +94,23 @@ class Measurement:
                         # check if it's a dictionary or object
                         if f.get(key, getclass=True) is h5py._hl.group.Group:
                             if key[0] == '!': # it's an object
-                                walk(d[key[1:]].__dict__, f[key])
-                                # [:1] strips the !; walks through the subobject
+                                # Current version of python on linux does not 
+                                # have a __dict__ of a dict object
+                                try:
+                                    walk(d[key[1:]].__dict__, f[key])
+                                    # [:1] strips the !; walks through the subobject
+                                except:
+                                    walk(d[key[1:]], f[key])
                             else: # it's a dictionary
                                 # walk through the subdictionary
-                                walk(d[key], f[key])
+
+                                # Current version of python on linux does not 
+                                # like to call fields that do not exist.  
+                                try:
+                                    walk(d[key], f.get(key))
+                                except:
+                                    d[key] = {};
+                                    walk(d[key], f.get(key))
                         else:
                             d[key] = f[key][:] # we've arrived at a dataset
 
@@ -157,8 +169,16 @@ class Measurement:
                     d[key] = walk(d[key])
             return d
 
-
         obj_dict = walk(obj_dict)
+
+        # If the class of the object is custom defined in __main__ or in a
+        # different branch, then just load it as a Measurement.
+        try:
+            exec(obj_dict['py/object']) # see if class is in the namespace
+        except:
+            obj_dict['py/object'] = 'Nowack_Lab.Utilities.save.Measurement'
+
+        # Decode with jsonpickle
         obj_string = json.dumps(obj_dict)
         obj = jsp.decode(obj_string)
 
