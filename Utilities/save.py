@@ -153,9 +153,11 @@ class Measurement:
 
         obj_dict = walk(obj_dict)
 
-        # If the class of the object is custom defined in __main__, then just
-        # load it as a measurement.
-        if '__main__' in obj_dict['py/object']:
+        # If the class of the object is custom defined in __main__ or in a
+        # different branch, then just load it as a Measurement.
+        try:
+            exec(obj_dict['py/object']) # see if class is in the namespace
+        except:
             obj_dict['py/object'] = 'Nowack_Lab.Utilities.save.Measurement'
 
         # Decode with jsonpickle.
