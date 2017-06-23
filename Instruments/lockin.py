@@ -278,7 +278,7 @@ class SR830(VISAInstrument):
     def dc_coupling(self):
         self.write('ICPL1')
 
-    def fix_sensitivity(self, OL_thresh=1, UL_thresh=0.1):
+    def fix_sensitivity(self, OL_thresh=1, UL_thresh=0):
         '''
         Checks to see if the lockin is overloading or underloading (signal/sensivity < 0.1)
         and adjusts the sensitivity accordingly.

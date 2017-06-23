@@ -4,8 +4,8 @@ from .instrument import Instrument, VISAInstrument
 _BMAX = {'x': 1, 'y': 1, 'z': 6} # T
 _IMAX = {'x': 50.73, 'y': 50.63, 'z': 50.76} # A
 _COILCONST = {'x': 0.01971, 'y': 0.01975, 'z': 0.1182} # T/A
-_IRATEMAX = {'x': 0.067, 'y': 0.0579, 'z': 0.0357} # A/s
-_BRATEMAX = {i: _IRATEMAX[i]*_COILCONST[i] for i in ['x','y','z']} # T/s
+_IRATEMAX = {'x': 0.067*60, 'y': 0.0579*60, 'z': 0.0357*60} # A/min
+_BRATEMAX = {i: _IRATEMAX[i]*_COILCONST[i] for i in ['x','y','z']} # T/min
 _VMAX = {var: 2.2 for var in ('x','y','z')} # V #FIXME?
 _STATES = {
     1: "RAMPING",
@@ -112,7 +112,7 @@ class AMI430(VISAInstrument):
     @property
     def Brate(self):
         '''
-        Get the field ramp rate (T/s)
+        Get the field ramp rate (T/min)
         '''
         s = self.ask('RAMP:RATE:FIELD:1?') # returns 'Brate,Bmax'
         s = s.split(',') # now we have ['Brate','Bmax']
@@ -122,10 +122,10 @@ class AMI430(VISAInstrument):
     @Brate.setter
     def Brate(self, value):
         '''
-        Set the field ramp rate (T/s)
+        Set the field ramp rate (T/min)
         '''
         if value > self._Bratemax:
-            print('Warning! %g T/s ramp rate too high! Rate set to %g T/s.'
+            print('Warning! %g T/min ramp rate too high! Rate set to %g T/min.'
                                                     %(value, self._Bratemax))
             value = self._Bratemax
         self.write('CONF:RAMP:RATE:FIELD 1,%g,%g' %(value, self._Bmax))
@@ -195,7 +195,7 @@ class AMI430(VISAInstrument):
         '''
         Get the present status of the system.
         '''
-        state = self.ask('STATE?')
+        state = int(self.ask('STATE?'))
         self._status = _STATES[state]
         return self._status
 
@@ -208,24 +208,26 @@ class AMI430(VISAInstrument):
     def ramp_to_field(self, B, rate=None):
         '''
         Heat up persistent switch and ramp the field with set ramp rate.
-        rate in T/s. None = max.
+        rate in T/min. None = use rate already set.
         '''
         self.p_switch = True
         self.B = B
-        if rate is None:
-            rate = _BRAMPMAX[self.axis]
-        self.Brate = rate
-        self.wait()
+        if rate is not None:
+            self.Brate = rate
+        print('Waiting to heat persistent switch')
+        while self.status == 'Heating Persistent Switch':
+            time.sleep(1)
         self.start_ramp()
 
     def shutdown(self, ramp_rate=None):
         '''
         Turn on persistent switch, ramp to zero, turn off persistent switch.
-        ramp_rate in T/s. None = max.
+        ramp_rate in T/min. None = use rate already set.
         '''
         self.p_switch = True
         self.wait()
-        self.Brate = ramp_rate
+        if rate is not None:
+            self.Brate = rate
         self.zero()
         self.wait()
         self.p_switch = False
@@ -236,15 +238,17 @@ class AMI430(VISAInstrument):
         '''
         self.write('RAMP')
 
-    def wait(self, timeout=800, interval=0.1):
+    def wait(self, timeout=1800, interval=0.1):
         '''
         Wait for holding.
         '''
+        print('Magnet waiting for holding.')
         tstart = time.time()
         while self.status not in ('HOLDING', 'PAUSED', 'AT ZERO CURRENT'):
             time.sleep(interval)
             if time.time()-tstart > timeout:
                 raise Exception('Timed out waiting for holding.')
+        print('Done waiting.')
 
     def zero(self):
         '''
@@ -264,18 +268,21 @@ class Magnet(AMI430):
         For safety, mark one axis as active and run from this object.
         This object also enables a vector field, max 1 T.
         '''
-        self.x = AMI430('x')
-        self.y = AMI430('y')
-        self.z = AMI430('z')
+        for i in ('x','y','z'):
+            try:
+                setattr(self, i, AMI430(i))
+            except:
+                setattr(self, i, None)
+                print('%s axis magnet not connected!' %i)
         self.set_active_axis(active_axis)
 
     def __del__(self):
         '''
         Destroy the object and close the visa handle for each axis.
         '''
-        self.x.close()
-        self.y.close()
-        self.z.close()
+        for i in ('x','y','z'):
+            if getattr(self, i) is not None:
+                getattr(self, i).close()
 
     def __getattr__(self, attr):
         '''

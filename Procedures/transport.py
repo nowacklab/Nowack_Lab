@@ -28,6 +28,7 @@ class RvsSomething(Measurement):
         self.Vy = {i: np.array([]) for i in range(self.num_lockins)}
         self.Ix = np.array([])
         self.Iy = np.array([])
+        self.B = np.array([]) # if we can record field, let's do it.
         self.R = {i: np.array([]) for i in range(self.num_lockins)}
         setattr(self, self.something, np.array([]))
 
@@ -76,7 +77,7 @@ class RvsSomething(Measurement):
 
 
     def do_measurement(self, delay = 0, num_avg = 1, delay_avg = 0,
-                                all_positive=False, plot=True, auto_gain=True):
+                                plot=True, auto_gain=True):
         '''
         Take a resistance measurement. Usually this will happen in a loop.
         Optional argument to set a delay before the measurement happens.
@@ -94,16 +95,20 @@ class RvsSomething(Measurement):
 
         self.Ix = np.append(self.Ix, self.lockin_I.X)
         self.Iy = np.append(self.Iy, self.lockin_I.Y)
+        if hasattr(self, 'ppms'):
+            self.B = np.append(self.B, self.ppms.field/10000) # Oe to T
+        elif hasattr(self, 'magnet'):
+            self.B = np.append(self.B, self.magnet.B)
         for j in range(self.num_lockins):
+            if auto_gain:
+                getattr(self, 'lockin_V%i' %(j+1)).fix_sensitivity() # make sure we aren't overloading or underloading.
+                self.lockin_I.fix_sensitivity()
 
             ## Take as many measurements as requested and average them
             vx = 0
             vy = 0
             r = 0
             for i in range(num_avg):
-                if auto_gain:
-                    getattr(self, 'lockin_V%i' %(j+1)).fix_sensitivity() # make sure we aren't overloading or underloading.
-                    self.lockin_I.fix_sensitivity()
                 vx += getattr(self, 'lockin_V%i' %(j+1)).X
                 vy += getattr(self, 'lockin_V%i' %(j+1)).Y
 
@@ -113,9 +118,6 @@ class RvsSomething(Measurement):
             vx /= num_avg
             vy /= num_avg
             r /= num_avg
-
-            if all_positive:
-                r = abs(r)
 
             self.Vx[j] = np.append(self.Vx[j], vx)
             self.Vy[j] = np.append(self.Vy[j], vy)
@@ -167,6 +169,11 @@ class RvsSomething(Measurement):
                     add_text_to_legend('T = %.2f K' %self.ppms.temperature)
                 if self.something != 'B':
                     add_text_to_legend('B = %.2f T' %(self.ppms.field/10000))
+
+        if hasattr(self, 'magnet'):
+            if self.magnet is not None:
+                if self.something != 'B':
+                    add_text_to_legend('B = %.2f T' %self.magnet.B)
 
         if hasattr(self, 'keithley'):
             if self.keithley is not None:
@@ -292,7 +299,7 @@ class RvsVg(RvsSomething):
 
         self.setup_keithley()
 
-    def do(self, num_avg = 1, delay_avg = 0, zero=False, all_positive=False, plot=True, auto_gain=False):
+    def do(self, num_avg = 1, delay_avg = 0, zero=False, plot=True, auto_gain=False):
 #         self.keithley.output = 'on' #NO! will cause a spike!
 
         ## Sweep to Vstart
@@ -309,7 +316,7 @@ class RvsVg(RvsSomething):
             elif hasattr(self, 'ppms'):
                 self.T = np.append(self.T, self.ppms.temperature)
 
-            self.do_measurement(self.delay, num_avg, delay_avg, all_positive=all_positive, plot=plot, auto_gain=auto_gain)
+            self.do_measurement(self.delay, num_avg, delay_avg, plot=plot, auto_gain=auto_gain)
 
         ## Sweep back to zero at 1V/s
         if zero:

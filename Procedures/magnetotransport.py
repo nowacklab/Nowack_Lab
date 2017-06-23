@@ -13,9 +13,9 @@ class RvsB(RvsSomething):
     something='B'
     something_units = 'T'
 
-    def __init__(self, instruments = {}, Bstart = 0, Bend = 14, delay=1, sweep_rate=.01):
+    def __init__(self, instruments = {}, Bstart = 0, Bend = 1, delay=1, sweep_rate=.1):
         '''
-        Sweep rate and field in T. PPMS uses Oe. Delay is in seconds. Rate is T/second
+        Sweep rate and field in T. Delay is in seconds. Rate is T/min
         '''
         super().__init__(instruments=instruments)
 
@@ -39,7 +39,7 @@ class RvsB(RvsSomething):
         print('Starting field sweep...')
 
         ## Set sweep to final field
-        self.ppms.field_rate = self.sweep_rate*10000# T to Oe
+        self.ppms.field_rate = self.sweep_rate/60*10000# T/min to Oe/s
         self.ppms.field_mode = 'Persistent'
         self.ppms.field_approach = 'Linear'
         self.ppms.field = self.Bend*10000 # T to Oe
@@ -49,7 +49,6 @@ class RvsB(RvsSomething):
 
         ## Measure while sweeping
         while self.ppms.field_status in ('Iterating', 'Charging'):
-            self.B = np.append(self.B, self.ppms.field/10000) # Oe to T
             self.do_measurement(delay=self.delay, plot=plot, auto_gain=auto_gain)
 
     def calc_n_Hall(self, Bmax=2, Rxy_channel=1):
@@ -143,14 +142,44 @@ class RvsB(RvsSomething):
             else:
                 self.legendtitle += '\n'+text
 
-        add_text_to_legend('Rate = %.1f Oe/s' %self.sweep_rate)
+        add_text_to_legend('Rate = %.2f T/min' %self.sweep_rate)
         add_text_to_legend('delay = %.1f s' %self.delay)
+
+class RvsB_BlueFors(RvsB):
+    instrument_list = ['magnet', 'lockin_V', 'lockin_I']
+
+    def do(self, plot=True, auto_gain=False):
+        ## Set initial field if not already there
+        if abs(self.magnet.B - self.Bstart) > 100e-6: # different by more than 100 uT
+            self.magnet.ramp_to_field(self.Bstart, self.sweep_rate)
+            time.sleep(5) # let the field start ramping to Bstart
+            print('Waiting for field to sweep to Bstart...')
+            self.magnet.wait()
+
+        if abs(self.Bstart-self.Bend) < 10e-6:
+            return # sweeping between the same two fields, no point in doing the measurement
+
+        print('Starting field sweep...')
+
+        ## Set sweep to final field
+        self.magnet.ramp_to_field(self.Bend, self.sweep_rate)
+
+        ## Measure while sweeping
+        while self.magnet.status not in ('HOLDING', 'PAUSED', 'AT ZERO CURRENT'):
+            self.do_measurement(delay=self.delay, plot=plot, auto_gain=auto_gain)
+
+        for i in range(5): # do a few more measurements
+            self.do_measurement(delay=self.delay, plot=plot, auto_gain=auto_gain)
+
+        self.magnet.p_switch = False
+
 
 class RvsVg_B(RvsVg):
     instrument_list = list(set(RvsB.instrument_list) | set(RvsVg.instrument_list))
+    field_sweep_class = RvsB
 
     def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1,
-                delay=1, Bstart = 0, Bend = 14, Bstep=1, Bdelay=1,sweep_rate=.01, Vg_sweep=None):
+                delay=1, Bstart = 0, Bend = 14, Bstep=1, Bdelay=1,sweep_rate=.1, Vg_sweep=None):
         '''
         Does gatesweeps at a series of magnetic fields.
         Stores the full gatesweeps at each field, as well as a RvsB curve done
@@ -164,7 +193,7 @@ class RvsVg_B(RvsVg):
         Bend: end field (Tesla)
         Bstep: field step between gatesweeps (Tesla)
         Bdelay: delay between resistance measurements during fieldsweep
-        sweep_rate: field sweep rate (Tesla/s)
+        sweep_rate: field sweep rate (Tesla/min)
         Vg_sweep: gate voltage at which to do the field sweep (V). Leave at None if you don't care.
         '''
         super().__init__(instruments=instruments, Vstart=Vstart, Vend=Vend, Vstep=Vstep, delay=delay)
@@ -233,7 +262,8 @@ class RvsVg_B(RvsVg):
                 self.Vstart, self.Vend = self.Vend, self.Vstart
 
             ## reset field sweep
-            self.fs = RvsB(self.instruments, self.ppms.field/10000, B, 1, self.sweep_rate)
+            self.fs = self.field_sweep_class(self.instruments,
+                                        self.get_field(), B, 1, self.sweep_rate)
             self.fs.run(plot=False)
 
             # store full field sweep data
@@ -259,6 +289,12 @@ class RvsVg_B(RvsVg):
         Uses the gate sweep at minimum field.
         '''
         return np.where(self.R2D[Rxx_channel][0]==self.R2D[Rxx_channel][0].max())[0][0] # find CNP
+
+    def get_field(self):
+        '''
+        Get current field from PPMS. (Other version of this class uses Bluefors magnet)
+        '''
+        return self.ppms.field/10000
 
     def mask_CNP(self, numpts=5):
         '''
@@ -324,11 +360,15 @@ class RvsVg_B(RvsVg):
     def setup_plots(self):
         self.fig, ax = plt.subplots(nrows = self.num_lockins, ncols=2, figsize=(10,10))
         self.fig.subplots_adjust(wspace=.5, hspace=.5) # breathing room
-        self.ax = {i: {j: ax[i][j] for j in range(ax.shape[1])} for i in range(ax.shape[0])}
-        # first index is lockin #, second index is plot # (one for regular, one for log)
-        self.im = {i: {j: None for j in range(ax.shape[1])} for i in range(ax.shape[0])}
+        if self.num_lockins == 1 :
+            self.ax = {0: {j: ax[j] for j in range(ax.shape[0])}}
+            self.im = {0: {j: None for j in range(ax.shape[0])}}
+        else:
+            self.ax = {i: {j: ax[i][j] for j in range(ax.shape[1])} for i in range(ax.shape[0])}
+            # first index is lockin #, second index is plot # (one for regular, one for log)
+            self.im = {i: {j: None for j in range(ax.shape[1])} for i in range(ax.shape[0])}
 
-        for i in range(ax.shape[0]): # rows == different channels
+        for i in range(self.num_lockins): # different channels
             ## Here we are plotting both |R| and log|R| for each channel
             ax = self.ax[i]
             self.im[i][0] = plot_mpl.plot2D(ax[0],
@@ -357,3 +397,14 @@ class RvsVg_B(RvsVg):
                 ax[j].set_ylabel('B (T)', fontsize=20)
                 plot_mpl.aspect(ax[j], 1)
                 ax[j].set_title(self.filename)
+
+class RvsVg_B_BlueFors(RvsVg_B):
+    field_sweep_class = RvsB_BlueFors
+    instrument_list = list(set(RvsB_BlueFors.instrument_list)
+                                                | set(RvsVg.instrument_list))
+
+    def get_field(self):
+        '''
+        Get current field from BlueFors magnet instead of PPMS.
+        '''
+        return self.magnet.B
