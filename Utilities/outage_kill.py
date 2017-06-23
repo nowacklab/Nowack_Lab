@@ -28,3 +28,7 @@ daq.sweep(vstart,vend)
 # step the attos down by 1000 steps.
 atto = Attocube()
 atto.z.step(-1000)
+
+# Zero the SQUID array
+sa = SquidArray.load()
+sa.zero()
