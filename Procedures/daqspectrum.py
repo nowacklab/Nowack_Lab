@@ -29,7 +29,7 @@ class DaqSpectrum(Measurement):
             annotate_notes=False,
             preamp_gain_override = True,
             preamp_gain = 1,
-            preamp_filter_override = False,
+            preamp_filter_override = True,
             preamp_filter = (0,100e3),
             preamp_dccouple_override = False,
             preamp_dccouple=True,
@@ -123,7 +123,7 @@ class DaqSpectrum(Measurement):
         self.ax['semilog'].set_xlim([self.f[0],1e3]);
         for ax in [self.ax['loglog'], self.ax['semilog']]:
             if self.annotate_notes:
-                ax.annotate(self.notes, xy=(0.02,.90), xycoords='axes fraction',
+                ax.annotate(self.notes, xy=(0.02,.45), xycoords='axes fraction',
                         fontsize=8, ha='left', va='top', family='monospace'
                 );
 
@@ -226,13 +226,24 @@ class AnnotatedSpectrum(DaqSpectrum):
     instrument_list=['daq','lockin_cap','preamp','squidarray', 'piezos'];
 
     def __init__(self, CAP_I, *args, 
-        notes='Annotated Spectrum',**kwargs
+        notes='Annotated Spectrum',
+        annotate_piezos = True,
+        annotate_cap    = True,
+        annotate_preamp = True,
+        annotate_saa    = True,
+        **kwargs
     ):
         '''
         '''
         super().__init__(*args, annotate_notes=True, **kwargs)
         self.notes = notes;
-        self.CAP_I = CAP_I
+        self.CAP_I = CAP_I;
+        self.annotate_piezos = annotate_piezos;
+        self.annotate_cap    = annotate_cap;
+        self.annotate_preamp = annotate_preamp;
+        self.annotate_saa    = annotate_saa;
+
+
 
     def squidspectra(self):
         self.units = '\phi_0';
@@ -256,40 +267,54 @@ class AnnotatedSpectrum(DaqSpectrum):
         # has a chance to plot anything
         self.notes = self.notes + (
         "\n"+
-        "[x,y,z] = [{0:d},{1:d},{2:d}]\n".format(
-                int(self.piezos.V['x']), 
-                int(self.piezos.V['y']), 
-                int(self.piezos.V['z'])
-            )+
-        "[c, c0] = [{0:2.2e}, {1:2.2e}]\n".format(
-                self.lockin_cap.R,
-                self.CAP_I
-            )+
-        "[gain, filter f, dc couple?, OL?] = [{0:d}, {1:2.2e}, {2}, {3}]\n".format(
-                self.preamp.gain,
-                self.preamp.filter[1],
-                self.preamp.is_dc_coupled(),
-                self.preamp.is_OL()
-            )+
         "[time, averages] = [{0:2.2f}, {1:d}]\n".format(
                 self.measure_time,
                 self.averages
             )+
-        "[A_bias, A_flux, S_bias, S_flux] = "
-        "[{0:2.2f}, {1:2.2f}, {3:2.2f}, {3:2.2f}]\n".format(
+        "[units, conversion] = [{0},{1:2.4f}]\n".format(
+                self.units,
+                self.conversion
+            )
+        )
+        if self.annotate_piezos:
+            self.notes = self.notes + (
+                "[x,y,z] = [{0:d},{1:d},{2:d}]\n".format(
+                    int(self.piezos.V['x']), 
+                    int(self.piezos.V['y']), 
+                    int(self.piezos.V['z'])
+                )
+            )
+        if self.annotate_cap:
+            self.notes = self.notes + (
+                "[c, c0] = [{0:2.2e}, {1:2.2e}]\n".format(
+                    self.lockin_cap.R,
+                    self.CAP_I
+                )
+            )
+        if self.annotate_preamp:
+            self.notes = self.notes + (
+            "[gain, filter f, dc couple?, OL?] = " + 
+            "[{0:d}, {1:2.2e}, {2}, {3}]\n".format(
+                self.preamp.gain,
+                self.preamp.filter[1],
+                self.preamp.is_dc_coupled(),
+                self.preamp.is_OL()
+            )
+            )
+        if self.annotate_saa:
+            self.notes = self.notes + (
+            "[A_bias, A_flux, S_bias, S_flux] = " + 
+            "[{0:2.2f}, {1:2.2f}, {3:2.2f}, {3:2.2f}]\n".format(
                 self.squidarray.A_bias,
                 self.squidarray.A_flux,
                 self.squidarray.S_bias,
                 self.squidarray.S_flux
             )+
-        "[Alocked, Slocked, sensitivity] = [{0}, {1}, {2}]\n".format(
+            "[Alocked, Slocked, sensitivity] = [{0}, {1}, {2}]\n".format(
                 self.squidarray.__getstate__()['Array locked'],
                 self.squidarray.__getstate__()['SQUID locked'],
                 self.squidarray.__getstate__()['sensitivity']
-            )+
-        "[units, conversion] = [{0},{1:2.4f}]".format(
-                self.units,
-                self.conversion
             )
-        )
+            )
+
         super().plot(*args, **kwargs);
