@@ -24,6 +24,7 @@ class RvsSomething(Measurement):
         super().__init__(instruments=instruments)
 
         # Set up dictionaries for each voltage channel.
+        # Empty arrays for each lockin
         self.Vx = {i: np.array([]) for i in range(self.num_lockins)}
         self.Vy = {i: np.array([]) for i in range(self.num_lockins)}
         self.Ix = np.array([])
@@ -403,8 +404,8 @@ class RvsVg(RvsSomething):
         if self.Igwarning is None: # if no warning
             if len(self.Ig)>0: # if have data
                 if self.Ig.max() >= 0.5e-9: # if should be warning
-                    self.Igwarning = self.ax.text(.02,.95, 
-                                        r'$I_g \geq 0.5$ nA!', 
+                    self.Igwarning = self.ax.text(.02,.95,
+                                        r'$I_g \geq 0.5$ nA!',
                                         transform=self.ax.transAxes,
                                         color = 'C3'
                                     ) # warning

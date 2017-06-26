@@ -4,21 +4,28 @@ Adapted for use by the Nowack lab Jan 2017
 '''
 
 from .instrument import Instrument
-import select, os, time
+import select, os, time, socket
 
 class PPMS(Instrument):
     r'''
     For remote operation of the Quantum Design PPMS.
-    Makes use of PyQDInstrument (https://github.com/guenp/PyQDInstrument)
-    Make sure to run PyQDInstrument.run_server() in an IronPython console on a machine that can connect to the PPMS control PC's QDInstrument_Server.exe program.
+    Runs a PyQDInstrument server (https://github.com/guenp/PyQDInstrument)
+    to conntect to QDInstrument_Server.exe on the PPMS.
     The basic commands to set up the server for the blue PPMS are:
         import sys
-        sys.path.append(r'C:\Users\ccmradmin\Documents\GitHub') (if pyQDInstrument is in the GitHub directory)
+        sys.path.append('/path/to/PyQDInstrument')
         import pyQDInstrument as pqi
         pqi.run_server('192.168.0.103', 50009, '192.168.0.100', 11000)
     Attributes represent the system control parameters:
-    'temperature', 'temperature_rate', 'temperature_approach', 'field', 'field_rate', 'field_approach', 'field_mode', 'temperature_status', 'field_status', 'chamber'
+    'temperature', 'temperature_rate', 'temperature_approach', 'field',
+    'field_rate', 'field_approach', 'field_mode', 'temperature_status',
+    'field_status', 'chamber'
     '''
+    _params = ['temperature', 'temperature_rate', 'temperature_approach',
+                    'field', 'field_rate', 'field_approach', 'field_mode',
+                    'temperature_status', 'field_status', 'chamber'
+            ]
+
     def __init__(self, host='127.0.0.2', port=50009, s=None):
         '''
         Default host and port are for the PPMS measurement computer.
@@ -28,41 +35,42 @@ class PPMS(Instrument):
             # Run script to start PyQDInstrument server
             ironpython = r'"C:\Program Files\IronPython 2.7\ipy.exe"'
             this_directory = os.path.dirname(__file__)
-            path_to_script = os.path.join(this_directory, 
+            path_to_script = os.path.join(this_directory,
                                '../Utilities/run_server_blue.py')
 
             print('Launching IronPython server...')
             # Start background IronPython running run_server_blue.py
             # This process runs in the jupyter notebook cmd prompt.
-            # Window text will show a mishmash of a normal cmd prompt and 
+            # Window text will show a mishmash of a normal cmd prompt and
             # the one used to start jupyter notebook.
-            os.system('start /B cmd /k %s %s %s %i' %(ironpython, path_to_script, host, port))
-             # %% to escape the %
-            time.sleep(1)
+            os.system('start /B cmd /k %s %s %s %i' %(ironpython,
+                                                path_to_script, host, port))
+            time.sleep(1) # wait for server to start
             print('Attempting to connect...')
             self._s = connect_socket(host, port)
             print('PPMS Connected.')
         else:
             self._s = s
 
-        self._units = {'temperature': 'K', 'temperature_rate': 'K/min','field': 'Oe', 'field_rate': 'Oe/min'}
-        
+        self._units = {'temperature': 'K',
+                       'temperature_rate': 'K/min',
+                       'field': 'Oe',
+                       'field_rate': 'Oe/min'
+                   }
+
         # Getters and setters for available commands
-        for param in ['temperature', 'temperature_rate', 'field', 'field_rate', 'temperature_approach', 'field_approach', 'field_mode']:
-            setattr(PPMS,param,property(fget=eval("lambda self: self._get_param('%s')" %param),
-                                                fset=eval("lambda self, value: self._set_param('%s',value)" %param)))
-        for param in ['temperature_status', 'field_status', 'chamber']:
-            setattr(PPMS,param,property(fget=eval("lambda self: self._get_param('%s')" %param)))
-        self._params = ['temperature', 'temperature_rate', 'temperature_approach', 'field', 'field_rate', 'field_approach', 'field_mode', 'temperature_status', 'field_status', 'chamber']
-        self._functions = []
+        # Some should not have setters but you'll just get an error from the PPMS
+        for param in self._params:
+            fget = eval("lambda self: self._get_param('%s')" %param)
+            fset = eval("lambda self, value: self._set_param('%s',value)" %param)
+            setattr(PPMS,param, property(fget, fset))
 
     def __del__(self):
         '''
         Terminates the running IronPython (ipy.exe) server and closes cmd window.
         WARNING: Assumes that the only instance of ipy.exe is for the PPMS server.
-        In future, if you can figure out the correct process ID, then 
-        add '/fi "PID eq %s"' in between /f and /im, and then format the string 
-        with %PID_number.
+        In the future, if you can figure out the correct process ID, then use
+            taskkill /f /fi "PID eq %s /im ipy.exe" %PID_number
         '''
         os.system('taskkill /f /im ipy.exe')
 
@@ -87,7 +95,6 @@ class PPMS(Instrument):
 
 
 def connect_socket(HOST, PORT):
-    import socket
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((HOST, PORT))
     return s
@@ -107,7 +114,6 @@ def ask_socket(s, cmd, startbytes=0):
     return ans
 
 def ask_socket_raw(s, cmd):
-    import time
     '''query socket and return response'''
     #empty socket buffer
     while socket_poll(s):

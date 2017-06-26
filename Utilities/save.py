@@ -391,14 +391,14 @@ class Measurement:
         figs = [a for a in self.__dict__.values()
                                     if type(a) is matplotlib.figure.Figure]
         for fig in figs: # loop over all figures in the object
-            for ax in fig.axes: # find all colorbars and update them
+            # find all colorbars and update them
+            for ax in fig.axes:
                 for im in ax.images:
                     c = im.colorbar
                     if c is not None:
                         # Adjust colorbar limits for new data
                         data = im.get_array()
                         c.set_clim([np.nanmin(data), np.nanmax(data)])
-                        # Update the colorbars
                         c.draw_all()
             fig.canvas.draw() # draw the figure
 
