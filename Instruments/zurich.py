@@ -327,6 +327,15 @@ class HF2LI(Instrument):
         """
         # Converts from 1 start to 0 start numerals.
         aux_channel = auxchan - 1
+        # Gets all previous setting from Zurich.
+        previous_settings = self.daq.get('*',True)
+
+        # Converts from flat dict to list of pairs.
+        previous_settings['/%s/auxouts/%d/value' % (self.device_id, aux_channel)] =  aux_stop
+        previous_settings_pairs = []
+        for key in previous_settings.keys():
+            previous_settings_pairs.append([key, float(previous_settings[key][0])])
+
 
         # Disables all demods, scopes, sigouts. Enables demod 0.
         # Puts auxout 1 in manual mode (-1)
@@ -414,6 +423,7 @@ class HF2LI(Instrument):
         #Unsubscribe and clear sweeper
         sweeperinitialize.unsubscribe(path)
         sweeperinitialize.clear()
+        self.daq.set(previous_settings_pairs)
 
     def aux_sweep(self, aux_start, aux_stop, num_steps, time_constant = 1e-3,
                  amplitude = .01, freq = 200,  auxchan = 1, outputchan = 1,
@@ -685,6 +695,8 @@ class HF2LI(Instrument):
                  sweeper.clear()
             except:
                 pass
+
+        samples = {}
         # Flatten dict
         for i in data.keys():
             samples[i] = data[i][path]
