@@ -6,6 +6,7 @@ from copy import copy
 import h5py, glob, matplotlib, inspect, platform, hashlib, shutil, time
 import matplotlib.pyplot as plt
 from . import utilities
+import Nowack_Lab
 
 '''
 How saving and loading works:

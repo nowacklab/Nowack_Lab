@@ -105,7 +105,7 @@ class AMI430(VISAInstrument):
         '''
         if abs(value) > self._Bmax:
             print('Warning! %g T setpoint too high! Setpoint set to %g T.'
-                                                        %(value, self._Bmax))
+                                            %(value, self._Bmax*np.sign(value)))
             value = self._Bmax*np.sign(value)
         self.write('CONF:FIELD TARG %g' %value)
 
@@ -205,7 +205,7 @@ class AMI430(VISAInstrument):
         '''
         self.write('PAUSE')
 
-    def ramp_to_field(self, B, rate=None):
+    def ramp_to_field(self, B, wait=False, rate=None):
         '''
         Heat up persistent switch and ramp the field with set ramp rate.
         rate in T/min. None = use rate already set.
@@ -217,7 +217,10 @@ class AMI430(VISAInstrument):
         print('Waiting to heat persistent switch')
         while self.status == 'Heating Persistent Switch':
             time.sleep(1)
+        print('Done waiting to heat persistent switch')
         self.start_ramp()
+        if wait:
+            self.wait()
 
     def shutdown(self, ramp_rate=None):
         '''

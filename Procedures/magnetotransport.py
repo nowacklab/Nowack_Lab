@@ -254,7 +254,10 @@ class RvsVg_B(RvsVg):
 
         return abs(slope) # this will be a conversion in cm^-2/V from gate voltage to carrier density.
 
-    def do(self, auto_gain=False):
+    def do(self, delay=0, auto_gain=False):
+        '''
+        delay: wait time after sweeping field
+        '''
         for i, B in enumerate(self.B):
             if self.Vg_sweep is not None:
                 self.keithley.sweep_V(self.keithley.V, self.Vg_sweep, .1, 1) # set desired gate voltage for the field sweep
@@ -265,6 +268,9 @@ class RvsVg_B(RvsVg):
             self.fs = self.field_sweep_class(self.instruments,
                                         self.get_field(), B, 1, self.sweep_rate)
             self.fs.run(plot=False)
+
+            # Wait for cooling/stabilization
+            time.sleep(delay)
 
             # store full field sweep data
             self.Bfull = np.append(self.Bfull, self.fs.B)
