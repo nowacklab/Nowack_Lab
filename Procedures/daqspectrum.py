@@ -304,7 +304,7 @@ class AnnotatedSpectrum(DaqSpectrum):
         if self.annotate_saa:
             self.notes = self.notes + (
             "[A_bias, A_flux, S_bias, S_flux] = " + 
-            "[{0:2.2f}, {1:2.2f}, {3:2.2f}, {3:2.2f}]\n".format(
+            "[{0:2.2f}, {1:2.2f}, {2:2.2f}, {3:2.2f}]\n".format(
                 self.squidarray.A_bias,
                 self.squidarray.A_flux,
                 self.squidarray.S_bias,
