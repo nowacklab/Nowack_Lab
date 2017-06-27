@@ -327,6 +327,16 @@ class HF2LI(Instrument):
         """
         # Converts from 1 start to 0 start numerals.
         aux_channel = auxchan - 1
+        # Gets all previous setting from Zurich.
+        previous_settings = self.daq.get('*',True)
+
+        # Converts from flat dict to list of pairs.
+        previous_settings['/%s/auxouts/%d/offset'
+                         % (self.device_id, aux_channel)] =  [aux_stop]
+        previous_settings_pairs = []
+        for key in previous_settings.keys():
+            previous_settings_pairs.append([key, float(previous_settings[key][0])])
+
 
         # Disables all demods, scopes, sigouts. Enables demod 0.
         # Puts auxout 1 in manual mode (-1)
@@ -414,7 +424,8 @@ class HF2LI(Instrument):
         #Unsubscribe and clear sweeper
         sweeperinitialize.unsubscribe(path)
         sweeperinitialize.clear()
-
+        self.daq.sync()
+        self.daq.set(previous_settings_pairs)
     def aux_sweep(self, aux_start, aux_stop, num_steps, time_constant = 1e-3,
                  amplitude = .01, freq = 200,  auxchan = 1, outputchan = 1,
                  inputchan = 1, couple = 'dc', settleTCs = 10, avgTCs = 5,
@@ -566,8 +577,9 @@ class HF2LI(Instrument):
                     keithley.Vout = current_gate
                     # check start time for timeout
                     start_time = time.time()
-                    # waits for current to drop below 90% of compliance.
-                    while abs(keithley.I) > .9*compliance:
+                    # Wait for keithley outvoltage to reach 95% of the desired
+                    # value
+                    while abs(keithley.Vout - current_gate) > .05*current_gate:
                         # checks for timeout, throws error to try if
                         # timeout occurs.
                         if time.time() - start_time > 240:
@@ -685,6 +697,8 @@ class HF2LI(Instrument):
                  sweeper.clear()
             except:
                 pass
+
+        samples = {}
         # Flatten dict
         for i in data.keys():
             samples[i] = data[i][path]
