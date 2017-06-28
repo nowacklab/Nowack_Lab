@@ -1,5 +1,5 @@
 from jsonpickle.ext import numpy as jspnp
-import json, os, pickle, bz2, jsonpickle as jsp, numpy as np, re
+import json, os, pickle, bz2, jsonpickle as jsp, numpy as np, re, sys, subprocess
 from datetime import datetime
 jspnp.register_handlers()
 from copy import copy
@@ -532,6 +532,13 @@ def get_todays_data_dir():
 
     return todays_data_path
 
+def open_experiment_data_dir():
+    filename = get_local_data_path()
+    if sys.platform == "win32":
+        os.startfile(filename)
+    else:
+        opener ="open" if sys.platform == "darwin" else "xdg-open"
+        subprocess.call([opener, filename])
 
 def set_experiment_data_dir(description=''):
     '''
