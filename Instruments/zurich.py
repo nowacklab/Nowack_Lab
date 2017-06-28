@@ -579,7 +579,8 @@ class HF2LI(Instrument):
                     start_time = time.time()
                     # Wait for keithley outvoltage to reach 95% of the desired
                     # value
-                    while abs(keithley.Vout - current_gate) > .05*current_gate:
+                    while (abs(keithley.Vout - current_gate)
+                                                > abs(.05*current_gate)):
                         # checks for timeout, throws error to try if
                         # timeout occurs.
                         if time.time() - start_time > 240:

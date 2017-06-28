@@ -28,13 +28,13 @@ class PPMS(Instrument):
             # Run script to start PyQDInstrument server
             ironpython = r'"C:\Program Files\IronPython 2.7\ipy.exe"'
             this_directory = os.path.dirname(__file__)
-            path_to_script = os.path.join(this_directory, 
+            path_to_script = os.path.join(this_directory,
                                '../Utilities/run_server_blue.py')
 
             print('Launching IronPython server...')
             # Start background IronPython running run_server_blue.py
             # This process runs in the jupyter notebook cmd prompt.
-            # Window text will show a mishmash of a normal cmd prompt and 
+            # Window text will show a mishmash of a normal cmd prompt and
             # the one used to start jupyter notebook.
             os.system('start /B cmd /k %s %s %s %i' %(ironpython, path_to_script, host, port))
              # %% to escape the %
@@ -46,7 +46,7 @@ class PPMS(Instrument):
             self._s = s
 
         self._units = {'temperature': 'K', 'temperature_rate': 'K/min','field': 'Oe', 'field_rate': 'Oe/min'}
-        
+
         # Getters and setters for available commands
         for param in ['temperature', 'temperature_rate', 'field', 'field_rate', 'temperature_approach', 'field_approach', 'field_mode']:
             setattr(PPMS,param,property(fget=eval("lambda self: self._get_param('%s')" %param),
@@ -60,8 +60,8 @@ class PPMS(Instrument):
         '''
         Terminates the running IronPython (ipy.exe) server and closes cmd window.
         WARNING: Assumes that the only instance of ipy.exe is for the PPMS server.
-        In future, if you can figure out the correct process ID, then 
-        add '/fi "PID eq %s"' in between /f and /im, and then format the string 
+        In future, if you can figure out the correct process ID, then
+        add '/fi "PID eq %s"' in between /f and /im, and then format the string
         with %PID_number.
         '''
         os.system('taskkill /f /im ipy.exe')
