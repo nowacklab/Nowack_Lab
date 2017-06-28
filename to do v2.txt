@@ -28,5 +28,3 @@ Connect to data server remotely.
 RC params
 
 Load instruments with json. This would just load the saved private parameters for easy access.
-
-Function to open current experiment directory
