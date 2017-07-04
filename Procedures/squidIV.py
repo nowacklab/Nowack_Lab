@@ -1,4 +1,6 @@
-""" Procedure to take an IV curve for a SQUID. By default, assumes -100 uA to 100 uA sweep (0.5 uA step) over a 2kOhm bias resistor and zero mod current. Can change these values when prompted. """
+""" Procedure to take an IV curve for a SQUID. By default, assumes -100 uA to
+100 uA sweep (0.5 uA step) over a 2kOhm bias resistor and zero mod current.
+Can change these values when prompted. """
 
 # TO DO:    - Try sweep vs individual points
 #           - Build in acceleration to daq sweep to and from zero?
@@ -27,7 +29,8 @@ class SquidIV(Measurement):
     def __init__(self, instruments={}, rate=9):
         '''
         Example: SquidIV({'daq': daq, 'preamp': preamp}, 0, 0, None, 90)
-        To make an empty object, then just call SquidIV(). You can do this if you want to plot previously collected data.
+        To make an empty object, then just call SquidIV(). You can do this if
+        you want to plot previously collected data.
         '''
         super().__init__()
 
@@ -106,7 +109,7 @@ class SquidIV(Measurement):
     def do(self, rate=9, Rbias=2000,
            Irampspan = 200e-6, Irampstep = 0.5e-6, Irampcenter = 0,
            preampgain = 5000, preampfilter = (.3,100),
-           smooth=False):
+           smooth=False, checkParam = True, notes = True):
         '''
         Execute me ... FIXME
 
@@ -135,7 +138,8 @@ class SquidIV(Measurement):
 
         repeat = True;
         while(repeat):
-            self.param_prompt(smooth) # Check parameters
+            if(checkParam):
+                self.param_prompt(smooth) # Check parameters
 
             self.do_IV()
             self.daq.zero() # zero everything
@@ -143,25 +147,28 @@ class SquidIV(Measurement):
             self.setup_plots()
             self.plot(dvdi = False)
             self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
+            if(notes):
+                self.notes = input('Notes for this IV (r to redo, q to quit): ')
+                if self.notes == 'r':
+                    self.notes = ''
+                    display.clear_output()
+                    repeat=True;
+                    continue;
+                #self.do(self, rate=self.rate, Rbias=self.Rbias,
+                #       Irampspan = self.Irampspan,
+                #       Irampstep = self.Irampstep,
+                #       Irampcenter = self.Irampcenter,
+                #       preampgain = self.preamp.gain,
+                #       preampfilter = self.preamp.filter,
+                #       smooth=smooth)
 
-            self.notes = input('Notes for this IV (r to redo, q to quit): ')
-            if self.notes == 'r':
-                self.notes = ''
-                display.clear_output()
-                repeat=True;
-                continue;
-            #self.do(self, rate=self.rate, Rbias=self.Rbias,
-            #       Irampspan = self.Irampspan,
-            #       Irampstep = self.Irampstep,
-            #       Irampcenter = self.Irampcenter,
-            #       preampgain = self.preamp.gain,
-            #       preampfilter = self.preamp.filter,
-            #       smooth=smooth)
-
-            elif self.notes != 'q':
-                self.ax.set_title(self.filename+'\n'+self.notes)
+                elif self.notes != 'q':
+                    self.ax.set_title(self.filename+'\n'+self.notes)
+                    self.save()
+            else:
                 self.save()
             repeat=False;
+            return self.filename
 
 
     def do_IV(self):

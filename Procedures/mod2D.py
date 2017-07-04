@@ -45,11 +45,26 @@ class Mod2D(Measurement):
         self.V = np.full((self.numpts, self.IV.numpts), np.nan)
         self.Isquid = self.IV.I
 
-    def do(self):
-        self.calc_ramp() #easy way to clear self.V
+    def do(self, rate=900, Rbias=2000,
+           Irampspan = 200e-6, Irampstep = 0.5e-6, Irampcenter = 0,
+           preampgain = 5000, preampfilter = (.3,100),Imodspan= 200e-6 ,
+           Imodstep = 4e-6, checkParam = True, notes = True):
+
+        self.IV.Rbias = Rbias # Ohm # 1k cold bias resistors on the SQUID testing PCB
+        self.IV.Rbias_mod = Rbias# Ohm # 1k cold bias resistors on the SQUID testing PCB
+        self.IV.Irampspan = Irampspan # A # Will sweep from -Irampspan/2 to +Irampspan/2
+        self.IV.Irampstep = Irampstep # A # Step size
+
+        self.Imodspan = Imodspan
+        self.Imodstep = Imodstep
+
+        self.IV.calc_ramp()
+        self.calc_ramp() # recalculate daq output
+        display.clear_output()
         self.IV.V = self.IV.V*0
 
-        self.param_prompt() # Check parameters
+        if(checkParam):
+            self.param_prompt() # Check parameters
 
         for i in range(len(self.Imod)):
             self.IV.Imod = self.Imod[i]
@@ -61,10 +76,13 @@ class Mod2D(Measurement):
             self.V[:][i] = self.IV.V
             self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
         self.IV.daq.zero() # zero everything
-
-        self.notes = input('Notes for this mod2D (q to quit without saving): ')
-        if self.notes != 'q':
+        if(notes):
+            self.notes = input('Notes for this mod2D (q to quit without saving): ')
+            if self.notes != 'q':
+                self.save()
+        else:
             self.save()
+        return self.filename
 
 
     def param_prompt(self):
