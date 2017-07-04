@@ -206,6 +206,11 @@ class RvsVg_B(RvsVg):
         self.Vg = self.gs.Vg_values
 
         self.R2D = {i: np.full((len(self.B), len(self.Vg)), np.nan) for i in range(self.num_lockins)}
+        self.Vx2D = {i: np.full((len(self.B), len(self.Vg)), np.nan) for i in range(self.num_lockins)}
+        self.Vy2D = {i: np.full((len(self.B), len(self.Vg)), np.nan) for i in range(self.num_lockins)}
+        self.Ix2D = np.full((len(self.B), len(self.Vg)), np.nan)
+        self.Ix2D = np.full((len(self.B), len(self.Vg)), np.nan)
+
         ## remember: shape of matrix given in y,x. So B is on the y axis and Vg on the x axis.
 
         # store full field sweep data
@@ -285,8 +290,16 @@ class RvsVg_B(RvsVg):
             for j in range(self.num_lockins):
                 if self.Vstart > self.Vend:
                     self.R2D[j][i, :] = self.gs.R[j][::-1] # reverse if we did the sweep backwards
+                    self.Vx2D[j][i, :] = self.gs.Vx[j][::-1] # reverse if we did the sweep backwards
+                    self.Vy2D[j][i, :] = self.gs.Vy[j][::-1] # reverse if we did the sweep backwards
+                    self.Ix2D[i, :] = self.gs.Ix[::-1] # reverse if we did the sweep backwards
+                    self.Iy2D[i, :] = self.gs.Iy[::-1] # reverse if we did the sweep backwards
                 else:
                     self.R2D[j][i, :] = self.gs.R[j] # first index is voltage channel, second is B, third is Vg. Reve
+                    self.Vx2D[j][i, :] = self.gs.Vx[j]
+                    self.Vy2D[j][i, :] = self.gs.Vy[j]
+                    self.Ix2D[i, :] = self.gs.Ix
+                    self.Iy2D[i, :] = self.gs.Iy
             self.plot()
 
     def find_CNP(self, Rxx_channel=0):
