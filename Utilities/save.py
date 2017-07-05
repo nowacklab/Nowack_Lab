@@ -1,5 +1,11 @@
 from jsonpickle.ext import numpy as jspnp
-import json, os, pickle, bz2, jsonpickle as jsp, numpy as np, re
+import json
+import os
+import pickle
+import bz2 
+import jsonpickle as jsp 
+import numpy as np 
+import re
 from datetime import datetime
 jspnp.register_handlers()
 from copy import copy

@@ -1,3 +1,9 @@
+try:
+    if (_GLOBAL_REMOVE_ALL_INIT is True):
+        exit()
+except:
+    pass
+
 import time
 import os
 # Workaround for scipy altering KeyboardInterrupt behavior
@@ -34,6 +40,11 @@ if not os.path.exists(save.get_data_server_path()):
     print('''SAMBASHARE not connected. Could not find path %s. If you want to change the expected path, modify the get_data_server_path function in Nowack_Lab/Utilities/save.py''' %save.get_data_server_path())
 
 
+try:
+    if (_GLOBAL_REMOVE_IMPORTS is True):
+        exit()
+except:
+    pass
 
 
 
