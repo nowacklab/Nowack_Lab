@@ -32,7 +32,7 @@ class MutualInductance(Measurement):
                 self.I[i,j] = self.lockin_I.X/self.Rmeas
                 self.plot()
         self.save()
-
+        return self.filename
 
     def plot(self):
         super().plot()

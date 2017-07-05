@@ -207,6 +207,7 @@ class Measurement:
         Basic save method. Just calls _save. Overwrite this for each subclass.
         '''
         self._save(filename, savefig=True)
+        return self.filename
 
 
     def _save(self, filename=None, savefig=True):
