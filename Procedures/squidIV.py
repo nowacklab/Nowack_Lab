@@ -14,7 +14,9 @@ from datetime import datetime
 from ..Utilities import dummy
 from ..Instruments import nidaq, preamp
 from ..Utilities.save import Measurement
+from ..Utilities import save
 from ..Utilities.utilities import AttrDict
+from . import squid_plotting
 
 
 class SquidIV(Measurement):
@@ -105,7 +107,7 @@ class SquidIV(Measurement):
             self.Vbias = Ibias*(self.Rbias+self.Rmeas) # SQUID bias voltage
 
 
-    def do(self, rate=9, Rbias=2000,
+    def do(self, squidNum = '0',rate=9, Rbias=2000,
            Irampspan = 200e-6, Irampstep = 0.5e-6, Irampcenter = 0,
            preampgain = 5000, preampfilter = (.3,100),
            smooth=False, checkParam = True, notes = True):
@@ -146,9 +148,16 @@ class SquidIV(Measurement):
             self.do_IV()
             self.daq.zero() # zero everything
 
-            self.setup_plots()
-            self.plot(dvdi = False)
-            self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
+            # path = os.path.join(save.get_local_data_path(),
+            #                     save.get_todays_data_dir())
+            # if(smooth):
+            #     squid_plotting.makePlots(squidNum, path, ivsmooth=self.filename)
+            # else:
+            #     squid_plotting.makePlots(squidNum, path, iv=self.filename)
+
+            # self.setup_plots()
+            # self.plot(dvdi = False)
+            # self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
             if(notes):
                 self.notes = input('Notes for this IV (r to redo, q to quit): ')
                 if self.notes == 'r':

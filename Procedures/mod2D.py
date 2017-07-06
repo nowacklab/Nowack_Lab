@@ -8,7 +8,9 @@ from datetime import datetime
 from .squidIV import SquidIV
 from ..Utilities.plotting import plot_mpl
 from ..Utilities.save import Measurement
+from ..Utilities import save
 from ..Utilities.utilities import AttrDict
+from . import squid_plotting
 
 class Mod2D(Measurement):
     _chan_labels = ['squidout','squidin','modout']
@@ -45,9 +47,9 @@ class Mod2D(Measurement):
         self.V = np.full((self.numpts, self.IV.numpts), np.nan)
         self.Isquid = self.IV.I
 
-    def do(self, rate=900, Rbias=2000,
-           Irampspan = 200e-6, Irampstep = 0.5e-6, Irampcenter = 0,
-           preampgain = 5000, preampfilter = (.3,100),Imodspan= 200e-6 ,
+    def do(self, squidNum='0', rate=900, Rbias=2000,
+           Irampspan = 120e-6, Irampstep = 0.5e-6, Irampcenter = 0,
+           preampgain = 5000, preampfilter = (.3,100),Imodspan= .0005 ,
            Imodstep = 4e-6, checkParam = True, notes = True):
 
         self.IV.Rbias = Rbias # Ohm # 1k cold bias resistors on the SQUID testing PCB
@@ -70,11 +72,12 @@ class Mod2D(Measurement):
             self.IV.Imod = self.Imod[i]
 
             self.IV.do_IV()
-            self.plot()
-            self.ax['IV'].clear()
-            self.IV.plot(self.ax['IV'])
             self.V[:][i] = self.IV.V
-            self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
+            # path = os.path.join(save.get_local_data_path(),
+            #                     save.get_todays_data_dir())
+            # squid_plotting.makePlots(squidNum, path, mod=self.filename)
+
+
         self.IV.daq.zero() # zero everything
         if(notes):
             self.notes = input('Notes for this mod2D (q to quit without saving): ')
