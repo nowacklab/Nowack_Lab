@@ -434,7 +434,6 @@ class Scanplane(Measurement):
             ax.relim()
             ax.autoscale_view()
         # Update the figure
-        plt.pause(0.01)
         self.fig_cuts.canvas.draw()
 
         # Do not flush events for inline or notebook backends

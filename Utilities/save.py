@@ -43,11 +43,11 @@ class Measurement:
             variables = list(d.keys()) # list of all the variables in the dictionary
 
             for var in variables: # copy so we don't change size of array during iteration
-                ## Don't save numpy arrays to JSON
+                # Don't save numpy arrays to JSON
                 if type(d[var]) is np.ndarray:
                     d[var] = None
 
-                ## Don't save matplotlib objects to JSON
+                # Don't save matplotlib objects to JSON
                 if hasattr(d[var], '__module__'): # built-in types won't have __module__
                     m = d[var].__module__
                     m = m[:m.find('.')] # will strip out "matplotlib", if there
@@ -60,7 +60,7 @@ class Measurement:
                         if m == 'matplotlib':
                             d[var] = None
 
-                ## Walk through dictionaries
+                # Walk through dictionaries
                 if 'dict' in utilities.get_superclasses(d[var]):
                     d[var] = walk(d[var]) # This unfortunately erases the dictionary...
 

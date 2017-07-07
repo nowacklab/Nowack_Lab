@@ -11,12 +11,6 @@ from ..Utilities.save import Measurement, get_todays_data_dir, get_local_data_pa
 from ..Utilities import conversions, logging
 from ..Utilities.utilities import AttrDict
 
-# TODO:
-#   - add timestamp to all saved plots
-#
-#
-
-
 _Z_PIEZO_STEP = 4  # V piezo
 _Z_PIEZO_STEP_SLOW = 4  # V piezo
 _CAPACITANCE_THRESHOLD = 1  # fF
@@ -101,7 +95,6 @@ class Touchdown(Measurement):
         super().__init__(instruments=instruments)
 
         if instruments:
-            self.atto.z.freq = 200
             self.configure_lockin()
         self.z_piezo_step = _Z_PIEZO_STEP
         self.Vz_max = Vz_max
@@ -575,6 +568,7 @@ class Touchdown(Measurement):
         self.ax.set_title(self.title, fontsize=12)
 
         #self.fig.tight_layout()
+        plt.pause(1e-6)
         self.fig.canvas.draw()
 
     def save(self, savefig=True):

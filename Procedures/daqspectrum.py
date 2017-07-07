@@ -100,10 +100,9 @@ class DaqSpectrum(Measurement):
         if not hasattr(self, 'preamp') or self.preamp is None:
             print('No preamp!')
             return
-        self.preamp.filter = (0, 100e3)
         self.preamp.dc_coupling()
         self.preamp.diff_input(False)
-        self.preamp.filter_mode('low', 12)
+        
 
 
 class SQUIDSpectrum(DaqSpectrum):
