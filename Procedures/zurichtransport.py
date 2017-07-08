@@ -447,8 +447,8 @@ class ziTransport(Measurement):
             start_time = time.time()
             # Wait for keithley outvoltage to reach 95% of the desired
             # value
-            while (abs(keithley.Vout - current_gate)
-                                        > abs(.05*current_gate)):
+            while (abs(keithley.Vout - gate_stop)
+                                        > abs(.05*gate_stop)):
                 # checks for timeout, throws error to try if
                 # timeout occurs.
                 if time.time() - start_time > 240:
@@ -872,7 +872,7 @@ class ziTransport(Measurement):
         current_channel = currentmonitor - 1
         aux_channel = auxchan - 1
         fp_channel = fourpointchannel - 1
-        osc_index = 1
+        osc_index = 0
         ta_bcoup = int((ta_couple == 'dc' or ta_couple == 'DC'))
         # Detects the correct mixer channel.
         out_mix_ch = int(self.daq.listNodes('/%s/sigouts/%d/amplitudes/'
@@ -948,7 +948,7 @@ class ziTransport(Measurement):
     ['/%s/ZCTRLS/0/TAMP/%d/CURRENTGAIN'
                                    % (self.device_id, current_channel), ta_gain],
     ['/%s/ZCTRLS/0/TAMP/%d/DC'     % (self.device_id, current_channel), ta_bcoup],
-    ['/%s/ZCTRLS/0/TAMP/VOLTAGEGAIN'
+    ['/%s/ZCTRLS/0/TAMP/%d/VOLTAGEGAIN'
                                    % (self.device_id, current_channel), 1],
     ['/%s/ZCTRLS/0/TAMP/%d/OFFSET' % (self.device_id, current_channel), 0],
 
