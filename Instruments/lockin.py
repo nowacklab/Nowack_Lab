@@ -1,4 +1,4 @@
-import visa, atexit, time, numpy as np
+import time, numpy as np
 from tabulate import tabulate
 from .instrument import Instrument
 
