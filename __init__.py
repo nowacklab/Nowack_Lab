@@ -19,7 +19,7 @@ try:
     print('Current experiment: %s' %save.get_experiment_data_dir())
 except:
     pass
-print('Use save.set_experiment_data_dir to change experiments\n')
+print('Use save.set_experiment_data_dir to change experiments')
 # inp = input('New experiment? y/(n): ')
 # if inp in ('y', 'Y'):
 #     while True:
@@ -32,7 +32,7 @@ print('Use save.set_experiment_data_dir to change experiments\n')
 
 ## Check for remote data server connection
 if not os.path.exists(save.get_data_server_path()):
-    print('''SAMBASHARE not connected. Could not find path %s.''' %save.get_data_server_path())
+    print('''\nSAMBASHARE not connected. Could not find path %s.''' %save.get_data_server_path())
 
 
 
@@ -66,6 +66,7 @@ from Nowack_Lab.Procedures.transport import RvsVg, RvsTime, RvsT
 from Nowack_Lab.Procedures.magnetotransport import RvsB, RvsVg_B, RvsB_BlueFors, RvsVg_B_BlueFors
 from Nowack_Lab.Instruments.attocube import Attocube
 from Nowack_Lab.Instruments.keithley import Keithley2400, Keithley2600, KeithleyPPMS
+from Nowack_Lab.Instruments.lakeshore import Lakeshore372
 from Nowack_Lab.Instruments.montana import Montana
 from Nowack_Lab.Instruments.nidaq import NIDAQ
 from Nowack_Lab.Instruments.piezos import Piezos
