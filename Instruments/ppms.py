@@ -29,8 +29,8 @@ class PPMS(Instrument):
         if s == None:
             # Run script to start PyQDInstrument server
             ironpython = r'"C:\Program Files\IronPython 2.7\ipy.exe"'
-            this_directory = os.path.dirname(__file__)
-            path_to_script = os.path.join(this_directory,
+            here = os.path.dirname(__file__)
+            path_to_script = os.path.join(here,
                                'ppms_server/run_server_blue.py')
 
             print('Launching IronPython server...')
@@ -40,13 +40,24 @@ class PPMS(Instrument):
             # the one used to start jupyter notebook.
 
             # Get current process id list.
-            get_pids_path = os.path.join(this_directory, 'ppms_server/get_pids.bat')
+            get_pids_path = os.path.join(here, 'ppms_server/get_pids.bat')
             p = subprocess.Popen(get_pids_path, stdout=subprocess.PIPE)
             out = p.communicate()
             out = out[0].decode()
             i = out.find('echo')
             pids = out[i:].split()[1] # extract printed output from batch
                                       # this is a list of open PIDs for ipy.exe
+            pids_no_p = pids.replace('p', '') # p added by script
+
+            i = -1
+            try:
+                i = int(pids_no_p.split(' ')[0]) # Passes if there one or more PID numbers.
+            except: # try fails if no PID numbers. But this is the good case!
+                pass
+
+            if i != -1: # if there is already a PID number:
+                self._pid = i
+                self.kill_server() # kill that communication.
 
             # Start the ironpython ipy.exe server
             os.system('start /B cmd /k %s %s %s %i' %(ironpython, path_to_script, host, port))
@@ -57,12 +68,15 @@ class PPMS(Instrument):
             out = out[0].decode()
             i = out.find('echo')
             self._pid = out[i:].split()[2] # This is the PID of the ipy.exe server
-            print(self._pid)
 
             time.sleep(1)
             print('Attempting to connect...')
-            self._s = connect_socket(host, port)
-            print('PPMS Connected.')
+            try:
+                self._s = connect_socket(host, port)
+            except Exception as e:
+                self.kill_server()
+                raise e
+            print('PPMS Connected. Process ID %s' %self._pid)
         else:
             self._s = s
 
@@ -78,15 +92,8 @@ class PPMS(Instrument):
         self._functions = []
 
     def __del__(self):
-        '''
-        Terminates the running IronPython (ipy.exe) server and closes cmd window.
-        WARNING: Assumes that the only instance of ipy.exe is for the PPMS server.
-        In future, if you can figure out the correct process ID, then
-        add '/fi "PID eq %s"' in between /f and /im, and then format the string
-        with %PID_number.
-        '''
         if self._pid is not None:
-            os.system('taskkill /f /fi "PID eq %s" /im ipy.exe' %self._pid)
+            self.kill_server()
 
     def __getstate__(self):
         d = {}
@@ -106,6 +113,20 @@ class PPMS(Instrument):
         else:
             cmd = '%s = %s' %(param, value)
         return ask_socket(self._s, cmd)
+
+    def kill_server(self,):
+        '''
+        Terminates the running IronPython (ipy.exe) server and closes cmd window.
+        WARNING: Assumes that the only instance of ipy.exe is for the PPMS server.
+        In future, if you can figure out the correct process ID, then
+        add '/fi "PID eq %s"' in between /f and /im, and then format the string
+        with %PID_number.
+        '''
+        err = os.system('taskkill /f /fi "PID eq %s" /im ipy.exe' %self._pid)
+        # if err == 0:
+        #     print('Killed IronPython server with PID %s' %self._pid)
+        # else:
+        #     print('Failed killing IronPython server with PID %s' %self._pid)
 
 
 def connect_socket(HOST, PORT):

@@ -150,7 +150,7 @@ class RvsB_BlueFors(RvsB):
 
     def do(self, plot=True, auto_gain=False):
         ## Set initial field if not already there
-        if abs(self.magnet.B - self.Bstart) > 100e-6: # different by more than 100 uT
+        if abs((self.magnet.B - self.Bstart)/self.magnet.B) > 0.01: # different by more than 1%
             self.magnet.ramp_to_field(self.Bstart, self.sweep_rate)
             time.sleep(5) # let the field start ramping to Bstart
             print('Waiting for field to sweep to Bstart...')
