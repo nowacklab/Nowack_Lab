@@ -4,7 +4,7 @@ Adapted for use by the Nowack lab Jan 2017
 '''
 
 from .instrument import Instrument
-import select, os, time
+import select, os, time, subprocess
 
 class PPMS(Instrument):
     r'''
@@ -19,6 +19,8 @@ class PPMS(Instrument):
     Attributes represent the system control parameters:
     'temperature', 'temperature_rate', 'temperature_approach', 'field', 'field_rate', 'field_approach', 'field_mode', 'temperature_status', 'field_status', 'chamber'
     '''
+    _pid = None # process id number for server
+
     def __init__(self, host='127.0.0.2', port=50009, s=None):
         '''
         Default host and port are for the PPMS measurement computer.
@@ -28,16 +30,35 @@ class PPMS(Instrument):
             # Run script to start PyQDInstrument server
             ironpython = r'"C:\Program Files\IronPython 2.7\ipy.exe"'
             this_directory = os.path.dirname(__file__)
-            path_to_script = os.path.join(this_directory, 
-                               '../Utilities/run_server_blue.py')
+            path_to_script = os.path.join(this_directory,
+                               'ppms_server/run_server_blue.py')
 
             print('Launching IronPython server...')
             # Start background IronPython running run_server_blue.py
             # This process runs in the jupyter notebook cmd prompt.
-            # Window text will show a mishmash of a normal cmd prompt and 
+            # Window text will show a mishmash of a normal cmd prompt and
             # the one used to start jupyter notebook.
+
+            # Get current process id list.
+            get_pids_path = os.path.join(this_directory, 'ppms_server/get_pids.bat')
+            p = subprocess.Popen(get_pids_path, stdout=subprocess.PIPE)
+            out = p.communicate()
+            out = out[0].decode()
+            i = out.find('echo')
+            pids = out[i:].split()[1] # extract printed output from batch
+                                      # this is a list of open PIDs for ipy.exe
+
+            # Start the ironpython ipy.exe server
             os.system('start /B cmd /k %s %s %s %i' %(ironpython, path_to_script, host, port))
-             # %% to escape the %
+
+            # Compare PID load_instruments
+            p = subprocess.Popen(os.path.join(here, 'ppms_server','compare_pids.bat %s') %pids, stdout=subprocess.PIPE)
+            out = p.communicate()
+            out = out[0].decode()
+            i = out.find('echo')
+            self._pid = out[i:].split()[2] # This is the PID of the ipy.exe server
+            print(self._pid)
+
             time.sleep(1)
             print('Attempting to connect...')
             self._s = connect_socket(host, port)
@@ -46,7 +67,7 @@ class PPMS(Instrument):
             self._s = s
 
         self._units = {'temperature': 'K', 'temperature_rate': 'K/min','field': 'Oe', 'field_rate': 'Oe/min'}
-        
+
         # Getters and setters for available commands
         for param in ['temperature', 'temperature_rate', 'field', 'field_rate', 'temperature_approach', 'field_approach', 'field_mode']:
             setattr(PPMS,param,property(fget=eval("lambda self: self._get_param('%s')" %param),
@@ -60,11 +81,12 @@ class PPMS(Instrument):
         '''
         Terminates the running IronPython (ipy.exe) server and closes cmd window.
         WARNING: Assumes that the only instance of ipy.exe is for the PPMS server.
-        In future, if you can figure out the correct process ID, then 
-        add '/fi "PID eq %s"' in between /f and /im, and then format the string 
+        In future, if you can figure out the correct process ID, then
+        add '/fi "PID eq %s"' in between /f and /im, and then format the string
         with %PID_number.
         '''
-        os.system('taskkill /f /im ipy.exe')
+        if self._pid is not None:
+            os.system('taskkill /f /fi "PID eq %s" /im ipy.exe' %self._pid)
 
     def __getstate__(self):
         d = {}
