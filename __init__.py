@@ -39,40 +39,42 @@ if not os.path.exists(save.get_data_server_path()):
 
 
 ## Importing commonly used packages
+try:
+    ip.run_code('''
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from imp import reload
+    from time import sleep
+    import sys, os
 
-ip.run_code('''
-import numpy as np
-import matplotlib.pyplot as plt
-from imp import reload
-from time import sleep
-import sys, os
-
-## Because I don't know how to do this otherwise, importing all functions and modules that we want in the namespace.
-from Nowack_Lab.Utilities import utilities, save, logging, conversions, anim, constants
-from Nowack_Lab.Utilities.plotting import plot_mpl
-from Nowack_Lab.Utilities.save import Measurement
-from Nowack_Lab.Procedures.daqspectrum import DaqSpectrum, SQUIDSpectrum
-from Nowack_Lab.Procedures.heightsweep import Heightsweep
-from Nowack_Lab.Procedures.mod2D import Mod2D
-from Nowack_Lab.Procedures.mutual_inductance import MutualInductance
-from Nowack_Lab.Procedures.navigation import move
-from Nowack_Lab.Procedures.planefit import Planefit
-from Nowack_Lab.Procedures.scanline import Scanline
-from Nowack_Lab.Procedures.scanplane import Scanplane
-from Nowack_Lab.Procedures.scanspectra import Scanspectra
-from Nowack_Lab.Procedures.squidIV import SquidIV
-from Nowack_Lab.Procedures.touchdown import Touchdown
-from Nowack_Lab.Procedures.transport import RvsVg, RvsTime, RvsT
-from Nowack_Lab.Procedures.magnetotransport import RvsB, RvsVg_B, RvsB_BlueFors, RvsVg_B_BlueFors
-from Nowack_Lab.Instruments.attocube import Attocube
-from Nowack_Lab.Instruments.keithley import Keithley2400, Keithley2600, KeithleyPPMS
-from Nowack_Lab.Instruments.montana import Montana
-from Nowack_Lab.Instruments.nidaq import NIDAQ
-from Nowack_Lab.Instruments.piezos import Piezos
-from Nowack_Lab.Instruments.preamp import SR5113
-from Nowack_Lab.Instruments.squidarray import SquidArray
-from Nowack_Lab.Instruments.lockin import SR830
-from Nowack_Lab.Instruments.ppms import PPMS
-from Nowack_Lab.Instruments.magnet import Magnet
-#from Nowack_Lab.Fun.callme import call
-''');
+    ## Because I don't know how to do this otherwise, importing all functions and modules that we want in the namespace.
+    from Nowack_Lab.Utilities import utilities, save, logging, conversions, anim, constants
+    from Nowack_Lab.Utilities.plotting import plot_mpl
+    from Nowack_Lab.Utilities.save import Measurement
+    from Nowack_Lab.Procedures.daqspectrum import DaqSpectrum, SQUIDSpectrum
+    from Nowack_Lab.Procedures.heightsweep import Heightsweep
+    from Nowack_Lab.Procedures.mod2D import Mod2D
+    from Nowack_Lab.Procedures.mutual_inductance import MutualInductance
+    from Nowack_Lab.Procedures.navigation import move
+    from Nowack_Lab.Procedures.planefit import Planefit
+    from Nowack_Lab.Procedures.scanline import Scanline
+    from Nowack_Lab.Procedures.scanplane import Scanplane
+    from Nowack_Lab.Procedures.scanspectra import Scanspectra
+    from Nowack_Lab.Procedures.squidIV import SquidIV
+    from Nowack_Lab.Procedures.touchdown import Touchdown
+    from Nowack_Lab.Procedures.transport import RvsVg, RvsTime, RvsT
+    from Nowack_Lab.Procedures.magnetotransport import RvsB, RvsVg_B, RvsB_BlueFors, RvsVg_B_BlueFors
+    from Nowack_Lab.Instruments.attocube import Attocube
+    from Nowack_Lab.Instruments.keithley import Keithley2400, Keithley2600, KeithleyPPMS
+    from Nowack_Lab.Instruments.montana import Montana
+    from Nowack_Lab.Instruments.nidaq import NIDAQ
+    from Nowack_Lab.Instruments.piezos import Piezos
+    from Nowack_Lab.Instruments.preamp import SR5113
+    from Nowack_Lab.Instruments.squidarray import SquidArray
+    from Nowack_Lab.Instruments.lockin import SR830
+    from Nowack_Lab.Instruments.ppms import PPMS
+    from Nowack_Lab.Instruments.magnet import Magnet
+    #from Nowack_Lab.Fun.callme import call
+    ''');
+except:
+    pass
