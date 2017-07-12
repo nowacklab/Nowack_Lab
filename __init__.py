@@ -19,7 +19,7 @@ try:
     print('Current experiment: %s' %save.get_experiment_data_dir())
 except:
     pass
-print('Use save.set_experiment_data_dir to change experiments\n')
+print('Use save.set_experiment_data_dir to change experiments')
 # inp = input('New experiment? y/(n): ')
 # if inp in ('y', 'Y'):
 #     while True:
@@ -32,7 +32,7 @@ print('Use save.set_experiment_data_dir to change experiments\n')
 
 ## Check for remote data server connection
 if not os.path.exists(save.get_data_server_path()):
-    print('''SAMBASHARE not connected. Could not find path %s.''' %save.get_data_server_path())
+    print('''\nSAMBASHARE not connected. Could not find path %s.''' %save.get_data_server_path())
 
 
 
