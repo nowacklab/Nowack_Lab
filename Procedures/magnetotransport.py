@@ -209,7 +209,7 @@ class RvsVg_B(RvsVg):
         self.Vx2D = {i: np.full((len(self.B), len(self.Vg)), np.nan) for i in range(self.num_lockins)}
         self.Vy2D = {i: np.full((len(self.B), len(self.Vg)), np.nan) for i in range(self.num_lockins)}
         self.Ix2D = np.full((len(self.B), len(self.Vg)), np.nan)
-        self.Ix2D = np.full((len(self.B), len(self.Vg)), np.nan)
+        self.Iy2D = np.full((len(self.B), len(self.Vg)), np.nan)
 
         ## remember: shape of matrix given in y,x. So B is on the y axis and Vg on the x axis.
 
