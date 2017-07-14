@@ -46,13 +46,17 @@ class R_vs_T(Bluefors_vs_T):
         '''
         super().__init__(instruments=instruments)
 
-        for arg in ['lakeshore_channel']:
+        for arg in ['lakeshore_channel',
+                    'meas_dur',
+                    'timestep'
+                   ]:
             setattr(self,arg,eval(arg))
         
     def do(self):
         '''
         '''
         # disable other channels so can update fast!
+        prev_lakeshore_settings = self.lakeshore.getchsettings()
         self.lakeshore.disable_others(self.lakeshore_channel)
 
         # store lakeshore channel settings
@@ -61,7 +65,7 @@ class R_vs_T(Bluefors_vs_T):
         # setup scan
         self.starttime  = datetime.now()
         self.endtime    = self.starttime + timedelta(seconds=self.meas_dur)
-        self.numsteps   = self.meas_dur/self.timestep
+        self.numsteps   = int(np.ceil(self.meas_dur/self.timestep))
 
         self.lockinI_X   = np.zeros(self.numsteps)
         self.lockinI_Y   = np.zeros(self.numsteps)
@@ -71,7 +75,7 @@ class R_vs_T(Bluefors_vs_T):
         self.sleeptimes  = np.zeros(self.numsteps)
 
 
-        for i in range(self.numstes):
+        for i in range(self.numsteps):
             lastmeastime = datetime.now();
 
             self.lockinI_X[i]   = self.lockin_I.X
@@ -80,19 +84,27 @@ class R_vs_T(Bluefors_vs_T):
             self.lockinV_Y[i]   = self.lockin_V.Y
             self.temperature[i] = self.lakeshore.T[self.lakeshore_channel]
 
+            print('At {0}K: Rx={1}'.format(self.temperature[i], 
+                    self.lockinV_X[i]/self.lockinI_X[i]))
+
             # live plotting
-            self.plot()
+            self.plot(i)
 
             # ensure constant measure interval
             # maybe do something so that will measure faster 
             # if resistance is changing faster?
             sleeptime = ( self.timestep - 
-                          (lastmeastime-datetime.now()).total_seconds
+                          (lastmeastime-datetime.now()).total_seconds()
                         ) 
             self.sleeptimes[i]  = sleeptime
 
             if sleeptime > 0:
                 time.sleep(sleeptime)
+
+        self.lakeshore.setchsettings(prev_lakeshore_settings)
+
+        #HACK FIXME
+        del self.lakeshore.__dict__['_visa_handle']
             
     def setup_plots(self):
         '''
@@ -111,30 +123,33 @@ class R_vs_T(Bluefors_vs_T):
 
         for ax in self.ax.values():
             ax.set_xlabel('Temperature (K)')
-            ax.annotate(self.notes
+            ax.annotate(self.notes,
                     xy=(.02,.98), xycoords='axes fraction',ha='left',va='top',
                     fontsize=10, family='monospace')
 
-        self._points     = {
-                            'X':ax['X'].plot([],[],
+        self._points = AttrDict()
+        self._points['X'] = self.ax['X'].plot([],[],
                                              marker='o', markersize=2, 
-                                             linestyle='-')
-                            'Y':ax['Y'].plot([],[],
+                                             linestyle='-')[0]
+        self._points['Y'] = self.ax['Y'].plot([],[],
                                              marker='o', markersize=2, 
-                                             linestyle='-')
-                            }
-        plt.ion()
-        plt.show()
-        plt.draw()
+                                             linestyle='-')[0]
 
-    def plot(self):
+    def plot(self, plotindex=0):
         '''
         Live plotting
-        https://stackoverflow.com/questions/11874767/real-time-plotting-in-while-loop-with-matplotlib
         '''
-        super().plot()
 
         # update plot
-        self._points['X'].set_data(self.temperature, self.lockinV_X/self.lockinI_X)
-        self._points['Y'].set_data(self.temperature, self.lockinV_Y/self.lockinI_Y)
+        self._points['X'].set_xdata(self.temperature[:plotindex])
+        self._points['X'].set_ydata(self.lockinV_X[:plotindex]/
+                                    self.lockinI_X[:plotindex])
+        self._points['Y'].set_xdata(self.temperature[:plotindex])
+        self._points['Y'].set_ydata(self.lockinV_Y[:plotindex]/
+                                    self.lockinI_Y[:plotindex])
+        plt.pause(0.01)
+        for ax in self.ax.values():
+            ax.relim()
+            ax.autoscale_view(True,True,True)
+        self.fig.tight_layout()
         self.fig.canvas.draw()
