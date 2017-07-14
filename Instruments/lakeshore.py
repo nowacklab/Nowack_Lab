@@ -1,4 +1,5 @@
 from .instrument import VISAInstrument
+import numpy as np
 
 class Lakeshore372(VISAInstrument):
     '''
@@ -81,4 +82,7 @@ class Lakeshore372(VISAInstrument):
         d = {}
         for chan in self._channel_names.keys():
             d[chan] = conversion_type(self.ask('%s %i' %(cmd, chan)))
+            if cmd != 'RDGST?': # to prevent infinite recursion
+                if self.status[chan] != 'OK':
+                    d[chan] = np.nan
         return d

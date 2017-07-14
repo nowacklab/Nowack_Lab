@@ -66,6 +66,7 @@ from Nowack_Lab.Procedures.transport import RvsVg, RvsTime, RvsT
 from Nowack_Lab.Procedures.magnetotransport import RvsB, RvsVg_B, RvsB_BlueFors, RvsVg_B_BlueFors
 from Nowack_Lab.Instruments.attocube import Attocube
 from Nowack_Lab.Instruments.keithley import Keithley2400, Keithley2600, KeithleyPPMS
+from Nowack_Lab.Instruments.lakeshore import Lakeshore372
 from Nowack_Lab.Instruments.montana import Montana
 from Nowack_Lab.Instruments.nidaq import NIDAQ
 from Nowack_Lab.Instruments.piezos import Piezos
@@ -76,5 +77,5 @@ from Nowack_Lab.Instruments.ppms import PPMS
 from Nowack_Lab.Instruments.magnet import Magnet
 #from Nowack_Lab.Fun.callme import call
     ''');
-except:
-    pass
+except Exception as e:
+    print(e)
