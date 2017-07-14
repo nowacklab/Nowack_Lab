@@ -6,7 +6,7 @@ import peakutils
 from scipy.interpolate import interp1d
 from scipy.stats import linregress
 
-from ..Utilities.constants import e, h
+from ..Utilities.constants import e, h, G0
 
 class RvsB(RvsSomething):
     instrument_list = ['ppms', 'lockin_V', 'lockin_I']
@@ -345,13 +345,55 @@ class RvsVg_B(RvsVg):
         self.fig.tight_layout()
         self.fig.canvas.draw()
 
-    def plot_mobility(self, Rxy_channel=1, Rxx_channel=0):
+    def plot_linecut(self, idx=0, num_squares=1, Rxx_channel=0, Rxy_channel=1, QH_type='MLG'):
+        '''
+        Plot a gatesweep at constant field.
+        idx: index of the gatesweep you wish to plot
+        num_squares: aspect ratio used to convert Rxx to resistivity
+        Rxx_channel: Rxx channel number
+        Rxy_channel: Rxy channel number
+        QH_type: 'MLG' or 'BLG' for monolayer/bilayer graphene
+
+        Returns:
+        fig - the figure
+        ax - the axes
+        '''
+        fig, ax = plt.subplots()
+        ax2 = ax.twinx()
+
+        # Plot the resistance channels
+        ax.plot(self.Vg, self.R2D[Rxx_channel][idx,:]/1000/num_squares)
+        # ax.set_ylim(-.01, 3.5)
+        ax.set_xlim(self.Vg.min(), self.Vg.max())
+        Gxy = 1/self.R2D[Rxy_channel][idx,:]/G0
+        ax2.plot(self.Vg, Gxy, 'C1')
+
+        for i in (np.array(range(9))-4+1/2)*4:
+            ax2.axhline(i, color='k', ls='--', alpha=0.5)
+        ylim = np.ceil(max(Gxy[0], Gxy[-1])) # choose the larger of the two endpoints
+        ax2.set_ylim(-ylim,ylim)
+
+        ax.set_xlabel('Gate voltage (V)',fontsize=16)
+        ax.set_ylabel(r'$\rho_{xx}$ (k$\Omega$/☐)',fontsize=16)
+        ax2.set_ylabel(r'$\sigma_{xy}$ ($e^2/h$)',fontsize=16, color='C1')
+
+        ax.text(.1, 0.9, '%g T' %self.B[idx], fontsize=20, transform=ax.transAxes)
+        plt.tight_layout()
+        fig.canvas.draw()
+        return fig, ax
+
+    def plot_mobility(self, l=0, u=-1, Rxx_channel=0, Rxy_channel=1):
         '''
         Makes a plot of the Hall coefficient and carrier mobility vs gate voltage.
         The voltage channel measuring Rxy is by default 1, and Rxx is 0.
         Right now we assume geometrical factor of 1, so Rxx = rho_xx
         mu = R_H/<R_xx>, average value of R_xx
         R_H = Rxy/B
+
+        l: lower index to do the fit
+        u: upper index to do the fit
+        Rxx_channel: channel number for Rxx
+        Rxy_channel: channel number for Rxy
         '''
         from scipy.stats import linregress as lr
         slopes = np.array([])
@@ -359,9 +401,9 @@ class RvsVg_B(RvsVg):
         Rxx = self.R2D[Rxx_channel]
         Rxy = self.R2D[Rxy_channel]
         for i in range(Rxy.shape[1]):
-            slope, intercept, _, _, _ = lr(self.B, Rxy[:,i])
+            slope, intercept, _, _, _ = lr(self.B[l:u], Rxy[l:u,i])
             slopes = np.append(slopes, slope)
-            mobility = np.append(mobility, slope/Rxx[:,i].mean())
+            mobility = np.append(mobility, slope/Rxx[l:u,i].mean())
         fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(10,4))
         ax1.plot(self.Vg, abs(slopes))
         ax2.plot(self.Vg, abs(mobility)*100**2)
