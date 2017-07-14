@@ -1,6 +1,9 @@
 '''
 For the future? Instrument base class that all instruments belong to.
 '''
+
+import visa
+
 class Instrument:
     _label = 'instrument'
 
@@ -78,4 +81,3 @@ class VISAInstrument(Instrument):
         Write to VISA.
         '''
         self._visa_handle.write(cmd)
->>>>>>> c5c9a0a... Lakeshore temperature controller
