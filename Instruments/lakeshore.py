@@ -42,6 +42,28 @@ class Lakeshore372(VISAInstrument):
         return self._R
 
     @property
+    def scanned(self):
+        '''
+        Is a particular channel being scanned?
+        Returns a dictionary of True/False
+        '''
+        # SCAN? returns ##,#. The first number is channel being scanned
+        scan = self.ask('SCAN?')
+        scan = int(scan.split(',')[0])
+        self._scanned = {c: False for c in self._channel_names.keys()}
+        self._scanned[scan] = True
+        return self._scanned
+
+    def scan(self, channel, autoscan=True):
+        '''
+        Start scanning a particular channel.
+
+        channel: channel number to scan
+        autoscan: whether to automatically loop through channels
+        '''
+        self.write('SCAN %i,%i' %(channel, autoscan))
+
+    @property
     def status(self):
         '''
         Get the status of all input channels.
@@ -80,9 +102,12 @@ class Lakeshore372(VISAInstrument):
 
     def _loop_over_chans(self, cmd, conversion_type):
         d = {}
+        if cmd != 'RDGST?': # to prevent infinite recursion
+            status = self.status
+        else: # to pass the OK check
+            status = {c: 'OK' for c in self._channel_names.keys()}
         for chan in self._channel_names.keys():
             d[chan] = conversion_type(self.ask('%s %i' %(cmd, chan)))
-            if cmd != 'RDGST?': # to prevent infinite recursion
-                if self.status[chan] != 'OK':
-                    d[chan] = np.nan
+            if status[chan] != 'OK':
+                d[chan] = np.nan
         return d
