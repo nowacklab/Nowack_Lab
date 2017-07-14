@@ -90,6 +90,22 @@ class Lakeshore372(VISAInstrument):
 
         return self._loop_over_chans(cmd, insetfunct)
 
+    def setchsettings(self, chsettings):
+        '''
+        sets all channel settings
+
+        arguments
+            chsettings: (dict) {1: [ <off/on>,<dwell>,<pause>,
+                                    <curve number>,<tempco> ],
+                                    ... 
+                               }
+        returns
+            none
+        '''
+        for i in chsettings.keys():
+            self.set_channel(i, *chsettings[i])
+
+
     def disable_others(self,channel):
         '''
         Disables all other channels except given channel
@@ -103,7 +119,7 @@ class Lakeshore372(VISAInstrument):
         for i in self._channel_names.keys():
             if (i == channel):
                 continue;
-            chsetting = self.get_channel(self, i)
+            chsetting = self.get_channel(i)
             self.set_channel(i,0,
                                 chsetting[1],
                                 chsetting[2],
@@ -120,13 +136,24 @@ class Lakeshore372(VISAInstrument):
             none
         '''
         for i in self._channel_names.keys():
-            chsetting = self.get_channel(self, i)
+            chsetting = self.get_channel(i)
             self.set_channel(i,1,
                                 chsetting[1],
                                 chsetting[2],
                                 chsetting[3],
                                 chsetting[4])
-            
+    def disable_ch(self, channel):
+        self._offon_ch(channel, 0)
+
+    def enable_ch(self, channel):
+        self._offon_ch(channel, 1)
+
+    def _offon_ch(self, channel, offon):
+        a = self.get_channel(channel);
+        a[0] = offon;
+        self.set_channel(channel, *a)
+
+
 
     def set_channel(self, channel, 
                    offon=1, dwell=30, pause=10, curvenumber=0, tempco=1):
@@ -142,7 +169,7 @@ class Lakeshore372(VISAInstrument):
             tempco     : temperature coefficient for temperature control if no
                          curve is selected: 1=negative, 2=positive
         '''
-        self.ask("INSET {0},{1},{2},{3},{4},{5}".format(
+        self.write("INSET {0},{1},{2},{3},{4},{5}".format(
                     channel, offon, dwell, pause, curvenumber, tempco))
 
     def get_channel(self, channel):
