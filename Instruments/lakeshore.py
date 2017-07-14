@@ -77,6 +77,91 @@ class Lakeshore372(VISAInstrument):
         self._T = self._loop_over_chans('RDGK?', float)# "ReaDinG Kelvin"
         return self._T
 
+    def getchsettings(self):
+        '''
+        Gets all channel settings
+        
+        returns dictionary, key is channel number, value is 
+        array as in get_channel
+        '''
+        cmd = "INSET?"
+        def insetfunct (s):
+            return [int(x) for x in s.split(',')]
+
+        return self._loop_over_chans(cmd, insetfunct)
+
+    def disable_others(self,channel):
+        '''
+        Disables all other channels except given channel
+        
+        arguments
+            channel: (int) channel number to enable
+
+        returns
+            none
+        '''
+        for i in self._channel_names.keys():
+            if (i == channel):
+                continue;
+            chsetting = self.get_channel(self, i)
+            self.set_channel(i,0,
+                                chsetting[1],
+                                chsetting[2],
+                                chsetting[3],
+                                chsetting[4])
+    def enable_all(self):
+        '''
+        Enable all channels
+
+        arguements
+            none
+
+        returns
+            none
+        '''
+        for i in self._channel_names.keys():
+            chsetting = self.get_channel(self, i)
+            self.set_channel(i,1,
+                                chsetting[1],
+                                chsetting[2],
+                                chsetting[3],
+                                chsetting[4])
+            
+
+    def set_channel(self, channel, 
+                   offon=1, dwell=30, pause=10, curvenumber=0, tempco=1):
+        '''
+        Sets channel parameters
+
+        arguments:
+            channel    : channel number, 1-16, 0 is all channels
+            offon      : channel is disabled or enabled.  0=disabled, 1=enabled
+            dwell      : autoscan dwell time, 1-200s
+            pause      : pause time, 3-200 s
+            curvenumber: which curve, 0=nocurve, 1-59 standard/user curves
+            tempco     : temperature coefficient for temperature control if no
+                         curve is selected: 1=negative, 2=positive
+        '''
+        self.ask("INSET {0},{1},{2},{3},{4},{5}".format(
+                    channel, offon, dwell, pause, curvenumber, tempco))
+
+    def get_channel(self, channel):
+        '''
+        Gets the channel parameter
+
+        arguments:
+            channel: int, channel number
+
+        returns:
+            [ <off/on>,<dwell>,<pause>,<curve number>,<tempco> ]
+
+            see set_channel for details
+        '''
+        s = self.ask("INSET? {0}".format(channel))
+        a = [int(x) for x in s.split(',')]
+        return a
+
+
     def _loop_over_chans(self, cmd, conversion_type):
         d = {}
         for chan in self._channel_names.keys():
