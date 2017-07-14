@@ -2,7 +2,8 @@ from .instrument import VISAInstrument
 
 class Lakeshore372(VISAInstrument):
     '''
-    Driver to communicate with LakeShore Model 372 AC Resistance Bridge & Temperature Controller for the BlueFors dilution refrigerator
+    Driver to communicate with LakeShore Model 372 AC Resistance Bridge & 
+    Temperature Controller for the BlueFors dilution refrigerator
     '''
     _label = 'Lakeshore Model 372'
     _strip = '\r'
