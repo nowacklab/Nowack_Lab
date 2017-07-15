@@ -334,11 +334,15 @@ class Touchdown(Measurement):
         # make sure we didn't crash
         self.check_balance()
 
-        msg = input("Ok to move {0} ums? q to quit".format(self.attoshift));
+        msg = input(
+                "Ok to move {0} ums? q to quit, s to skip".format(
+                    self.attoshift));
         if (msg is 'q'):
             raise KeyboardInterrupt;
-
-        self.atto.z.move(self.attoshift)
+        if (msg is 's'):
+            pass
+        else:
+            self.atto.z.move(self.attoshift)
 
         # wait until capacitance settles
         time.sleep(self._T_UNTIL_BAL)
@@ -347,10 +351,14 @@ class Touchdown(Measurement):
         while self.daq.inputs['cap'].V > 10:
             # we probably moved too far
             move = -_ATTO_TOWARDS_SAMPLE*self.attoshift/2
-            msg = input("Ok to move {0} um? q to quit".format(move));
+            msg = input(
+                    "Ok to move {0} um? q to quit, s to skip".format(move));
             if (msg is 'q'):
                 raise KeyboardInterrupt;
-            self.atto.z.move(move)
+            if (msg is 's'):
+                pass
+            else:
+                self.atto.z.move(move)
 
             # wait until capacitance settles
             time.sleep(self._T_UNTIL_BAL)
