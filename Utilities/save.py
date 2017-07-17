@@ -13,6 +13,7 @@ import h5py, glob, matplotlib, inspect, platform, hashlib, shutil, time
 import matplotlib.pyplot as plt
 from . import utilities
 
+
 '''
 How saving and loading works:
 1) Walks through object's __dict__, subdictionaries, and subobjects, picks out
@@ -144,6 +145,7 @@ class Measurement:
 
     @staticmethod
     def _load_json(json_file, unwanted_keys = []):
+        import Nowack_Lab.Procedures.planefit
         '''
         Loads an object from JSON.
         '''
@@ -176,6 +178,8 @@ class Measurement:
         try:
             exec(obj_dict['py/object']) # see if class is in the namespace
         except:
+            print('Cannot find class definition {0}: '.format(
+                obj_dict['py/object']) + 'using measurement object')
             obj_dict['py/object'] = 'Nowack_Lab.Utilities.save.Measurement'
 
         # Decode with jsonpickle
