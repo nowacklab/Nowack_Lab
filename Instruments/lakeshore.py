@@ -10,6 +10,7 @@ class LakeshoreChannel(VISAInstrument):
     _label = 'LakeshoreChannel'
     _num = 0
     _strip = '\r'
+    _insets = ['enabled', 'dwell', 'pause', 'curve_num', 'temp_coef']
 
     def __init__(self, visa_handle, num, label):
         '''
@@ -22,6 +23,15 @@ class LakeshoreChannel(VISAInstrument):
         self._num = num
         self._label = label
 
+        # Properties for all the channel settings
+        for i, var in enumerate(self._insets):
+            setattr(LakeshoreChannel, var, property(
+                fget = eval('lambda self: self._get_inset()[%i]' %i),
+                fset = eval('lambda self, value: self._set_inset(%s = value)'
+                %var)
+            ))
+
+
     def __getstate__(self):
         self._save_dict = {
             'Channel number': self._num,
@@ -32,8 +42,13 @@ class LakeshoreChannel(VISAInstrument):
             'resistance': self.R,
             'temperature': self.T,
             'status': self.status,
+            'dwell time': self.dwell,
+            'pause': self.pause,
+            'curve number': self.curve_num,
+            'temperature coefficient 1pos, 2neg': self.temp_coef,
         }
         return self._save_dict
+
 
     def __setstate__(self, state):
         state['_num'] = state.pop('Channel number')
@@ -44,31 +59,52 @@ class LakeshoreChannel(VISAInstrument):
         state['_R'] = state.pop('resistance')
         state['_T'] = state.pop('temperature')
         state['_status'] = state.pop('status')
+        state['_dwell'] = state.pop('dwell time')
+        state['_pause'] = state.pop('pause')
+        state['_curve_num'] = state.pop('curve number')
+        state['_temp_coef'] = state.pop('temperature coefficient 1pos, 2neg')
 
         self.__dict__.update(state)
 
-    def enable(self):
-        '''
-        Enable this channel.
-        '''
 
-
-    @property
-    def enabled(self):
-        '''
-        Is this particular channel enabled?
-        Returns True/False
-        '''
-        # INSE? returns a bunch of stuff. The first number is 0/1 if (dis/en)abled
-        inset = self.ask('INSET? %i' %self._num)
-        self._enabled = bool(inset.split(',')[0])
-        return self._enabled
-
-    def _inset(self):
+    def _get_inset(self):
         '''
         Returns all the parameters returned by the INSET? query.
+        These are channel settings in an array:
+            [enabled/disabled, dwell, pause, curve number, tempco]
         '''
-        pass
+        inset = self.ask('INSET? %i' %self._num)
+        inset = [int(x) for x in inset.split(',')]
+        inset[0] = bool(inset[0]) # make enabled True/False
+        for i, var in enumerate(self._insets):
+            setattr(self, '_'+var, inset[i])
+        return inset
+
+
+    def _set_inset(self, enabled = None, dwell = None, pause = None,
+                    curve_num = None, temp_coef = None
+        ):
+        '''
+        Set any number of channel settings uing the INSET command.
+        For each keyword argument, None indicates not to change that setting.
+
+        Parameters:
+            enabled (bool): enable or disable the channel
+            dwell (float): Dwell time (1-200 s)
+            pause (float): Change pause time (3-200 s)
+            curve_num (int 0-59): Which curve the channel uses. 0 = no curve.
+            temp_coef (int): Temp. coefficient used if no curve; 1 = -, 2 = +
+        '''
+        inset = self._get_inset()
+        args = [enabled, dwell, pause, curve_num, temp_coef]
+
+        for i, arg in enumerate(args):
+            if arg is None:
+                args[i] = inset[i]
+
+        cmd = 'INSET %i,%i,%i,%i,%i,%i' %(self._num, *args)
+        self.write(cmd)
+
 
     @property
     def P(self):
@@ -176,10 +212,14 @@ class Lakeshore372(VISAInstrument):
         for c, n in self._channel_names.items():
             setattr(self, 'chan%i' %c, LakeshoreChannel(self._visa_handle, c, n))
 
-        # Set properties to get all params
-        for v in ['P', 'R', 'T', 'status', 'scanned', 'enabled']:
-            setattr(Lakeshore372, v,
-                property(fget=eval("lambda self: self._get_param('%s')" %v))
+        # Set properties to get/set all params
+        params = ['P', 'R', 'T', 'status', 'scanned', *self.chan1._insets]
+        for p in params:
+            setattr(self, '_' + p, {}) # empty dictionary for later
+            setattr(Lakeshore372, p,
+                property(fget = eval("lambda self: self._get_param('%s')" %p),
+                    fset = eval('lambda self, v: self._set_param("%s", v)' %p)
+                )
             )
 
     def __getstate__(self):
@@ -200,6 +240,37 @@ class Lakeshore372(VISAInstrument):
                 for c in self._channel_names}
         )
         return getattr(self, '_' + param)
+
+    def _set_param(self, param, d):
+        '''
+        Set the same parameter for all channels with a dictionary
+        '''
+        for c in d.keys():
+            getattr(self, '_' + param)[c] = d[c]
+            setattr(getattr(self, 'chan%i' %c), param, d[c])
+
+
+    def enable_all(self):
+        '''
+        Enable all channels.
+        '''
+        enabled_now = self.enabled
+        self.enabled = {c: True for c in self._channel_names.keys()
+                if enabled_now[c] is False # to speed things up
+            }
+
+
+    def enable_only(self, channel):
+        '''
+        Enable only the designated channel.
+        All other channels will be disabled.
+
+        channel: the channel number to be enabled.
+        '''
+        d = {c: False for c in self._channel_names.keys()}
+        d[channel] = True
+        self.enabled = d
+
 
     def scan(self, channel, autoscan=True):
         '''
