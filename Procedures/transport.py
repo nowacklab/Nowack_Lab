@@ -229,7 +229,7 @@ class RvsT(RvsSomething):
         self.sweep_rate = sweep_rate
 
     def do(self, plot=True):
-        ## Set initial field if not already there
+        ## Set initial temperature if not already there
         if abs(self.ppms.temperature - self.Tstart) > 1: # different by more than 1 K
             self.ppms.temperature_rate = 20 # sweep as fast as possible
             self.ppms.temperature = self.Tstart
@@ -246,12 +246,35 @@ class RvsT(RvsSomething):
         ## Set sweep to final temperature
         self.ppms.temperature_rate = self.sweep_rate
         self.ppms.temperature_approach = 'FastSettle'
-        self.ppms.temperature = self.Tend # T to Oe
+        self.ppms.temperature = self.Tend
 
         time.sleep(5) # wait for ppms to process command
         ## Measure while sweeping
         while self.ppms.temperature_status not in ('Near', 'Stable'):
-            self.T = np.append(self.T, self.ppms.temperature) # Oe to T
+            self.T = np.append(self.T, self.ppms.temperature)
+            self.do_measurement(delay=self.delay, plot=plot)
+
+
+class RvsT_Bluefors(RvsSomething):
+    instrument_list = ['lakeshore', 'lockin_V', 'lockin_I']
+    something = 'T'
+    something_units = 'K'
+
+    def __init__(self, instruments = {}, channel=6, Tend = 10, delay=1):
+        '''
+        channel: lakeshore channel number to monitor
+        Tend: target temperature (when to stop taking data)
+        delay: time between measurements (seconds)
+        '''
+        super().__init__(instruments=instruments)
+
+        self.channel = getattr(getattr(self, 'lakeshore'), 'chan%i' %channel)
+        self.Tend = Tend
+        self.delay = delay
+
+    def do(self, plot=True):
+        while self.channel.T > self.Tend:
+            self.T = np.append(self.T, self.channel.T)
             self.do_measurement(delay=self.delay, plot=plot)
 
 
