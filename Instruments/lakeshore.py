@@ -22,6 +22,37 @@ class LakeshoreChannel(VISAInstrument):
         self._num = num
         self._label = label
 
+    def __getstate__(self):
+        self._save_dict = {
+            'Channel number': self._num,
+            'Channel label': self._label,
+            'Channel enabled?': self.enabled,
+            'Channel being scanned?': self.scanned,
+            'power': self.P,
+            'resistance': self.R,
+            'temperature': self.T,
+            'status': self.status,
+        }
+        return self._save_dict
+
+    def __setstate__(self, state):
+        state['_num'] = state.pop('Channel number')
+        state['_label'] = state.pop('Channel label')
+        state['_enabled'] = state.pop('Channel enabled?')
+        state['_scanned'] = state.pop('Channel being scanned?')
+        state['_P'] = state.pop('power')
+        state['_R'] = state.pop('resistance')
+        state['_T'] = state.pop('temperature')
+        state['_status'] = state.pop('status')
+
+        self.__dict__.update(state)
+
+    def enable(self):
+        '''
+        Enable this channel.
+        '''
+
+
     @property
     def enabled(self):
         '''
@@ -32,6 +63,12 @@ class LakeshoreChannel(VISAInstrument):
         inset = self.ask('INSET? %i' %self._num)
         self._enabled = bool(inset.split(',')[0])
         return self._enabled
+
+    def _inset(self):
+        '''
+        Returns all the parameters returned by the INSET? query.
+        '''
+        pass
 
     @property
     def P(self):
@@ -144,6 +181,15 @@ class Lakeshore372(VISAInstrument):
             setattr(Lakeshore372, v,
                 property(fget=eval("lambda self: self._get_param('%s')" %v))
             )
+
+    def __getstate__(self):
+        self._save_dict = {
+            'chan%i' %i: getattr(self, 'chan%i' %i)
+            for i in self._channel_names.keys()
+        }
+
+        return self._save_dict
+
 
     def _get_param(self, param):
         '''
