@@ -368,9 +368,15 @@ class RvsVg_B(RvsVg):
         Gxy = 1/self.R2D[Rxy_channel][idx,:]/G0
         ax2.plot(self.Vg, Gxy, 'C1')
 
-        for i in (np.array(range(9))-4+1/2)*4:
+        if QH_type == 'MLG':
+            plateaus = (np.array(range(9))-4+1/2)*4
+        elif QH_type == 'BLG':
+            plateaus = (np.array(range(9))-4)*4
+        else:
+            plateaus = (np.array(range(9))-4)
+        for i in plateaus:
             ax2.axhline(i, color='k', ls='--', alpha=0.5)
-        ylim = np.ceil(max(Gxy[0], Gxy[-1])) # choose the larger of the two endpoints
+        ylim = np.ceil(max(abs(Gxy[0]), abs(Gxy[-1]))) # choose the larger of the two endpoints
         ax2.set_ylim(-ylim,ylim)
 
         ax.set_xlabel('Gate voltage (V)',fontsize=16)
@@ -408,6 +414,8 @@ class RvsVg_B(RvsVg):
         ax1.plot(self.Vg, abs(slopes))
         ax2.plot(self.Vg, abs(mobility)*100**2)
         ax1.set_xlabel('Vg (V)',fontsize=20)
+        ax2.set_xlabel('Vg (V)',fontsize=20)
+
         ax1.set_ylabel(r'Hall Coefficient ($\rm \Omega/T$)', fontsize=16)
         ax2.set_ylabel(r'Carrier mobility ($\rm{cm^2/V\cdot s}$)', fontsize=16)
 
