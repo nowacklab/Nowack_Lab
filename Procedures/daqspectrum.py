@@ -284,6 +284,9 @@ class AnnotatedSpectrum(DaqSpectrum):
                     int(self.piezos.V['z'])
                 )
             )
+            self.X = self.piezos.V['x']
+            self.Y = self.piezos.V['y']
+            self.Z = self.piezos.V['z']
         if self.annotate_cap:
             self.notes = self.notes + (
                 "[c, c0] = [{0:2.2e}, {1:2.2e}]\n".format(
@@ -291,6 +294,7 @@ class AnnotatedSpectrum(DaqSpectrum):
                     self.CAP_I
                 )
             )
+            self.cap = self.lockin_cap.R
         if self.annotate_preamp:
             self.notes = self.notes + (
             "[gain, filter f, dc couple?, OL?] = " + 
@@ -301,6 +305,7 @@ class AnnotatedSpectrum(DaqSpectrum):
                 self.preamp.is_OL()
             )
             )
+            self.gain = self.preamp.gain
         if self.annotate_saa:
             self.notes = self.notes + (
             "[A_bias, A_flux, S_bias, S_flux] = " + 
