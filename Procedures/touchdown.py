@@ -53,14 +53,14 @@ class Touchdown(Measurement):
 
     baseline = 0
 
-    def __init__(self, instruments={}, planescan=False, Vz_max=None):
+    def __init__(self, instruments={}, disable_attocubes=False, Vz_max=None):
         '''
         Approach the sample to the SQUID while recording the capacitance
         of the cantelever in a lockin measurement to detect touchdown.
 
         Arguments:
         instruments -- dictionary containing instruments for the touchdown.
-        planescan -- if set to True the attocubes will not move.
+        disable_attocubes -- if set to True the attocubes will not move.
         Vz_max -- the maximum voltage that can be applied to the Z piezo.
 
         Required instruments:
@@ -85,7 +85,7 @@ class Touchdown(Measurement):
                 self.Vz_max = 200  # just for the sake of having something
 
         self._init_arrays()
-        self.planescan = planescan
+        self.disable_attocubes = disable_attocubes
         self.error_flag = False
 
 
@@ -321,7 +321,7 @@ class Touchdown(Measurement):
 
             # Move the attocubes
             # Either we're too far away for a touchdown or Vtd not centered
-            if (self.planescan is False and
+            if (self.disable_attocubes is False and
                 self.touchdown is False and
                 self.error_flag is False):
                 # Confirm that the attocubes should move
@@ -373,7 +373,7 @@ class Touchdown(Measurement):
                 self.plot_td()
 
                 # Don't want to move attos during planescan or bad fit
-                if not self.planescan and not self.error_flag:
+                if not self.disable_attocubes and not self.error_flag:
                     # Check if touchdown near center of z piezo +V range
                     self._determine_attoshift_to_center()
                     start = -self.Vz_max # start far away next time
