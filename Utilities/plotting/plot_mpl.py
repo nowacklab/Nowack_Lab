@@ -79,6 +79,7 @@ def extents(x, y):
             y.max() + np.abs(dy) / 2
             ]
 
+
 def plotline(ax, x, y, z):
     pass
 
