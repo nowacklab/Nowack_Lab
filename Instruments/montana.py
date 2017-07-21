@@ -54,7 +54,7 @@ class Montana(Instrument):
     @property
     def compressor_speed(self):
         cs = self.ask('GCS')
-        if cs == 22:
+        if cs in (25, 30):
             self._compressor_speed = 'high'
         elif cs == 14:
             self._compressor_speed = 'low'
@@ -67,10 +67,11 @@ class Montana(Instrument):
         '''
         Set the compressor speed.
         value either 'high', 'low', or 'off'
+        There are more options. See Montana communication manual.
         '''
         assert value in ('high', 'low', 'off')
         if value == 'high':
-            response = self.ask('SCS1', to_float=False)
+            response = self.ask('SCS7', to_float=False)
         elif value == 'low':
             response = self.ask('SCS2', to_float=False)
         elif value == 'off':
