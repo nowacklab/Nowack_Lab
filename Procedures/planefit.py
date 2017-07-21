@@ -5,7 +5,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from .touchdown import Touchdown
 from ..Utilities.utilities import reject_outliers_plane, fit_plane
 from ..Utilities.save import Measurement
-from ..Utilities.plotting.plot_mpl import extents
+from ..Utilities.plotting.plot_mpl import extents, using_notebook_backend
 
 class Planefit(Measurement):
     '''
@@ -230,7 +230,7 @@ class Planefit(Measurement):
         self.fig.canvas.draw()
 
         # Do not flush events for inline or notebook backends
-        if matplotlib.get_backend() in ('nbAgg','module://ipykernel.pylab.backend_inline'):
+        if using_notebook_backend()
             return
 
         self.fig.canvas.flush_events()
