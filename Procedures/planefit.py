@@ -1,4 +1,4 @@
-import numpy as np, time, matplotlib.pyplot as plt
+import numpy as np, time, matplotlib.pyplot as plt, matplotlib
 from IPython import display
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
@@ -72,8 +72,10 @@ class Planefit(Measurement):
 
         self.X, self.Y = np.meshgrid(self.x, self.y)
         self.Z = np.nan * self.X  # makes array of nans same size as grid
+        self.Zdiff = np.nan * self.X  # makes array of nans same size as grid
 
-    def calculate_plane(self, no_outliers=True):
+
+    def calculate_plane(self, no_outliers=False): # disabled 7/21/2017
         '''
         Calculates the plane parameters a, b, and c.
         z = ax + by + c
@@ -103,20 +105,20 @@ class Planefit(Measurement):
                          'y': self.center[1],
                          'z': -self.Vz_max
                      }
-        td = Touchdown(self.instruments, Vz_max=self.Vz_max, planescan=True)
-        td.run()
+        self.td = Touchdown(self.instruments, Vz_max=self.Vz_max, planescan=True)
+        self.td.run()
 
         # If the initial touchdown generates a poor fit, try again
         n = 0
-        while td.error_flag and n < 5:
-            td = Touchdown(self.instruments, Vz_max=self.Vz_max, planescan=True)
-            td.run()
+        while self.td.error_flag and n < 5:
+            self.td = Touchdown(self.instruments, Vz_max=self.Vz_max, planescan=True)
+            self.td.run()
             n = n + 1
 
-        if td.error_flag:
-            raise Exception("Can't fit capacitance signal.")
+        if self.td.error_flag:
+            raise Exception(r'Can\'t fit capacitance signal.')
         else:
-            center_z_value = td.Vtd
+            center_z_value = self.td.Vtd
 
         # If only taking plane from edges, make masked array
         if edges_only:
@@ -148,23 +150,24 @@ class Planefit(Measurement):
                 # New touchdown at this point
                 # Take touchdowns until the fitting algorithm gives a
                 # good result, up to 5 touchdowns
-                td = Touchdown(self.instruments,
+                self.td = Touchdown(self.instruments,
                                Vz_max=self.Vz_max, planescan=True)
 
                 n = 0
                 while td.error_flag is True and n < 5:
-                    print("Redo")
-                    td = Touchdown(self.instruments,
+                    print('Redo')
+                    self.td = Touchdown(self.instruments,
                                    Vz_max = self.Vz_max, planescan=True)
-                    td.title = '(%i, %i). TD# %i' % (i, j, counter)
-                    td.run()
+                    self.td.title = '(%i, %i). TD# %i' % (i, j, counter)
+                    self.td.run()
                     n = i + 1
-                    plt.close(td.fig)
+                    plt.close(self.td.fig)
 
-                # Record the touchdown voltage and update the gridplot
-                self.Z[i, j] = td.Vtd
-                td.gridplot(self.axes[-(i+1),j]) #FIXME indices...?
-                self.fig.canvas.draw()
+                # Record the touchdown voltage and update the plots
+                self.Z[i, j] = self.td.Vtd
+                self.calculate_plane()
+                self.Zdiff = self.Z - self.plane(self.X, self.Y)
+                self.plot(i,j)
 
                 # Return to zero between points.
                 self.piezos.V = 0
@@ -175,8 +178,6 @@ class Planefit(Measurement):
 
         self.piezos.V = 0
         self.calculate_plane()
-
-        self.axes = list(self.axes.flatten())
 
     @classmethod
     def load(cls, json_file=None, instruments={}, unwanted_keys=[]):
@@ -190,14 +191,20 @@ class Planefit(Measurement):
 
         return obj
 
-    def plane(self, x, y, recal=False):
+    def plane(self, x, y):
         '''
         Given points x and y, calculates a point z on the plane.
         '''
         return self.a * x + self.b * y + self.c
 
-    def colorplot(self):
+    def plot(self, i=None, j=None):
         '''
+        First plot:
+        Grid of individual touchdowns
+        Arguments:
+        i, j - indices of the current x,y point.
+
+        Second plot:
         Visualize a plane and compare to touchdown voltages.
 
         Generates two colorplots:
@@ -205,41 +212,28 @@ class Planefit(Measurement):
         2. Plots the difference between the measured touchdown voltage
         and the fit plane.
         '''
+        if hasattr(self, 'td'):
+            self.td.gridplot(self.ax_grid[-(i+1),j]) #FIXME indices...?
 
-        # Compute the difference between the fit plane and the touchdowns
-        Z_diff = self.Z - self.plane(self.X, self.Y)
+        self.im[0].set_data(self.Z)
+        self.im[1].set_data(self.Zdiff)
 
-        # Set up figure and plot Z and Z_diff
-        fig, axes = plt.subplots(1, 2, figsize=(6,3))
-        im0 = axes[0].matshow(self.Z, origin="lower")
-        im1 = axes[1].matshow(Z_diff, origin="lower", cmap="RdBu")
-        ims = [im0, im1]
-        axes[0].set_title("Touchdown Voltages", size="medium")
-        axes[1].set_title(r"$V_{td} - V_{fit}$", size="medium")
+        # Adjust colorbar limits for new data
+        self.im[0].colorbar.set_clim([np.nanmin(self.Z), np.nanmax(self.Z)])
+        self.im[1].colorbar.set_clim([np.nanmin(self.Zdiff.flatten()),
+                                        np.nanmax(self.Zdiff.flatten())])
+        # Update the colorbars
+        self.im[0].colorbar.draw_all()
+        self.im[1].colorbar.draw_all()
 
-        # Reformat the axes
-        for ax, im in zip(axes, ims):
-            ax.xaxis.set_ticks_position("bottom")
-            # Label the axes in voltage applied to piezos
-            ax.set_xticks([0,1,2,3])
-            ax.set_yticks([0,1,2,3])
-            ax.set_xticklabels(['{:.0f}'.format(x) for x in self.X[0,:]])
-            ax.xaxis.set_ticks_position("both")
-            ax.set_xlabel("X Position (V)")
+        self.fig_grid.canvas.draw()
+        self.fig.canvas.draw()
 
-            # Add colorbars
-            d = make_axes_locatable(ax)
-            cax = d.append_axes("right", 0.1, 0.1)
-            print(type(im))
-            cbar = plt.colorbar(im, cax)
+        ## Do not flush events for inline or notebook backends
+        if matplotlib.get_backend() in ('nbAgg','module://ipykernel.pylab.backend_inline'):
+            return
 
-        # Label the Y axis of only the left-most plot
-        axes[0].set_yticklabels(['{:.0f}'.format(y) for y in self.Y[:,0]])
-        axes[1].set_yticklabels([])
-        axes[0].set_ylabel("Y Position (V)")
-
-        plt.tight_layout()
-        return fig, axes
+        self.fig.canvas.flush_events()
 
 
     def save(self, savefig=True):
@@ -251,16 +245,42 @@ class Planefit(Measurement):
 
 
     def setup_plots(self):
+        '''
+        Set up a grid plot for the individual touchdowns on the plane.
+        '''
+        # Set up grid of touchdowns
         numX, numY = self.numpts
-        self.fig = plt.figure(figsize=(numX*2,numY*2))
+        self.fig_grid = plt.figure(figsize=(numX*2, numY*2))
         axes = []
         for i in range(numX*numY):
-            ax = self.fig.add_subplot(numX, numY, i+1)
+            ax = self.fig_grid.add_subplot(numX, numY, i+1)
             ax.set_xticks([])
             ax.set_yticks([])
             axes.append(ax)
-        self.fig.subplots_adjust(wspace=0, hspace=0)
-        self.axes = np.reshape(axes, self.numpts)
+        self.fig_grid.subplots_adjust(wspace=0, hspace=0)
+        self.ax_grid = np.reshape(axes, self.numpts)
+
+        # Set up colorplot figure
+        self.fig, self.ax = plt.subplots(1, 2, figsize=(12,6))
+        extent = [self.X.min(), self.X.max(), self.Y.min(), self.Y.max()]
+
+        im0 = self.ax[0].imshow(self.Z, origin='lower', extent=extent)
+        im1 = self.ax[1].imshow(self.Zdiff, origin='lower', cmap='RdBu', extent=extent)
+        self.im = [im0, im1]
+
+        self.ax[0].set_title('Touchdown Voltages', size='medium')
+        self.ax[1].set_title(r'$V_{\rm td} - V_{\rm fit}$', size='medium')
+
+        for ax, im in zip(self.ax, self.im):
+            ax.set_xlabel('X Position (V)')
+            ax.set_ylabel('Y Position (V)')
+
+            # Add colorbars
+            d = make_axes_locatable(ax)
+            cax = d.append_axes('right', size=0.1, pad=0.1)
+            cbar = plt.colorbar(im, cax)
+
+        self.fig.tight_layout(pad=5)
 
 
     def update_c(self, Vx=0, Vy=0, start=None, move_attocubes=False):
@@ -281,12 +301,12 @@ class Planefit(Measurement):
 
         old_c = self.c
         self.piezos.V = {'x': Vx, 'y': Vy, 'z': 0}
-        td = Touchdown(self.instruments,
+        self.td = Touchdown(self.instruments,
                        disable_attocubes = not move_attocubes,
                        Vz_max = self.Vz_max,
                        )
-        td.run(start=start)
-        center_z_value = td.Vtd
+        self.td.run(start=start)
+        center_z_value = self.td.Vtd
         self.c = center_z_value - self.a * Vx - self.b * Vy
 
         # Check that no points within the scan range exceed the limits
@@ -297,8 +317,8 @@ class Planefit(Measurement):
                 if z_maxormin > self.piezos.z.Vmax or z_maxormin < 0:
                     self.c = old_c
                     raise Exception(
-                        'Plane now extends outside range of piezos! '+
+                        'Plane now extends outside positive range of Z piezo! '+
                         'Move the attocubes and try again.')
-        # If c decreased, then we subtract a positive number from the plane
+        # Subtract old c, add new c
         self.Z -= (old_c - self.c)
         self.save(savefig=False)
