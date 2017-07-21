@@ -1,19 +1,11 @@
-import numpy as np
-from numpy.linalg import lstsq
-import time, os
-from datetime import datetime
+import time, os, matplotlib, matplotlib.pyplot as plt, numpy as np
 from scipy.interpolate import interp1d
-import matplotlib
-import matplotlib.pyplot as plt
-from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from IPython import display
-from numpy import ma
-from ..Utilities.plotting import plot_mpl
-from ..Instruments import piezos, montana, squidarray
-from ..Utilities.save import Measurement, get_todays_data_dir, get_local_data_path
+
 from ..Utilities import conversions
+from ..Utilities.save import Measurement, get_todays_data_dir, get_local_data_path
 from ..Utilities.utilities import AttrDict
+from ..Utilities.plotting.plot_mpl import extents
 
 class Scanplane(Measurement):
     """Scan over a plane while monitoring signal on DAQ
@@ -362,8 +354,7 @@ class Scanplane(Measurement):
 
             # Plot masked data on the appropriate axis with imshow
             image = ax.imshow(masked_data, cmap=cmap, origin="lower",
-                              extent = [self.X.min(), self.X.max(),
-                                        self.Y.min(), self.Y.max()])
+                              extent = extents(self.X, self.Y))
 
             # Create a colorbar that matches the image height
             d = make_axes_locatable(ax)

@@ -5,7 +5,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from .touchdown import Touchdown
 from ..Utilities.utilities import reject_outliers_plane, fit_plane
 from ..Utilities.save import Measurement
-
+from ..Utilities.plotting.plot_mpl import extents
 
 class Planefit(Measurement):
     '''
@@ -262,8 +262,8 @@ class Planefit(Measurement):
 
         # Set up colorplot figure
         self.fig, self.ax = plt.subplots(1, 2, figsize=(12,6))
-        extent = [self.X.min(), self.X.max(), self.Y.min(), self.Y.max()]
 
+        extent = extents(self.X, self.Y)
         im0 = self.ax[0].imshow(self.Z, origin='lower', extent=extent)
         im1 = self.ax[1].imshow(self.Zdiff, origin='lower', cmap='RdBu', extent=extent)
         self.im = [im0, im1]
