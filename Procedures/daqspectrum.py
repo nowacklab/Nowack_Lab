@@ -1,10 +1,5 @@
+import matplotlib.pyplot as plt, os, re, numpy as np
 from scipy import signal
-import matplotlib.pyplot as plt
-import numpy as np
-from datetime import datetime
-import os
-import re
-from ..Instruments import nidaq, preamp
 from ..Utilities.save import Measurement
 from ..Utilities.utilities import AttrDict
 from ..Utilities import conversions
