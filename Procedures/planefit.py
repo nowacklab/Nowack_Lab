@@ -11,7 +11,7 @@ class Planefit(Measurement):
     '''
     Take touchdowns in a grid to define a plane.
     '''
-    instrument_list = ['piezos', 'montana']
+    instrument_list = ['daq', 'lockin_cap', 'piezos', 'atto']
 
     a = np.nan
     b = np.nan
@@ -40,7 +40,7 @@ class Planefit(Measurement):
         If None then the the max voltage for the piezo is used.
 
         Required instruments:
-        daq, lockin_cap, attocubes, piezos, montana
+        daq, lockin_cap, atto, piezos, montana
 
         Required daq inputs:
         'cap', 'capx', 'capy', 'theta'
@@ -229,7 +229,7 @@ class Planefit(Measurement):
         self.fig_grid.canvas.draw()
         self.fig.canvas.draw()
 
-        ## Do not flush events for inline or notebook backends
+        # Do not flush events for inline or notebook backends
         if matplotlib.get_backend() in ('nbAgg','module://ipykernel.pylab.backend_inline'):
             return
 

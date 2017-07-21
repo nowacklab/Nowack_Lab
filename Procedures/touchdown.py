@@ -1,9 +1,6 @@
 from IPython import display
 from scipy.optimize import curve_fit
-import time
-import os
-import matplotlib.pyplot as plt
-import numpy as np
+import time, os, matplotlib, matplotlib.pyplot as plt, numpy as np
 from ..Utilities.save import Measurement, get_todays_data_dir, get_local_data_path
 from ..Utilities import conversions
 from ..Utilities.utilities import AttrDict
@@ -32,7 +29,7 @@ def piecewise_linear(x, x0, y0, m1, m2):
 
     Returns
     '''
-    return np.piecewise(x[~np.isnan(x)],
+    return np.piecewise(x,
                         [x < x0],
                         [lambda x: m1*x + y0 - m1*x0,
                          lambda x: m2*x + y0 - m2*x0])
@@ -40,7 +37,7 @@ def piecewise_linear(x, x0, y0, m1, m2):
 
 class Touchdown(Measurement):
     _daq_inputs = ['cap', 'capx', 'capy', 'theta']
-    instrument_list = ['lockin_cap', 'atto', 'piezos', 'daq', 'montana']
+    instrument_list = ['lockin_cap', 'atto', 'piezos', 'daq']
 
     Vtd = None
     touchdown = False
@@ -64,10 +61,10 @@ class Touchdown(Measurement):
         Vz_max -- the maximum voltage that can be applied to the Z piezo.
 
         Required instruments:
-        daq, lockin_cap, atto, piezos, montana
+        daq, lockin_cap, atto, piezos
 
         Required daq inputs:
-        'cap', 'capx', 'capy' 'theta'
+        'cap', 'capx', 'capy', 'theta'
 
         Required daq ouputs:
         'x', 'y', 'z'
@@ -214,7 +211,6 @@ class Touchdown(Measurement):
         Sets the plot title to an informative message.
         '''
         self.ax.set_title(title, fontsize=12)
-        plt.pause(1e-6)
         self.fig.canvas.draw()
 
 
@@ -229,7 +225,7 @@ class Touchdown(Measurement):
 
         if Vcap > V_unbalanced:
             inp = input(
-                'Balance capacitance bridge. Press enter to continue, q to quit'
+            'Balance capacitance bridge to slightly below balance point. Press enter to continue, q to quit'
             )
             if inp == 'q':
                 raise Exception('quit by user')
@@ -293,17 +289,16 @@ class Touchdown(Measurement):
         '''
 
         self.Vtd = None
+        # If the surface location is unknown, sweep all the way down
+        if start is None:
+            start = -self.Vz_max
 
         # Loop that does sweeps of z piezo
         # Z atto is moved up between iterations
         # Loop breaks when true touchdown detected.
         while not self.touchdown:
             # Specify a starting voltage for the Z bender.
-            # If the surface location is unknown, sweep all the way down
-            if start is not None:
-                self.piezos.z.V = start
-            else:
-                self.piezos.z.V = -self.Vz_max
+            self.piezos.z.V = start
 
             # Wait for capacitance to settle, then
             # check balance of capacitance bridge
@@ -317,7 +312,7 @@ class Touchdown(Measurement):
             self._init_arrays()
 
             # Inner loop to sweep z-piezo
-            self.do_sweep()
+            self.do_sweep(start)
 
             # Move the attocubes
             # Either we're too far away for a touchdown or Vtd not centered
@@ -333,9 +328,12 @@ class Touchdown(Measurement):
         self.piezos.z.V = 0  # bring the piezo back to zero
 
 
-    def do_sweep(self):
+    def do_sweep(self, start):
         '''
         Inner loop separated to do the piezo sweep
+
+        Args:
+        start (float) -- Starting position (in voltage) of Z peizo.
         '''
         for i in np.argwhere(self.V >= start):
             if self.interrupt:
@@ -412,6 +410,8 @@ class Touchdown(Measurement):
         Returns
         Vtd: touchdown voltage
         '''
+        C = self.C[~np.isnan(self.C)]
+        V = self.V[~np.isnan(self.C)]
         self.p, e = curve_fit(piecewise_linear, V, C)
         # Calculate one standard deviation errors in the fit parameters
         self.err = np.sqrt(np.diag(e))
@@ -437,7 +437,10 @@ class Touchdown(Measurement):
         self.ax.set_ylim(-0.5, max(np.nanmax(self.C), 1))
 
         self.fig.tight_layout()
-        plt.pause(1e-6)
+        # Do not pause for inline or notebook backends
+        inline = 'module://ipykernel.pylab.backend_inline'
+        if matplotlib.get_backend() not in ('nbAgg', inline):
+            plt.pause(1e-6)
         self.fig.canvas.draw()
 
 

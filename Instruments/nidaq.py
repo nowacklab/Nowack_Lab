@@ -50,28 +50,16 @@ class NIDAQ(Instrument):
         self._save_dict.update({
             'device name': self._dev_name,
             'input range': self._input_range,
-            'output range': self._output_range
+            'output range': self._output_range,
+            'inputs': self.inputs,
+            'outputs': self.outputs,
         })
 
         return self._save_dict
 
 
     def __setstate__(self, state):
-        self._daq = ni.NIDAQ(state['device name'], state['input range'], state['output range'])
-
-
-    def accel_function(self, start,end, numpts):
-        """ Does an x**2-like ramp. Code looks weird but test it if you want! ^_^ """
-        '''
-        NO THIS IS ACTUALLY CRAP DON'T USE THIS <-- LOL
-        '''
-        if start == end:
-            return [start]*numpts*2 # just return array of the same value
-        part1arg = np.linspace(start, (end-start)/2+start, numpts)
-        part2arg = np.linspace((end-start)/2+start, end, numpts)
-        part1 = start+ (part1arg-start)**2/((end-start)/2)**2*(end-start)/2
-        part2 = end-(part2arg-end)**2/((end-start)/2)**2*(end-start)/2
-        return list(part1)+list(part2[1:])
+        pass
 
 
     def all(self):
@@ -360,26 +348,3 @@ class OutputChannel(Channel):
     def V(self, value):
         self._V = value
         getattr(self._daq,  self._name).write('%sV' %value) # V is for pint units used in Instrumental package
-
-
-if __name__ == '__main__':
-    '''
-    Out of date 11/3/2016
-    '''
-    nidaq = NIDAQ()
-
-    out_data = []
-    in_data = []
-    num = 100
-    vmax = 5
-    for i in range(num):
-        nidaq.ao3 = vmax*i/num
-        out_data.append(nidaq.ao3)
-        in_data.append(nidaq.ai3)
-    for i in range(num):
-        nidaq.ao3 = vmax-vmax*i/num
-        out_data.append(nidaq.ao3)
-        in_data.append(nidaq.ai3)
-    import matplotlib.pyplot as plt
-    plt.plot(in_data)
-    plt.show()
