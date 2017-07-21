@@ -11,7 +11,7 @@ from ..Utilities.plotting import plot_mpl
 from ..Instruments import piezos, montana, squidarray
 from ..Utilities.save import Measurement
 from ..Utilities import conversions
-from ..Procedures import DaqSpectrum
+from ..Procedures.daqspectrum import DaqSpectrum
 from ..Utilities.utilities import AttrDict
 
 class Scanspectra(Measurement):
@@ -37,11 +37,6 @@ class Scanspectra(Measurement):
         if plane is None:
             plane = Planefit()
         self.plane = plane
-
-        if scanheight < 0:
-            inp = input('Scan height is negative, SQUID will ram into sample! Are you sure you want this? \'q\' to quit.')
-            if inp == 'q':
-                raise Exception('Terminated by user')
         self.scanheight = scanheight
 
         x = np.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
@@ -105,8 +100,6 @@ class Scanspectra(Measurement):
 
 
     def setup_preamp(self):
-        self.preamp.gain = 1
-        self.preamp.filter = (0, 100e3)
         self.preamp.dc_coupling()
         self.preamp.diff_input(False)
         self.preamp.filter_mode('low',12)

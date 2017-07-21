@@ -195,3 +195,7 @@ class Lakeshore372(VISAInstrument):
         for chan in self._channel_names.keys():
             d[chan] = conversion_type(self.ask('%s %i' %(cmd, chan)))
         return d
+
+    def __getstate__(self):
+        d = {'chansettings':self.getchsettings()}
+        return d
