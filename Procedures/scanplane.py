@@ -42,6 +42,7 @@ class Scanplane(Measurement):
                        'lockin_cap',
                        'atto',
                        'daq']
+    fast_axis = 'x'
 
     def __init__(self, instruments={}, plane=None, span=[800,800],
                         center=[0,0], numpts=[20,20],
@@ -68,6 +69,7 @@ class Scanplane(Measurement):
         self.center = center
         self.numpts = numpts
         self.plane = plane
+        self.scanheight = scanheight
 
         self.V = AttrDict({
            chan: np.nan for chan in self._daq_inputs + ['piezo']
@@ -78,8 +80,6 @@ class Scanplane(Measurement):
         self.Vinterp = AttrDict({
            chan: np.nan for chan in self._daq_inputs + ['piezo']
         })
-
-        self.scanheight = scanheight
 
         x = np.linspace(center[0]-span[0]/2,
                         center[0]+span[0]/2,
@@ -103,9 +103,6 @@ class Scanplane(Measurement):
                 self._conversions[chan] = 1
             if chan not in self._units.keys():
                 self._units[chan] = 'V'
-
-        # Scan in X direction by default
-        self.fast_axis = 'x'
 
     def do(self, fast_axis = 'x', surface=False):
         '''
