@@ -230,7 +230,7 @@ class Planefit(Measurement):
         self.fig.canvas.draw()
 
         # Do not flush events for inline or notebook backends
-        if using_notebook_backend()
+        if using_notebook_backend():
             return
 
         self.fig.canvas.flush_events()

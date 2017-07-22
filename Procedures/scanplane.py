@@ -44,7 +44,7 @@ class Scanplane(Measurement):
                        'lockin_cap',
                        'atto',
                        'daq']
-   fast_axis = 'x'
+    fast_axis = 'x'
 
 
     def __init__(self, instruments={}, plane=None, span=[800, 800],
