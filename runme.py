@@ -21,10 +21,10 @@ home = os.path.expanduser('~')
 site_packages = os.path.dirname(os.path.abspath(os.path.join(matplotlib.__file__, '..')))
 
 ## Add utility to save jupyter notebook to HTML
-# package_path = os.path.join(os.getcwd(),'Utilities','jupyter_notebook_config.py')
-# jupyter_path = os.path.join(home, '.jupyter', 'jupyter_notebook_config.py')
+package_path = os.path.join(os.getcwd(),'Utilities','jupyter_notebook_config.py')
+jupyter_path = os.path.join(home, '.jupyter', 'jupyter_notebook_config.py')
 
-# shutil.copyfile(package_path, jupyter_path)
+shutil.copyfile(package_path, jupyter_path)
 
 ## Add github.pth file to enable "from Nowack_Lab import *"
 anaconda_path = os.path.join(site_packages,'github.pth')

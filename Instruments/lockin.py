@@ -1,6 +1,6 @@
-import visa, atexit, time, numpy as np
+import time, numpy as np
 from tabulate import tabulate
-from .instrument import Instrument
+from .instrument import VISAInstrument
 
 _time_constant_values = [10e-6, 30e-6, 100e-6, 300e-6, 1e-3, 3e-3, 10e-3, 30e-3, 100e-3, 300e-3, 1, 3, 10, 30, 100, 300, 1000, 3000, 10000, 30000]
 _sensitivity_options = [
@@ -11,7 +11,7 @@ _sensitivity_options = [
 _reserve_options = ['High Reserve', 'Normal', 'Low Noise']
 _input_modes = ['A', 'A-B', 'I (10^6)', 'I (10^8)']
 
-class SR830(Instrument):
+class SR830(VISAInstrument):
     _label = 'lockin'
     time_constant_options = {
             "10 us": 0,
@@ -43,14 +43,8 @@ class SR830(Instrument):
             gpib_address = 'GPIB::%02i::INSTR' %gpib_address
         self.gpib_address = gpib_address
 
-        self.init_visa()
+        self._init_visa(gpib_address)
         self._visa_handle.timeout = 3000 # default
-
-    def __del__(self):
-        '''
-        Destroy the object and close the visa handle
-        '''
-        self.close()
 
     def __getstate__(self):
         self._save_dict = {"sensitivity": self.sensitivity,
@@ -108,7 +102,7 @@ class SR830(Instrument):
                 index -= 1 # highest sensitivity
             value = _sensitivity_options[index]
         elif value == 'down':
-            index = int(self.ask('SENS?')) - 1 
+            index = int(self.ask('SENS?')) - 1
             if index == -1:
                 index += 1 # lowest sensitivity
             value = _sensitivity_options[index]
@@ -203,14 +197,14 @@ class SR830(Instrument):
     def Y(self):
         self._Y = float(self.ask('OUTP?2'))
         if self._Y == 0:
-            self._Y = self.sensitivity/1e12 # so we don't have zeros        
+            self._Y = self.sensitivity/1e12 # so we don't have zeros
         return self._Y
 
     @property
     def R(self):
         self._R = float(self.ask('OUTP?3'))
         if self._R == 0:
-            self._R = self.sensitivity/1e12 # so we don't have zeros     
+            self._R = self.sensitivity/1e12 # so we don't have zeros
         return self._R
 
     @property
@@ -256,7 +250,6 @@ class SR830(Instrument):
             i=1
         self.write('FMOD%i' %i)
 
-
     @property
     def reserve(self):
         i = int(self.ask('RMOD?'))
@@ -267,13 +260,6 @@ class SR830(Instrument):
     def reserve(self, value):
         i = _reserve_options.index(value)
         self.write('RMOD%i' %i)
-
-    def ask(self, cmd, timeout=3000):
-        '''
-        Default timeout 3000 ms. None for infinite timeout
-        '''
-        self._visa_handle.timeout = timeout
-        return self._visa_handle.ask(cmd)
 
     def ac_coupling(self):
         self.write('ICPL0')
@@ -292,7 +278,7 @@ class SR830(Instrument):
     def dc_coupling(self):
         self.write('ICPL1')
 
-    def fix_sensitivity(self, OL_thresh=1, UL_thresh=0.1):
+    def fix_sensitivity(self, OL_thresh=1, UL_thresh=0):
         '''
         Checks to see if the lockin is overloading or underloading (signal/sensivity < 0.1)
         and adjusts the sensitivity accordingly.
@@ -331,17 +317,16 @@ class SR830(Instrument):
         table.append(['theta', snapped[3]])
         return tabulate(table, headers = ['Parameter', 'Value'])
 
-        
-    def init_visa(self):
-        self._visa_handle = visa.ResourceManager().open_resource(self.gpib_address)
-        self._visa_handle.read_termination = '\n'
+
+    def _init_visa(self, resource):
+        super()._init_visa(resource) # creates self._visa_handle
         self._visa_handle.write('OUTX 1') #1=GPIB
 
     def is_OL(self, thresh=1):
         '''
         Looks at the magnitude and x and y components to determine whether or not we are overloading the lockin.
         There is a status byte that you can read that will supposedly tell you this as well, but it wasn't working reliably.
-        
+
         Set the threshold for changing the gain. Note that each sensitivity does allow
         inputs to be slightly higher than the nominal sensitivity.
         '''
@@ -354,7 +339,7 @@ class SR830(Instrument):
     def is_UL(self, thresh=1e-2):
         '''
         Looks at the magnitude of the larger of the x and y components to determine
-        whether or not the lockin is "underloading". This is defined by the given 
+        whether or not the lockin is "underloading". This is defined by the given
         threshold, which is by default signal/sensitivity < 0.01
         '''
         m = max(abs(np.array([self.R, self.X, self.Y]))/self.sensitivity)
@@ -387,15 +372,6 @@ class SR830(Instrument):
             return np.array(value/10*self.sensitivity) # will give actual output in volts, since output is scaled to 10 V == sensitivity
         return value/10*self.sensitivity
 
-    def close(self):
-        if hasattr(self, '_visa_handle'):
-            self._visa_handle.close()
-            del(self._visa_handle)
-
-    def read(self):
-        return self._visa_handle.read()
-        self.close()
-
     def sweep(self, Vstart, Vend, Vstep=0.01, sweep_rate=0.1):
         '''
         Sweeps the lockin amplitude at given sweep rate in V/s (default 0.1).
@@ -407,9 +383,6 @@ class SR830(Instrument):
         for v in V:
             self.amplitude = v
             time.sleep(delay)
-
-    def write(self, cmd):
-        self._visa_handle.write(cmd)
 
     def zero(self, sweep_rate=0.1):
         '''

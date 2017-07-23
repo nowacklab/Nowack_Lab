@@ -30,11 +30,12 @@ class Piezos(Instrument):
                         # 0.0025 V is approximately the resolution of the daq, so it doesn't make sense to go much slower than that.
                         # 0.2 is a nice number
 
-    def __init__(self, daq=None, zero = False):
+    def __init__(self, daq=None, zero = False, checkHVAStatus = True):
         '''
-        e.g. pz = piezos.Piezos(daq=daq, zero = True)
-            daq: the nidaq.NIDAQ() object
-            zero: whether to zero the daq or not
+        Arguments
+        daq: NIDAQ object
+        zero: Whether or not to zero the DAQ
+        checkHVAStatus: Whether or not to check the HVA Settings.
         '''
         self._daq = daq
         if daq is None:
@@ -51,7 +52,8 @@ class Piezos(Instrument):
                                 max_step_size=self._max_step_size))
                                 # makes benders x, y, and z
 
-        self.checkHVAStatus()
+        if checkHVAStatus:
+            self.checkHVAStatus()
 
         if zero:
             self.zero()

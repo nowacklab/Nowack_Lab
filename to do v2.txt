@@ -24,11 +24,9 @@ Add time estimates to procedures somehow
 Connect to data server remotely.
 
 **kwargs for everything - with warning for unused ones?
+
 RC params
 
-Figure out keyboard interrupt. I added this at the end of run(), but needs more testing.
-if self.interrupt:
-            raise KeyboardInterrupt # So we actually terminate with an interrupt.
+Load instruments with json. This would just load the saved private parameters for easy access.
 
-
-
+Bug where Keithley changes ranges upon sweep.

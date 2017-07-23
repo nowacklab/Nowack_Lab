@@ -1,5 +1,5 @@
 from jsonpickle.ext import numpy as jspnp
-import json, os, pickle, bz2, jsonpickle as jsp, numpy as np, re
+import json, os, pickle, bz2, jsonpickle as jsp, numpy as np, re, sys, subprocess
 from datetime import datetime
 jspnp.register_handlers()
 from copy import copy
@@ -7,6 +7,7 @@ import h5py, glob, matplotlib, inspect, platform, hashlib, shutil, time
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from . import utilities
+import Nowack_Lab
 
 '''
 How saving and loading works:
@@ -154,9 +155,11 @@ class Measurement:
 
         obj_dict = walk(obj_dict)
 
-        # If the class of the object is custom defined in __main__, then just
-        # load it as a measurement.
-        if '__main__' in obj_dict['py/object']:
+        # If the class of the object is custom defined in __main__ or in a
+        # different branch, then just load it as a Measurement.
+        try:
+            exec(obj_dict['py/object']) # see if class is in the namespace
+        except:
             obj_dict['py/object'] = 'Nowack_Lab.Utilities.save.Measurement'
 
         # Decode with jsonpickle.
@@ -333,7 +336,7 @@ class Measurement:
         run() wraps this function to enable keyboard interrupts.
         run() also includes saving and elapsed time logging.
         '''
-        pass
+        print('Doing stuff!')
 
 
     @classmethod
@@ -455,6 +458,11 @@ class Measurement:
         print('%s took %.1f %s.' %(self.__class__.__name__, t, t_unit))
         self.save()
 
+        # If this run is in a loop, then we want to raise the KeyboardInterrupt
+        # to terminate the loop.
+        if self.interrupt:
+            raise KeyboardInterrupt
+
         return done
 
     def save(self, filename=None, savefig=True):
@@ -568,6 +576,13 @@ def get_todays_data_dir():
 
     return todays_data_path
 
+def open_experiment_data_dir():
+    filename = get_local_data_path()
+    if sys.platform == "win32":
+        os.startfile(filename)
+    else:
+        opener ="open" if sys.platform == "darwin" else "xdg-open"
+        subprocess.call([opener, filename])
 
 def set_experiment_data_dir(description=''):
     '''

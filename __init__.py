@@ -7,18 +7,19 @@ ip = get_ipython()
 
 from .Utilities import save
 
-## Set experiment data path
+# Set experiment data path
 try:
     print('Current experiment: %s' %save.get_experiment_data_dir())
 except:
     pass
+
 print('Use save.set_experiment_data_dir to change experiments\n')
 
-## Check for remote data server connection
+# Check for remote data server connection
 if not os.path.exists(save.get_data_server_path()):
-    print('''SAMBASHARE not connected. Could not find path %s.''' %save.get_data_server_path())
+    print('''\nSAMBASHARE not connected. Could not find path %s.''' %save.get_data_server_path())
 
-## Importing commonly used packages
+# Importing commonly used packages
 setup_path = os.path.join(os.path.dirname(__file__),
                             'Utilities',
                             'setup',
