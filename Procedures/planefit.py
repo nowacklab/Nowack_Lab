@@ -18,7 +18,7 @@ class Planefit(Measurement):
     c = np.nan
 
     def __init__(self, instruments={}, span=[400, 400], center=[0, 0],
-                 numpts=[4, 4], Vz_max=None):
+                 numpts=[4, 4], Vz_max=None, first_td=None):
         '''
         Take touchdowns in a grid to determine the slope of the sample
         surface.
@@ -36,8 +36,11 @@ class Planefit(Measurement):
         numpts (list): The numper of touchdowns to take on each axis
         [X number, Y number].
 
-        Vz_max (float):Maximum voltage that can be applied to the Zpiezo.
+        Vz_max (float): Maximum voltage that can be applied to the Zpiezo.
         If None then the the max voltage for the piezo is used.
+
+        first_td (Touchdown object or float): The touchdown object or touchdown
+        voltage used for the center of the plane. Skips the initial touchdown.
 
         Required instruments:
         daq, lockin_cap, atto, piezos, montana
@@ -59,6 +62,7 @@ class Planefit(Measurement):
         self.span = span
         self.center = center
         self.numpts = numpts
+        self.first_td = first_td
 
         if Vz_max == None:
             if hasattr(self, 'piezos'):
@@ -101,24 +105,30 @@ class Planefit(Measurement):
         self.piezos.y.check_lim(self.Y)
 
         # Initial touchdown at center of plane
-        self.piezos.V = {'x': self.center[0],
-                         'y': self.center[1],
-                         'z': -self.Vz_max
-                     }
-        self.td = Touchdown(self.instruments, Vz_max=self.Vz_max, planescan=True)
-        self.td.run()
-
-        # If the initial touchdown generates a poor fit, try again
-        n = 0
-        while self.td.error_flag and n < 5:
-            self.td = Touchdown(self.instruments, Vz_max=self.Vz_max, planescan=True)
+        # Skipped if a first touchdown was given.
+        if self.first_td is None:
+            self.piezos.V = {'x': self.center[0],
+                             'y': self.center[1],
+                             'z': -self.Vz_max
+                         }
+            self.td = Touchdown(self.instruments, Vz_max=self.Vz_max, disable_attocubes=True)
             self.td.run()
-            n = n + 1
+
+            # If the initial touchdown generates a poor fit, try again
+            n = 0
+            while self.td.error_flag and n < 5:
+                self.td = Touchdown(self.instruments, Vz_max=self.Vz_max, disable_attocubes=True)
+                self.td.run()
+                n = n + 1
+        else:
+            if type(self.first_td) in (int, float):
+                self.td = Touchdown()
+                self.td.Vtd = self.first_td # because we passed a number
+            else:
+                self.td = self.first_td
 
         if self.td.error_flag:
             raise Exception(r'Can\'t fit capacitance signal.')
-        else:
-            center_z_value = self.td.Vtd
 
         # If only taking plane from edges, make masked array
         if edges_only:
@@ -140,7 +150,6 @@ class Planefit(Measurement):
                     continue
 
                 counter = counter + 1
-                display.clear_output(wait=True)
 
                 # Go to location of next touchdown
                 self.piezos.V = {'x': self.X[i, j],
@@ -151,14 +160,17 @@ class Planefit(Measurement):
                 # Take touchdowns until the fitting algorithm gives a
                 # good result, up to 5 touchdowns
                 self.td = Touchdown(self.instruments,
-                               Vz_max=self.Vz_max, planescan=True)
+                               Vz_max=self.Vz_max, disable_attocubes=True)
+                self.td.error_flag = True # to force the following while loop
 
                 n = 0
-                while td.error_flag is True and n < 5:
-                    print('Redo')
+                while self.td.error_flag is True and n < 5:
+                    if n > 0:
+                        print('Redo')
+
                     self.td = Touchdown(self.instruments,
-                                   Vz_max = self.Vz_max, planescan=True)
-                    self.td.title = '(%i, %i). TD# %i' % (i, j, counter)
+                                   Vz_max = self.Vz_max, disable_attocubes=True)
+                    self.td._set_title('(%i, %i). TD# %i' % (i, j, counter))
                     self.td.run()
                     n = i + 1
                     plt.close(self.td.fig)
@@ -212,7 +224,7 @@ class Planefit(Measurement):
         2. Plots the difference between the measured touchdown voltage
         and the fit plane.
         '''
-        if hasattr(self, 'td'):
+        if hasattr(self, 'td') and i is not None and j is not None:
             self.td.gridplot(self.ax_grid[-(i+1),j]) #FIXME indices...?
 
         self.im[0].set_data(self.Z)
@@ -235,12 +247,31 @@ class Planefit(Measurement):
 
         self.fig.canvas.flush_events()
 
+    def plot3D(self):
+        '''
+        Generates a 3D plot of the plane.
+        '''
+        from mpl_toolkits.mplot3d import Axes3D
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        ax.set_zlabel('z')
+
+        ax.scatter(self.X, self.Y, self.Z)
+        Zfit = self.plane(self.X, self.Y)
+        ax.plot_surface(self.X, self.Y, Zfit, alpha=0.2, color=[0,1,0])
+
+        return fig, ax
 
     def save(self, savefig=True):
         '''
         Saves the planefit object to json.
         Also saves the figure as a pdf, if wanted.
         '''
+        self.ax = None
+        self.ax_grid = None #FIXME change to dict to enable auto ignore in save
         self._save(self.filename, savefig)
 
 
@@ -262,6 +293,7 @@ class Planefit(Measurement):
 
         # Set up colorplot figure
         self.fig, self.ax = plt.subplots(1, 2, figsize=(12,6))
+        self.ax = list(self.ax)
 
         extent = extents(self.X, self.Y)
         im0 = self.ax[0].imshow(self.Z, origin='lower', extent=extent)
@@ -283,7 +315,7 @@ class Planefit(Measurement):
         self.fig.tight_layout(pad=5)
 
 
-    def update_c(self, Vx=0, Vy=0, start=None, move_attocubes=False):
+    def update_c(self, Vx=0, Vy=0, start=None, disable_attocubes=True):
         '''
         Does a single touchdown to update the offset of the plane.
 
@@ -295,14 +327,14 @@ class Planefit(Measurement):
         Vx (float): X piezo voltage for the touchdown
         Vy (float): Y piezo voltage for the thouchdown
         start (float): Z piezo voltage where touchdown sweep starts
-        move_attocubes (bool): If False, attocube motion is disabled
+        disable_attocubes (bool): If True, attocube motion is disabled
         '''
         self.make_timestamp_and_filename()
 
         old_c = self.c
         self.piezos.V = {'x': Vx, 'y': Vy, 'z': 0}
         self.td = Touchdown(self.instruments,
-                       disable_attocubes = not move_attocubes,
+                       disable_attocubes = disable_attocubes,
                        Vz_max = self.Vz_max,
                        )
         self.td.run(start=start)

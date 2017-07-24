@@ -220,8 +220,14 @@ class Scanplane(Measurement):
                 self.Vinterp['piezo'] = self.Y[:, i]
 
             # Store this line's signals for Vdc, Vac x/y, and Cap
+            # Sometimes the daq doesn't return the right keys
+            # Using try/except to try to diagnose for the future.
             for chan in self._daq_inputs:
-                self.Vfull[chan] = received[chan]
+                try:
+                    self.Vfull[chan] = received[chan]
+                except Exception as e:
+                    print(received)
+                    raise e
 
             # Convert from DAQ volts to lockin volts where applicable
             for chan in ['acx', 'acy']:

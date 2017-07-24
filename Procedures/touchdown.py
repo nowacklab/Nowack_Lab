@@ -105,7 +105,7 @@ class Touchdown(Measurement):
         # touchdown must fall within.
         u = 0.85
         l = 0.45
-        if not u * self.Vz_max < self.Vtd < u * self.Vz_max:
+        if not l * self.Vz_max < self.Vtd < u * self.Vz_max:
             self.touchdown = False
             self._set_title('Found touchdown, centering near %i Vpiezo' %int(
                 self.Vz_max/2))
@@ -258,7 +258,7 @@ class Touchdown(Measurement):
                     if self.C[j + 1] - self.C[j] < 0:
                         return False
                 # If the for loop passed, then touchdown
-                print("level condition")
+                print('level condition')
                 return True
         # If we haven't taken enough points
         return False
@@ -320,12 +320,12 @@ class Touchdown(Measurement):
                 self.touchdown is False and
                 self.error_flag is False):
                 # Confirm that the attocubes should move
-                inp = input("Move attocubes? [y]/n: ")
-                if inp == "y":
+                inp = input('Move attocubes by %s um? [y]/n: ' %self.attoshift)
+                if inp in ('y', '', 'Y'):
                     self._move_attocubes(self.attoshift)
                     start = -self.Vz_max # start far away next time
 
-        self.piezos.z.V = 0  # bring the piezo back to zero
+            self.piezos.z.V = 0  # bring the piezo back to zero
 
 
     def do_sweep(self, start):
@@ -414,7 +414,7 @@ class Touchdown(Measurement):
         V = self.V[~np.isnan(self.C)]
         self.p, e = curve_fit(piecewise_linear, V, C)
         # Calculate one standard deviation errors in the fit parameters
-        self.err = np.sqrt(np.diag(e))
+        self.err = np.sqrt(np.abs(np.diag(e)))
         return self.p[0]
 
 
@@ -422,6 +422,8 @@ class Touchdown(Measurement):
         '''
         Compact plot of touchdown for use when taking planes
         '''
+        C = self.C[~np.isnan(self.C)]
+        V = self.V[~np.isnan(self.C)]
         ax.plot(V, C, '.', color='k', markersize=2)
         ax.plot(V, piecewise_linear(V, *self.p))
         ax.axvline(self.p[0], color='r')
@@ -466,7 +468,6 @@ class Touchdown(Measurement):
 
 
     def setup_plots(self):
-        display.clear_output(wait=True)
         self.fig, self.ax = plt.subplots()
         line = self.ax.plot(self.V, self.C, 'k.')
         self.line = line[0]
