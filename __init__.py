@@ -64,13 +64,13 @@ from Nowack_Lab.Utilities.save import Measurement
 #from Nowack_Lab.Procedures.transport import RvsVg, RvsTime, RvsT
 #from Nowack_Lab.Procedures.magnetotransport import RvsB, RvsVg_B
 #from Nowack_Lab.Instruments.attocube import Attocube
-#from Nowack_Lab.Instruments.keithley import Keithley2400, Keithley2600, KeithleyPPMS
+from Nowack_Lab.Instruments.keithley import Keithley2400, Keithley2600, KeithleyPPMS
 #from Nowack_Lab.Instruments.montana import Montana
-#from Nowack_Lab.Instruments.nidaq import NIDAQ
+from Nowack_Lab.Instruments.nidaq import NIDAQ
 #from Nowack_Lab.Instruments.piezos import Piezos
 #from Nowack_Lab.Instruments.preamp import SR5113
 #from Nowack_Lab.Instruments.squidarray import SquidArray
-#from Nowack_Lab.Instruments.lockin import SR830
+from Nowack_Lab.Instruments.lockin import SR830
 #from Nowack_Lab.Instruments.ppms import PPMS
 #from Nowack_Lab.Fun.callme import call
 ''');
