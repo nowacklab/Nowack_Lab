@@ -386,7 +386,7 @@ class RvsVg_B(RvsVg):
         ax.text(.1, 0.9, '%g T' %self.B[idx], fontsize=20, transform=ax.transAxes)
         plt.tight_layout()
         fig.canvas.draw()
-        return fig, ax
+        return fig, (ax, ax2)
 
     def plot_mobility(self, l=0, u=-1, Rxx_channel=0, Rxy_channel=1):
         '''
@@ -443,12 +443,12 @@ class RvsVg_B(RvsVg):
             self.im[i][0] = plot_mpl.plot2D(ax[0],
                                                 self.Vg,
                                                 self.B,
-                                                self.R2D[i],
+                                                np.abs(self.R2D[i]),
                                                 interpolation = 'none',
                                                 cmap='cubehelix',
                                                 xlabel='Vg (V)',
                                                 ylabel= 'B (T)',
-                                                clabel='R%s (Ohm)' %i,
+                                                clabel='|R%s| (Ohm)' %i,
                                                 equal_aspect=False)
             self.im[i][1] = plot_mpl.plot2D(ax[1],
                                                 self.Vg,
