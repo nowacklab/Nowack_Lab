@@ -11,8 +11,6 @@ try:
 except:
     print('PyDAQmx not imported in nidaq.py!')
 import time
-from copy import copy
-from ..Utilities import logging
 from .instrument import Instrument
 
 class NIDAQ(Instrument):
@@ -194,7 +192,6 @@ class NIDAQ(Instrument):
         chan_in is a list of all input channel labels or names you wish to monitor.
         '''
 
-
         # Make everything a numpy array
         data = data.copy() # so we don't modify original data
         for key, value in data.items():
@@ -247,28 +244,28 @@ class NIDAQ(Instrument):
         some_data = next(iter(data.values())) # All data must be equal length, so just choose one.
         task.set_timing(n_samples = len(some_data), fsamp='%fHz' %sample_rate)
 
-        ## run the task and remove units
+        # run the task and remove units
         received = task.run(data)
         for key, value in received.items():
             received[key] = value.magnitude
 
-        ## Undo added data point
-        ## The daq gives data late by one.
-        ## This only happens on the lowest numbered input channel.
-        ## the nowacklab branch of Instrumental is modified so that channels
-        ## are ordered, and in this case it's the lowest numbered channel.
+        # Undo added data point
+        # The daq gives data late by one.
+        # This only happens on the lowest numbered input channel.
+        # the nowacklab branch of Instrumental is modified so that channels
+        # are ordered, and in this case it's the lowest numbered channel.
         # First we find the input channel numbers as ints, then find the min.
         ch_nums = [int(''.join(x for x in y if x.isdigit())) for y in chan_in]
         min_chan = 'ai%i' %min(ch_nums)
 
         for chan, value in received.items():
             if chan == min_chan:
-                received[chan] = np.delete(value, 0) #removes first data point, which is wrong
+                received[chan] = np.delete(value, 0)  # removes first data point, which is wrong
             else:
-                received[chan] = np.delete(value,-1) #removes last data point, a duplicate
+                received[chan] = np.delete(value,-1)  # removes last data point, a duplicate
         for chan, value in received.items():
             if chan not in input_labels and chan is not 't':
-                received[getattr(self, chan).label] = received.pop(chan) # change back to the given channel labels if different from the real channel names
+                received[getattr(self, chan).label] = received.pop(chan)  # change back to the given channel labels if different from the real channel names
 
         return received
 
@@ -294,7 +291,6 @@ class NIDAQ(Instrument):
         for chan in self.outputs.values(): # loop over output channel objects
             self.sweep({chan.label: chan.V}, {chan.label: 0}, sample_rate=rate, numsteps=numsteps)
         print('Zeroed DAQ outputs.')
-        logging.log('Zeroed DAQ outputs.')
 
 
 class Channel():
