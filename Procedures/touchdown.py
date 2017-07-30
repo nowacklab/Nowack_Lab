@@ -134,7 +134,7 @@ class Touchdown(Measurement):
         self.C0 = None # offset: will take on value of the first point
 
 
-    def _move_attocubes(self, attoshift):
+    def _move_attocubes(self):
         '''
         Helper function for do():
         Copied directly from do() at 2017-05-30 by dhl88
@@ -146,28 +146,31 @@ class Touchdown(Measurement):
         4) move attocubes to the position self.attoshift
         5) sleep until capacitance settles
         6) if capacitance is overloading, backoff
-
-        Arguments
-            attoshift: distance in "atto"-microns to move the z attocube
         '''
-        # before moving attos, make sure we're far away from the sample!
-        self.piezos.z.V = -self.Vz_max
+        if (self.disable_attocubes is False and
+            self.touchdown is False and
+            self.error_flag is False):
+            # Confirm that the attocubes should move
+            inp = input('Sweep z piezo down and move attocubes by %s um? [y]/n: ' %self.attoshift)
+            if inp in ('y', '', 'Y'):
+                # before moving attos, make sure we're far away from the sample!
+                self.piezos.z.V = -self.Vz_max
 
-        # make sure we didn't crash
-        self.check_balance()
+                # make sure we didn't crash
+                self.check_balance()
 
-        self.atto.z.move(attoshift)
+                self.atto.z.move(self.attoshift)
 
-        # wait until capacitance settles
-        time.sleep(_TIME_UNTIL_STABLE)
+                # wait until capacitance settles
+                time.sleep(_TIME_UNTIL_STABLE)
 
-        # While capacitance measurement is overloading:
-        while self.daq.inputs['cap'].V > 10:
-            # we probably moved too far
-            self.atto.z.move(-attoshift/2)
+                # While capacitance measurement is overloading:
+                while self.daq.inputs['cap'].V > 10:
+                    # we probably moved too far
+                    self.atto.z.move(-attoshift/2)
 
-            # wait until capacitance settles
-            time.sleep(_TIME_UNTIL_STABLE)
+                    # wait until capacitance settles
+                    time.sleep(_TIME_UNTIL_STABLE)
 
 
     def _record_cap(self, i):
@@ -210,6 +213,8 @@ class Touchdown(Measurement):
         '''
         Sets the plot title to an informative message.
         '''
+        if not hasattr(self, 'ax'):
+            self.setup_plots()
         self.ax.set_title(title, fontsize=12)
         self.fig.canvas.draw()
 
@@ -316,14 +321,8 @@ class Touchdown(Measurement):
 
             # Move the attocubes
             # Either we're too far away for a touchdown or Vtd not centered
-            if (self.disable_attocubes is False and
-                self.touchdown is False and
-                self.error_flag is False):
-                # Confirm that the attocubes should move
-                inp = input('Move attocubes by %s um? [y]/n: ' %self.attoshift)
-                if inp in ('y', '', 'Y'):
-                    self._move_attocubes(self.attoshift)
-                    start = -self.Vz_max # start far away next time
+            self._move_attocubes()
+            start = -self.Vz_max # start far away next time
 
             self.piezos.z.V = 0  # bring the piezo back to zero
 
@@ -412,7 +411,16 @@ class Touchdown(Measurement):
         '''
         C = self.C[~np.isnan(self.C)]
         V = self.V[~np.isnan(self.C)]
+        # Try to fit with no initial parameters
         self.p, e = curve_fit(piecewise_linear, V, C)
+        if e[0,0] == np.inf:
+            Cp = np.gradient(C)
+            Cpp = np.gradient(Cp)
+            i = np.nanargmax(Cpp)  # spike in second derivative = slope change
+            p0 = [self.V[i], 0, 0, 0]  # x0, y0, m1, m2
+            self.p, e = curve_fit(piecewise_linear, V, C, p0=p0)
+            if e[0,0] == np.inf:
+                print('Could not fit touchdown!')
         # Calculate one standard deviation errors in the fit parameters
         self.err = np.sqrt(np.abs(np.diag(e)))
         return self.p[0]
@@ -446,6 +454,13 @@ class Touchdown(Measurement):
         self.fig.canvas.draw()
 
 
+    def plot_threshold(self):
+        std = np.sqrt(_VAR_THRESHOLD)
+        self.ax.axhline(std, color='C9', linestyle='--')
+        self.ax.axhline(-std, color='C9', linestyle='--')
+        self.plot()
+
+
     def plot_td(self):
         self.ax.plot(self.V, piecewise_linear(self.V, *self.p))
         self.ax.axvline(self.p[0], color='r')
@@ -468,11 +483,14 @@ class Touchdown(Measurement):
 
 
     def setup_plots(self):
-        self.fig, self.ax = plt.subplots()
-        line = self.ax.plot(self.V, self.C, 'k.')
-        self.line = line[0]
+        if not hasattr(self, 'ax'): # for _set_title
+            self.fig, self.ax = plt.subplots()
+            line = self.ax.plot(self.V, self.C, 'k.')
+            self.line = line[0]
 
-        plt.xlabel('Piezo voltage (V)')
-        plt.ylabel(r'$C - C_{balance}$ (fF)')
+            plt.xlabel('Piezo voltage (V)')
+            plt.ylabel(r'$C - C_{balance}$ (fF)')
 
-        plt.xlim(self.V.min(), self.V.max())
+            plt.xlim(self.V.min(), self.V.max())
+
+            self.plot_threshold()
