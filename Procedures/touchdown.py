@@ -151,8 +151,18 @@ class Touchdown(Measurement):
             self.touchdown is False and
             self.error_flag is False):
             # Confirm that the attocubes should move
-            inp = input('Sweep z piezo down and move attocubes by %s um? [y]/n: ' %self.attoshift)
-            if inp in ('y', '', 'Y'):
+            inp = input('[y]: Sweep z piezo down and move attocubes by %s um\n \
+n: Sweep z piezo down without moving attocubes.\n \
+#: Enter custom attocube movement. ' %self.attoshift)
+            try:
+                float(inp)
+                is_number = True
+            except:
+                is_number = False
+            if inp in ('y', '', 'Y') or is_number:
+                if is_number:
+                    self.attoshift = float(inp)
+
                 # before moving attos, make sure we're far away from the sample!
                 self.piezos.z.V = -self.Vz_max
 
@@ -442,6 +452,8 @@ class Touchdown(Measurement):
     def plot(self):
         super().plot()
 
+        self.plot_threshold()
+
         # Update plot with new capacitance values
         self.line.set_ydata(self.C)
         self.ax.set_ylim(-0.5, max(np.nanmax(self.C), 1))
@@ -455,10 +467,16 @@ class Touchdown(Measurement):
 
 
     def plot_threshold(self):
-        std = np.sqrt(_VAR_THRESHOLD)
-        self.ax.axhline(std, color='C9', linestyle='--')
-        self.ax.axhline(-std, color='C9', linestyle='--')
-        self.plot()
+        std_diff = np.sqrt(np.nanvar(self.C) - self.baseline)
+        if not hasattr(self, 'line_var1'):
+            std = np.sqrt(_VAR_THRESHOLD)
+            self.ax.axhline(std, color='C9', linestyle='--')
+            self.ax.axhline(-std, color='C9', linestyle='--')
+            self.line_var1 = self.ax.axhline(std_diff, color='C8', ls='--')
+            self.line_var2 = self.ax.axhline(-std_diff, color='C8', ls='--')
+        else:
+            self.line_var1.set_ydata(std_diff)
+            self.line_var2.set_ydata(-std_diff)
 
 
     def plot_td(self):
@@ -492,5 +510,3 @@ class Touchdown(Measurement):
             plt.ylabel(r'$C - C_{balance}$ (fF)')
 
             plt.xlim(self.V.min(), self.V.max())
-
-            self.plot_threshold()
