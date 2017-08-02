@@ -21,7 +21,7 @@ class PPMS(Instrument):
     '''
     _pid = None # process id number for server
 
-    def __init__(self, host='127.0.0.2', port=50009, s=None):
+    def __init__(self, host='192.168.0.103', port=50009, s=None):
         '''
         Default host and port are for the PPMS measurement computer.
         '''

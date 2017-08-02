@@ -68,12 +68,13 @@ class RvsSomething(Measurement):
         '''
         time_start = time.time()
         if duration is None:
-            while True:
-                self.time = np.append(self.time, time.time()-time_start)
-                self.do_measurement(delay, num_avg, delay_avg, plot, auto_gain=auto_gain)
-                if duration is not None:
-                    if self.time[-1] >= duration:
-                        break
+            duration = 1000000000000
+        while True:
+            self.time = np.append(self.time, time.time()-time_start)
+            self.do_measurement(delay, num_avg, delay_avg, plot, auto_gain=auto_gain)
+            if duration is not None:
+                if self.time[-1] >= duration:
+                    break
 
 
     def do_measurement(self, delay = 0, num_avg = 1, delay_avg = 0,

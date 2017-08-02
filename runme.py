@@ -1,20 +1,5 @@
 import os, shutil, matplotlib, pip
 
-## Install required packages
-packages = [
-    'pint',
-    'tabulate',
-    'jsonpickle',
-    'pydaqmx',
-    'pyvisa',
-    'setuptools',
-    'tornado',
-    'peakutils',
-    'https://github.com/nowacklab/PyANC350/tarball/master',
-    'https://github.com/nowacklab/Instrumental/tarball/master'
-]
-for package in packages:
-    pip.main(['install', '--upgrade', package])
 
 
 home = os.path.expanduser('~')
@@ -31,6 +16,27 @@ anaconda_path = os.path.join(site_packages,'github.pth')
 
 with open(anaconda_path, 'w') as f:
     f.write(os.path.dirname(os.getcwd())) # Writes Github directory name
+
+## Install required packages
+packages = [
+    'pint',
+    'tabulate',
+    'jsonpickle',
+    'pydaqmx',
+    'pyvisa',
+    'setuptools',
+    'tornado',
+    'peakutils',
+    'https://github.com/nowacklab/Instrumental/tarball/master',
+    'https://github.com/nowacklab/PyANC350/tarball/master',
+]
+for package in packages:
+    try:
+        pip.main(['install', '--upgrade', package])
+    except:
+        pass
+
+
 
 ## Add custom.css file to add padding to bottom of the notebook
 # package_path = os.path.join(os.getcwd(),'Utilities','custom.css')
