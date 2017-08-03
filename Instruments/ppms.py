@@ -21,7 +21,7 @@ class PPMS(Instrument):
     '''
     _pid = None # process id number for server
 
-    def __init__(self, host='192.168.0.103', port=50009, s=None):
+    def __init__(self, host='127.0.0.1', port=50009, s=None):
         '''
         Default host and port are for the PPMS measurement computer.
         '''
@@ -73,7 +73,7 @@ class PPMS(Instrument):
         the one used to start jupyter notebook.
         '''
         # Run script to start PyQDInstrument server
-        ironpython = r'"C:\Program Files\IronPython 2.7\ipy.exe"'
+        ironpython = r'"C:\Program Files (x86)\IronPython 2.7\ipy.exe"'
         here = os.path.dirname(__file__)
         path_to_script = os.path.join(here,
                            'ppms_server/run_server_blue.py')
@@ -101,7 +101,7 @@ class PPMS(Instrument):
             self.kill_server() # kill that communication.
 
         # Start the ironpython ipy.exe server
-        os.system('start /B cmd /k %s %s %s %i' %(ironpython, path_to_script, host, port))
+        os.system('start /B cmd /k "%s \"%s\" %s %i"' %(ironpython, path_to_script, host, port))
 
         # Compare PID load_instruments
         p = subprocess.Popen(os.path.join(here, 'ppms_server','compare_pids.bat %s') %pids, stdout=subprocess.PIPE)
