@@ -151,8 +151,9 @@ class Touchdown(Measurement):
             self.touchdown is False and
             self.error_flag is False):
             # Confirm that the attocubes should move
-            inp = input('[y]: Sweep z piezo down and move attocubes by %s um\n \
-n: Sweep z piezo down without moving attocubes.\n \
+            inp = input(
+'[y]: Sweep z piezo down, move attocubes by %s um, and redo touchdown\n \
+n: Sweep z piezo down and redo without moving attocubes.\n \
 #: Enter custom attocube movement. ' %self.attoshift)
             try:
                 float(inp)
