@@ -1,9 +1,9 @@
 import visa
 import numpy as np
 import time
-from .instrument import Instrument
+from .instrument import Instrument, VISAInstrument
 
-class Keithley2400(Instrument):
+class Keithley2400(VISAInstrument):
     _label = 'keithley'
     '''
     Instrument driver for Keithley 2400 Source Meter
@@ -19,8 +19,10 @@ class Keithley2400(Instrument):
         if type(gpib_address) is int:
             gpib_address = 'GPIB::%02i::INSTR' %gpib_address
         self.gpib_address= gpib_address
-        self._visa_handle = visa.ResourceManager().open_resource(self.gpib_address)
+
+        self._init_visa(gpib_address)
         self._visa_handle.read_termination = '\n'
+
         self.write(':SENS:FUNC \"VOLT\"')
         self.write(':SENS:FUNC \"CURR\"') # set up to sense voltage and current
 
@@ -38,16 +40,6 @@ class Keithley2400(Instrument):
 
     def __setstate__(self, state):
         pass
-
-    def ask(self, msg, tryagain=True):
-        try:
-            return self._visa_handle.ask(msg)
-        except:
-            print('Communication error with Keithley')
-            self.close()
-            self.__init__(self.gpib_address)
-            if tryagain:
-                self.ask(msg, False)
 
     @property
     def source(self):
@@ -269,14 +261,6 @@ class Keithley2400(Instrument):
         """
         self.write(":SYST:BEEP %g, %g" % (frequency, duration))
 
-
-    def close(self):
-        '''
-        End the visa session.
-        '''
-        self._visa_handle.close()
-        del(self._visa_handle)
-
     def reset(self):
         '''
         Reset GPIB comms.
@@ -344,9 +328,6 @@ class Keithley2400(Instrument):
         time.sleep(duration)
         self.beep(base_frequency*6.0/4.0, duration)
 
-
-    def write(self, msg):
-        self._visa_handle.write(msg)
 
     def zero_V(self, sweep_rate=1):
         '''
