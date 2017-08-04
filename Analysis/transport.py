@@ -1,5 +1,94 @@
 import numpy as np
-from ..Utilities.constants import e, h
+from ..Utilities.constants import e, h, eps0
+from scipy.stats import linregress
+
+def carrier_density(Vg, rho, Vg_CNP=None, conversion=None,
+    t_gate=None, eps_gate=None):
+    '''
+    For gatesweep data, center the charge neutrality point and calculate carrier
+    density (cm^-2) in a few different ways. Relative kwargs listed in [].
+    Set all other kwargs to None.
+    (1) Provide a direct conversion factor [conversion].
+    (2) Estimated from gate capacitance [t_gate, eps_gate]
+    (3) (Not written yet): calculate from position and filling factor of
+        Landau levels
+
+    Arguments:
+    Vg: Array of gate voltages
+    resistivity: Array of resistivity (Ohm/sq) values corresponding to Vgs.
+    Vg_CNP: The gate voltage equivalent to zero carrier density. If None,
+        the maximum of resistivity will correspond to zero carrier density.
+    conversion: Direct conversion from gate voltage to carrier density in units
+        of cm^-2/V
+    t_gate: Thickness of gate dielectric (nm).
+    eps_gate: Dielectric constant of gate dielectric. 3.9 for SiO2.
+        If you pass in t_gate with no eps_gate, will assume SiO2.
+
+    Returns:
+    n: Array of carrier densities (cm^-2)
+    '''
+    # Find the charge neutrality point
+    if Vg_CNP is None:
+        idx_CNP = np.where(rho==np.nanmax(rho))[0]
+        Vg_CNP = Vg[idx_CNP]
+    Vg2 = Vg - Vg_CNP
+
+    # Direct conversion
+    if conversion is not None:
+        n = conversion*Vg2
+
+    # Geometrical capacitance
+    if t_gate is not None:
+        if eps_gate is None:
+            eps_gate = 3.9 # SiO2
+        n = Vg2 * eps0 * eps_gate / (t_gate * 1e-9 * e) / 100 ** 2 # to cm^-2
+
+    return n
+
+
+def carrier_density_Hall(B, Rxy, Bmax=None):
+    '''
+    Calculate the carrier density (cm^-2) from the ordinary Hall effect.
+    Rxy = B/ne. Slope of Rxy vs B: m = 1/ne. n = 1/me
+
+    Arguments:
+    B: array of magnetic field values
+    Rxy: array of Hall resistance (Ohm) values corresponding to Bs
+    Bmax: largest field to fit (usually this is the onset of the QHE). If None,
+        will fit to all fields.
+
+    Returns:
+    n: carrier density (cm^-2)
+    '''
+    if Bmax is None:
+        Bmax = np.nanmax(B) # nanmax probably not necessary
+
+    where = np.where(B < Bmax) # cut off data if necessary
+    m, b, r, p, err = linregress(B[where], Rxy[where])
+    print('R-squared for fit: ', r**2)
+
+    n = 1/(m*e)/100**2 # convert to cm^-2
+    return n
+
+
+def carrier_mobility(n, rho):
+    '''
+    Calculate carrier mobility (cm^2/(V*s)) from carrier density (cm^-2) and
+    resistivity (Ohm/sq).
+
+    sigma = n*e*mu -> mu = 1/(rho*n*e)
+
+    Arguments:
+    n: Array of carrier densities.
+    rho: Array of resitivity values corresponding to n's.
+
+    Returns:
+    mobility: Array of carrier mobilities corresponding to n's.
+    '''
+    sigma = 1/rho
+    mobility = abs(sigma / (n * e))
+    return mobility
+
 
 def mean_free_path(n=None, rho=None, mu=None):
     '''
