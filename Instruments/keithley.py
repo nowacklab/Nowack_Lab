@@ -20,8 +20,7 @@ class Keithley2400(VISAInstrument):
             gpib_address = 'GPIB::%02i::INSTR' %gpib_address
         self.gpib_address= gpib_address
 
-        self._init_visa(gpib_address)
-        self._visa_handle.read_termination = '\n'
+        self._init_visa(gpib_address, termination='\n')
 
         self.write(':SENS:FUNC \"VOLT\"')
         self.write(':SENS:FUNC \"CURR\"') # set up to sense voltage and current

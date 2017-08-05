@@ -154,7 +154,7 @@ class SR5113(VISAInstrument):
         '''
         return self.write(cmd, read=True)
 
-    def write(self, cmd, read=True):
+    def write(self, cmd, read=False):
         '''
         Will write commands to SR5113 preamp via serial port.
         Figured this out by trial and error.
