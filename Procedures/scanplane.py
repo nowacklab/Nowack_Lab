@@ -439,9 +439,4 @@ class Line(Measurement):
         super().__init__()
 
     def save(self):
-        filename_in_extras = os.path.join(
-            get_local_data_path(),
-            get_todays_data_dir(),
-            'extras',
-            self.filename)
-        self._save(filename_in_extras)
+        super().save(extras=True)

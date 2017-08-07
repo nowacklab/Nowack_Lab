@@ -167,7 +167,7 @@ class Measurement:
 
         return obj
 
-    def _save(self, filename=None, savefig=True, ignored = []):
+    def _save(self, filename=None, savefig=True, extras=False, ignored = []):
         '''
         Saves data. numpy arrays are saved to one file as hdf5, everything else
         is saved to JSON
@@ -179,6 +179,9 @@ class Measurement:
 
         savefig -- If "True" figures are saved. If "False" only data and config
         are saved
+
+        extras -- If True, saved to a subfolder of the current data directory
+        named "extras" to reduce clutter. If False, saved in the normal way.
 
         ignored -- Array of objects to be ignored during saving. Passed to
         _save_hdf5 and _save_json.
@@ -199,13 +202,24 @@ class Measurement:
 
         # Saving to the experiment-specified directory
         if filename is None:
-            if not hasattr(self, 'filename'): # if you forgot to make a filename
+            if not hasattr(self, 'filename'):  # if you did not make a filename
                 self.make_timestamp_and_filename()
             filename = self.filename
 
-        if os.path.dirname(filename) == '': # you specified a filename with no preceding path
-            local_path = os.path.join(get_local_data_path(), get_todays_data_dir(), filename)
-            remote_path = os.path.join(get_remote_data_path(), get_todays_data_dir(), filename)
+        if extras is True:
+            extras = 'extras'
+        else:
+            extras = ''
+
+        if os.path.dirname(filename) == '':  # you specified a filename with no preceding path
+            local_path = os.path.join(get_local_data_path(),
+                                      get_todays_data_dir(),
+                                      extras,
+                                      filename)
+            remote_path = os.path.join(get_remote_data_path(),
+                                       get_todays_data_dir(),
+                                       extras,
+                                       filename)
 
         # Saving to a custom path
         else: # you specified some sort of path
@@ -421,11 +435,11 @@ class Measurement:
 
         return done
 
-    def save(self, filename=None, savefig=True):
+    def save(self, filename=None, savefig=True, extras=False):
         '''
         Basic save method. Just calls _save. Overwrite this for each subclass.
         '''
-        self._save(filename, savefig=True)
+        self._save(filename, savefig=savefig, extras=extras)
 
 
     def setup_plots(self):

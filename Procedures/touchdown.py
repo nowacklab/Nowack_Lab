@@ -103,8 +103,8 @@ class Touchdown(Measurement):
         '''
         # Specify a percentage of the piezo range that the
         # touchdown must fall within.
-        u = 0.85
-        l = 0.45
+        u = 0.75
+        l = 0.25
         if not l * self.Vz_max < self.Vtd < u * self.Vz_max:
             self.touchdown = False
             self._set_title('Found touchdown, centering near %i Vpiezo' %int(
@@ -488,17 +488,12 @@ n: Sweep z piezo down and redo without moving attocubes.\n \
         self.plot()
 
 
-    def save(self, savefig=True):
+    def save(self, savefig=True, extras=True):
         '''
         Saves the touchdown object.
         Also saves the figure as a pdf, if wanted.
         '''
-
-        filename_in_extras = os.path.join(get_local_data_path(),
-                                          get_todays_data_dir(),
-                                          'extras',
-                                          self.filename)
-        self._save(filename_in_extras, savefig)
+        self._save(savefig=savefig, extras=extras)
 
 
     def setup_plots(self):
