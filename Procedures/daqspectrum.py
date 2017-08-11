@@ -28,7 +28,7 @@ class DaqSpectrum(Measurement):
 
 
     def do(self):
-        self.setup_preamp()
+        #self.setup_preamp()
 
         self.psdAve = self.get_spectrum()
 
