@@ -49,7 +49,13 @@ class Scanplane(Measurement):
 
     def __init__(self, instruments={}, plane=None, span=[800, 800],
                  center=[0, 0], numpts=[20, 20],
-                 scanheight=15, scan_rate=120, raster=False):
+                 scanheight=15, scan_rate=120, raster=False,
+                 direction=['+','+']):
+        '''
+        direction: +/- to sweep each axis forwards or backwards.
+        Flips scan image. TODO: don't flip
+        '''
+
 
         super().__init__(instruments=instruments)
 
@@ -75,7 +81,7 @@ class Scanplane(Measurement):
         self.numpts = numpts
         self.plane = plane
         self.scanheight = scanheight
-
+        self.direction = direction
 
         self.V = AttrDict({
             chan: np.nan for chan in self._daq_inputs + ['piezo']
@@ -93,6 +99,12 @@ class Scanplane(Measurement):
         y = np.linspace(center[1] - span[1] / 2,
                         center[1] + span[1] / 2,
                         numpts[1])
+
+        # Reverse scan direction
+        if direction[0] == '-':
+            x = x[::-1]
+        if direction[1] == '-':
+            y = y[::-1]
 
         self.X, self.Y = np.meshgrid(x, y)
         try:

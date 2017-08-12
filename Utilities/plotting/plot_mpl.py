@@ -26,6 +26,7 @@ def clim(im, l, u):
     im.set_clim(l,u)
     cb.set_clim(l,u)
     cb.draw_all()
+    im.figure.canvas.draw()
 
 
 def cubehelix(g=1.0, s=0.5, r=-1.0, h=1.5):
