@@ -30,13 +30,14 @@ def data_to_txt(filename):
                     f.write('\n@ \n')
                 elif 'dict' in utilities.get_superclasses(value):
                     f.write('## %s\n' %key)
-                    walk(value) # walk through the dictionary
+                    walk(value)  # walk through the dictionary
                     f.write('@@\n')
                 # If the there is some other object
                 elif hasattr(value, '__dict__'):
-                    if 'Measurement' in utilities.get_superclasses(value): # restrict saving Measurements.
+                    # Restrict saving Measurements.
+                    if 'Measurement' in utilities.get_superclasses(value):
                         f.write('## %s\n' %key)
-                        walk(value.__dict__) # walk through the object dictionary
+                        walk(value.__dict__)
                         f.write('@@\n')
         walk(m.__dict__)
 

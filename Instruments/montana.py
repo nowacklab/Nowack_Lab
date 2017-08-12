@@ -12,6 +12,8 @@ from .instrument import Instrument
 class Montana(Instrument):
     _label = 'montana'
     _temperature = {}
+    _temperature_stability = {}
+    _compressor_speed = None
     cryo = None
     def __init__(self, ip='192.168.100.237', port=7773):
         directory_of_this_module = os.path.dirname(os.path.realpath(__file__))
@@ -26,14 +28,16 @@ class Montana(Instrument):
 
         atexit.register(self.exit)
 
-        self._temperature = self.temperature
-        self._temperature_stability = {}
-        self._temperature_stability = self.temperature_stability
-
+        # Record initial values
+        self.temperature
+        self.temperature_stability
+        self.compressor_speed
 
     def __getstate__(self):
-        self._save_dict = {"temperature": self._temperature,
-                          "stability": self._temperature_stability}
+        self._save_dict = {'temperature': self._temperature,
+                          'stability': self._temperature_stability,
+                          'compressor speed': self._compressor_speed
+                          }
         return self._save_dict
 
 
@@ -43,9 +47,36 @@ class Montana(Instrument):
         '''
         state['_temperature'] = state.pop('temperature')
         state['_temperature_stability'] = state.pop('stability')
+        state['_compressor_speed'] = state.pop('compressor speed')
 
         self.__dict__.update(state)
 
+    @property
+    def compressor_speed(self):
+        cs = self.ask('GCS')
+        if cs in (25, 30):
+            self._compressor_speed = 'high'
+        elif cs == 14:
+            self._compressor_speed = 'low'
+        else:
+            self._compressor_speed = 'custom'
+        return self._compressor_speed
+
+    @compressor_speed.setter
+    def compressor_speed(self, value):
+        '''
+        Set the compressor speed.
+        value either 'high', 'low', or 'off'
+        There are more options. See Montana communication manual.
+        '''
+        assert value in ('high', 'low', 'off')
+        if value == 'high':
+            response = self.ask('SCS7', to_float=False)
+        elif value == 'low':
+            response = self.ask('SCS2', to_float=False)
+        elif value == 'off':
+            response = self.ask('SCS0', to_float=False)
+        print(response)
 
     @property
     def pressure(self):

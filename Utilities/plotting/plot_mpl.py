@@ -1,6 +1,4 @@
-import matplotlib.pyplot as plt
-import numpy as np
-import math
+import matplotlib, matplotlib.pyplot as plt, numpy as np
 
 ## NOTE: Aspect handled differently in matplotlib 2.0. Don't need to set it this way!
 def aspect(ax, ratio, absolute=True):
@@ -28,6 +26,7 @@ def clim(im, l, u):
     im.set_clim(l,u)
     cb.set_clim(l,u)
     cb.draw_all()
+    im.figure.canvas.draw()
 
 
 def cubehelix(g=1.0, s=0.5, r=-1.0, h=1.5):
@@ -46,6 +45,38 @@ def cubehelix(g=1.0, s=0.5, r=-1.0, h=1.5):
     cdict = mpl._cm.cubehelix(g, s, r, h)
     cm = LinearSegmentedColormap('cubehelix_custom', cdict)
     return cm
+
+
+def extents(x, y):
+    '''
+    Returns an extent kwarg for imshow. The extents are set such that the pixels
+    on the border of the image are in line with the maxima and minima of the x,y
+    data. Assumes step size is constant throughout entire array.
+
+    Arguments
+    x, y: 1D or 2D X and Y arrays mapping to imshow matrix.
+    '''
+    diffsx = np.diff(x, axis=0).flatten() # 2D to 1D
+    if np.all(diffsx) == 0: # we chose the wrong axis
+        diffsx = np.diff(x, axis=1).flatten()
+    diffsy = np.diff(y, axis=0).flatten() # 2D to 1D
+    if np.all(diffsy) == 0: # we chose the wrong axis
+        diffsy = np.diff(y, axis=1).flatten()
+
+    # Try both first and last differences.
+    # This is to account for potential sweeps done in reverse.
+    dx = diffsx[0]
+    if np.isnan(dx):
+        dx = diffsx[-1]
+    dy = diffsy[0]
+    if np.isnan(dy):
+        dy = diffsy[-1]
+
+    return [x.min() - np.abs(dx) / 2,
+            x.max() + np.abs(dx) / 2,
+            y.min() - np.abs(dy) / 2,
+            y.max() + np.abs(dy) / 2
+            ]
 
 
 def plotline(ax, x, y, z):
@@ -90,7 +121,7 @@ def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='',
                 cmap=cmap,
                 interpolation=interpolation,
                 origin='lower', ## NOTE: KEEP
-                extent=[x.min(), x.max(), y.min(), y.max()] ## NOTE: KEEP
+                extent=extents(x,y) ## NOTE: KEEP
             )
 
     ## Make a colorbar
@@ -129,3 +160,7 @@ def update2D(im, z, center_at_zero=False, equal_aspect=True):
         clim(im, zm.min(), zm.max())
     else:
         clim(im, -abs(zm).max(), abs(zm).max())
+
+def using_notebook_backend():
+    inline = 'module://ipykernel.pylab.backend_inline'
+    return matplotlib.get_backend() in ('nbAgg', inline)

@@ -47,7 +47,7 @@ def fit_plane(x,y,z):
 
 
     A = np.vstack([X, Y, np.ones(len(X))]).T
-    return lstsq(A, Z)[0] # a,b,c
+    return lstsq(A[~np.isnan(Z)], Z[~np.isnan(Z)])[0] # a,b,c
 
 
 def get_browser_height():

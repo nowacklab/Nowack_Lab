@@ -1,11 +1,12 @@
 from jsonpickle.ext import numpy as jspnp
-import json, os, pickle, bz2, jsonpickle as jsp, numpy as np, re
+import json, os, pickle, bz2, jsonpickle as jsp, numpy as np, re, sys, subprocess
 from datetime import datetime
 jspnp.register_handlers()
 from copy import copy
 import h5py, glob, matplotlib, inspect, platform, hashlib, shutil, time
 import matplotlib.pyplot as plt
 from . import utilities
+import Nowack_Lab
 
 '''
 How saving and loading works:
@@ -153,9 +154,11 @@ class Measurement:
 
         obj_dict = walk(obj_dict)
 
-        # If the class of the object is custom defined in __main__, then just
-        # load it as a measurement.
-        if '__main__' in obj_dict['py/object']:
+        # If the class of the object is custom defined in __main__ or in a
+        # different branch, then just load it as a Measurement.
+        try:
+            exec(obj_dict['py/object']) # see if class is in the namespace
+        except:
             obj_dict['py/object'] = 'Nowack_Lab.Utilities.save.Measurement'
 
         # Decode with jsonpickle.
@@ -164,7 +167,7 @@ class Measurement:
 
         return obj
 
-    def _save(self, filename=None, savefig=True, ignored = []):
+    def _save(self, filename=None, savefig=True, extras=False, ignored = []):
         '''
         Saves data. numpy arrays are saved to one file as hdf5, everything else
         is saved to JSON
@@ -176,6 +179,9 @@ class Measurement:
 
         savefig -- If "True" figures are saved. If "False" only data and config
         are saved
+
+        extras -- If True, saved to a subfolder of the current data directory
+        named "extras" to reduce clutter. If False, saved in the normal way.
 
         ignored -- Array of objects to be ignored during saving. Passed to
         _save_hdf5 and _save_json.
@@ -196,13 +202,24 @@ class Measurement:
 
         # Saving to the experiment-specified directory
         if filename is None:
-            if not hasattr(self, 'filename'): # if you forgot to make a filename
+            if not hasattr(self, 'filename'):  # if you did not make a filename
                 self.make_timestamp_and_filename()
             filename = self.filename
 
-        if os.path.dirname(filename) == '': # you specified a filename with no preceding path
-            local_path = os.path.join(get_local_data_path(), get_todays_data_dir(), filename)
-            remote_path = os.path.join(get_remote_data_path(), get_todays_data_dir(), filename)
+        if extras is True:
+            extras = 'extras'
+        else:
+            extras = ''
+
+        if os.path.dirname(filename) == '':  # you specified a filename with no preceding path
+            local_path = os.path.join(get_local_data_path(),
+                                      get_todays_data_dir(),
+                                      extras,
+                                      filename)
+            remote_path = os.path.join(get_remote_data_path(),
+                                       get_todays_data_dir(),
+                                       extras,
+                                       filename)
 
         # Saving to a custom path
         else: # you specified some sort of path
@@ -319,7 +336,7 @@ class Measurement:
         run() wraps this function to enable keyboard interrupts.
         run() also includes saving and elapsed time logging.
         '''
-        pass
+        print('Doing stuff!')
 
 
     @classmethod
@@ -329,17 +346,25 @@ class Measurement:
         Overwrite this for each subclass if necessary.
         Pass in an array of the names of things you don't want to load.
         By default, we won't load any instruments, but you can pass in an instruments dictionary to load them.
+
+        Filename may be None (load last measurement), a filename, a path, or an
+        index (will search all Measurements of this type for this experiment)
         '''
 
         if filename is None: # tries to find the last saved object; not guaranteed to work
+            filename = -1
+        if type(filename) is int:
+            folders = list(glob.iglob(os.path.join(get_local_data_path(), get_todays_data_dir(),'..','*')))
+            # Collect a list of all Measurements of this type for this experiment
+            l = []
+            for i in range(len(folders)):
+                l = l + list(glob.iglob(os.path.join(folders[i],'*_%s.json' %cls.__name__)))
             try:
-                filename =  max(glob.iglob(os.path.join(get_local_data_path(), get_todays_data_dir(),'*_%s.json' %cls.__name__)),
-                                        key=os.path.getctime)
-            except: # we must have taken one during the previous day's work
-                folders = list(glob.iglob(os.path.join(get_local_data_path(), get_todays_data_dir(),'..','*')))
-                # -2 should be the previous day (-1 is today)
-                filename =  max(glob.iglob(os.path.join(folders[-2],'*_%s.json' %cls.__name__)),
-                                        key=os.path.getctime)
+                filename = l[filename] # filename was an int
+            except:
+                pass
+            if type(filename) is int:  # still
+                raise Exception('could not find %s to load.' %cls.__name__)
         elif os.path.dirname(filename) == '': # if no path specified
             os.path.join(get_local_data_path(), get_todays_data_dir(), filename)
 
@@ -411,13 +436,18 @@ class Measurement:
         print('%s took %.1f %s.' %(self.__class__.__name__, t, t_unit))
         self.save()
 
+        # If this run is in a loop, then we want to raise the KeyboardInterrupt
+        # to terminate the loop.
+        if self.interrupt:
+            raise KeyboardInterrupt
+
         return done
 
-    def save(self, filename=None, savefig=True):
+    def save(self, filename=None, savefig=True, extras=False):
         '''
         Basic save method. Just calls _save. Overwrite this for each subclass.
         '''
-        self._save(filename, savefig=True)
+        self._save(filename, savefig=savefig, extras=extras)
 
 
     def setup_plots(self):
@@ -524,6 +554,13 @@ def get_todays_data_dir():
 
     return todays_data_path
 
+def open_experiment_data_dir():
+    filename = get_local_data_path()
+    if sys.platform == "win32":
+        os.startfile(filename)
+    else:
+        opener ="open" if sys.platform == "darwin" else "xdg-open"
+        subprocess.call([opener, filename])
 
 def set_experiment_data_dir(description=''):
     '''

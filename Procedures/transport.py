@@ -28,6 +28,7 @@ class RvsSomething(Measurement):
         self.Vy = {i: np.array([]) for i in range(self.num_lockins)}
         self.Ix = np.array([])
         self.Iy = np.array([])
+        self.B = np.array([]) # if we can record field, let's do it.
         self.R = {i: np.array([]) for i in range(self.num_lockins)}
         setattr(self, self.something, np.array([]))
 
@@ -65,17 +66,19 @@ class RvsSomething(Measurement):
         Duration and delay both in seconds.
         Use do_measurement() for each resistance measurement.
         '''
+        time_start = time.time()
         if duration is None:
-            while True:
-                self.time = np.append(self.time, time.time()-self.time_start)
-                self.do_measurement(delay, num_avg, delay_avg, plot, auto_gain=auto_gain)
-                if duration is not None:
-                    if self.time[-1] >= duration:
-                        break
+            duration = 1000000000000
+        while True:
+            self.time = np.append(self.time, time.time()-time_start)
+            self.do_measurement(delay, num_avg, delay_avg, plot, auto_gain=auto_gain)
+            if duration is not None:
+                if self.time[-1] >= duration:
+                    break
 
 
     def do_measurement(self, delay = 0, num_avg = 1, delay_avg = 0,
-                                all_positive=False, plot=True, auto_gain=True):
+                                plot=True, auto_gain=True):
         '''
         Take a resistance measurement. Usually this will happen in a loop.
         Optional argument to set a delay before the measurement happens.
@@ -93,16 +96,20 @@ class RvsSomething(Measurement):
 
         self.Ix = np.append(self.Ix, self.lockin_I.X)
         self.Iy = np.append(self.Iy, self.lockin_I.Y)
+        if hasattr(self, 'ppms'):
+            self.B = np.append(self.B, self.ppms.field/10000) # Oe to T
+        elif hasattr(self, 'magnet'):
+            self.B = np.append(self.B, self.magnet.B)
         for j in range(self.num_lockins):
+            if auto_gain:
+                getattr(self, 'lockin_V%i' %(j+1)).fix_sensitivity() # make sure we aren't overloading or underloading.
+                self.lockin_I.fix_sensitivity()
 
             ## Take as many measurements as requested and average them
             vx = 0
             vy = 0
             r = 0
             for i in range(num_avg):
-                if auto_gain:
-                    getattr(self, 'lockin_V%i' %(j+1)).fix_sensitivity() # make sure we aren't overloading or underloading.
-                    self.lockin_I.fix_sensitivity()
                 vx += getattr(self, 'lockin_V%i' %(j+1)).X
                 vy += getattr(self, 'lockin_V%i' %(j+1)).Y
 
@@ -112,9 +119,6 @@ class RvsSomething(Measurement):
             vx /= num_avg
             vy /= num_avg
             r /= num_avg
-
-            if all_positive:
-                r = abs(r)
 
             self.Vx[j] = np.append(self.Vx[j], vx)
             self.Vy[j] = np.append(self.Vy[j], vy)
@@ -166,6 +170,11 @@ class RvsSomething(Measurement):
                     add_text_to_legend('T = %.2f K' %self.ppms.temperature)
                 if self.something != 'B':
                     add_text_to_legend('B = %.2f T' %(self.ppms.field/10000))
+
+        if hasattr(self, 'magnet'):
+            if self.magnet is not None:
+                if self.something != 'B':
+                    add_text_to_legend('B = %.2f T' %self.magnet.B)
 
         if hasattr(self, 'keithley'):
             if self.keithley is not None:
@@ -221,7 +230,7 @@ class RvsT(RvsSomething):
         self.sweep_rate = sweep_rate
 
     def do(self, plot=True):
-        ## Set initial field if not already there
+        ## Set initial temperature if not already there
         if abs(self.ppms.temperature - self.Tstart) > 1: # different by more than 1 K
             self.ppms.temperature_rate = 20 # sweep as fast as possible
             self.ppms.temperature = self.Tstart
@@ -238,12 +247,35 @@ class RvsT(RvsSomething):
         ## Set sweep to final temperature
         self.ppms.temperature_rate = self.sweep_rate
         self.ppms.temperature_approach = 'FastSettle'
-        self.ppms.temperature = self.Tend # T to Oe
+        self.ppms.temperature = self.Tend
 
         time.sleep(5) # wait for ppms to process command
         ## Measure while sweeping
         while self.ppms.temperature_status not in ('Near', 'Stable'):
-            self.T = np.append(self.T, self.ppms.temperature) # Oe to T
+            self.T = np.append(self.T, self.ppms.temperature)
+            self.do_measurement(delay=self.delay, plot=plot)
+
+
+class RvsT_Bluefors(RvsSomething):
+    instrument_list = ['lakeshore', 'lockin_V', 'lockin_I']
+    something = 'T'
+    something_units = 'K'
+
+    def __init__(self, instruments = {}, channel=6, Tend = 10, delay=1):
+        '''
+        channel: lakeshore channel number to monitor
+        Tend: target temperature (when to stop taking data)
+        delay: time between measurements (seconds)
+        '''
+        super().__init__(instruments=instruments)
+
+        self.channel = getattr(getattr(self, 'lakeshore'), 'chan%i' %channel)
+        self.Tend = Tend
+        self.delay = delay
+
+    def do(self, plot=True):
+        while self.channel.T > self.Tend:
+            self.T = np.append(self.T, self.channel.T)
             self.do_measurement(delay=self.delay, plot=plot)
 
 
@@ -291,7 +323,7 @@ class RvsVg(RvsSomething):
 
         self.setup_keithley()
 
-    def do(self, num_avg = 1, delay_avg = 0, zero=False, all_positive=False, plot=True, auto_gain=False):
+    def do(self, num_avg = 1, delay_avg = 0, zero=False, plot=True, auto_gain=False):
 #         self.keithley.output = 'on' #NO! will cause a spike!
 
         ## Sweep to Vstart
@@ -308,91 +340,11 @@ class RvsVg(RvsSomething):
             elif hasattr(self, 'ppms'):
                 self.T = np.append(self.T, self.ppms.temperature)
 
-            self.do_measurement(self.delay, num_avg, delay_avg, all_positive=all_positive, plot=plot, auto_gain=auto_gain)
+            self.do_measurement(self.delay, num_avg, delay_avg, plot=plot, auto_gain=auto_gain)
 
         ## Sweep back to zero at 1V/s
         if zero:
             self.keithley.zero_V(1)
-
-
-    def calc_mobility(self, num_squares=1):
-        '''
-        Calculate the carrier mobility from the carrier density n and the device
-         resistivity. Since we measured resistance, this function divides by the
-         number of squares to calculate a 2D resistivity (sheet resistance).
-
-        mu = sigma/(ne), sigma = 1/Rs, Rs = R/(number of squares)
-
-        Units are cm^2/(V*s)
-        '''
-        if not hasattr(self, 'n'):
-            raise Exception('need to calculate carrier density using calc_n')
-        Rs = self.R[0]/num_squares
-        sigma = 1/Rs
-        self.mobility = abs(sigma/(self.n*e))
-
-    def calc_n_conversion(self, c):
-        '''
-        Converts gate voltage to carrier density using a conversion, given in
-        cm^-2/V. Centers CNP at 0.
-        '''
-        CNP = self.find_CNP()
-        self.n = c*(self.Vg-self.Vg[CNP])
-
-    def calc_n_geo(self, t_ox = 300, center_CNP=True):
-        '''
-        Converts gate voltage to an approximate carrier density using geometry.
-        Carrier density is stored as the attribute n.
-        t_ox is the thickness of the oxide in nm. Default 300 nm.
-        Charge neutrality point centered by default.
-        Units are cm^-2
-        '''
-        eps_SiO2 = 3.9
-        eps0 = 8.854187817e-12 #F/m
-        self.n = self.Vg*eps0*eps_SiO2/(t_ox*1e-9*e)/100**2 # convert to cm^-2
-        if center_CNP:
-            CNP = self.find_CNP()
-            self.n -= self.n[CNP] # set CNP = 0 carrier density
-
-    def calc_n_LL(self, B_LL, nu, Vg=0):
-        '''
-        Converts gate voltage to a carrier density using conversion factor
-        determined by location of center of quantum Hall plateaux.
-        n = nu*e*B_LL/h, where e and h are electron charge and Planck constant,
-        B_LL is the field at the center of the Landau Level, and nu is the
-        filling factor.
-        B_LL and nu should be arrays of landau level centers and filling factors.
-        Vg is the gate voltage at which the measurements were taken.
-        '''
-        if type(B_LL) is not np.ndarray:
-            B_LL = np.array(B_LL)
-
-        if type(nu) is not np.ndarray:
-            nu = np.array(nu)
-
-        n_at_Vg = np.mean(nu*e*B_LL/h/100**2) # convert to cm^2
-
-        CNP = self.find_CNP()
-        if Vg < CNP: ## TYPO??
-            n_at_Vg *= -1 # fix the sign if we are below CNP
-        self.n = n_at_Vg*(self.Vg-self.Vg[CNP])/(Vg-self.Vg[CNP])
-
-    def calc_n_QHE(self, Vg, n):
-        '''
-        Calibrate carrier density using density determined via QHE (vs. B) at
-        a particular gate voltage.
-        '''
-        CNP = self.find_CNP()
-        VgCNP = self.Vg[CNP]
-
-        self.n = n*(self.Vg-VgCNP)/(Vg-VgCNP)
-        return n/(Vg-VgCNP)
-
-    def find_CNP(self):
-        '''
-        Finds the index of gate voltage corresponding to charge neutrality point
-        '''
-        return np.where(self.R[0]==np.nanmax(self.R[0]))[0] # find CNP
 
 
     def plot(self):
@@ -402,9 +354,9 @@ class RvsVg(RvsSomething):
         super().plot()
         if self.Igwarning is None: # if no warning
             if len(self.Ig)>0: # if have data
-                if self.Ig.max() >= 0.5e-9: # if should be warning
-                    self.Igwarning = self.ax.text(.02,.95, 
-                                        r'$I_g \geq 0.5$ nA!', 
+                if abs(self.Ig).max() >= 0.5e-9: # if should be warning
+                    self.Igwarning = self.ax.text(.02,.95,
+                                        r'$|I_g| \geq 0.5$ nA!',
                                         transform=self.ax.transAxes,
                                         color = 'C3'
                                     ) # warning

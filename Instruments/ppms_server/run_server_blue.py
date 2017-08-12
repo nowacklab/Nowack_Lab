@@ -12,8 +12,8 @@ home = os.path.expanduser('~')
 path = os.path.join(home, 'Documents','GitHub')
 sys.path.append(path)
 
-import pyQDInstrument as pqi
-# Arguments are: 
+import PyQDInstrument as pqi
+# Arguments are:
 # 	Local host (Not sure how to find/set this)
 #	Local port (Not sure how to find/set this)
 #	PPMS computer IP address
