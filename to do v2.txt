@@ -19,6 +19,8 @@ Reinstate _chan_labels as _daq_inputs and add _daq_outputs
 
 Figure out notebook shared secret to avoid "untrusted" notebooks.
 
+More accurate time delay in transport measurements. Check elapsed time for reading from lockins/ppms/whatever and don't sleep if the delay time is already met. Record a more accurate time delay when saving.
+
 Add time estimates to procedures somehow
 
 Connect to data server remotely.
@@ -31,4 +33,8 @@ Load instruments with json. This would just load the saved private parameters fo
 
 Bug where Keithley changes ranges upon sweep.
 
+
 pass in ax to plotting function to have it plot on those axes
+
+DAQ bug with channel names.
+

@@ -304,7 +304,7 @@ class Keithley2400(VISAInstrument):
         old_timeout = self._visa_handle.timeout
         self._visa_handle.timeout = None # infinite timeout
 
-        a = self.ask(':READ?') # starts the sweep
+        a = self.ask(':READ?', timeout=None) # starts the sweep
         self.write(':SOUR:VOLT:MODE FIXED') # fixed voltage mode
         self.write(':SENS:FUNC:CONC ON') # turn concurrent functions back on
         self.write(':SENS:FUNC \"CURR\"')
