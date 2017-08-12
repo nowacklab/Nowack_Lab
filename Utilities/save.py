@@ -346,17 +346,25 @@ class Measurement:
         Overwrite this for each subclass if necessary.
         Pass in an array of the names of things you don't want to load.
         By default, we won't load any instruments, but you can pass in an instruments dictionary to load them.
+
+        Filename may be None (load last measurement), a filename, a path, or an
+        index (will search all Measurements of this type for this experiment)
         '''
 
         if filename is None: # tries to find the last saved object; not guaranteed to work
+            filename = -1
+        if type(filename) is int:
+            folders = list(glob.iglob(os.path.join(get_local_data_path(), get_todays_data_dir(),'..','*')))
+            # Collect a list of all Measurements of this type for this experiment
+            l = []
+            for i in range(len(folders)):
+                l = l + list(glob.iglob(os.path.join(folders[i],'*_%s.json' %cls.__name__)))
             try:
-                filename =  max(glob.iglob(os.path.join(get_local_data_path(), get_todays_data_dir(),'*_%s.json' %cls.__name__)),
-                                        key=os.path.getctime)
-            except: # we must have taken one during the previous day's work
-                folders = list(glob.iglob(os.path.join(get_local_data_path(), get_todays_data_dir(),'..','*')))
-                # -2 should be the previous day (-1 is today)
-                filename =  max(glob.iglob(os.path.join(folders[-2],'*_%s.json' %cls.__name__)),
-                                        key=os.path.getctime)
+                filename = l[filename] # filename was an int
+            except:
+                pass
+            if type(filename) is int:  # still
+                raise Exception('could not find %s to load.' %cls.__name__)
         elif os.path.dirname(filename) == '': # if no path specified
             os.path.join(get_local_data_path(), get_todays_data_dir(), filename)
 
