@@ -30,3 +30,5 @@ RC params
 Load instruments with json. This would just load the saved private parameters for easy access.
 
 Bug where Keithley changes ranges upon sweep.
+
+pass in ax to plotting function to have it plot on those axes

@@ -97,7 +97,7 @@ class Planefit(Measurement):
         Do the planefit.
 
         Args:
-        edges_only (bool): If True touchdowns are taken only around the
+        edges_only (bool): If True, touchdowns are taken only around the
         edges of the grid.
         '''
         # make sure we won't scan outside X, Y piezo ranges!
@@ -105,30 +105,31 @@ class Planefit(Measurement):
         self.piezos.y.check_lim(self.Y)
 
         # Initial touchdown at center of plane
-        # Skipped if a first touchdown was given.
-        if self.first_td is None:
-            self.piezos.V = {'x': self.center[0],
-                             'y': self.center[1],
-                             'z': -self.Vz_max
-                         }
-            self.td = Touchdown(self.instruments, Vz_max=self.Vz_max, disable_attocubes=True)
-            self.td.run()
-
-            # If the initial touchdown generates a poor fit, try again
-            n = 0
-            while self.td.error_flag and n < 5:
+        # Skipped if a first touchdown was given or if doing edges only.
+        if not edges_only:
+            if self.first_td is None:
+                self.piezos.V = {'x': self.center[0],
+                                 'y': self.center[1],
+                                 'z': -self.Vz_max
+                             }
                 self.td = Touchdown(self.instruments, Vz_max=self.Vz_max, disable_attocubes=True)
                 self.td.run()
-                n = n + 1
-        else:
-            if type(self.first_td) in (int, float):
-                self.td = Touchdown()
-                self.td.Vtd = self.first_td # because we passed a number
-            else:
-                self.td = self.first_td
 
-        if self.td.error_flag:
-            raise Exception(r'Can\'t fit capacitance signal.')
+                # If the initial touchdown generates a poor fit, try again
+                n = 0
+                while self.td.error_flag and n < 5:
+                    self.td = Touchdown(self.instruments, Vz_max=self.Vz_max, disable_attocubes=True)
+                    self.td.run()
+                    n = n + 1
+            else:
+                if type(self.first_td) in (int, float):
+                    self.td = Touchdown()
+                    self.td.Vtd = self.first_td # because we passed a number
+                else:
+                    self.td = self.first_td
+
+            if self.td.error_flag:
+                raise Exception(r'Can\'t fit capacitance signal.')
 
         # If only taking plane from edges, make masked array
         if edges_only:
@@ -170,7 +171,7 @@ class Planefit(Measurement):
 
                     self.td = Touchdown(self.instruments,
                                    Vz_max = self.Vz_max, disable_attocubes=True)
-                    self.td._set_title('(%i, %i). TD# %i' % (i, j, counter))
+                    self.td._set_title('(%.2f, %.2f). TD# %i' % (self.X[i, j], self.Y[i, j], counter))
                     self.td.run()
                     n = i + 1
                     plt.close(self.td.fig)

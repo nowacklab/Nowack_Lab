@@ -468,16 +468,17 @@ n: Sweep z piezo down and redo without moving attocubes.\n \
 
 
     def plot_threshold(self):
-        std_diff = np.sqrt(np.nanvar(self.C) - self.baseline)
-        if not hasattr(self, 'line_var1'):
-            std = np.sqrt(_VAR_THRESHOLD)
-            self.ax.axhline(std, color='C9', linestyle='--')
-            self.ax.axhline(-std, color='C9', linestyle='--')
-            self.line_var1 = self.ax.axhline(std_diff, color='C8', ls='--')
-            self.line_var2 = self.ax.axhline(-std_diff, color='C8', ls='--')
-        else:
-            self.line_var1.set_ydata(std_diff)
-            self.line_var2.set_ydata(-std_diff)
+        if np.nanvar(self.C) is not np.nan:
+            std_diff = np.sqrt(np.nanvar(self.C) - self.baseline)
+            if not hasattr(self, 'line_var1'):
+                std = np.sqrt(_VAR_THRESHOLD)
+                self.ax.axhline(std, color='C9', linestyle='--')
+                self.ax.axhline(-std, color='C9', linestyle='--')
+                self.line_var1 = self.ax.axhline(std_diff, color='C8', ls='--')
+                self.line_var2 = self.ax.axhline(-std_diff, color='C8', ls='--')
+            else:
+                self.line_var1.set_ydata(std_diff)
+                self.line_var2.set_ydata(-std_diff)
 
 
     def plot_td(self):
