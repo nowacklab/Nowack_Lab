@@ -39,10 +39,10 @@ for package in packages:
 
 
 ## Add custom.css file to add padding to bottom of the notebook
-# package_path = os.path.join(os.getcwd(),'Utilities','custom.css')
-# notebook_path = os.path.join(site_packages, 'notebook', 'static', 'custom', 'custom.css')
+package_path = os.path.join(os.getcwd(),'Utilities','notebook', 'custom.css')
+notebook_path = os.path.join(os.expanduser('~'), '.jupyter', 'custom', 'custom.css')
 
-# shutil.copyfile(package_path, notebook_path)
+shutil.copyfile(package_path, notebook_path)
 
 ## Add custom.js file to disable autosave
 # package_path = os.path.join(os.getcwd(),'Utilities','custom.js')
