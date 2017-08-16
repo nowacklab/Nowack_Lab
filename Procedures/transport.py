@@ -390,3 +390,120 @@ class RvsVg(RvsSomething):
 
     def setup_plots(self):
         super().setup_plots()
+
+class RvsVg_Vtg(RvsVg):
+    instrument_list = RvsVg.instrument_list + 'keithley_tg'
+
+    def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1,
+                delay=1, Vtgstart = -5, Vtgend = 5, Vtgstep=.1):
+        '''
+        Does gatesweeps at a series of topgate voltages.
+
+        Vstart: start of gatesweep
+        Vend: end of gatesweep
+        Vstep: gatesweep voltage step size
+        delay: gatesweep delay time
+        Vtgstart: starting topgate voltage (V)
+        Vtgend: end topgate voltage (V)
+        Vtgstep: topgate voltage step between gatesweeps (V)
+        '''
+        super().__init__(instruments=instruments, Vstart=Vstart, Vend=Vend, Vstep=Vstep, delay=delay)
+        self.__dict__.update(locals()) # cute way to set attributes from arguments
+        del self.self # but includes self, get rid of this!
+
+        self.Vtg = np.linspace(Vtgstart, Vtgend, round(abs(Vtgstart-Vtgend)/Vtgstep)+1)
+        self.gs = RvsVg(self.instruments, self.Vstart, self.Vend, self.Vstep, self.delay)
+
+        self.Vg = self.gs.Vg_values
+
+        self.R2D = {i: np.full((len(self.Vtg), len(self.Vg)), np.nan) for i in range(self.num_lockins)}
+        self.Vx2D = {i: np.full((len(self.Vtg), len(self.Vg)), np.nan) for i in range(self.num_lockins)}
+        self.Vy2D = {i: np.full((len(self.Vtg), len(self.Vg)), np.nan) for i in range(self.num_lockins)}
+        self.Ix2D = np.full((len(self.Vtg), len(self.Vg)), np.nan)
+        self.Iy2D = np.full((len(self.Vtg), len(self.Vg)), np.nan)
+
+        # remember: shape of matrix given in y,x. So Vtg is on the y axis and Vg on the x axis.
+
+    def do(self, delay=0, auto_gain=False):
+        '''
+        delay: wait time after sweeping field
+        '''
+        for i, Vtg in enumerate(self.Vtg):
+            # sweep topgate
+            self.keithley_tg.sweep_V(keithley_tg.V, keithley_tg.Vtg, .005, .01) # 5 mV steps, 10 mV/second
+
+            # reset arrays for gatesweep
+            self.gs = RvsVg(self.instruments, self.Vstart, self.Vend, self.Vstep, self.delay)
+            self.gs.run(auto_gain=auto_gain)
+
+            for j in range(self.num_lockins):
+                if self.Vstart > self.Vend:
+                    self.R2D[j][i, :] = self.gs.R[j][::-1] # reverse if we did the sweep backwards
+                    self.Vx2D[j][i, :] = self.gs.Vx[j][::-1] # reverse if we did the sweep backwards
+                    self.Vy2D[j][i, :] = self.gs.Vy[j][::-1] # reverse if we did the sweep backwards
+                    self.Ix2D[i, :] = self.gs.Ix[::-1] # reverse if we did the sweep backwards
+                    self.Iy2D[i, :] = self.gs.Iy[::-1] # reverse if we did the sweep backwards
+                else:
+                    self.R2D[j][i, :] = self.gs.R[j] # first index is voltage channel, second is Vtg, third is Vg. Reve
+                    self.Vx2D[j][i, :] = self.gs.Vx[j]
+                    self.Vy2D[j][i, :] = self.gs.Vy[j]
+                    self.Ix2D[i, :] = self.gs.Ix
+                    self.Iy2D[i, :] = self.gs.Iy
+            self.plot()
+
+
+    def plot(self):
+        Measurement.plot(self) # don't want to do RvsVg plotting
+
+        for i in range(len(self.ax.keys())): # rows == different channels
+            plot_mpl.update2D(self.im[i][0], np.abs(self.R2D[i]), equal_aspect=False)
+            plot_mpl.update2D(self.im[i][1], np.log(np.abs(self.R2D[i])), equal_aspect=False)
+
+        self.fig.tight_layout()
+        self.fig.canvas.draw()
+
+
+    def plot_linecut(self, idx=0):
+        pass
+
+
+    def setup_plots(self):
+        self.fig, ax = plt.subplots(nrows = self.num_lockins, ncols=2, figsize=(10,10))
+        self.fig.subplots_adjust(wspace=.5, hspace=.5)  # breathing room
+        if self.num_lockins == 1 :
+            self.ax = {0: {j: ax[j] for j in range(ax.shape[0])}}
+            self.im = {0: {j: None for j in range(ax.shape[0])}}
+        else:
+            self.ax = {i: {j: ax[i][j] for j in range(ax.shape[1])} for i in range(ax.shape[0])}
+            # first index is lockin #, second index is plot # (one for regular, one for log)
+            self.im = {i: {j: None for j in range(ax.shape[1])} for i in range(ax.shape[0])}
+
+        for i in range(self.num_lockins):  # different channels
+            # Here we are plotting both |R| and log|R| for each channel
+            ax = self.ax[i]
+            self.im[i][0] = plot_mpl.plot2D(ax[0],
+                                                self.Vg,
+                                                self.Vtg,
+                                                np.abs(self.R2D[i]),
+                                                interpolation = 'none',
+                                                cmap='cubehelix',
+                                                xlabel='Vg (V)',
+                                                ylabel= 'Vtg (V)',
+                                                clabel='|R%s| (Ohm)' %i,
+                                                equal_aspect=False)
+            self.im[i][1] = plot_mpl.plot2D(ax[1],
+                                                self.Vg,
+                                                self.Vtg,
+                                                np.log(np.abs(self.R2D[i])),
+                                                interpolation = 'none',
+                                                cmap='cubehelix',
+                                                xlabel='Vg (V)',
+                                                ylabel= 'Vtg (V)',
+                                                clabel='log(|R%s (Ohm)|)' %i,
+                                                equal_aspect=False)
+
+            for j in range(2):
+                ax[j].set_xlabel('Vg (V)', fontsize=20)
+                ax[j].set_ylabel('Vtg (V)', fontsize=20)
+                plot_mpl.aspect(ax[j], 1)
+                ax[j].set_title(self.filename)
