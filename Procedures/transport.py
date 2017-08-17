@@ -392,7 +392,7 @@ class RvsVg(RvsSomething):
         super().setup_plots()
 
 class RvsVg_Vtg(RvsVg):
-    instrument_list = RvsVg.instrument_list + 'keithley_tg'
+    instrument_list = RvsVg.instrument_list + ['keithley_tg']
 
     def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1,
                 delay=1, Vtgstart = -5, Vtgend = 5, Vtgstep=.1):
