@@ -18,7 +18,7 @@ class Planefit(Measurement):
     c = np.nan
 
     def __init__(self, instruments={}, span=[400, 400], center=[0, 0],
-                 numpts=[4, 4], Vz_max=None, first_td=None):
+                 numpts=[4, 4], Vz_max=None, first_td=None, gridplot=False):
         '''
         Take touchdowns in a grid to determine the slope of the sample
         surface.
@@ -42,6 +42,8 @@ class Planefit(Measurement):
         first_td (Touchdown object or float): The touchdown object or touchdown
         voltage used for the center of the plane. Skips the initial touchdown.
 
+        gridplot (bool): Whether or not to plot touchdowns in compact grid
+
         Required instruments:
         daq, lockin_cap, atto, piezos, montana
 
@@ -63,6 +65,7 @@ class Planefit(Measurement):
         self.center = center
         self.numpts = numpts
         self.first_td = first_td
+        self.gridplot = gridplot
 
         if Vz_max == None:
             if hasattr(self, 'piezos'):
@@ -225,7 +228,7 @@ class Planefit(Measurement):
         2. Plots the difference between the measured touchdown voltage
         and the fit plane.
         '''
-        if hasattr(self, 'td') and i is not None and j is not None:
+        if hasattr(self, 'td') and i is not None and j is not None and self.gridplot:
             self.td.gridplot(self.ax_grid[-(i+1),j]) #FIXME indices...?
 
         self.im[0].set_data(self.Z)
@@ -239,7 +242,8 @@ class Planefit(Measurement):
         self.im[0].colorbar.draw_all()
         self.im[1].colorbar.draw_all()
 
-        self.fig_grid.canvas.draw()
+        if hasattr(self, 'fig_grid'):
+            self.fig_grid.canvas.draw() 
         self.fig.canvas.draw()
 
         # Do not flush events for inline or notebook backends
@@ -281,16 +285,17 @@ class Planefit(Measurement):
         Set up a grid plot for the individual touchdowns on the plane.
         '''
         # Set up grid of touchdowns
-        numX, numY = self.numpts
-        self.fig_grid = plt.figure(figsize=(numX*2, numY*2))
-        axes = []
-        for i in range(numX*numY):
-            ax = self.fig_grid.add_subplot(numX, numY, i+1)
-            ax.set_xticks([])
-            ax.set_yticks([])
-            axes.append(ax)
-        self.fig_grid.subplots_adjust(wspace=0, hspace=0)
-        self.ax_grid = np.reshape(axes, self.numpts)
+        if self.gridplot:
+            numX, numY = self.numpts
+            self.fig_grid = plt.figure(figsize=(numX*2, numY*2))
+            axes = []
+            for i in range(numX*numY):
+                ax = self.fig_grid.add_subplot(numX, numY, i+1)
+                ax.set_xticks([])
+                ax.set_yticks([])
+                axes.append(ax)
+            self.fig_grid.subplots_adjust(wspace=0, hspace=0)
+            self.ax_grid = np.reshape(axes, self.numpts)
 
         # Set up colorplot figure
         self.fig, self.ax = plt.subplots(1, 2, figsize=(12,6))
