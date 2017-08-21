@@ -142,12 +142,6 @@ class Scanplane(Measurement):
 
         # Loop over Y values if fast_axis is x,
         # Loop over X values if fast_axis is y
-        # Print a warning if the fast_axis has fewer points than the slow.
-        def slow_axis_alert():
-            print('Slow axis has more points than fast axis!')
-            import winsound
-            winsound.Beep(int(440 * 2**(1 / 2)), 200)  # play a tone
-            winsound.Beep(440, 200)  # play a tone
         if fast_axis == 'x':
             num_lines = int(self.X.shape[0])  # loop over Y
             if num_lines > int(self.X.shape[1]):  # if more Y points than X
@@ -206,8 +200,8 @@ class Scanplane(Measurement):
 
             # Go to first point of scan
             self.piezos.sweep(self.piezos.V, Vstart)
-            self.squidarray.reset()
-            time.sleep(3)
+            #self.squidarray.reset()
+            #time.sleep(0.5)
             # Begin the sweep
             if not surface:
                 # Sweep over X
@@ -237,8 +231,12 @@ class Scanplane(Measurement):
                         d[key] = value[::-1]  # flip the 1D array
 
             # Return to zero for a couple of seconds:
-            self.piezos.V = 0
-            time.sleep(2)
+            #self.piezos.V = 0
+            #time.sleep(2)
+            
+            # Back off with the Z piezo before moving to the next line
+            self.piezos.V = {'z': 0}
+            self.squidarray.reset()
 
             # Interpolate to the number of lines
             self.Vfull['piezo'] = output_data[fast_axis]
@@ -272,10 +270,9 @@ class Scanplane(Measurement):
                         self.Vfull[chan])(self.Vinterp['piezo']
                                           )
                     self.V[chan][:, i] = self.Vinterp[chan]
-
+                    
             self.save_line(i, Vstart)
             self.plot()
-
         self.piezos.V = 0
 
     def plot(self):
@@ -301,7 +298,6 @@ class Scanplane(Measurement):
             # Update the colorbars
             self.cbars[chan].draw_all()
 
-        plt.pause(0.01) #non notebook non-responsive fig bug
         self.fig.canvas.draw()
 
         # Do not flush events for inline or notebook backends
@@ -340,7 +336,6 @@ class Scanplane(Measurement):
         self.fig_cuts, self.axes_cuts = plt.subplots(4, 1, figsize=(6, 8),
                                                      sharex=True)
         # Convert the axis numpy arrays to list so they aren't saved as data.
-        # Change these back to dicts eventually.
         self.axes = list(self.axes.flatten())
         self.axes_cuts = list(self.axes_cuts.flatten())
         cmaps = ['RdBu',
@@ -414,7 +409,6 @@ class Scanplane(Measurement):
         self.fig_cuts.tight_layout()
 
         # Show the (now empty) figures
-        plt.pause(0.01) #non notebook non-responsive fig bug
         self.fig.canvas.draw()
         self.fig_cuts.canvas.draw()
 
@@ -429,20 +423,17 @@ class Scanplane(Measurement):
                    'AC Y ($\Phi_o$)']
         for ax, chan, clabel in zip(self.axes_cuts, self._daq_inputs, clabels):
             # Update X and Y data for the "full data"
-            self.lines_full[chan].set_xdata(self.Vfull['piezo'] *
-                                            self._conversions[self.fast_axis])
+            self.lines_full[chan].set_xdata(self.Vfull['piezo'])
             self.lines_full[chan].set_ydata(self.Vfull[chan] *
                                             self._conversions[chan])
             # Update X and Y data for the interpolated data
-            self.lines_interp[chan].set_xdata(self.Vfull['piezo'] *
-                                              self._conversions[self.fast_axis])
+            self.lines_interp[chan].set_xdata(self.Vfull['piezo'])
             self.lines_interp[chan].set_ydata(self.Vfull[chan] *
                                               self._conversions[chan])
             # Rescale axes for newly plotted data
             ax.relim()
             ax.autoscale_view()
         # Update the figure
-        plt.pause(0.01) #non notebook non-responsive fig bug
         self.fig_cuts.canvas.draw()
 
         # Do not flush events for inline or notebook backends
