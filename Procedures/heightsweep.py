@@ -8,7 +8,7 @@ from ..Utilities import conversions
 from ..Utilities.utilities import AttrDict
 
 class Heightsweep(Measurement):
-    _daq_inputs = ['dc','acx','acy']
+    _daq_inputs = ['dc','acx','acy','cap']
     _conversions = AttrDict({
         'dc': conversions.Vsquid_to_phi0,
         'acx': conversions.Vsquid_to_phi0,
@@ -26,28 +26,40 @@ class Heightsweep(Measurement):
         self.z0 = z0
         self.plane = plane
         self.scan_rate = scan_rate
-        self.V = AttrDict({
+        self.Vup = AttrDict({
+            chan: np.nan for chan in self._daq_inputs + ['piezo', 'z']
+        })
+        self.Vdown = AttrDict({
             chan: np.nan for chan in self._daq_inputs + ['piezo', 'z']
         })
 
+
     def do(self):
 
-        self.temp_start = self.montana.temperature['platform']
-
-        Vstart = {'z': self.plane.plane(self.x, self.y) - self.z0}
-        Vend = {'z': -self.piezos.z.Vmax}
+        Vend = {'z': self.plane.plane(self.x, self.y) - self.z0}
+        Vstart = {'z': 0.}
 
         self.piezos.V = {'x':self.x, 'y':self.y, 'z': Vstart['z']}
         self.squidarray.reset()
-        time.sleep(10) # wait at the surface
+        time.sleep(1) # wait before sweeping
 
         output_data, received = self.piezos.sweep(Vstart, Vend,
                                         chan_in = self._daq_inputs,
                                         sweep_rate = self.scan_rate)
 
         for chan in self._daq_inputs:
-            self.V[chan] = received[chan]
-        self.V['z'] = self.plane.plane(self.x, self.y)-np.array(output_data['z'])-self.z0
+            self.Vup[chan] = received[chan]
+        self.Vup['z'] = np.array(output_data['z'])
+
+        time.sleep(1)
+
+        output_data, received = self.piezos.sweep(Vend, Vstart,
+                                        chan_in = self._daq_inputs,
+                                        sweep_rate = self.scan_rate)
+
+        for chan in self._daq_inputs:
+            self.Vdown[chan] = received[chan]
+        self.Vdown['z'] = np.array(output_data['z'])
 
         self.piezos.zero()
 
@@ -56,20 +68,19 @@ class Heightsweep(Measurement):
 
     def plot(self):
         super().plot()
+        labels = {'dc':'DC Flux (A.U.)', 'cap':"Capacitance (A.U.)", 
+                'acx':"AC X (A.U.)", 'acy':"AC Y (A.U.)"}
 
-        for chan in self._daq_inputs:
-            self.ax[chan].plot(self.V['z'], self.V[chan]*self._conversions[chan], '.k', markersize=6, alpha=0.5)
+        self.fig, self.axes = plt.subplots(4, 1, figsize=(6,10), sharex=True)
+        self.fig.subplots_adjust(hspace=0)
+        for chan, ax in zip(self._daq_inputs, self.axes.flatten()):
+            ax.plot(self.Vup['z'], self.Vup[chan])
+            ax.plot(self.Vdown['z'], self.Vdown[chan])
+            ax.set_ylabel(labels[chan])
+
+        self.axes[-1].set_xlabel("Z Position (V)")
+        self.axes[0].set_title(self.timestamp, size="medium")
 
 
     def setup_plots(self):
-        self.fig = plt.figure()
-        self.fig.subplots_adjust(hspace=1.2)
-        self.ax = AttrDict({})
-
-        self.ax['dc'] = self.fig.add_subplot(311)
-        self.ax['acx'] = self.fig.add_subplot(312)
-        self.ax['acy'] = self.fig.add_subplot(313)
-
-        for label, ax in self.ax.items():
-            ax.set_xlabel(r'$V_z^{samp} - V_z (V)$')
-            ax.set_title('%s\n%s (V) at (%.2f, %.2f)' %(self.filename, label, self.x, self.y))
+        pass

@@ -26,7 +26,7 @@ class Scanspectra(Measurement):
 
     def __init__(self, instruments = {}, plane = None, span=[800,800],
                         center=[0,0], numpts=[20,20], scanheight=15,
-                        monitor_time=1, sample_rate=10000, num_averages=1):
+                        monitor_time=1, sample_rate=1000, num_averages=1):
         super().__init__(instruments=instruments)
         self.instruments = instruments
         self.monitor_time = monitor_time
@@ -64,7 +64,7 @@ class Scanspectra(Measurement):
         # Move to each point on the grid and take a spectrum
         for i in range(self.X.shape[0]):
             for j in range(self.Y.shape[1]):
-                print(self.X[i,j], self.Y[i,j])
+                #print(self.X[i,j], self.Y[i,j])
                 self.piezos.V = {'x': self.X[i,j], 'y': self.Y[i,j], 'z': self.Z[i,j]}
                 self.squidarray.reset()
                 time.sleep(0.5)
@@ -81,8 +81,12 @@ class Scanspectra(Measurement):
         self.f = spectrum.f
         self.t = spectrum.t
         # Reshape lists into numpy arrays
-        self.psdAve = np.array(self.psdAve)
-        self.V = np.array(self.V)
+        self.psdAve = np.array(self.psdAve).reshape(self.numpts[0], 
+                                                    self.numpts[1],
+                                                    -1)
+        self.V = np.array(self.V).reshape(self.numpts[0],
+                                          self.numpts[1],
+                                          -1)
 
     def setup_preamp(self):
         self.preamp.dc_coupling()
