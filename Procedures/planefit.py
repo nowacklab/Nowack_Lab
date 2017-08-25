@@ -207,6 +207,24 @@ class Planefit(Measurement):
 
         return obj
 
+    def move_and_update(self, x=0, y=0, z=0, ux=0, uy=0):
+        '''
+        Move the attocubes by a specified distance and then update the plane.
+
+        Arguments:
+        x (y, z) - positive or negative distance to move in x (y, z) direction (~um)
+        ux (uy) - x (y) coordinate at which to update the plane (piezo V)
+        '''
+        self.piezos.z.V = -self.piezos.z.Vmax
+        if x != 0:
+            self.atto.x.move(x)
+        if y != 0:
+            self.atto.y.move(y)
+        if z != 0:
+            self.atto.z.move(z)
+
+        self.update_c(ux, uy)
+
     def plane(self, x, y):
         '''
         Given points x and y, calculates a point z on the plane.
@@ -243,7 +261,7 @@ class Planefit(Measurement):
         self.im[1].colorbar.draw_all()
 
         if hasattr(self, 'fig_grid'):
-            self.fig_grid.canvas.draw() 
+            self.fig_grid.canvas.draw()
         self.fig.canvas.draw()
 
         # Do not flush events for inline or notebook backends
