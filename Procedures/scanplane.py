@@ -208,7 +208,8 @@ class Scanplane(Measurement):
             # Go to first point of scan
             self.piezos.sweep(self.piezos.V, Vstart)
             #self.squidarray.reset()
-            #time.sleep(0.5)
+            time.sleep(3*self.lockin_squid.time_constant)
+
             # Begin the sweep
             output_data, received = self.piezos.sweep(Vstart, Vend,
                                           chan_in=self._daq_inputs,

@@ -115,13 +115,13 @@ class Planefit(Measurement):
                                  'y': self.center[1],
                                  'z': -self.Vz_max
                              }
-                self.td = Touchdown(self.instruments, Vz_max=self.Vz_max, disable_attocubes=True)
+                self.td = Touchdown(self.instruments, Vz_max=self.Vz_max, disable_atto=True)
                 self.td.run()
 
                 # If the initial touchdown generates a poor fit, try again
                 n = 0
                 while self.td.error_flag and n < 5:
-                    self.td = Touchdown(self.instruments, Vz_max=self.Vz_max, disable_attocubes=True)
+                    self.td = Touchdown(self.instruments, Vz_max=self.Vz_max, disable_atto=True)
                     self.td.run()
                     n = n + 1
             else:
@@ -164,7 +164,7 @@ class Planefit(Measurement):
                 # Take touchdowns until the fitting algorithm gives a
                 # good result, up to 5 touchdowns
                 self.td = Touchdown(self.instruments,
-                               Vz_max=self.Vz_max, disable_attocubes=True)
+                               Vz_max=self.Vz_max, disable_atto=True)
                 self.td.error_flag = True # to force the following while loop
 
                 n = 0
@@ -173,7 +173,7 @@ class Planefit(Measurement):
                         print('Redo')
 
                     self.td = Touchdown(self.instruments,
-                                   Vz_max = self.Vz_max, disable_attocubes=True)
+                                   Vz_max = self.Vz_max, disable_atto=True)
                     self.td._set_title('(%.2f, %.2f). TD# %i' % (self.X[i, j], self.Y[i, j], counter))
                     self.td.run()
                     n = i + 1
@@ -339,7 +339,7 @@ class Planefit(Measurement):
         self.fig.tight_layout(pad=5)
 
 
-    def update_c(self, Vx=0, Vy=0, start=None, disable_attocubes=True):
+    def update_c(self, Vx=0, Vy=0, start=None, disable_atto=True):
         '''
         Does a single touchdown to update the offset of the plane.
 
@@ -351,14 +351,14 @@ class Planefit(Measurement):
         Vx (float): X piezo voltage for the touchdown
         Vy (float): Y piezo voltage for the thouchdown
         start (float): Z piezo voltage where touchdown sweep starts
-        disable_attocubes (bool): If True, attocube motion is disabled
+        disable_atto (bool): If True, attocube motion is disabled
         '''
         self.make_timestamp_and_filename()
 
         old_c = self.c
         self.piezos.V = {'x': Vx, 'y': Vy, 'z': 0}
         self.td = Touchdown(self.instruments,
-                       disable_attocubes = disable_attocubes,
+                       disable_atto = disable_atto,
                        Vz_max = self.Vz_max,
                        )
         self.td.run(start=start)

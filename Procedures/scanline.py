@@ -85,7 +85,7 @@ class Scanline(Measurement):
         # Explicitly go to first point of scan
         self.piezos.V = Vstart
         self.squidarray.reset()
-        # time.sleep(3)
+        time.sleep(3*self.lockin_squid.time_constant)
 
         # Do the sweep
         output_data, received = self.piezos.sweep(Vstart, Vend,
