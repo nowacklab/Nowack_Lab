@@ -280,3 +280,80 @@ class Lakeshore372(VISAInstrument):
         autoscan: whether to automatically loop through channels
         '''
         getattr(self, 'chan%i' %self._num).scan(autoscan)
+
+    @property
+    def pid_setpoint(self):
+        '''
+        Get setpoint for PID
+        '''
+        return float(self.ask('SETP? 0')) #0 is sample heater
+
+    @pid_setpoint.setter
+    def pid_setpoint(self, setpoint):
+        '''
+        Set setpoint for PID.  Should be float.  In preferred units
+        of the setpoint.  Kelvin, unless changed
+        '''
+        self.write('SETP 0,{0}'.format(float(setpoint)))
+
+    _MODE_LOOKUP = {
+            0: 'Off',
+            1: 'Monitor Out',
+            2: 'Manual',
+            3: 'Zone',
+            4: 'Still',
+            5: 'PID',
+            6: 'Warm up'
+    }
+
+    @property
+    def sample_heater(self):
+        s = self.ask('OUTMODE? 0').split(',')
+        return self._MODE_LOOKUP[int(s[0])]
+
+    @sample_heater.setter
+    def sample_heater(self, s):
+        mode = -1 
+        try:
+            mode = int(s)
+        except:
+            l    = self._MODE_LOOKUP.items()
+            for key, value in l:
+                if s.lower() == value.lower():
+                    mode = key
+        if mode == -1:
+            print("Invalid mode: {0}".format(s))
+            print("Mode must be in a key or value in _MODE_LOOKUP:")
+            print(self._MODE_LOOKUP)
+            return 
+
+        settings = self.ask("OUTMODE? 0").split(',')
+        self.write("OUTMODE 0,{0},{1},{2},{3},{4},{5}".format(
+                    mode,
+                    settings[1],
+                    settings[2],
+                    settings[3],
+                    settings[4],
+                    settings[5]
+                   ))
+        return
+    @property
+    def sample_heater_ch(self):
+        return int(self.ask('OUTMODE? 0').split(',')[1])
+
+    @sample_heater_ch.setter
+    def sample_heater_ch(self, ch):
+        if type(ch) == int and ch>=1 and ch<=16:
+            settings = self.ask("OUTMODE? 0").split(',')
+            self.write("OUTMODE 0,{0},{1},{2},{3},{4},{5}".format(
+                        settings[0],
+                        ch,
+                        settings[2],
+                        settings[3],
+                        settings[4],
+                        settings[5]
+                      )
+            )
+        else:
+            print("Invalid channel: {0}".format(ch))
+

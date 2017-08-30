@@ -136,6 +136,7 @@ class RvsSomething(Measurement):
 
         self.fig.tight_layout()
         self.fig.canvas.draw()
+        plt.pause(1e-6) # live plotting outside notebooks
 
 
     def run(self, plot=True, **kwargs):
@@ -242,6 +243,44 @@ class RvsT(RvsSomething):
             self.T = np.append(self.T, self.ppms.temperature) # Oe to T
             self.do_measurement(delay=self.delay, plot=plot)
 
+
+class BlueforsRvsT(RvsSomething):
+    instrument_list = ['lakeshore','lockin_V1', 'lockin_I']
+    something='T'
+    something_units = 'K'
+
+    def __init__(self, instruments = {}, duration=36000, interval=1,
+                channel = 8):
+        '''
+        Bluefors R vs T.  No PID (no control).
+
+        Parameters:
+        instruments:    (dict) dict of instruments
+        duration:       (int) time to measure in seconds
+        interval:       (int) time to wait between each measurement
+        '''
+        super().__init__(instruments=instruments)
+        self.duration = duration
+        self.interval = interval
+        self.channel  = channel
+        self.lakeshore.enable_only(self.channel)
+
+    def do(self, plot=True):
+        self.startTime = time.time() #seconds since epoch
+        self.lakeshoreR = [];
+        while time.time() < self.startTime + self.duration:
+            self.T = np.append(self.T, self.lakeshore.T[self.channel])
+            self.lakeshoreR.append(self.lakeshore.R[self.channel])
+            self.do_measurement(delay=0,plot=plot)
+            time.sleep(self.interval)
+        self.lakeshore.enable_all()
+
+    def setup_lockins(self):
+        '''
+        Overload setup_lockins and just pass to allow user to set 
+        lockins manually
+        '''
+        pass
 
 class RvsVg(RvsSomething):
     '''
