@@ -15,7 +15,7 @@ class RvsSomething(Measurement):
 
     Make sure to change the name of the "something" you're measuring vs!
     '''
-    instrument_list = ['lockin_V', 'lockin_I']
+    instrument_list = ['lockin_V1', 'lockin_I']
     something='time'
     something_units = 's'
     legendtitle=None
@@ -214,7 +214,7 @@ class RvsTime(RvsSomething):
     pass
 
 class RvsT(RvsSomething):
-    instrument_list = ['ppms', 'lockin_V', 'lockin_I']
+    instrument_list = ['ppms', 'lockin_V1', 'lockin_I']
     something='T'
     something_units = 'K'
 
@@ -257,7 +257,7 @@ class RvsT(RvsSomething):
 
 
 class RvsT_Bluefors(RvsSomething):
-    instrument_list = ['lakeshore', 'lockin_V', 'lockin_I']
+    instrument_list = ['lakeshore', 'lockin_V1', 'lockin_I']
     something = 'T'
     something_units = 'K'
 
@@ -285,7 +285,7 @@ class RvsVg(RvsSomething):
     Can supply additional lockin_V2, lockin_V3, etc to montior more voltages
     (plotted as resistance)
     '''
-    instrument_list = ['keithley', 'lockin_V', 'lockin_I']
+    instrument_list = ['keithley', 'lockin_V1', 'lockin_I']
     something = 'Vg'
     something_units = 'V'
     Igwarning = None

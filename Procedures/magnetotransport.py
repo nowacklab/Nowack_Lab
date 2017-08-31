@@ -9,7 +9,7 @@ from scipy.stats import linregress
 from ..Utilities.constants import e, h, G0
 
 class RvsB(RvsSomething):
-    instrument_list = ['ppms', 'lockin_V', 'lockin_I']
+    instrument_list = ['ppms', 'lockin_V1', 'lockin_I']
     something='B'
     something_units = 'T'
 
@@ -86,7 +86,7 @@ class RvsB(RvsSomething):
         add_text_to_legend('delay = %.1f s' %self.delay)
 
 class RvsB_BlueFors(RvsB):
-    instrument_list = ['magnet', 'lockin_V', 'lockin_I']
+    instrument_list = ['magnet', 'lockin_V1', 'lockin_I']
 
     def do(self, plot=True, auto_gain=False):
         ## Set initial field if not already there
