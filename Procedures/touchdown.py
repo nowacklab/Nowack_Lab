@@ -20,7 +20,7 @@ from ..Utilities.utilities import AttrDict
 _Z_PIEZO_STEP = 4  # V piezo
 _Z_PIEZO_STEP_SLOW = 4  # V piezo
 _CAPACITANCE_THRESHOLD = 1  # fF
-_VAR_THRESHOLD = 0.007
+_VAR_THRESHOLD = 0.008
 _ATTO_TOWARDS_SAMPLE = -1
 
 def piecewise_linear(x, x0, y0, m1, m2):
