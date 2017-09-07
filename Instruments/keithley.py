@@ -479,7 +479,7 @@ class Keithley2600(Instrument):
     #         time.sleep(delay)
 
 
-    def sweep_V(self, Vstart, Vend, Vstep=.1, sweep_rate=.1):
+    def sweep_V(self, Vstart, Vend, Vstep=.1, sweep_rate=1):
         '''
         Uses the Keithley's internal sweep function to sweep from Vstart to Vend with a step size of Vstep and sweep rate of sweep_rate volts/second.
         '''
@@ -511,7 +511,7 @@ class Keithley2600(Instrument):
         self.Vout = Vend # make sure the last voltage is explicit
 
         self._visa_handle.timeout = old_timeout
-        return [float(i) for i in a.split(',')] # not sure what this data represents
+    #    return [float(i) for i in a.split(',')] # not sure what this data represents
 
 
     def triad(self, base_frequency, duration):
