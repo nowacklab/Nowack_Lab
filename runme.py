@@ -6,7 +6,7 @@ home = os.path.expanduser('~')
 site_packages = os.path.dirname(os.path.abspath(os.path.join(matplotlib.__file__, '..')))
 
 ## Add utility to save jupyter notebook to HTML
-package_path = os.path.join(os.getcwd(),'Utilities','jupyter_notebook_config.py')
+package_path = os.path.join(os.getcwd(),'Utilities','notebook','jupyter_notebook_config.py')
 jupyter_path = os.path.join(home, '.jupyter', 'jupyter_notebook_config.py')
 
 shutil.copyfile(package_path, jupyter_path)
@@ -36,12 +36,12 @@ for package in packages:
     except:
         pass
 
-
-
-## Add custom.css file to add padding to bottom of the notebook
+# Add custom.css file to add padding to bottom of the notebook
 package_path = os.path.join(os.getcwd(),'Utilities','notebook', 'custom.css')
-notebook_path = os.path.join(os.expanduser('~'), '.jupyter', 'custom', 'custom.css')
+notebook_path = os.path.join(os.path.expanduser('~'), '.jupyter', 'custom', 'custom.css')
 
+if not os.path.exists(os.path.dirname(notebook_path)):
+    os.makedirs(os.path.dirname(notebook_path))
 shutil.copyfile(package_path, notebook_path)
 
 ## Add custom.js file to disable autosave

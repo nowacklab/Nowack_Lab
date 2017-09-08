@@ -65,7 +65,7 @@ from Nowack_Lab.Procedures.touchdown import Touchdown
 from Nowack_Lab.Procedures.transport import RvsVg, RvsTime, RvsT, RvsVg_Vtg
 from Nowack_Lab.Procedures.magnetotransport import RvsB, RvsVg_B, RvsB_BlueFors, RvsVg_B_BlueFors
 from Nowack_Lab.Instruments.attocube import Attocube
-from Nowack_Lab.Instruments.keithley import Keithley2400, Keithley2600, KeithleyPPMS
+from Nowack_Lab.Instruments.keithley import Keithley2400, Keithley2450, Keithley2600, KeithleyPPMS
 from Nowack_Lab.Instruments.lakeshore import Lakeshore372
 from Nowack_Lab.Instruments.montana import Montana
 from Nowack_Lab.Instruments.nidaq import NIDAQ
@@ -74,7 +74,8 @@ from Nowack_Lab.Instruments.preamp import SR5113
 from Nowack_Lab.Instruments.squidarray import SquidArray
 from Nowack_Lab.Instruments.lockin import SR830
 from Nowack_Lab.Instruments.ppms import PPMS
-from Nowack_Lab.Instruments.magnet import Magnet
+from Nowack_Lab.Instruments.magnet import Magnet, AMI420
+from Nowack_Lab.Instruments.zurich import HF2LI
 #from Nowack_Lab.Fun.callme import call
     ''');
 except Exception as e:

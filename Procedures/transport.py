@@ -407,6 +407,7 @@ class RvsVg_Vtg(RvsVg):
         Vtgend: end topgate voltage (V)
         Vtgstep: topgate voltage step between gatesweeps (V)
         '''
+        raise Exception('Not tested')
         super().__init__(instruments=instruments, Vstart=Vstart, Vend=Vend, Vstep=Vstep, delay=delay)
         self.__dict__.update(locals()) # cute way to set attributes from arguments
         del self.self # but includes self, get rid of this!
@@ -430,7 +431,7 @@ class RvsVg_Vtg(RvsVg):
         '''
         for i, Vtg in enumerate(self.Vtg):
             # sweep topgate
-            self.keithley_tg.sweep_V(keithley_tg.V, keithley_tg.Vtg, .005, .01) # 5 mV steps, 10 mV/second
+            self.keithley_tg.sweep_V(keithley_tg.V, Vtg, .005, .01) # 5 mV steps, 10 mV/second
 
             # reset arrays for gatesweep
             self.gs = RvsVg(self.instruments, self.Vstart, self.Vend, self.Vstep, self.delay)
