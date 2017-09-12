@@ -284,6 +284,11 @@ class NIDAQ(Instrument):
 
         received = self.send_receive(output_data, chan_in, sample_rate=sample_rate)
 
+        if chan_in is not None:
+            for k in received.keys():
+                if k not in chan_in and k != 't':
+                    raise Exception('DAQ channel name error! Expected keys: %s, Received: %s' %(chan_in, received.keys()))
+
         return output_data, received
 
 

@@ -123,7 +123,7 @@ class Scanplane(Measurement):
                 self._units[chan] = 'V'
 
 
-    def do(self, fast_axis='x', wait=0):
+    def do(self, fast_axis='x', wait=None):
         '''
         Routine to perform a scan over a plane.
 
@@ -131,7 +131,7 @@ class Scanplane(Measurement):
             fast_axis: If 'x' (default) take linecuts in the X direction
             If 'y', take linecuts in the Y direction.
             wait: Time in seconds to wait at the beginning of a scan.
-            If wait < 3 * time constant of lockin, will wait 3 * time const.
+            If wait == None, will wait 3 * time const of lockin.
         '''
         self.fast_axis = fast_axis
 
@@ -210,7 +210,9 @@ class Scanplane(Measurement):
             # Go to first point of scan
             self.piezos.sweep(self.piezos.V, Vstart)
             #self.squidarray.reset()
-            time.sleep(max(3*self.lockin_squid.time_constant, wait))
+            if wait is None:
+                wait = 3*self.lockin_squid.time_constant
+            time.sleep(wait)
 
             # Begin the sweep
             output_data, received = self.piezos.sweep(Vstart, Vend,

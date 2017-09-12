@@ -535,11 +535,11 @@ class Piezo(Instrument):
         if Vstart != self._V:
             self.V = Vstart
 
-        ## Check voltage limits
+        # Check voltage limits
         self.check_lim(Vstart)
         self.check_lim(Vend)
 
-        ## Figuring out how fast to sweep
+        # Figuring out how fast to sweep
         if sweep_rate > self._max_sweep_rate:
             raise Exception('Sweeping piezos too fast! Max is %i V/s!' %self._max_sweep_rate)
 
@@ -564,7 +564,7 @@ class Piezo(Instrument):
                                         )
 
         output_data = output_data[self.label]
-        ## reapply gain
+        # reapply gain
         output_data = self.apply_gain(output_data)
 
         self._V = Vend # check the current voltage
