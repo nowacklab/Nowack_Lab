@@ -5,6 +5,7 @@ Possible to-do: make parameter values quantized to 12 bits to more accurately re
 """
 
 import visa, time, atexit, inspect, os, json, jsonpickle as jsp
+import numpy as np
 from IPython.display import clear_output
 from .instrument import Instrument
 
@@ -616,5 +617,59 @@ class SquidArray(PFL102):
         self.A_flux = 0
         self.offset = 0
 
-if __name__ == '__main__':
-    """ Example/test code"""
+    def autotune(self, daq, channame, tuneparam, 
+                 setpoint=0, threshold=.01, meas_dur=.1, exittime=60, P=1):
+        '''
+        '''
+        ave = np.mean(daq.monitor(channame, meas_dur, 256000)[channame])
+        starttime = time.time()
+        hitlimit = False
+        while (abs(ave-setpoint) > threshold        and 
+               starttime + exittime < time.time()   and
+              ):
+
+            # If the limit of tuneparam was hit last time and we are not
+            # within the threshold of setpoint, 
+            if hitlimit:
+                raise ValueError("S_flux cannot be tuned within threshold")
+
+            # Reset, try to set tune param, reset again
+            self.reset()
+            newtuneparamval = getattr(self, tuneparam) + P*(ave-setpoint)
+            try:
+                setattr(self, tuneparam, newtuneparamval)
+            except:
+                hitlimit = True
+            self.reset()
+
+            # Measure new mean value of daq input channel channame
+            newave = np.mean(daq.monitor(channame, meas_dur, 256000)[channame])
+
+            # If moving in the wrong direction, correct it
+            if abs(newave) > abs(ave):
+                P = -P
+
+            ave = newave
+        
+        success = abs(ave-setpoint) <= threshold
+        return success
+
+
+
+    def autotune_sflux(self, daq, channame, 
+                       threshold = .01, meas_dur = .1, exittime=60, P=1):
+        '''
+        Tune squid flux so response is at zero.  Maybe useful between scans
+
+        Inputs:
+        daq
+        channame
+        threshold
+        meas_dur
+        '''
+
+        return self.autotune(daq, channame, 'S_flux', 
+                              threshold = threshold, 
+                              meas_dur  = meas_dur, 
+                              exittime  = exittime, 
+                              P         = P )
