@@ -1,3 +1,4 @@
+
 import numpy as np
 import matplotlib.pyplot as plt
 from ..Instruments import piezos, nidaq, montana
@@ -34,10 +35,10 @@ class Heightsweep(Measurement):
         })
 
 
-    def do(self):
+    def do(self, zstart=0.0):
 
         Vend = {'z': self.plane.plane(self.x, self.y) - self.z0}
-        Vstart = {'z': 0.}
+        Vstart = {'z': zstart}
 
         self.piezos.V = {'x':self.x, 'y':self.y, 'z': Vstart['z']}
         self.squidarray.reset()
@@ -84,3 +85,6 @@ class Heightsweep(Measurement):
 
     def setup_plots(self):
         pass
+
+    def save(self, filename=None, savefig=True):
+        self._save(filename, savefig=True, ignored=["axes"])

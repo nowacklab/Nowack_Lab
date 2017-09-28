@@ -20,7 +20,6 @@ from ..Utilities.utilities import AttrDict
 _Z_PIEZO_STEP = 4  # V piezo
 _Z_PIEZO_STEP_SLOW = 4  # V piezo
 _CAPACITANCE_THRESHOLD = 1  # fF
-_VAR_THRESHOLD = 0.007
 _ATTO_TOWARDS_SAMPLE = -1
 
 def piecewise_linear(x, x0, y0, m1, m2):
@@ -51,6 +50,7 @@ class Touchdown(Measurement):
     V = np.array([])
     rs = np.array([])
     C0 = 0
+    _VAR_THRESHOLD = 0.01
 
     # Time to wait before reading lockin to determine
     # capacitance.  Time > 5*time constant for 6dB
@@ -102,8 +102,9 @@ class Touchdown(Measurement):
         super().__init__(instruments=instruments)
 
         if instruments:
-            self.atto.z.freq = 200
-            self.configure_lockin()
+            #self.atto.z.freq = 200
+            #self.configure_lockin()
+            pass
         self.z_piezo_step = _Z_PIEZO_STEP
         self.Vz_max = Vz_max
         if Vz_max is None:
@@ -164,7 +165,7 @@ class Touchdown(Measurement):
         # Check that enough data has been collected to do a linear fit
         if i > self.numfit + self.start_offset:
             # Check if the variance of the capacitance trace is high enough.
-            if np.var(self.C[~np.isnan(self.C)]) > _VAR_THRESHOLD:
+            if np.var(self.C[~np.isnan(self.C)]) > self._VAR_THRESHOLD:
                 return True
             # Check if the capacitance has been high enough (above 3 fF)
             if self.C[i - self.numfit] > _CAPACITANCE_THRESHOLD:
@@ -335,14 +336,14 @@ class Touchdown(Measurement):
         self.check_balance()
 
         msg = input(
-                "Ok to move {0} ums? q to quit, s to skip".format(
+                "Ok to move {0} ums? q to quit, m to move automatically".format(
                     self.attoshift));
         if (msg is 'q'):
             raise KeyboardInterrupt;
-        if (msg is 's'):
-            pass
-        else:
+        if (msg is 'm'):
             self.atto.z.move(self.attoshift)
+        else:
+            pass
 
         # wait until capacitance settles
         time.sleep(self._T_UNTIL_BAL)
@@ -352,13 +353,13 @@ class Touchdown(Measurement):
             # we probably moved too far
             move = -_ATTO_TOWARDS_SAMPLE*self.attoshift/2
             msg = input(
-                    "Ok to move {0} um? q to quit, s to skip".format(move));
+                    "Ok to move {0} um? q to quit, m to move automatically".format(move));
             if (msg is 'q'):
                 raise KeyboardInterrupt;
-            if (msg is 's'):
-                pass
-            else:
+            if (msg is 'm'):
                 self.atto.z.move(move)
+            else:
+                pass
 
             # wait until capacitance settles
             time.sleep(self._T_UNTIL_BAL)
