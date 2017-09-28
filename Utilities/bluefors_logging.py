@@ -51,6 +51,8 @@ def getClosestVals_raw(times, vals, matchtimes, T_INTERVAL=30):
         # do a binary search.  Number of possible steps go as log(n)
         # this is just a for loop vs a while(closest==False) so deterministic
         for a in range( int(np.ceil(np.log2(len(times))))+1):
+            #if type(t) is not datetime.datetime and type(times[i]) is not datetime.datetime:
+            #print(t, times[i])
             if(np.abs((t-times[i]).total_seconds()) < T_INTERVAL):
                 closest = True;
                 break;
@@ -125,7 +127,7 @@ def getClosestVals(filename, times, T_INTERVAL=30):
 #            print("Did not find closest in O(log(n)) time for time "+ str(t));
     myvals = [l[1] for l in log];
     mytimes = [l[0] for l in log];
-    return getClosestVals_raw(myvals,mytimes,times,T_INTERVAL);
+    return getClosestVals_raw(mytimes, myvals, times,T_INTERVAL);
 
 def getClosestVals_comp(filename1, filename2):
     '''
@@ -166,30 +168,30 @@ def thermometercalibration(filename_res, filename_temp, tcutoff=4):
                 given data res, temp.
         pcov:   covariance matrix for the fit
     '''
-     [rawres, rawtemp]= getClosestVals_comp(filename_res, filename_temp);
-     res = [];
-     temp = [];
+    [rawres, rawtemp]= getClosestVals_comp(filename_res, filename_temp);
+    res = [];
+    temp = [];
 
-     # remove zero entries
-     for i in range(len(rawres)):
-         if rawtemp[i] <= tcutoff:
-             continue;
-         if abs(rawtemp[i]) > 1e-16 and abs(rawres[i]) > 1e-16:
-             res.append(rawres[i]);
-             temp.append(rawtemp[i]);
+    # remove zero entries
+    for i in range(len(rawres)):
+        if rawtemp[i] <= tcutoff:
+            continue;
+        if abs(rawtemp[i]) > 1e-16 and abs(rawres[i]) > 1e-16:
+            res.append(rawres[i]);
+            temp.append(rawtemp[i]);
 
 
      # remove dupes???
 
-     print(len(res));
-     print(len(temp));
+    print(len(res));
+    print(len(temp));
 
-     # fit
-     f = lambda x, a, b: a*x + b;
+    # fit
+    f = lambda x, a, b: a*x + b;
 
-     [popt, pcov] = curve_fit(f, np.log(res), np.log(temp))
+    [popt, pcov] = curve_fit(f, np.log(res), np.log(temp))
 
-     return [res, temp, f, popt, pcov]
+    return [res, temp, f, popt, pcov]
 
 def thermcal(datestr='17-04-10', resname=r'CH7 R ', tempname=r'CH6 T ',
              tcutoff=4, numpts = 200, binsize = 3):
