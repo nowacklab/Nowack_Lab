@@ -265,21 +265,102 @@ class BlueforsRvsT(RvsSomething):
         self.channel  = channel
         self.lakeshore.enable_only(self.channel)
 
-    def do(self, plot=True):
+    def do(self, plot=True, auto_gain=False):
         self.startTime = time.time() #seconds since epoch
         self.lakeshoreR = [];
         while time.time() < self.startTime + self.duration:
             self.T = np.append(self.T, self.lakeshore.T[self.channel])
             self.lakeshoreR.append(self.lakeshore.R[self.channel])
-            self.do_measurement(delay=0,plot=plot)
+            self.do_measurement(delay=0,plot=plot,auto_gain=auto_gain)
             time.sleep(self.interval)
         self.lakeshore.enable_all()
+
 
     def setup_lockins(self):
         '''
         Overload setup_lockins and just pass to allow user to set 
         lockins manually
         '''
+        pass
+class SimpleRvsTime(Measurement):
+    def __init__(self, instruments={}, duration=100, delay=1):
+        super().__init__(instruments=instruments)
+        self.duration = duration
+        self.delay=delay
+        
+    def do(self):
+        self.starttime = time.time()
+        self.V1xs = np.zeros(int(self.duration/self.delay)+1)
+        self.V1ys = np.zeros(int(self.duration/self.delay)+1)
+        self.V2xs = np.zeros(int(self.duration/self.delay)+1)
+        self.V2ys = np.zeros(int(self.duration/self.delay)+1)
+        self.Ixs = np.zeros(int(self.duration/self.delay)+1)
+        self.Iys = np.zeros(int(self.duration/self.delay)+1)
+        self.time = np.zeros(int(self.duration/self.delay)+1)
+        i = 0
+        while (self.starttime + self.duration > time.time() ):
+            self.time[i] = time.time()
+            self.V1xs[i] = self.lockin_V1.X
+            self.V1ys[i] = self.lockin_V1.Y
+            self.V2xs[i] = self.lockin_V2.X
+            self.V2ys[i] = self.lockin_V2.Y
+            self.Ixs[i]  = self.lockin_I.X
+            self.Iys[i]  = self.lockin_I.Y
+            print(
+                    "{0}/{1}: [V1x,V1y,V2x,V2y,Ix,Iy] = [{2:2.2e},{3:2.2e},{4:2.2e},{5:2.2e},{6:2.2e},{7:2.2e}]".format(
+                i, int(self.duration/self.delay),
+                self.V1xs[i], self.V1ys[i], self.V2xs[i], self.V2ys[i],self.Ixs[i], self.Iys[i]
+                ))
+            print(
+                    "[R1x,R1y,R2x,R2y] = [{0:2.2e}, {1:2.2e}, {2:2.2e},{3:2.2e}]".format(
+                self.V1xs[i]/self.Ixs[i], self.V1ys[i]/self.Iys[i],
+                self.V2xs[i]/self.Ixs[i], self.V2ys[i]/self.Iys[i]
+                ))
+            time.sleep(self.delay)
+            i += 1
+
+        
+
+    def plot(self):
+        pass
+
+    def setup_plots(self):
+        pass
+
+
+class VvsF(Measurement):
+    instrument_list = ['lockin_V']
+
+    def __init__(self, instruments={}, freqs = [], dwelltime = 1):
+        '''
+        Measure voltage on lockin as a funtion of lockin frequency
+
+        parameters:
+        instruments:    (dict) dict of instruments, only 1 lockin
+        freqs:          (list) list of frequencies to scan with lockin
+        dwelltime       (float) time to wait between measurements (s)
+        '''
+        super().__init__(instruments=instruments)
+        self.freqs = freqs
+        self.dwelltime = dwelltime
+    
+    def do(self):
+        self.Vxs = []
+        self.Vys = []
+        i = 0
+        for f in self.freqs:
+            self.lockin_V.frequency = f
+            time.sleep(self.dwelltime)
+            self.Vxs.append(self.lockin_V.X)
+            self.Vys.append(self.lockin_V.Y)
+            print("{0}/{1}: [f, Vx, Vy] = [{2}, {3}, {4}]".format(
+                i, len(self.freqs), f, self.Vxs[-1], self.Vys[-1]))
+            i+=1
+
+    def setup_plots(self):
+        pass
+
+    def plot(self):
         pass
 
 class RvsVg(RvsSomething):
