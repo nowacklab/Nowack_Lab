@@ -357,3 +357,37 @@ class Lakeshore372(VISAInstrument):
         else:
             print("Invalid channel: {0}".format(ch))
 
+    _RANGE_LOOKUP = {
+            0: 'Off',
+            1: '31.6 uA',
+            2: '100 uA',
+            3: '316 uA',
+            4: '1.00 mA',
+            5: '3.16 mA',
+            6: '10.0 mA',
+            7: '31.6 mA',
+            8: '100 mA'
+    }
+    @property
+    def heater_range(self):
+        s = self.ask('RANGE? 0').split(',')
+        return self._RANGE_LOOKUP[int(s[0])]
+
+    @heater_range.setter
+    def heater_range(self, s):
+        mode = -1 
+        try:
+            mode = int(s)
+        except:
+            l    = self._RANGE_LOOKUP.items()
+            for key, value in l:
+                if s.lower() == value.lower():
+                    mode = key
+        if mode == -1:
+            print("Invalid range: {0}".format(s))
+            print("Range must be in a key or value in _RANGE_LOOKUP:")
+            print(self._RANGE_LOOKUP)
+            return 
+
+        self.write("RANGE 0,{0}".format(mode))
+        return
