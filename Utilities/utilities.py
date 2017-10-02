@@ -143,6 +143,8 @@ def reject_outliers(data, radius=[None,None], m=2):
     `m` is the number of standard deviations we have to stay close to the mean.
     Higher `m` means less stringent.
     This takes a long time... might just want to do this occasionally.
+
+    TODO: use chauvenet's criterion for "justified" rejection of data
     '''
     new_data = np.copy(data)
 
