@@ -8,6 +8,7 @@ import visa, time, atexit, inspect, os, json, jsonpickle as jsp
 import numpy as np
 from IPython.display import clear_output
 from .instrument import Instrument
+import random
 
 class PCI100(Instrument):
     def __init__(self, visaResource='COM3'):
@@ -625,39 +626,35 @@ class SquidArray(PFL102):
         starttime = time.time()
         hitlimit = False
         while (abs(ave-setpoint) > threshold        and 
-               starttime + exittime < time.time()   and
+               starttime + exittime > time.time()   
               ):
 
             # If the limit of tuneparam was hit last time and we are not
             # within the threshold of setpoint, 
             if hitlimit:
-                raise ValueError("S_flux cannot be tuned within threshold")
+                setattr(self, tuneparam, getattr(self, tuneparam + '_lim')/2)
+                self.reset()
 
             # Reset, try to set tune param, reset again
-            self.reset()
             newtuneparamval = getattr(self, tuneparam) + P*(ave-setpoint)
-            try:
-                setattr(self, tuneparam, newtuneparamval)
-            except:
-                hitlimit = True
-            self.reset()
+            if (newtuneparamval >  getattr(self, tuneparam + '_lim') or
+                newtuneparamval <=0 
+                ):
+                hitlim = True
+            setattr(self, tuneparam, newtuneparamval)
 
             # Measure new mean value of daq input channel channame
             newave = np.mean(daq.monitor(channame, meas_dur, 256000)[channame])
 
-            # If moving in the wrong direction, correct it
-            if abs(newave) > abs(ave):
-                P = -P
-
             ave = newave
         
         success = abs(ave-setpoint) <= threshold
-        return success
+        return [success, getattr(self, tuneparam), abs(ave-setpoint)] 
 
 
 
     def autotune_sflux(self, daq, channame, 
-                       threshold = .01, meas_dur = .1, exittime=60, P=1):
+                       threshold = .01, meas_dur = .1, exittime=60, P=10):
         '''
         Tune squid flux so response is at zero.  Maybe useful between scans
 
@@ -667,9 +664,43 @@ class SquidArray(PFL102):
         threshold
         meas_dur
         '''
+        istuned     = False
+        hastuned    = False
+        starttime   = time.time()
+        lowesterr   = 1e9
+        lowestsflux = 0
+        
+        while (not istuned and 
+               starttime + exittime > time.time()
+               ):
 
-        return self.autotune(daq, channame, 'S_flux', 
+            if not istuned and hastuned:
+                self.S_flux = [2,50][random.randint(0,1)]
+                self.reset()
+
+            hastuned = True
+
+            [istuned,
+             sflux,
+             error] = self.autotune(daq, channame, 'S_flux', 
                               threshold = threshold, 
                               meas_dur  = meas_dur, 
-                              exittime  = exittime, 
+                              exittime  = 10, 
                               P         = P )
+            if lowesterr > error:
+                 lowesterr   = error
+                 lowestsflux = sflux
+        
+        if not istuned:
+            self.S_flux = lowestsflux
+            self.reset()
+            [istuned,
+             sflux,
+             error] = self.autotune(daq, channame, 'S_flux', 
+                              threshold = threshold, 
+                              meas_dur  = meas_dur, 
+                              exittime  = 10, 
+                              P         = P )
+
+        return [istuned, self.S_flux]
+
