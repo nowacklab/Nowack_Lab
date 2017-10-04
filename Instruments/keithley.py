@@ -1,9 +1,9 @@
 import visa
 import numpy as np
 import time
-from .instrument import Instrument
+from .instrument import Instrument, VISAInstrument
 
-class Keithley2400(Instrument):
+class Keithley2400(VISAInstrument):
     _label = 'keithley'
     '''
     Instrument driver for Keithley 2400 Source Meter
@@ -19,10 +19,10 @@ class Keithley2400(Instrument):
         if type(gpib_address) is int:
             gpib_address = 'GPIB::%02i::INSTR' %gpib_address
         self.gpib_address= gpib_address
-        self._visa_handle = visa.ResourceManager().open_resource(self.gpib_address)
-        self._visa_handle.read_termination = '\n'
-        self.write(':SENS:FUNC \"VOLT\"')
-        self.write(':SENS:FUNC \"CURR\"') # set up to sense voltage and current
+
+        self._init_visa(gpib_address, termination='\n')
+
+        self.setup()
 
 
     def __getstate__(self):
@@ -38,16 +38,6 @@ class Keithley2400(Instrument):
 
     def __setstate__(self, state):
         pass
-
-    def ask(self, msg, tryagain=True):
-        try:
-            return self._visa_handle.ask(msg)
-        except:
-            print('Communication error with Keithley')
-            self.close()
-            self.__init__(self.gpib_address)
-            if tryagain:
-                self.ask(msg, False)
 
     @property
     def source(self):
@@ -104,7 +94,9 @@ class Keithley2400(Instrument):
         if self.source != 'I':
             raise Exception('Cannot read source current if sourcing voltage!')
         self._Iout = float(self.ask(':SOUR:CURR:LEV:AMPL?'))
+
         return self._Iout
+
 
     @Iout.setter
     def Iout(self, value):
@@ -119,6 +111,8 @@ class Keithley2400(Instrument):
             raise Exception('Output current %s too large for range of %s' %(value, self.Iout_range))
         self.write(':SOUR:CURR:LEV %s' %value)
         self._Iout = value
+
+        self.V # trigger a reading to update the screen, assuming we measure V
 
     @property
     def Iout_range(self):
@@ -157,12 +151,10 @@ class Keithley2400(Instrument):
     @I_compliance.setter
     def I_compliance(self, value):
         '''
-        Set the compliance current (if in voltage source mode). Also sets
-        current measure range to an appropriate one for that compliance.
+        Set the compliance current (if in voltage source mode).
         '''
         if self.source != 'V':
             raise Exception('Cannot set current compliance if sourcing current!')
-        self.write(':SENS:CURR:RANG %s' %value)
         self.write(':SENS:CURR:PROT %s' %value)
         self._I_compliance = value
 
@@ -199,6 +191,8 @@ class Keithley2400(Instrument):
             raise Exception('Output voltage %s too large for range of %s' %(value, self.Vout_range))
         self.write(':SOUR:VOLT:LEV %s' %value)
         self._Vout = value
+        self.I # trigger a reading to update the screen, assuming we measure I
+
 
     @property
     def Vout_range(self):
@@ -272,12 +266,10 @@ class Keithley2400(Instrument):
         self.write(":SYST:BEEP %g, %g" % (frequency, duration))
 
 
-    def close(self):
-        '''
-        End the visa session.
-        '''
-        self._visa_handle.close()
-        del(self._visa_handle)
+    def setup(self):
+        self.write(':SENS:FUNC \"VOLT\"')
+        self.write(':SENS:FUNC \"CURR\"') # set up to sense voltage and current
+
 
     def reset(self):
         '''
@@ -323,7 +315,7 @@ class Keithley2400(Instrument):
         old_timeout = self._visa_handle.timeout
         self._visa_handle.timeout = None # infinite timeout
 
-        a = self.ask(':READ?') # starts the sweep
+        a = self.ask(':READ?', timeout=None) # starts the sweep
         self.write(':SOUR:VOLT:MODE FIXED') # fixed voltage mode
         self.write(':SENS:FUNC:CONC ON') # turn concurrent functions back on
         self.write(':SENS:FUNC \"CURR\"')
@@ -347,9 +339,6 @@ class Keithley2400(Instrument):
         self.beep(base_frequency*6.0/4.0, duration)
 
 
-    def write(self, msg):
-        self._visa_handle.write(msg)
-
     def zero_V(self, sweep_rate=1):
         '''
         Ramp down voltage to zero. Sweep rate in volts/second
@@ -357,6 +346,57 @@ class Keithley2400(Instrument):
         print('Zeroing Keithley voltage...')
         self.sweep_V(self.Vout, 0, .1, sweep_rate)
         print('Done zeroing Keithley.')
+
+
+class Keithley2450(Keithley2400):
+
+    def __init__(self, resource='USB0::0x05E6::0x2450::04110400::INSTR'):
+        super().__init__(resource)
+        self.I # trigger reading to update screen
+
+    def setup(self):
+        # self.write('*LANG SCPI2400') # for Keithley2400 compatibility mode
+        super().setup()
+
+
+    @property
+    def I(self):
+        '''
+        Get the input current.
+        '''
+        if self.output == 'off':
+            raise Exception('Need to turn output on to read current!')
+        I = self.ask('MEAS:CURR?') # get current reading
+        return float(I)
+
+
+    @property
+    def V(self):
+        '''
+        Get the input voltage.
+        '''
+        if self.output == 'off':
+            raise Exception('Need to turn output on to read voltage!')
+        V = self.ask('MEAS:VOLT?') # get voltage reading
+        return float(V)
+
+
+    def sweep_V(self, Vstart, Vend, Vstep=.1, sweep_rate=.1):
+        '''
+        Sweep WITHOUT using Keithley internal function
+        '''
+        if abs(Vstart - Vend) < Vstep: # within step size of the starting value
+            self.Vout = Vend
+            return
+        self.Vout = Vstart
+
+        numsteps = int(abs((Vend - Vstart) / Vstep + 1))
+        delay = Vstep/sweep_rate
+
+        V = np.linspace(Vstart, Vend, numsteps)
+        for v in V:
+            self.Vout = v
+            time.sleep(delay)
 
 
 class Keithley2600(Instrument):
@@ -501,7 +541,7 @@ class Keithley2600(Instrument):
     #         time.sleep(delay)
 
 
-    def sweep_V(self, Vstart, Vend, Vstep=.1, sweep_rate=.1):
+    def sweep_V(self, Vstart, Vend, Vstep=.1, sweep_rate=1):
         '''
         Uses the Keithley's internal sweep function to sweep from Vstart to Vend with a step size of Vstep and sweep rate of sweep_rate volts/second.
         '''
@@ -533,7 +573,7 @@ class Keithley2600(Instrument):
         self.Vout = Vend # make sure the last voltage is explicit
 
         self._visa_handle.timeout = old_timeout
-        return [float(i) for i in a.split(',')] # not sure what this data represents
+    #    return [float(i) for i in a.split(',')] # not sure what this data represents
 
 
     def triad(self, base_frequency, duration):
