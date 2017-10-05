@@ -447,8 +447,8 @@ class ziTransport(Measurement):
             start_time = time.time()
             # Wait for keithley outvoltage to reach 95% of the desired
             # value
-            while (abs(keithley.Vout - gate_stop)
-                                        > abs(.05*gate_stop)):
+            while (abs(keithley.V - gate_stop)
+                                        > .01):
                 # checks for timeout, throws error to try if
                 # timeout occurs.
                 if time.time() - start_time > 240:
@@ -878,7 +878,7 @@ class ziTransport(Measurement):
         out_mix_ch = int(self.daq.listNodes('/%s/sigouts/%d/amplitudes/'
                                     % (self.device_id, out_channel),0)[0])
         # Sets the demod communication rate
-        demod_rate = 10e3
+        demod_rate = 100*freq
         # Determine whether the user wants ac or dc couple
         if couple == 'ac':
             # AC couple
@@ -970,7 +970,7 @@ class ziTransport(Measurement):
         # the current gate value, the gate fails. Stops the iterative loop
         # over gate values and reports to the user.
         paths = [];
-        for i in range(5):
+        for i in range(6):
             paths.append('/'+ self.device_id+'/demods/%d/sample' % i)
         try:
             self.daq.subscribe(paths)
@@ -998,6 +998,16 @@ class ziTransport(Measurement):
         # Ramp aux down safely.
         self.aux_sweepND(auxchan,0)
         # if samples is non-empty, plot
+        #this assumes the ordering above of demods.
+        names = ['current 1h','current 2h','current 3h','4pnt 1h','4pnt 2h',
+            '4pnt 3h']
+        samples = {}
+        # Flatten dict
+        for j in range(6):
+            sample = {}
+            for i in data.keys():
+                sample[i] = data[i][paths[j]]
+            samples[names[j]]=sample
         if samples:
             import matplotlib.pyplot as plt
             #clear figure
@@ -1015,26 +1025,26 @@ class ziTransport(Measurement):
                 deviceR.append(np.abs((currentdata[gate]['x'] + 1j
                                                 *currentdata[gate]['y'])
                                                *1/(ta_gain  * amplitude)*1e9))
-            plt.plot(np.array(gatevoltages),np.array(deviceR))
+            plt.semilogy(np.array(gatevoltages),np.array(deviceR))
             #Get the current axis
             ax = plt.gca()
             # turn on grid, for Brian
             plt.grid(True)
             # label axes
             plt.ylabel(r'Device conductivity DS (nA/V)')
-            plt.xlabel('$V_\mathrm{ds}$ bias ($V$)')
+            plt.xlabel('Gate Voltage')
             plt.subplot(212)
             sheetR = [];
             for gate in gatevoltages:
                 #set y axis to the calculated conductivity. Uses passed
                 # ta_gain and amplitude
                 sheetR.append(np.abs(fourpntdata[gate]['x'] + 1j
-                                                *currentdata[gate]['y'])
-                              /(np.abs(fourpntdata[gate]['x'] + 1j
+                                                *fourpntdata[gate]['y'])
+                              /(np.abs(currentdata[gate]['x'] + 1j
                                                 *currentdata[gate]['y'])
                                                *1/(ta_gain)))
             # show plot without returning.
-            plt.plot(np.array(gatevoltages),np.array(sheetR))
+            plt.semilogy(np.array(gatevoltages),np.array(sheetR))
             #Get the current axis
             ax = plt.gca()
             # turn on grid, for Brian
@@ -1044,6 +1054,8 @@ class ziTransport(Measurement):
             ax.yaxis.tick_right()
             plt.ylabel(r'Uncorrected Sheet resistance (Ohm-sq)')
             plt.xlabel('Gate Voltage')
+            fig = plt.gcf()
+            fig.set_size_inches(10, 15)
             plt.draw()
             plt.show()
         return data

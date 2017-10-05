@@ -427,7 +427,7 @@ class Keithley2450(Keithley2400):
         '''
         if self.source != 'I':
             raise Exception('Cannot read source current if sourcing voltage!')
-        self._Iout = float(self.ask(':SOUR:CURR?'))
+        self._Iout = float(self.ask(':SOUR:CURR:LEV:AMPL?'))
 
         return self._Iout
 
@@ -509,7 +509,7 @@ class Keithley2450(Keithley2400):
         '''
         if self.source != 'V':
             raise Exception('Cannot read source voltage if sourcing current!')
-        self._Vout = float(self.ask(':SOUR:VOLT?'))
+        self._Vout = float(self.ask(':SOUR:VOLT:LEV:AMPL?'))
         return self._Vout
 
     @Vout.setter
