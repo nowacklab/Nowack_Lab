@@ -773,10 +773,10 @@ class ziTransport(Measurement):
         return samples
 
     def gate_sweep(self, gate_start,gate_stop, num_steps, keithley,
-                 time_constant = 1e-3, amplitude = .01, freq = 200,  auxchan = 1,
-                 outputchan = 1, currentmonitor = 1, fourpointchannel = 2,
-                 couple = 'dc', ta_couple = 'ac', settleTCs = 10, avgTCs = 5, loopcount = 1,
-                 aux_bias = 0, compliance = 1E-9, ta_gain = 1e8, fprange = 1):
+                 time_constant = 1e-3, amplitude = .01, freq = 200, auxchan = 1,
+                 outputchan = 1, couple = 'dc', ta_couple = 'ac',
+                 settleTCs = 10, avgTCs = 5, loopcount = 1, aux_bias = 0,
+                 compliance = 1E-9, ta_gain = 1e8, fprange = 1):
         """
         Sweeps the output of a keithley SMU, while recording differential device
         resistivity and 4 point sheet resistivity.
@@ -785,13 +785,15 @@ class ziTransport(Measurement):
 
         auxchan should be connected to the "Add"  of the output channel
 
-        outputchan should be connected to one of the current source of the device
+        outputchan should be connected to one of the current source of the
+         device
 
-        currentmonitor should be connected the matching output channel of the TA,
-         and the corresponding TA input should be connected to the current duration
+        Signal input 1 is currentmonitor, and should be connected to
+         HF2TA channel 1.
 
-        fourpoint channel should have diff + and diff - attached to the voltage
-         probes of the device.
+        Signal input 2 is fourpoint channel should have diff + and diff -
+        attached to the voltage probes of the device. For high resistance
+        devices, remember to use a unity gain buffer!
 
         HF2TA must be connected to ZCTRL1 on the back of the HF2LI.
 
@@ -869,9 +871,9 @@ class ziTransport(Measurement):
 
         # Calculate start 0 numbers for channels
         out_channel = outputchan - 1
-        current_channel = currentmonitor - 1
+        current_channel = 0
         aux_channel = auxchan - 1
-        fp_channel = fourpointchannel - 1
+        fp_channel = 1
         osc_index = 0
         ta_bcoup = int((ta_couple == 'dc' or ta_couple == 'DC'))
         # Detects the correct mixer channel.
@@ -960,6 +962,7 @@ class ziTransport(Measurement):
         self.aux_sweepND(auxchan,aux_bias)
         # Create empty dict in which to put data.
         data = {}
+        keithley.Vout_range = 210
         # generate list of gate values
         gatesweep = np.linspace(gate_start,gate_stop,num_steps)
         # Outer most try-except detects if during initial ramp up to
@@ -993,32 +996,63 @@ class ziTransport(Measurement):
         self.keithleySweep(keithley, 0, compliance)
         # Ramp aux down safely.
         self.aux_sweepND(auxchan,0)
+        #this assumes the ordering above of demods.
+        names = ['current 1h','current 2h','current 3h','4pnt 1h','4pnt 2h',
+            '4pnt 3h']
+        samples = {}
+        # Flatten dict
+        for j in range(5):
+            sample = {}
+            for i in data.keys():
+                sample[i] = data[i][paths[j]]
+            samples[names[j]]=sample
         # if samples is non-empty, plot
-        #if data:
-
-            #import matplotlib.pyplot as plt
-            # clear figure
-            #plt.clf()
+        if samples:
+            import matplotlib.pyplot as plt
+            #clear figure
+            plt.clf()
             # for each gate value, create a plot trace
-            #for gate in samples.keys():
-                # set vds to the "grid" node, that is, the swept variable
-            #    vds = samples[gate][0][0]['grid']
-                # set y axis to the calculated conductivity. Uses passed
+            currentdata = samples['current 1h']
+            fourpntdata = samples['4pnt 1h']
+            plt.subplot(211)
+            deviceR = [];
+            gatevoltages = []
+            for gate in currentdata.keys():
+                gatevoltages.append(gate)
+                #set y axis to the calculated conductivity. Uses passed
                 # ta_gain and amplitude
-            #    R = np.abs((samples[gate][0][0]['x'] + 1j
-                                                #*samples[gate][0][0]['y'])
-                #                                *1/(ta_gain  * amplitude)*1e9)
-            #    plt.plot(vds, R, label = 'Gate %s V' % gate)
-            # Get the current axis
-            #ax = plt.gca()
-            # plot legend outside plot
-            #plt.legend(bbox_to_anchor=(1.4, 1.0))
+                deviceR.append(np.abs((currentdata[gate]['x'] + 1j
+                                                *currentdata[gate]['y'])
+                                               *1/(ta_gain  * amplitude)*1e9))
+            plt.plot(np.array(gatevoltages),np.array(deviceR))
+            #Get the current axis
+            ax = plt.gca()
             # turn on grid, for Brian
-            #plt.grid(True)
+            plt.grid(True)
             # label axes
-            #plt.ylabel(r'Conductivity DS (nA/V)')
-            #plt.xlabel('$V_\mathrm{ds}$ bias ($V$)')
+            plt.ylabel(r'Device conductivity DS (nA/V)')
+            plt.xlabel('$V_\mathrm{ds}$ bias ($V$)')
+            plt.subplot(212)
+            sheetR = [];
+            for gate in gatevoltages:
+                #set y axis to the calculated conductivity. Uses passed
+                # ta_gain and amplitude
+                sheetR.append(np.abs(fourpntdata[gate]['x'] + 1j
+                                                *currentdata[gate]['y'])
+                              /(np.abs(fourpntdata[gate]['x'] + 1j
+                                                *currentdata[gate]['y'])
+                                               *1/(ta_gain)))
             # show plot without returning.
-            #plt.draw()
-            #plt.show()
-        return data
+            plt.plot(np.array(gatevoltages),np.array(sheetR))
+            #Get the current axis
+            ax = plt.gca()
+            # turn on grid, for Brian
+            plt.grid(True)
+            # label axes
+            ax.yaxis.set_label_position("right")
+            ax.yaxis.tick_right()
+            plt.ylabel(r'Uncorrected Sheet resistance (Ohm-sq)')
+            plt.xlabel('Gate Voltage')
+            plt.draw()
+            plt.show()
+        return samples
