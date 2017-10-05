@@ -359,6 +359,57 @@ class Keithley2450(Keithley2400):
         super().setup()
 
 
+    def __getstate__(self):
+        self._save_dict = {
+            'output current': self._Iout,
+            'output current range': self._Iout_range,
+            'current compliance': self._I_compliance,
+            'output voltage': self._Vout,
+            'output voltage range': self._Vout_range,
+            'voltage compliance': self._V_compliance
+        }
+        return self._save_dict
+
+    def __setstate__(self, state):
+        pass
+
+    @property
+    def source(self):
+        '''
+        Get the source mode.
+        '''
+        options = {
+            "VOLT": "V",
+            "CURR": "I",
+            "MEM": "memory"
+        }
+        return options[self.ask(':SOUR:FUNC?')]
+
+    @source.setter
+    def source(self, value):
+        '''
+        Set the source mode.
+        '''
+        if value == 'current':
+            value = 'I'
+        elif value == 'voltage':
+            value = 'V'
+        options = {
+            "V": "VOLT",
+            "I": "CURR",
+            "memory": "MEM"
+        }
+        self.write(':SOUR:FUNC %s' %options[value])
+        if value == 'V':
+            self._Iout = None # just to make it clear that there is no output current
+            self._Iout_range = None
+            self._V_compliance = None
+        elif value == 'I':
+            self._Vout = None # just to make it clear that there is no output voltage
+            self._Vout_range = None
+            self._I_compliance = None
+        self._output = 'off'
+
     @property
     def I(self):
         '''
@@ -366,9 +417,81 @@ class Keithley2450(Keithley2400):
         '''
         if self.output == 'off':
             raise Exception('Need to turn output on to read current!')
-        I = self.ask('MEAS:CURR?') # get current reading
-        return float(I)
+        self.write(':TRAC:MAKE "currBuffer"') # make a buffer
+        self.write(':SENS:FUNC "CURR"')
+        return float(self.ask(':READ? "currBuffer" READ'))
 
+    @property
+    def Iout(self):
+        '''
+        Get the output current (if in current source mode).
+        '''
+        if self.source != 'I':
+            raise Exception('Cannot read source current if sourcing voltage!')
+        self._Iout = float(self.ask(':SOUR:CURR?'))
+
+        return self._Iout
+
+
+    @Iout.setter
+    def Iout(self, value):
+        '''
+        Set the output current (if in current source mode).
+        '''
+        if self.output != 'on':
+            raise Exception('Output is off, cannot set current!')
+        if self.source != 'I':
+            raise Exception('Cannot set source current if sourcing voltage!')
+        if abs(value) > self.Iout_range:
+            raise Exception('Output current %s too large for range of %s' %(value, self.Iout_range))
+        self.write(':SOUR:CURR %s' %value)
+        self._Iout = value
+
+        self.V # trigger a reading to update the screen, assuming we measure V
+
+    @property
+    def Iout_range(self):
+        '''
+        Get the output current range (if in current source mode).
+        '''
+        if self.source != 'I':
+            raise Exception('Cannot get source current range if sourcing voltage!')
+        self._Iout_range = float(self.ask(':SOUR:CURR:RANGE?'))
+        return self._Iout_range
+
+    @Iout_range.setter
+    def Iout_range(self, value):
+        '''
+        Set the output current range (if in current source mode).
+        '''
+        if self.source != 'I':
+            raise Exception('Cannot set source current range if sourcing voltage!')
+        if value == 'auto':
+            self.write(':SOUR:CURR:RANG:AUTO 1')
+        else:
+            self.write(':SOUR:CURR:RANG:AUTO 0')
+            self.write(':SOUR:CURR:RANG %g' %value)
+        self._Iout_range = value
+
+    @property
+    def I_compliance(self):
+        '''
+        Get the compliance current (if in voltage source mode).
+        '''
+        if self.source != 'V':
+            raise Exception('Cannot get current compliance if sourcing current!')
+        self._I_compliance = float(self.ask(':SOUR:CURR:VLIM?'))
+        return self._I_compliance
+
+    @I_compliance.setter
+    def I_compliance(self, value):
+        '''
+        Set the compliance current (if in voltage source mode).
+        '''
+        if self.source != 'V':
+            raise Exception('Cannot set current compliance if sourcing current!')
+        self.write(':SOUR:CURR:VLIM %s' %value)
+        self._I_compliance = value
 
     @property
     def V(self):
@@ -377,26 +500,106 @@ class Keithley2450(Keithley2400):
         '''
         if self.output == 'off':
             raise Exception('Need to turn output on to read voltage!')
-        V = self.ask('MEAS:VOLT?') # get voltage reading
-        return float(V)
+        self.write(':TRAC:MAKE "voltBuffer"') # make a buffer
+        self.write(':SENS:FUNC "VOLT"')
+        return float(self.ask(':READ? "voltBuffer" READ'))
 
-
-    def sweep_V(self, Vstart, Vend, Vstep=.1, sweep_rate=.1):
+    @property
+    def Vout(self):
         '''
-        Sweep WITHOUT using Keithley internal function
+        Get the output voltage (if in voltage source mode).
         '''
-        if abs(Vstart - Vend) < Vstep: # within step size of the starting value
-            self.Vout = Vend
-            return
-        self.Vout = Vstart
+        if self.source != 'V':
+            raise Exception('Cannot read source voltage if sourcing current!')
+        self._Vout = float(self.ask(':SOUR:VOLT?'))
+        return self._Vout
 
-        numsteps = int(abs((Vend - Vstart) / Vstep + 1))
-        delay = Vstep/sweep_rate
+    @Vout.setter
+    def Vout(self, value):
+        '''
+        Set the output voltage (if in voltage source mode).
+        '''
+        if self.output != 'on':
+            raise Exception('Output is off, cannot set voltage!')
+        if self.source != 'V':
+            raise Exception('Cannot set source voltage if sourcing current!')
+        if abs(value) > self.Vout_range:
+            raise Exception('Output voltage %s too large for range of %s' %(value, self.Vout_range))
+        self.write(':SOUR:VOLT %s' %value)
+        self._Vout = value
+        self.I # trigger a reading to update the screen, assuming we measure I
 
-        V = np.linspace(Vstart, Vend, numsteps)
-        for v in V:
-            self.Vout = v
-            time.sleep(delay)
+
+    @property
+    def Vout_range(self):
+        '''
+        Get the output voltage range (if in voltage source mode).
+        '''
+        if self.source != 'V':
+            raise Exception('Cannot get source voltage range if sourcing current!')
+        self._Vout_range = float(self.ask(':SOUR:VOLT:RANGE?'))
+        return self._Vout_range
+
+    @Vout_range.setter
+    def Vout_range(self, value):
+        '''
+        Set the output voltage range (if in voltage source mode).
+        '''
+        if self.source != 'V':
+            raise Exception('Cannot set source voltage range if sourcing current!')
+        if value == 'auto':
+            self.write(':SOUR:VOLT:RANG:AUTO 1')
+        else:
+            # if abs(value) > 210: # max voltage output range # better to hear the beep
+            #     value = 210
+            self.write(':SOUR:VOLT:RANG:AUTO 0')
+            self.write(':SOUR:VOLT:RANG %g' %value)
+        self._Vout_range = value
+
+    @property
+    def V_compliance(self):
+        '''
+        Get the compliance voltage (if in current source mode).
+        '''
+        if self.source != 'I':
+            raise Exception('Cannot get voltage compliance if sourcing voltage!')
+        self._V_compliance = float(self.ask(':SOUR:VOLT:ILIM?'))
+        return self._V_compliance
+
+    @V_compliance.setter
+    def V_compliance(self, value):
+        '''
+        Set the compliance voltage (if in current source mode).
+        '''
+        if self.source != 'I':
+            raise Exception('Cannot set voltage compliance if sourcing voltage!')
+        self.write(':SOUR:VOLT:ILIM %s' %value)
+        self._V_compliance = value
+
+    @property
+    def output(self):
+        '''
+        Check whether or not output is enabled
+        '''
+        self._output = {0: 'off', 1:'on'}[int(self.ask(':OUTP?'))]
+        return self._output
+
+    @output.setter
+    def output(self, value):
+        '''
+        Enable or disable output.
+        '''
+        status = 'ON' if value in (True, 1, 'on') else 'OFF'
+        self.write(':OUTP %s' %status)
+        self._output = value
+
+
+    def beep(self, frequency, duration):
+        """ Sounds a system beep.
+        :param frequency: A frequency in Hz between 65 Hz and 2 MHz
+        :param duration: A time in seconds between 0 and 7.9 seconds
+        """
+        self.write(":SYST:BEEP %g, %g" % (frequency, duration))
 
 
 class Keithley2600(Instrument):
