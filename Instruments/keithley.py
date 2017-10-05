@@ -417,9 +417,8 @@ class Keithley2450(Keithley2400):
         '''
         if self.output == 'off':
             raise Exception('Need to turn output on to read current!')
-        self.write(':TRAC:MAKE "currBuffer"') # make a buffer
         self.write(':SENS:FUNC "CURR"')
-        return float(self.ask(':READ? "currBuffer" READ'))
+        return float(self.ask(':READ? "defbuffer1", READ'))
 
     @property
     def Iout(self):
@@ -480,7 +479,7 @@ class Keithley2450(Keithley2400):
         '''
         if self.source != 'V':
             raise Exception('Cannot get current compliance if sourcing current!')
-        self._I_compliance = float(self.ask(':SOUR:CURR:VLIM?'))
+        self._I_compliance = float(self.ask(':SOUR:VOLT:ILIM?'))
         return self._I_compliance
 
     @I_compliance.setter
@@ -490,7 +489,7 @@ class Keithley2450(Keithley2400):
         '''
         if self.source != 'V':
             raise Exception('Cannot set current compliance if sourcing current!')
-        self.write(':SOUR:CURR:VLIM %s' %value)
+        self.write(':SOUR:VOLT:ILIM %s' %value)
         self._I_compliance = value
 
     @property
@@ -500,9 +499,8 @@ class Keithley2450(Keithley2400):
         '''
         if self.output == 'off':
             raise Exception('Need to turn output on to read voltage!')
-        self.write(':TRAC:MAKE "voltBuffer"') # make a buffer
         self.write(':SENS:FUNC "VOLT"')
-        return float(self.ask(':READ? "voltBuffer" READ'))
+        return float(self.ask(':READ? "defbuffer2", READ'))
 
     @property
     def Vout(self):
@@ -563,7 +561,7 @@ class Keithley2450(Keithley2400):
         '''
         if self.source != 'I':
             raise Exception('Cannot get voltage compliance if sourcing voltage!')
-        self._V_compliance = float(self.ask(':SOUR:VOLT:ILIM?'))
+        self._V_compliance = float(self.ask(':SOUR:CURR:VLIM?'))
         return self._V_compliance
 
     @V_compliance.setter
@@ -573,7 +571,7 @@ class Keithley2450(Keithley2400):
         '''
         if self.source != 'I':
             raise Exception('Cannot set voltage compliance if sourcing voltage!')
-        self.write(':SOUR:VOLT:ILIM %s' %value)
+        self.write(':SOUR:CURR:VLIM %s' %value)
         self._V_compliance = value
 
     @property
