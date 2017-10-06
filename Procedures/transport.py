@@ -363,6 +363,92 @@ class VvsF(Measurement):
     def plot(self):
         pass
 
+class VvsIdc(Measurement):
+    instrument_list = ['nidaq', 'keithley', 'preamp']
+
+    def __init__(self, daqchannel, instruments={}, iouts=[], dwelltime=.01):
+        '''
+        '''
+        super().__init__(instruments=instruments)
+        self.iouts=iouts
+        self.dwelltime=dwelltime
+        self.daqchannel = daqchannel
+
+    def __repr__(self):
+        return 'VvsIdc({0},instruments,{1},{2})'.format(
+                repr(self.daqchannel),
+                repr(self.iouts),
+                repr(self.dwelltime))
+
+    def do(self, slowsweeprate = 200e-6, slowsweeppts=50, 
+            plot=True, removeplot=True):
+        self.Vmea = np.zeros(len(self.iouts))
+        self.Isrc = np.zeros(len(self.iouts))
+        self.gain = self.preamp.gain
+
+        # slowly sweep to the starting voltage
+        self.slowsweep(self.iouts[0], numpts=slowsweeppts, ipers=slowsweeprate)
+
+        # Sweep keithley, wait dwelltime, and record voltage at each point
+        for i in range(len(self.iouts)):
+            starttime = time.time()
+            self.keithley.Iout = self.iouts[i] 
+            self.Isrc[i] = self.keithley.Iout
+            VvsIdc.wait(starttime, self.dwelltime)
+            self.Vmea[i] = self.daqchannel.V/self.gain
+
+        # fit the voltages / applied currents to a line to extract R and error
+        [p,covar] = np.polyfit(self.Isrc, self.Vmea, deg=1, cov=True)
+        self.Rfits = p
+        self.covar = covar
+        self.R = self.Rfits[0]
+
+        if plot:
+            self.plot()
+        if removeplot:
+            plt.close()
+
+    def slowsweep(self, itarget, ipers=100e-6, numpts = 10):
+        istart = self.keithley.Iout
+        iend = itarget
+        currents = np.linspace(istart, iend, numpts)
+        timesleep = abs(currents[1]-currents[0])/ipers
+        for c in currents:
+            self.keithley.Iout = c
+            VvsIdc.wait(time.time(), timesleep)
+            
+    @staticmethod           
+    def wait(starttime, dwelltime):
+        if (starttime + dwelltime > time.time()):
+            time.sleep(starttime + dwelltime - time.time())
+
+    def setup_plots(self):
+        self.fig = 0
+        self.ax = 0
+
+    def plot(self, **plot_kwargs):
+        self.fig, self.ax = plt.subplots()
+        self.ax.ticklabel_format(style='sci', axis='both', scilimits=(0,0), useMathText=True)
+        self.ax.plot(self.Isrc, self.Vmea, 
+                label='Data',
+                marker='o', linestyle='', markersize=5, **plot_kwargs)
+        extra = abs(self.Isrc.max() - self.Isrc.min())*.1
+        xs = np.linspace(self.Isrc.min() - extra, self.Isrc.max() + extra, 100) 
+        p = np.poly1d(self.Rfits)
+        err = np.diag(self.covar)**.5
+        self.ax.plot(xs, p(xs), linestyle='-', marker='', 
+        label=r'Fit: V = ({0:2.2e}$\pm${2:2.2e})I + ({1:2.2e}$\pm${3:2.2e})'.format( 
+                                                              self.Rfits[0], 
+                                                              self.Rfits[1],
+                                                              err[0], 
+                                                              err[1]))
+        self.ax.legend(fontsize=8)
+        self.ax.set_xlabel('I (A)')
+        self.ax.set_ylabel('V (V)')
+        return [self.fig,self.ax]
+
+
+
 class RvsVg(RvsSomething):
     '''
     Monitor R = lockin_V.X/lockin_I.Y from two different lockins.
