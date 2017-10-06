@@ -26,9 +26,9 @@ class Montana(Instrument):
 
         atexit.register(self.exit)
 
-        self._temperature = self.temperature
+        # self._temperature = self.temperature
         self._temperature_stability = {}
-        self._temperature_stability = self.temperature_stability
+        # self._temperature_stability = self.temperature_stability
 
 
     def __getstate__(self):
