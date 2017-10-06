@@ -1,5 +1,6 @@
 import dill
 import numpy as np
+import os
 from IPython import get_ipython
 ipython = get_ipython()
 
@@ -11,11 +12,11 @@ for name in vars:
     if not name in ['outfile','vars', 'dictofvars','item','localvars']:
         item = localvars[name]
         try:
-            with open('temptestfile.pkl', 'wb') as outfile:
+            with open('temptestfiledonotuse.pkl', 'wb') as outfile:
                 dill.dump(item, outfile)
             dictofvars[name] = item
         except:
             pass
-print(dictofvars)
+os.remove('temptestfiledonotuse.pkl')
 with open(filename, 'wb') as outfile:
     dill.dump(dictofvars, outfile)
