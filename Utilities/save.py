@@ -61,11 +61,16 @@ class Measurement:
                     if m == 'matplotlib':
                         d[var] = None
                 elif type(d[var]) is list: # check for lists of mpl objects
-                    if hasattr(d[var][0], '__module__'): # built-in types won't have __module__
-                        m = d[var][0].__module__
-                        m = m[:m.find('.')] # will strip out "matplotlib"
-                        if m == 'matplotlib':
-                            d[var] = None
+                    try:
+                        if hasattr(d[var][0], '__module__'): # built-in types won't have __module__
+                            m = d[var][0].__module__
+                            m = m[:m.find('.')] # will strip out "matplotlib"
+                            if m == 'matplotlib':
+                                d[var] = None
+                    except:
+                        print('Error saving ', var)
+                        print(str(self))
+                        d[var] = ['This list was empty.  Empty list do not save well']
 
                 ## Walk through dictionaries
                 if 'dict' in utilities.get_superclasses(d[var]):
@@ -188,7 +193,7 @@ class Measurement:
 
         return obj
 
-    def _save(self, filename=None, savefig=True, ignored = []):
+    def _save(self, filename=None, savefig=True, ignored = [], appendedpath=''):
         '''
         Saves data. numpy arrays are saved to one file as hdf5, everything else
         is saved to JSON
@@ -225,9 +230,14 @@ class Measurement:
             filename = self.filename
 
         if os.path.dirname(filename) == '': # you specified a filename with no preceding path
-            local_path = os.path.join(get_local_data_path(), get_todays_data_dir(), filename)
-            remote_path = os.path.join(get_remote_data_path(), get_todays_data_dir(), filename)
-
+            local_path = os.path.join(get_local_data_path(), 
+                                      get_todays_data_dir(), 
+                                      appendedpath, 
+                                      filename)
+            remote_path = os.path.join(get_remote_data_path(), 
+                                       get_todays_data_dir(), 
+                                       appendedpath, 
+                                       filename)
         # Saving to a custom path
         else: # you specified some sort of path
             local_path = filename
@@ -443,11 +453,11 @@ class Measurement:
 
         return done
 
-    def save(self, filename=None, savefig=True):
+    def save(self, filename=None, savefig=True, **kwargs):
         '''
         Basic save method. Just calls _save. Overwrite this for each subclass.
         '''
-        self._save(filename, savefig=True)
+        self._save(filename, savefig=True, **kwargs)
 
 
     def setup_plots(self):
