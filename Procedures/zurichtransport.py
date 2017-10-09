@@ -775,7 +775,7 @@ class ziTransport(Measurement):
     def gate_sweep(self, gate_start,gate_stop, num_steps, keithley,
                  time_constant = 1e-3, amplitude = .01, freq = 13,  auxchan = 1,
                  couple = 'dc', ta_couple = 'dc', fpdiff = True,
-                 settleTCs = 10, avgTCs = 5, loopcount = 1, aux_bias = 0,
+                 settleTCs = 10, avgTCs = 5, isettleTCs = 100, loopcount = 1, aux_bias = 0,
                  compliance = 1E-9, ta_gain = 1e8, fprange = 1):
         """
         Sweeps the output of a keithley SMU, while recording differential device
@@ -834,6 +834,9 @@ class ziTransport(Measurement):
 
           avgTCs (int, optional): number of time constants to average demod
                 output for data point.
+
+          isettleTCs (int, optional): number of time constants to allow demod
+                to stabilize after ramping to the first data point.
 
           loopcount (int, optional): how many of each sweep to do. Default
                 is one.
@@ -975,6 +978,9 @@ class ziTransport(Measurement):
         paths = [];
         for i in range(6):
             paths.append('/'+ self.device_id+'/demods/%d/sample' % i)
+        # sweep to the inital data point and hold for the requested time
+        self.keithleySweep(keithley, gate_start, compliance)
+        time.sleep(isettleTCs*time_constant)
         try:
             self.daq.subscribe(paths)
             # while True ... if (..) break structure to impliment do...while
