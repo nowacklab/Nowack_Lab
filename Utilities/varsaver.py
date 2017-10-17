@@ -1,4 +1,4 @@
-import dill
+import json
 import numpy as np
 import os
 from IPython import get_ipython
@@ -9,14 +9,14 @@ vars = ipython.magic('who_ls')
 localvars = locals()
 dictofvars = {}
 for name in vars:
-    if not name in ['outfile','vars', 'dictofvars','item','localvars']:
+    if not name in ['outfile','vars', 'dictofvars','item','localvars',
+                            'thingdonotuse', 'datadonotuse']:
         item = localvars[name]
-        try:
-            with open('temptestfiledonotuse.pkl', 'wb') as outfile:
-                dill.dump(item, outfile)
+        if isinstance(item, (str,int,float,list,dict)):
             dictofvars[name] = item
-        except:
-            pass
-os.remove('temptestfiledonotuse.pkl')
-with open(filename, 'wb') as outfile:
-    dill.dump(dictofvars, outfile)
+            print(name)
+        if isinstance(item, np.ndarray):
+            dictofvars[name] = item.tolist()
+            print(name)
+with open(filename, 'w') as outfile:
+    json.dump(dictofvars, outfile)

@@ -37,18 +37,18 @@ class Planefit(Measurement):
         span (list): Specifices the size [X span, Y span] of the plane
         in voltage applied to the X and Y peizos.
 
-        center (list): Specifies the center of the plane 
+        center (list): Specifies the center of the plane
         [X center, Y center] in voltage applied to the X and Y peizos.
 
-        numpts (list): The numper of touchdowns to take on each axis 
-        [X number, Y number]. 
+        numpts (list): The numper of touchdowns to take on each axis
+        [X number, Y number].
 
         Vz_max (float):Maximum voltage that can be applied to the Zpiezo.
         If None then the the max voltage for the piezo is used.
 
         Required instruments:
         daq, lockin_cap, attocubes, piezos, montana
-        
+
         Required daq inputs:
         'cap', 'capx', 'capy', 'theta'
 
@@ -125,7 +125,7 @@ class Planefit(Measurement):
             raise Exception("Can't fit capacitance signal.")
         else:
             center_z_value = td.Vtd
-        
+
         # If only taking plane from edges, make masked array
         if edges_only:
             mask = np.full(self.X.shape, True)
@@ -136,7 +136,7 @@ class Planefit(Measurement):
 
             self.X = np.ma.masked_array(self.X, mask)
             self.Y = np.ma.masked_array(self.Y, mask)
-            
+
         # Loop over points sampled from plane.
         counter = 0
         for i in range(self.X.shape[0]):
@@ -174,7 +174,7 @@ class Planefit(Measurement):
                 self.Z[i, j] = td.Vtd
                 td.gridplot(self.axes[-(i+1),j])
                 self.fig.canvas.draw()
-                
+
                 # Return to zero between points.
                 self.piezos.V = 0
 
@@ -213,7 +213,7 @@ class Planefit(Measurement):
         Given points x and y, calculates a point z on the plane.
         '''
         return self.a * x + self.b * y + self.c
-        
+
 
     def colorplot(self):
         fig, ax = plt.subplots(figsize=(6,6))
@@ -229,7 +229,7 @@ class Planefit(Measurement):
         ax.set_ylabel("Y Position (V)")
         plt.tight_layout()
         return fig, ax
-        
+
     def save(self, savefig=True):
         '''
         Saves the planefit object to json.
@@ -251,7 +251,7 @@ class Planefit(Measurement):
             axes.append(ax)
         self.fig.subplots_adjust(wspace=0, hspace=0)
         self.axes = np.reshape(axes, self.numpts)
-    
+
     def surface(self, x, y):
         '''
         Does an interpolation on the surface to give an array of z values
@@ -264,7 +264,7 @@ class Planefit(Measurement):
     def update_c(self, Vx=0, Vy=0, start=None, move_attocubes=False):
         '''
         Does a single touchdown to update the offset of the plane.
-        
+
         After the touchdown the corners of thep plane are checked
         to see if any of the voltages within the X,Y scanrange
         exceed the limits set for the voltage on the Z piezo.
@@ -296,7 +296,7 @@ class Planefit(Measurement):
                 if z_maxormin > self.piezos.z.Vmax or z_maxormin < 0:
                     self.c = old_c
                     raise Exception(
-                        'Plane now extends outside range of piezos!' 
+                        'Plane now extends outside range of piezos!'
                         'Move the attocubes and try again.')
         # If c decreased, then we subtract a positive number from the plane
         self.Z -= (old_c - self.c)

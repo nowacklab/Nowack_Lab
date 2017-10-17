@@ -9,6 +9,7 @@ import time
 from ..Utilities.save import Measurement
 import numpy as np
 import zhinst.utils
+import sys
 
 class gateVoltageError( Exception ):
     pass
@@ -776,7 +777,7 @@ class ziTransport(Measurement):
                  time_constant = 1e-3, amplitude = .01, freq = 13,  auxchan = 1,
                  couple = 'dc', ta_couple = 'dc', fpdiff = True,
                  settleTCs = 10, avgTCs = 5, isettleTCs = 100, loopcount = 1, aux_bias = 0,
-                 compliance = 1E-9, ta_gain = 1e8, fprange = 1):
+                 compliance = 1E-9, ta_gain = 1e8, fprange = 1, hall = False):
         """
         Sweeps the output of a keithley SMU, while recording differential device
         resistivity and 4 point sheet resistivity.
@@ -986,6 +987,9 @@ class ziTransport(Measurement):
             # while True ... if (..) break structure to impliment do...while
             # in Python. Iterates over gate voltages.
             for gate in gatesweep:
+                sys.stdout.flush()
+                wrtstr = 'Current gate voltage: ' + format(field, '+.2f')  + 'V'
+                sys.stdout.write('\r' + wrtstr)
                 self.keithleySweep(keithley, gate, compliance)
                 time.sleep(settleTCs*time_constant)
                 dataDict=self.daq.poll(avgTCs*time_constant, 500, 2, True)
@@ -1031,9 +1035,8 @@ class ziTransport(Measurement):
                 gatevoltages.append(gate)
                 #set y axis to the calculated conductivity. Uses passed
                 # ta_gain and amplitude
-                deviceR.append(np.abs((currentdata[gate]['x'] + 1j
-                                                *currentdata[gate]['y'])
-                                               *1/(ta_gain  * amplitude)*1e9))
+                deviceR.append(-currentdata[gate]['x']
+                                               *1/(ta_gain  * amplitude)*1e9)
             plt.semilogy(np.array(gatevoltages),np.array(deviceR))
             #Get the current axis
             ax = plt.gca()
@@ -1047,10 +1050,8 @@ class ziTransport(Measurement):
             for gate in gatevoltages:
                 #set y axis to the calculated conductivity. Uses passed
                 # ta_gain and amplitude
-                sheetR.append(np.abs(fourpntdata[gate]['x'] + 1j
-                                                *fourpntdata[gate]['y'])
-                              /(np.abs(currentdata[gate]['x'] + 1j
-                                                *currentdata[gate]['y'])
+                sheetR.append(fourpntdata[gate]['x']
+                              /(currentdata[gate]['x']
                                                *1/(ta_gain)))
             # show plot without returning.
             plt.semilogy(np.array(gatevoltages),np.array(sheetR))
@@ -1061,7 +1062,11 @@ class ziTransport(Measurement):
             # label axes
             ax.yaxis.set_label_position("right")
             ax.yaxis.tick_right()
-            plt.ylabel(r'Uncorrected Sheet resistance (Ohm-sq)')
+            if hall:
+                ylabelstr = 'Uncorrected hall resistance (Ohms)'
+            else:
+                ylabelstr = 'Uncorrected sheet resistance (Ohms)'
+            plt.ylabel(ylabelstr)
             plt.xlabel('Gate Voltage')
             fig = plt.gcf()
             fig.set_size_inches(10, 15)
@@ -1069,290 +1074,310 @@ class ziTransport(Measurement):
             plt.show()
         return data
 
-def field_sweep(self, field_start,field_stop, num_steps, keithley,
-             time_constant = 1e-3, amplitude = .01, freq = 200,  auxchan = 1,
-             outputchan = 1, currentmonitor = 1, fourpointchannel = 2,
-             couple = 'dc', ta_couple = 'ac', settleTCs = 10, avgTCs = 5, loopcount = 1,
-             aux_bias = 0, compliance = 1E-9, ta_gain = 1e8, fprange = 1):
-    """
-    Sweeps the output of a keithley SMU, while recording differential device
-    resistivity and 4 point sheet resistivity.
+    def field_sweep(self, field_start,field_stop, num_steps, keithley, mag,
+                 time_constant = 1e-3, amplitude = .01, freq = 13,  auxchan = 1,
+                 couple = 'dc', ta_couple = 'dc', fpdiff = True, gateVoltage = 0,
+                 settleTCs = 10, avgTCs = 5, isettleTCs = 100, loopcount = 1, aux_bias = 0,
+                 compliance = 1E-9, ta_gain = 1e8, fprange = 1, hall = False):
+        """
+        Sweeps the output of a keithley SMU, while recording differential device
+        resistivity and 4 point sheet resistivity.
 
-    Hardware:
+        Hardware:
 
-    auxchan should be connected to the "Add"  of the output channel
+        auxchan should be connected to the "Add"  of the output channel
 
-    outputchan should be connected to one of the current source of the device
+        drive must be output 1 of the Zurich, and should be connected to one
+            of the current source of the device
 
-    currentmonitor should be connected the matching output channel of the TA,
-     and the corresponding TA input should be connected to the current duration
+        current monitor must be SIGIN 1 and should be connected to channel one
+            of the TA, and the TA should be connected to the current drain
+            of the device.
 
-    fourpoint channel should have diff + and diff - attached to the voltage
-     probes of the device.
+        fourpoint channel must be channel 1, and should have diff + and diff -
+            attached to the voltage probes of the device. Alternatively,
+            "fpdiff" can be set to "false" and then a preamplifier
+            can be used.
 
-    HF2TA must be connected to ZCTRL1 on the back of the HF2LI.
+        HF2TA must be connected to ZCTRL1 on the back of the HF2LI.
 
-    Citation: Adapted from Zurich Instruments' "sweep" example.
+        Citation: Adapted from Zurich Instruments' "sweep" example.
 
-    Arguments:
+        Arguments:
 
-      gate_start (float): start voltage of the sweep in volts
+          gate_start (float): start voltage of the sweep in volts
 
-      gate_stop (float): stop voltage of the sweep in volts. Must be
+          gate_stop (float): stop voltage of the sweep in volts. Must be
                 greater than start voltage.
 
-      num_steps (int): number of frequency steps to perform
+          num_steps (int): number of frequency steps to perform
 
-      time_constant (float, optional): demod timeconstant
+          keithley (class): keithley class object to control
+                backgate. gatesweep will fully configure it. Tested with
+                both keithley 2400 and 2450.
 
-      amplitude (float, optional): The amplitude to set on the signal
-        output.
+          time_constant (float, optional): demod timeconstant
 
-      freq (float, optional): the frequency of the lock in measurement.
-        If ac couple is enabled (not default), it must be greater than
-        100 hz (corner of ac highpass).
+          amplitude (float, optional): The amplitude to set on the signal
+                output.
 
-      auxchan (int, optional): input channel (1 or 2)
+          freq (float, optional): the frequency of the lock in measurement.
+                If ac couple is enabled (not default), it must be greater than
+                100 hz (corner of ac highpass).
 
-      outputchan (int, optional): output channel (1 or 2)
+          auxchan (int, optional): input channel (1 or 2)
 
-      inputchan (int, optional): input channel (1 or 2). In nearly all
-        applications, outputchan = inputchan.
+          couple (string, optional): ac couple if str = 'ac', o.w. dc couple
 
-      couple (string, optional): ac couple if str = 'ac', o.w. dc couple
+          ta_couple (string, optional): ac couple if str = 'ac', o.w. dc couple
 
-      settleTCs (int, optional): number of time constants to allow demod
-        to stabilize after sweep.
+          settleTCs (int, optional): number of time constants to allow demod
+                to stabilize after sweep.
 
-      avgTCs (int, optional): number of time constants to average demod
-        output for data point.
+          avgTCs (int, optional): number of time constants to average demod
+                output for data point.
 
-      loopcount (int, optional): how many of each sweep to do. Default
-        is one.
+          isettleTCs (int, optional): number of time constants to allow demod
+                to stabilize after ramping to the first data point.
 
-      gatesweep (list, optional): list of gate voltages to do sweep at.
-        Requires a keithley class to be passed. Default is False, no
-        gatesweep.
+          loopcount (int, optional): how many of each sweep to do. Default
+                is one.
 
-      keithley (class, optional): keithley class object to control
-        backgate. For safety reasons, must be handed to function with
-        it's output enabled. Default: False, no gatesweep.
+          aux_bias (float, optional): optional aux bias to put across the
+                device. Default is zero.
 
-      compliance (float, optional): compliance to use for sweeping gate.
-        for safety reasons, it is reset by this method. Default: 1 nA
+          compliance (float, optional): compliance to use for sweeping gate.
+                for safety reasons, it is reset by this method. Default: 1 nA
 
-      ta_gain (int): gain of Zurich HF2TA transimpedence amplifier.
-        HF2TA must be configured in LabOne, this value allows plots to
-        have correct y-axis.
+          ta_gain (int): gain of Zurich HF2TA transimpedence amplifier.
+                HF2TA must be configured in LabOne, this value allows plots to
+                have correct y-axis.
 
-    Returns:
+          fprange (float, optional): sets the range of the four point channel.
+                defaults to 1.
 
-      sample (list of dict): A list of demodulator sample dictionaries.
-        Each entry in the list correspond to the result of a single sweep
-        and is a dict containing a demodulator sample.
+        Returns:
 
-    """
+            data (list of dict): A list of demodulator sample dictionaries.
+            Each entry in the list correspond to the result of a single sweep
+            and is a dict containing a demodulator sample.
+
+        """
 
 
-    # Create a base instrument configuration:
-    # disable all outputs, demods and scopes.
-    general_setting = [['/%s/demods/*/enable' % self.device_id, 0],
-                       ['/%s/demods/*/trigger' % self.device_id, 0],
-                       ['/%s/sigouts/*/enables/*' % self.device_id, 0],
-                       ['/%s/scopes/*/enable' % self.device_id, 0]]
-    self.daq.set(general_setting)
-    # Performs a global sync between the device and the data server
-    self.daq.sync()
+        # Create a base instrument configuration:
+        # disable all outputs, demods and scopes.
+        general_setting = [['/%s/demods/*/enable' % self.device_id, 0],
+                           ['/%s/demods/*/trigger' % self.device_id, 0],
+                           ['/%s/sigouts/*/enables/*' % self.device_id, 0],
+                           ['/%s/scopes/*/enable' % self.device_id, 0]]
+        self.daq.set(general_setting)
+        # Performs a global sync between the device and the data server
+        self.daq.sync()
 
-    # Calculate start 0 numbers for channels
-    out_channel = outputchan - 1
-    current_channel = currentmonitor - 1
-    aux_channel = auxchan - 1
-    fp_channel = fourpointchannel - 1
-    osc_index = 0
-    ta_bcoup = int((ta_couple == 'dc' or ta_couple == 'DC'))
-    # Detects the correct mixer channel.
-    out_mix_ch = int(self.daq.listNodes('/%s/sigouts/%d/amplitudes/'
-                                % (self.device_id, out_channel),0)[0])
-    # Sets the demod communication rate
-    demod_rate = 100*freq
-    # Determine whether the user wants ac or dc couple
-    if couple == 'ac':
-        # AC couple
-        acUse = 1
-    else:
-        # Disable AC couple (use DC couple)
-        acUse = 0
-    # Sets up the keithley2400 or 2450
-    keithley.source = 'V'
-    keithley.output = 'on'
-    keithley.I_compliance = compliance
-    keithley.Vout_range = 210
-    # Sets up the experiment.
-    exp_setting = [
+        # Calculate start 0 numbers for channels
+        out_channel = 0
+        current_channel = 0
+        aux_channel = auxchan - 1
+        fp_channel = 1
+        osc_index = 0
+        ta_bcoup = int((ta_couple == 'dc' or ta_couple == 'DC'))
+        # Detects the correct mixer channel.
+        out_mix_ch = int(self.daq.listNodes('/%s/sigouts/%d/amplitudes/'
+                                    % (self.device_id, out_channel),0)[0])
+        # Sets the demod communication rate
+        demod_rate = 100*freq
+        # Determine whether the user wants ac or dc couple
+        if couple == 'ac':
+            # AC couple
+            acUse = 1
+        else:
+            # Disable AC couple (use DC couple)
+            acUse = 0
+        # Sets up the keithley2400 or 2450
+        keithley.source = 'V'
+        keithley.output = 'on'
+        keithley.I_compliance = compliance
+        keithley.Vout_range = 210
+        self.keithleySweep(keithley, gateVoltage, compliance)
+        # Sets up the experiment.
+        exp_setting = [
 
-#Configure the four point channel.
-['/%s/sigins/%d/ac'            % (self.device_id, fp_channel), acUse],
-['/%s/sigins/%d/range'         % (self.device_id, fp_channel), fprange],
-['/%s/sigins/%d/diff'          % (self.device_id, fp_channel), 1],
+    #Configure the four point channel.
+    ['/%s/sigins/%d/ac'            % (self.device_id, fp_channel), acUse],
+    ['/%s/sigins/%d/range'         % (self.device_id, fp_channel), fprange],
+    ['/%s/sigins/%d/diff'          % (self.device_id, fp_channel), int(fpdiff)],
 
-#Configure the current sense channel
-['/%s/sigins/%d/ac'            % (self.device_id, current_channel), acUse],
-['/%s/sigins/%d/range'         % (self.device_id, current_channel), 2],
-['/%s/sigins/%d/diff'          % (self.device_id, current_channel), 0],
+    #Configure the current sense channel
+    ['/%s/sigins/%d/ac'            % (self.device_id, current_channel), acUse],
+    ['/%s/sigins/%d/range'         % (self.device_id, current_channel), 2],
+    ['/%s/sigins/%d/diff'          % (self.device_id, current_channel), 0],
 
-#Global demod settings
-['/%s/demods/*/enable'         % (self.device_id), 1],
-['/%s/demods/*/rate'           % (self.device_id), demod_rate],
-['/%s/demods/*/order'          % (self.device_id), 4],
-['/%s/demods/*/timeconstant'   % (self.device_id), time_constant],
+    #Global demod settings
+    ['/%s/demods/*/enable'         % (self.device_id), 1],
+    ['/%s/demods/*/rate'           % (self.device_id), demod_rate],
+    ['/%s/demods/*/order'          % (self.device_id), 4],
+    ['/%s/demods/*/timeconstant'   % (self.device_id), time_constant],
 
-#Configure the demods for the current sense
-['/%s/demods/0/adcselect'      % (self.device_id), current_channel],
-['/%s/demods/0/harmonic'       % (self.device_id), 1],
-['/%s/demods/0/oscselect'      % (self.device_id), osc_index],
+    #Configure the demods for the current sense
+    ['/%s/demods/0/adcselect'      % (self.device_id), current_channel],
+    ['/%s/demods/0/harmonic'       % (self.device_id), 1],
+    ['/%s/demods/0/oscselect'      % (self.device_id), osc_index],
 
-['/%s/demods/1/adcselect'      % (self.device_id), current_channel],
-['/%s/demods/1/harmonic'       % (self.device_id), 2],
-['/%s/demods/1/oscselect'      % (self.device_id), osc_index],
+    ['/%s/demods/1/adcselect'      % (self.device_id), current_channel],
+    ['/%s/demods/1/harmonic'       % (self.device_id), 2],
+    ['/%s/demods/1/oscselect'      % (self.device_id), osc_index],
 
-['/%s/demods/2/adcselect'      % (self.device_id), current_channel],
-['/%s/demods/2/harmonic'       % (self.device_id), 3],
-['/%s/demods/2/oscselect'      % (self.device_id), osc_index],
+    ['/%s/demods/2/adcselect'      % (self.device_id), current_channel],
+    ['/%s/demods/2/harmonic'       % (self.device_id), 3],
+    ['/%s/demods/2/oscselect'      % (self.device_id), osc_index],
 
-#Configure the demods for the 4 probe voltage sense
-['/%s/demods/3/adcselect'      % (self.device_id), fp_channel],
-['/%s/demods/3/harmonic'       % (self.device_id), 1],
-['/%s/demods/3/oscselect'      % (self.device_id), osc_index],
+    #Configure the demods for the 4 probe voltage sense
+    ['/%s/demods/3/adcselect'      % (self.device_id), fp_channel],
+    ['/%s/demods/3/harmonic'       % (self.device_id), 1],
+    ['/%s/demods/3/oscselect'      % (self.device_id), osc_index],
 
-['/%s/demods/4/adcselect'      % (self.device_id), fp_channel],
-['/%s/demods/4/harmonic'       % (self.device_id), 2],
-['/%s/demods/4/oscselect'      % (self.device_id), osc_index],
+    ['/%s/demods/4/adcselect'      % (self.device_id), fp_channel],
+    ['/%s/demods/4/harmonic'       % (self.device_id), 2],
+    ['/%s/demods/4/oscselect'      % (self.device_id), osc_index],
 
-['/%s/demods/5/adcselect'      % (self.device_id), fp_channel],
-['/%s/demods/5/harmonic'       % (self.device_id), 3],
-['/%s/demods/5/oscselect'      % (self.device_id), osc_index],
+    ['/%s/demods/5/adcselect'      % (self.device_id), fp_channel],
+    ['/%s/demods/5/harmonic'       % (self.device_id), 3],
+    ['/%s/demods/5/oscselect'      % (self.device_id), osc_index],
 
-#Configure the oscillator
-['/%s/oscs/%d/freq'            % (self.device_id, out_channel), freq],
+    #Configure the oscillator
+    ['/%s/oscs/%d/freq'            % (self.device_id, out_channel), freq],
 
-#Configure the signal output
-['/%s/sigouts/%d/on'           % (self.device_id, out_channel), 1],
-['/%s/sigouts/%d/enables/%d'   % (self.device_id, out_channel, out_mix_ch), 1],
-['/%s/sigouts/%d/range'        % (self.device_id, out_channel), 1],
-['/%s/sigouts/%d/add'          % (self.device_id, out_channel), 1],
-['/%s/sigouts/%d/amplitudes/%d'% (self.device_id, out_channel, out_mix_ch),
-                                                                amplitude],
-#Configure the transimpedence amplifier
-['/%s/ZCTRLS/0/TAMP/BIASOUT'   % (self.device_id), 0],
-['/%s/ZCTRLS/0/TAMP/EXTBIAS'   % (self.device_id), 0],
-['/%s/ZCTRLS/0/TAMP/%d/CURRENTGAIN'
-                               % (self.device_id, current_channel), ta_gain],
-['/%s/ZCTRLS/0/TAMP/%d/DC'     % (self.device_id, current_channel), ta_bcoup],
-['/%s/ZCTRLS/0/TAMP/%d/VOLTAGEGAIN'
-                               % (self.device_id, current_channel), 1],
-['/%s/ZCTRLS/0/TAMP/%d/OFFSET' % (self.device_id, current_channel), 0],
+    #Configure the signal output
+    ['/%s/sigouts/%d/on'           % (self.device_id, out_channel), 1],
+    ['/%s/sigouts/%d/enables/%d'   % (self.device_id, out_channel, out_mix_ch), 1],
+    ['/%s/sigouts/%d/range'        % (self.device_id, out_channel), 1],
+    ['/%s/sigouts/%d/add'          % (self.device_id, out_channel), 1],
+    ['/%s/sigouts/%d/amplitudes/%d'% (self.device_id, out_channel, out_mix_ch),
+                                                                    amplitude],
+    #Configure the transimpedence amplifier
+    ['/%s/ZCTRLS/0/TAMP/BIASOUT'   % (self.device_id), 0],
+    ['/%s/ZCTRLS/0/TAMP/EXTBIAS'   % (self.device_id), 0],
+    ['/%s/ZCTRLS/0/TAMP/%d/CURRENTGAIN'
+                                   % (self.device_id, current_channel), ta_gain],
+    ['/%s/ZCTRLS/0/TAMP/%d/DC'     % (self.device_id, current_channel), ta_bcoup],
+    ['/%s/ZCTRLS/0/TAMP/%d/VOLTAGEGAIN'
+                                   % (self.device_id, current_channel), 1],
+    ['/%s/ZCTRLS/0/TAMP/%d/OFFSET' % (self.device_id, current_channel), 0],
 
-#Configure the aux output supplying bias to the signal output
-['/%s/auxouts/%d/outputselect' % (self.device_id, aux_channel),-1]]
+    #Configure the aux output supplying bias to the signal output
+    ['/%s/auxouts/%d/outputselect' % (self.device_id, aux_channel),-1]]
 
-    #Sends settings to ZI
-    self.daq.set(exp_setting)
-    self.aux_sweepND(auxchan,aux_bias)
-    # Create empty dict in which to put data.
-    data = {}
-    # generate list of gate values
-    gatesweep = np.linspace(gate_start,gate_stop,num_steps)
-    # Outer most try-except detects if during initial ramp up to
-    # the current gate value, the gate fails. Stops the iterative loop
-    # over gate values and reports to the user.
-    paths = [];
-    for i in range(6):
-        paths.append('/'+ self.device_id+'/demods/%d/sample' % i)
-    try:
-        self.daq.subscribe(paths)
-        # while True ... if (..) break structure to impliment do...while
-        # in Python. Iterates over gate voltages.
-        for gate in gatesweep:
-            self.keithleySweep(keithley, gate, compliance)
-            time.sleep(settleTCs*time_constant)
-            dataDict=self.daq.poll(avgTCs*time_constant, 500, 2, True)
-            data[gate] = {}
-            for key in dataDict.keys():
-                data[gate][key] = {}
-                dataDict[key].pop('time',None)
-                for key2 in dataDict[key].keys():
-                    data[gate][key][key2] = np.mean(dataDict[key][key2])
+        #Sends settings to ZI
+        self.daq.set(exp_setting)
+        self.aux_sweepND(auxchan,aux_bias)
+        # Create empty dict in which to put data.
+        data = {}
+        # generate list of gate values
+        fieldsweep = np.linspace(field_start,field_stop,num_steps)
+        # Outer most try-except detects if during initial ramp up to
+        # the current gate value, the gate fails. Stops the iterative loop
+        # over gate values and reports to the user.
+        paths = [];
+        for i in range(6):
+            paths.append('/'+ self.device_id+'/demods/%d/sample' % i)
+        # sweep to the inital data point and hold for the requested time
+        mag.ramp_to_field(field_start, wait = True)
+        time.sleep(isettleTCs*time_constant)
+        try:
+            self.daq.subscribe(paths)
+            # while True ... if (..) break structure to impliment do...while
+            # in Python. Iterates over gate voltages.
+            for field in fieldsweep:
+                sys.stdout.flush()
+                wrtstr = 'Current field: ' + format(field, '+.2f') + 'T'
+                sys.stdout.write( '\r'+ wrtstr)
+                mag.ramp_to_field(field, wait = True)
+                time.sleep(settleTCs*time_constant)
+                dataDict=self.daq.poll(avgTCs*time_constant, 500, 2, True)
+                data[field] = {}
+                for key in dataDict.keys():
+                    data[field][key] = {}
+                    dataDict[key].pop('time',None)
+                    for key2 in dataDict[key].keys():
+                        data[field][key][key2] = np.mean(dataDict[key][key2])
 
-        self.daq.unsubscribe(paths)
+            self.daq.unsubscribe(paths)
 
-    # handle gateVoltageError, just pass since sweeper finished and clear
-    # in loop
-    except KeyboardInterrupt:
-        pass
-    # Ramp down gate
-    self.keithleySweep(keithley, 0, compliance)
-    # Ramp aux down safely.
-    self.aux_sweepND(auxchan,0)
-    # if samples is non-empty, plot
-    #this assumes the ordering above of demods.
-    names = ['current 1h','current 2h','current 3h','4pnt 1h','4pnt 2h',
-        '4pnt 3h']
-    samples = {}
-    # Flatten dict
-    for j in range(6):
-        sample = {}
-        for i in data.keys():
-            sample[i] = data[i][paths[j]]
-        samples[names[j]]=sample
-    if samples:
-        import matplotlib.pyplot as plt
-        #clear figure
-        plt.clf()
-        # for each gate value, create a plot trace
-        currentdata = samples['current 1h']
-        fourpntdata = samples['4pnt 1h']
-        plt.subplot(211)
-        deviceR = [];
-        gatevoltages = []
-        for gate in currentdata.keys():
-            gatevoltages.append(gate)
-            #set y axis to the calculated conductivity. Uses passed
-            # ta_gain and amplitude
-            deviceR.append(np.abs((currentdata[gate]['x'] + 1j
-                                            *currentdata[gate]['y'])
-                                           *1/(ta_gain  * amplitude)*1e9))
-        plt.semilogy(np.array(gatevoltages),np.array(deviceR))
-        #Get the current axis
-        ax = plt.gca()
-        # turn on grid, for Brian
-        plt.grid(True)
-        # label axes
-        plt.ylabel(r'Device conductivity DS (nA/V)')
-        plt.xlabel('Gate Voltage')
-        plt.subplot(212)
-        sheetR = [];
-        for gate in gatevoltages:
-            #set y axis to the calculated conductivity. Uses passed
-            # ta_gain and amplitude
-            sheetR.append(np.abs(fourpntdata[gate]['x'] + 1j
-                                            *fourpntdata[gate]['y'])
-                          /(np.abs(currentdata[gate]['x'] + 1j
-                                            *currentdata[gate]['y'])
-                                           *1/(ta_gain)))
-        # show plot without returning.
-        plt.semilogy(np.array(gatevoltages),np.array(sheetR))
-        #Get the current axis
-        ax = plt.gca()
-        # turn on grid, for Brian
-        plt.grid(True)
-        # label axes
-        ax.yaxis.set_label_position("right")
-        ax.yaxis.tick_right()
-        plt.ylabel(r'Uncorrected Sheet resistance (Ohm-sq)')
-        plt.xlabel('Gate Voltage')
-        fig = plt.gcf()
-        fig.set_size_inches(10, 15)
-        plt.draw()
-        plt.show()
-    return data
+        # handle gateVoltageError, just pass since sweeper finished and clear
+        # in loop
+        except KeyboardInterrupt:
+            pass
+        # Ramp down gate
+        self.keithleySweep(keithley, 0, compliance)
+        # Ramp aux down safely.
+        self.aux_sweepND(auxchan,0)
+        # if samples is non-empty, plot
+        #this assumes the ordering above of demods.
+        names = ['current 1h','current 2h','current 3h','4pnt 1h','4pnt 2h',
+            '4pnt 3h']
+        samples = {}
+        # Flatten dict
+        for j in range(6):
+            sample = {}
+            for i in data.keys():
+                sample[i] = data[i][paths[j]]
+            samples[names[j]]=sample
+        if samples:
+            import matplotlib.pyplot as plt
+            #clear figure
+            plt.clf()
+            # for each gate value, create a plot trace
+            currentdata = samples['current 1h']
+            fourpntdata = samples['4pnt 1h']
+            plt.subplot(211)
+            deviceR = [];
+            fieldstrengths = []
+            for field in currentdata.keys():
+                fieldstrengths.append(field)
+                #set y axis to the calculated conductivity. Uses passed
+                # ta_gain and amplitude
+                deviceR.append(-currentdata[field]['x']
+                                               *1/(ta_gain  * amplitude)*1e9)
+            if (np.max(np.array(deviceR)) / np.min(np.array(deviceR)) <10):
+                plt.plot(np.array(fieldstrengths),np.array(deviceR))
+            else:
+                plt.semilogy(np.array(fieldstrengths),np.array(deviceR))
+            #Get the current axis
+            ax = plt.gca()
+            # turn on grid, for Brian
+            plt.grid(True)
+            # label axes
+            plt.ylabel(r'Device conductivity DS (nA/V)')
+            plt.xlabel('Field (T)')
+            plt.subplot(212)
+            sheetR = [];
+            for field in fieldstrengths:
+                #set y axis to the calculated conductivity. Uses passed
+                # ta_gain and amplitude
+                sheetR.append(fourpntdata[field]['x']
+                              /(currentdata[field]['x']
+                                               *1/(ta_gain)))
+            # show plot without returning.
+            if (np.max(np.array(sheetR)) / np.min(np.array(sheetR)) <10):
+                plt.plot(np.array(fieldstrengths),np.array(sheetR))
+            else:
+                plt.semilogy(np.array(fieldstrengths),np.array(sheetR))
+            #Get the current axis
+            ax = plt.gca()
+            # turn on grid, for Brian
+            plt.grid(True)
+            # label axes
+            ax.yaxis.set_label_position("right")
+            ax.yaxis.tick_right()
+            if hall:
+                ylabelstr = 'Uncorrected hall resistance (Ohms)'
+            else:
+                ylabelstr = 'Uncorrected sheet resistance (Ohms)'
+            plt.ylabel(ylabelstr)
+            plt.xlabel('Field (T)')
+            fig = plt.gcf()
+            fig.set_size_inches(10, 15)
+            plt.draw()
+            plt.show()
+        return data
