@@ -988,7 +988,7 @@ class ziTransport(Measurement):
             # in Python. Iterates over gate voltages.
             for gate in gatesweep:
                 sys.stdout.flush()
-                wrtstr = 'Current gate voltage: ' + format(field, '+.2f')  + 'V'
+                wrtstr = 'Current gate voltage: ' + format(gate, '+.2f')  + 'V'
                 sys.stdout.write('\r' + wrtstr)
                 self.keithleySweep(keithley, gate, compliance)
                 time.sleep(settleTCs*time_constant)
