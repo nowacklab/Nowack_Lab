@@ -64,15 +64,14 @@ class HF2LI(Instrument):
             # self.daq.set(general_setting)
             # self.daq.sync()
 
-            self.configure()
-            print('Must now reenable data transfer and output in Zurich software. Check setup again.')
+            # self.configure()
+            # print('Must now reenable data transfer and output in Zurich software. Check setup again.')
 
     def __getstate__(self):
         self._save_dict = {'device_id': self.device_id,
                           'X': self.X,
                           'Y': self.Y,
-                        #   'R': self.R,
-                        #   'theta': self.theta
+                          'zurich_dict': self.daq.get('/', True) #  all settings
                           }
         return self._save_dict
 
@@ -80,8 +79,6 @@ class HF2LI(Instrument):
     def __setstate__(self, state):
         state['_X'] = state.pop('X')
         state['_Y'] = state.pop('Y')
-        # state['_R'] = state.pop('R')
-        # state['_theta'] = state.pop('theta')
 
         self.__dict__.update(state)
 
