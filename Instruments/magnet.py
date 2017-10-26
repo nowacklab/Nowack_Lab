@@ -283,6 +283,7 @@ class AMI420(AMI430):
         self._resource = 'GPIB::%02i::INSTR' %gpib_address
         VISAInstrument._init_visa(self, self._resource)
 
+
     @property
     def Bset(self):
         '''
@@ -296,7 +297,6 @@ class AMI420(AMI430):
         '''
         Set the field setpoint in Tesla.
         '''
-        raise Exeception('not working')
         if abs(value) > self._Bmax:
             print('Warning! %g T setpoint too high! Setpoint set to %g T.'
                                             %(value, self._Bmax*np.sign(value)))
@@ -374,6 +374,36 @@ class AMI420(AMI430):
         state_num = int(self.ask('STATE?'))
         self._status = states[state_num]
         return self._status
+
+
+    def wait(self, timeout=1800, interval=0.5):
+        '''
+        Wait for holding.
+        '''
+        tstart = time.time()
+        waiting = True;
+        while waiting:
+            try:
+                waiting = abs(self.B - self.Bset) > .1
+            except:
+                pass
+            time.sleep(interval)
+            if time.time()-tstart > timeout:
+                raise Exception('Timed out waiting for holding.')
+
+    def ramp_to_field(self, B, wait=False, rate=None):
+        '''
+        Heat up persistent switch and ramp the field with set ramp rate.
+        rate in T/min. None = use rate already set.
+        '''
+        if not self.p_switch:
+            raise Exception('P switch is not enabled!')
+        self.Bset = B
+        if rate is not None:
+            self.Brate = rate
+        self.start_ramp()
+        if wait:
+            self.wait()
 
 
 class Magnet(AMI430):
