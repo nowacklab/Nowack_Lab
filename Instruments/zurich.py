@@ -55,13 +55,14 @@ class HF2LI(Instrument):
             self.in_channel = in_channel
             self.meas_type = meas_type
 
-            # Disable everything
-            general_setting = [['/%s/demods/*/enable' % self.device_id, 0],
-                   ['/%s/demods/*/trigger' % self.device_id, 0],
-                   ['/%s/sigouts/*/enables/*' % self.device_id, 0],
-                   ['/%s/scopes/*/enable' % self.device_id, 0]]
-            self.daq.set(general_setting)
-            self.daq.sync()
+            # This code wouild disable all outputs and demods
+            # general_setting = [['/%s/demods/*/enable' % self.device_id, 0],
+            #        ['/%s/demods/*/trigger' % self.device_id, 0],
+            #        ['/%s/sigouts/*/enables/*' % self.device_id, 0],
+            #        ['/%s/scopes/*/enable' % self.device_id, 0]]
+            #
+            # self.daq.set(general_setting)
+            # self.daq.sync()
 
             self.configure()
             print('Must now reenable data transfer and output in Zurich software. Check setup again.')
