@@ -8,6 +8,7 @@ class LakeshoreChannel(VISAInstrument):
     representing each of the input channels on the instrument.
     '''
     _label = 'LakeshoreChannel'
+    _idn = None #TODO
     _num = 0
     _strip = '\r'
     _insets = ['enabled', 'dwell', 'pause', 'curve_num', 'temp_coef']

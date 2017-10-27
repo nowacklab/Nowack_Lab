@@ -5,6 +5,8 @@ from .instrument import Instrument, VISAInstrument
 
 class Keithley2400(VISAInstrument):
     _label = 'keithley'
+    _idn = 'MODEL 2400'
+
     '''
     Instrument driver for Keithley 2400 Source Meter
     '''

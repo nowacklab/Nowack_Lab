@@ -471,7 +471,20 @@ class SquidArray(PFL102):
     _label = 'squidarray'
 
     def __init__(self, port='COM3'):
+        # self = SquidArray.load()
         super().__init__(1, PCI100(port))
+
+    # #  Good idea; bad implementation. Tried to allow load from JSON upon init.
+    # def __new__(cls, load=True):
+    #     '''
+    #     Init by loading saved instance of the class.
+    #     '''
+    #     if load:
+    #         return PFL102.load()
+    #     else:
+    #         return Instrument.__new__(cls)
+
+
 
     def tune(self):
         '''

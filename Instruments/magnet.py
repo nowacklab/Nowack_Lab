@@ -20,6 +20,8 @@ class AMI430(VISAInstrument):
     readings/setpoints are always related by the coil constant.
     '''
     _label = 'ami430'
+    _idn = None #TODO
+
     _params = ['B', 'Bset', 'Brate', 'I', 'Iset', 'Irate', 'Isupply',
                     'p_switch']
     _Bmax = 1  # T
