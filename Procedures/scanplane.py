@@ -50,10 +50,12 @@ class Scanplane(Measurement):
     def __init__(self, instruments={}, plane=None, span=[800, 800],
                  center=[0, 0], numpts=[20, 20],
                  scanheight=15, scan_rate=120, raster=False,
-                 direction=['+','+']):
+                 direction=['+','+'], ROI=None):
         '''
         direction: +/- to sweep each axis forwards or backwards.
         Flips scan image. TODO: don't flip
+        ROI: List of [Vx1, Vx2, Vy1, Vy2] to specify a region of interest.
+            Will draw a box from Vx1 < Vx < Vx2 and Vy1 < Vy < Vy2.
         '''
 
 
@@ -82,6 +84,7 @@ class Scanplane(Measurement):
         self.plane = plane
         self.scanheight = scanheight
         self.direction = direction
+        self.ROI = ROI
 
         self.V = AttrDict({
             chan: np.nan for chan in self._daq_inputs + ['piezo']
@@ -377,6 +380,18 @@ class Scanplane(Measurement):
             title = ax.set_title(self.timestamp, size="medium", y=1.02)
             # If the title intersects the exponent label from the colorbar
             # shift the title up and center it
+
+            # ROI
+            # make closed path of coordinates
+            xy = [[self.ROI[0], self.ROI[2]],
+                  [self.ROI[1], self.ROI[2]],
+                  [self.ROI[1], self.ROI[3]],
+                  [self.ROI[0], self.ROI[3]],
+                  [self.ROI[0], self.ROI[2]],
+                  ]
+            p = matplotlib.patches.Polygon(xy)
+            c = matplotlib.collections.PatchCollection([p], facecolors=['none'], edgecolors=['k'])
+            ax.add_collection(c)
 
         # Plot the last linecut for DC, AC and capacitance signals
         for ax, chan, clabel in zip(self.axes_cuts,
