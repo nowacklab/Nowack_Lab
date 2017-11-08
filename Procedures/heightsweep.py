@@ -66,25 +66,31 @@ class Heightsweep(Measurement):
 
         self.plot()
 
+    def setup_plots(self):
+        self.fig = plt.figure(figsize=(6,10))
+        self.axes = AttrDict()
+        self.axes[0] = self.fig.add_subplot(411)
+        self.axes[1] = self.fig.add_subplot(412, sharex=self.axes[0])
+        self.axes[2] = self.fig.add_subplot(413, sharex=self.axes[0])
+        self.axes[3] = self.fig.add_subplot(414, sharex=self.axes[0])
 
     def plot(self):
-        super().plot()
+        #super().plot()
         labels = {'dc':'DC Flux (A.U.)', 'cap':"Capacitance (A.U.)", 
                 'acx':"AC X (A.U.)", 'acy':"AC Y (A.U.)"}
 
-        self.fig, self.axes = plt.subplots(4, 1, figsize=(6,10), sharex=True)
+        #self.fig, self.axes = plt.subplots(4, 1, figsize=(6,10), sharex=True)
         self.fig.subplots_adjust(hspace=0)
-        for chan, ax in zip(self._daq_inputs, self.axes.flatten()):
+        axes = [self.axes[0], self.axes[1], self.axes[2], self.axes[3]]
+        for chan, ax in zip(self._daq_inputs, axes):
             ax.plot(self.Vup['z'], self.Vup[chan])
             ax.plot(self.Vdown['z'], self.Vdown[chan])
             ax.set_ylabel(labels[chan])
 
-        self.axes[-1].set_xlabel("Z Position (V)")
+        self.axes[3].set_xlabel("Z Position (V)")
         self.axes[0].set_title(self.timestamp, size="medium")
 
 
-    def setup_plots(self):
-        pass
-
-    def save(self, filename=None, savefig=True):
-        self._save(filename, savefig=True, ignored=["axes"])
+    #def save(self, filename=None, savefig=True, **kwargs):
+        # the problem is axes is not an attrdict
+    #    self._save(filename, savefig=True, ignored=["axes"], **kwargs)
