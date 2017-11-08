@@ -2,6 +2,7 @@ from ..Utilities.save import Measurement
 import time
 import types
 import datetime
+import numpy as np
 
 class NestedMeasurement(Measurement):
 
@@ -13,15 +14,18 @@ class NestedMeasurement(Measurement):
                        instrument_to_varry,
                        instrument_parameter,
                        instrument_values,
+                       before_fnct,
+                       before_fnct_args,
                        wait_fncts,
                        wait_fncts_args,
                        log_fncts,
                        log_fncts_args,
-                       before_fnct,
-                       before_fnct_args,
+                       pre_run,
+                       pre_run_args,
                        post_run,
                        post_run_args,
-                       saveinfolder = True
+                       saveinfolder = True,
+                       saveinsamefolder = True
                        ):
         '''
         inputs:
@@ -50,19 +54,24 @@ class NestedMeasurement(Measurement):
         self.m_r_kwargs= measurement_run_kwargs
         self.inst = instrument_to_varry
         self.paramname = instrument_parameter
-        self.params = instrument_values
+        self.params = np.array(instrument_values)
         self.wait_fncts = wait_fncts
         self.wait_fncts_args = wait_fncts_args
         self.log_fncts = log_fncts
         self.log_fncts_args = log_fncts_args
         self.before_fnct = before_fnct
         self.before_fnct_args = before_fnct_args
+        self.pre_run = pre_run
+        self.pre_run_args = pre_run_args
         self.post_run = post_run
         self.post_run_args = post_run_args
         self.measurements = []
         self.filenames = []
         self.log = []
         self.saveinfolder = saveinfolder
+        self.saveinsamefolder = saveinsamefolder
+        self.folderpath_remote = ''
+        self.folderpath_local  = ''
 
         if self.saveinfolder:
             now = datetime.datetime.now()
@@ -102,8 +111,11 @@ class NestedMeasurement(Measurement):
             except:
                 print("Cannot sleep, waittimes not properly defined")
 
+            # Construct measurement
             self.measurements.append(self.m_c[i](*self.m_c_args[i], 
                                                  **self.m_c_kwargs[i]))
+
+            # Log measurement
             try:
                 self.log.append(self.log_fncts[i](self, 
                                 self.measurements[-1], 
@@ -112,19 +124,47 @@ class NestedMeasurement(Measurement):
                 self.log.append('Error')
                 pass
 
+            # If folder for this measurement, redefine save
             if saveinfolder:
                 NestedMeasurement.saveinfolder(self.folder, 
-                                               self.measurements[-1])
+                                         self.measurements[-1],
+                                         localpath = self.folderpath_local,
+                                         remotepath= self.folderpath_remote)
 
+            # Prerun
+            self.pre_run[i](self, *self.pre_run_args[i])
+
+            # run
             self.measurements[-1].run(*self.m_r_args[i], 
                                       **self.m_r_kwargs[i])
+
+            # store filenames
             self.filenames.append(self.measurements[-1].filename)
+
+            # postrun
             self.post_run[i](self, *self.post_run_args[i])
+
+            if (self.saveinsamefolder and len(self.measurements) == 1):
+                self.folderpath_remote = self.measurements[0]._remotepath
+                self.folderpath_local  = self.measurements[0]._localpath
+
+        self.pre_run = 'deleted'
+        self.post_run = 'deleted'
+        self.log_fncts = 'deleted'
+        self.wait_fncts = 'deleted'
+        self.before_fncts = 'deleted'
+
+        # TODO: fix saving
+        # TODO: add 'after' function that does something after loop
+
     
     @staticmethod
-    def saveinfolder(foldername, obj):
+    def saveinfolder(foldername, obj, localpath, remotepath):
         def newsave(self, **kwargs):
             return super(type(obj), obj).save(appendedpath=foldername,
+                                              savepath=True,
+                                              localpath=localpath,
+                                              remotepath=remotepath,
                                               **kwargs)
         obj.save = types.MethodType(newsave, obj)
             

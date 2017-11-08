@@ -162,6 +162,8 @@ class Measurement:
             Walk through dictionary to prune out Instruments
             '''
             for key in list(d.keys()): # convert to list because dictionary changes size
+                #print(key)
+                #print(key)
                 if key in unwanted_keys: # get rid of keys you don't want to load
                     d[key] = None
                 elif 'py/' in key:
@@ -193,7 +195,8 @@ class Measurement:
 
         return obj
 
-    def _save(self, filename=None, savefig=True, ignored = [], appendedpath=''):
+    def _save(self, filename=None, savefig=True, ignored = [], appendedpath='',
+                localpath='', remotepath = '', savepath = False):
         '''
         Saves data. numpy arrays are saved to one file as hdf5, everything else
         is saved to JSON
@@ -229,20 +232,33 @@ class Measurement:
                 self.make_timestamp_and_filename()
             filename = self.filename
 
-        if os.path.dirname(filename) == '': # you specified a filename with no preceding path
-            local_path = os.path.join(get_local_data_path(), 
-                                      get_todays_data_dir(), 
-                                      appendedpath, 
-                                      filename)
-            remote_path = os.path.join(get_remote_data_path(), 
-                                       get_todays_data_dir(), 
-                                       appendedpath, 
-                                       filename)
-        # Saving to a custom path
-        else: # you specified some sort of path
+        # If you did not specify a filename with a path, generate a path
+        if os.path.dirname(filename) == '': 
+            # If you specified a local AND remote path, set them correctly
+            if localpath != '' and remotepath != '':
+                local_path  = os.path.join(localpath, filename)
+                remote_path = os.path.join(remotepath, filename)
+            else:
+                local_path = os.path.join(get_local_data_path(), 
+                                          get_todays_data_dir(), 
+                                          appendedpath, 
+                                          filename)
+                remote_path = os.path.join(get_remote_data_path(), 
+                                           get_todays_data_dir(), 
+                                           appendedpath, 
+                                           filename)
+        # Else, you specified some sort of path but no remote path (legacy)
+        else: 
             local_path = filename
-            remote_path = os.path.join(get_remote_data_path(), '..', 'other', *filename.replace('\\', '/').split('/')[1:]) # removes anything before the first slash. e.g. ~/data/stuff -> data/stuff
+            remote_path = os.path.join(get_remote_data_path(), 
+                                        '..', 'other', 
+                                        *filename.replace('\\', '/').split('/')[1:]) 
+            # removes anything before the first slash. e.g. ~/data/stuff -> data/stuff
             # All in all, remote_path should look something like: .../labshare/data/bluefors/other/
+
+        if savepath:
+            self._localpath = os.path.dirname(local_path)
+            self._remotepath = os.path.dirname(remote_path)
 
         # Save locally:
         local_dir = os.path.split(local_path)[0]
