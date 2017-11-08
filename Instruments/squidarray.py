@@ -470,21 +470,21 @@ class PFL102(Instrument):
 class SquidArray(PFL102):
     _label = 'squidarray'
 
-    def __init__(self, port='COM3'):
-        # self = SquidArray.load()
+    def __init__(self, port='COM3', load=True):
+        '''
+        Port: where the PCI100 is connected
+        load: Load previous parameters.
+        '''
         super().__init__(1, PCI100(port))
+        self.load_dict()
 
-    # #  Good idea; bad implementation. Tried to allow load from JSON upon init.
-    # def __new__(cls, load=True):
-    #     '''
-    #     Init by loading saved instance of the class.
-    #     '''
-    #     if load:
-    #         return PFL102.load()
-    #     else:
-    #         return Instrument.__new__(cls)
-
-
+    def load_dict(self, json_file=None):
+        '''
+        Load Squid array parameters from a JSON file without needing to create
+        a new object.
+        '''
+        obj = SquidArray.load(json_file)
+        self.__dict__.update(obj.__dict__)
 
     def tune(self):
         '''
