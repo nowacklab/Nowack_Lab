@@ -282,12 +282,14 @@ class NIDAQ(Instrument):
         for k in Vstart.keys():
             output_data[k] = np.linspace(Vstart[k], Vend[k], numsteps)
 
+        sent = '%s' %output_data.keys()
+
         received = self.send_receive(output_data, chan_in, sample_rate=sample_rate)
 
         if chan_in is not None:
             for k in received.keys():
                 if k not in chan_in and k != 't':
-                    raise Exception('DAQ channel name error! Sent keys: %s, Expected keys: %s, Received: %s' %(output_data.keys(), chan_in, received.keys()))
+                    raise Exception('DAQ channel name error! Sent keys: %s, Expected keys: %s, Received: %s' %(sent, chan_in, received.keys()))
 
         return output_data, received
 

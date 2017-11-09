@@ -382,16 +382,17 @@ class Scanplane(Measurement):
             # shift the title up and center it
 
             # ROI
-            # make closed path of coordinates
-            xy = [[self.ROI[0], self.ROI[2]],
-                  [self.ROI[1], self.ROI[2]],
-                  [self.ROI[1], self.ROI[3]],
-                  [self.ROI[0], self.ROI[3]],
-                  [self.ROI[0], self.ROI[2]],
-                  ]
-            p = matplotlib.patches.Polygon(xy)
-            c = matplotlib.collections.PatchCollection([p], facecolors=['none'], edgecolors=['k'])
-            ax.add_collection(c)
+            if self.ROI is not None:
+                # make closed path of coordinates
+                xy = [[self.ROI[0], self.ROI[2]],
+                      [self.ROI[1], self.ROI[2]],
+                      [self.ROI[1], self.ROI[3]],
+                      [self.ROI[0], self.ROI[3]],
+                      [self.ROI[0], self.ROI[2]],
+                      ]
+                p = matplotlib.patches.Polygon(xy)
+                c = matplotlib.collections.PatchCollection([p], facecolors=['none'], edgecolors=['k'])
+                ax.add_collection(c)
 
         # Plot the last linecut for DC, AC and capacitance signals
         for ax, chan, clabel in zip(self.axes_cuts,

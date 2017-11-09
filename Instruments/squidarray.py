@@ -475,8 +475,9 @@ class SquidArray(PFL102):
         Port: where the PCI100 is connected
         load: Load previous parameters.
         '''
-        super().__init__(1, PCI100(port))
         self.load_dict()
+        self.channel = 1
+        self.pci = PCI100(port)
 
     def load_dict(self, json_file=None):
         '''
