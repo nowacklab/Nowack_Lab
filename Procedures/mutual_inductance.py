@@ -122,6 +122,7 @@ class ArraylessMI(Measurement):
                 {"field_source": self.daq.outputs["field_source"].V},
                 {"field_source": f * self.r_bias_field},
                 sample_rate = 10000, numsteps = 10000)
+            print(self.daq.outputs['field_source'].V, f * self.r_bias_field)
             #now sweep the current in the mod coil
             output_data, recieved = self.daq.sweep(
                 {"mod_source": self.I_mod_i * self.r_bias_mod},

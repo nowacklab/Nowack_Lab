@@ -14,7 +14,7 @@ def makePlots(squidNum, date, file, iv = 0, mod = 0, field = [0,0,0], ivSlope = 
     if(mod!=0):
         makeModPlot(mod, squidNum, date, file)
     if(field != [0,0,0]):
-        makeAllFieldPlot(field[0], field[1], field[2], squidNum, date, file)
+        makeAllFieldPlot(field[0], field[1], field[2], squidNum, file)
 
 
 def makeIVPlot(timestamp , squidNum, date, file, ivSlope = True):
@@ -245,7 +245,7 @@ def makeFieldPlot(timestamp , squidNum, path, loop):
         timestamp +"_Squid" + squidNum, dpi=500, bbox_inches = "tight")
     plt.show()
 
-def makeAllFieldPlot(timestamp1 ,timestamp2,timestamp3, squidNum, date, file):
+def makeAllFieldPlot(timestamp1 ,timestamp2,timestamp3, squidNum, file):
     if(timestamp1!=0):
         makeFieldPlot(timestamp1 , squidNum,path, 'Entire Loop')
 
