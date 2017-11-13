@@ -225,6 +225,7 @@ class Planefit(Measurement):
 
         self.update_c(ux, uy)
 
+
     def plane(self, x, y):
         '''
         Given points x and y, calculates a point z on the plane.

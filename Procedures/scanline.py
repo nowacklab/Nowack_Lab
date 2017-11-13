@@ -120,7 +120,8 @@ class Scanline(Measurement):
         super().plot()
 
         for chan in self._daq_inputs:
-            self.ax[chan].plot(self.Vout*self._conversions['x'], self.V[chan], '-')
+            self.ax[chan].plot(self.Vout*self._conversions['x'],
+                               self.V[chan] * self._conversions[chan], '-')
 
         self.fig.tight_layout()
         self.fig.canvas.draw()
@@ -143,4 +144,4 @@ class Scanline(Measurement):
             ax.set_title(self.filename)
             ax.yaxis.get_major_formatter().set_powerlimits((-2, 2))
 
-        self.ax['cap'].set_ylabel('cap (C)')
+        self.ax['cap'].set_ylabel('cap (F)')
