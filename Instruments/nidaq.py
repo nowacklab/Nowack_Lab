@@ -216,7 +216,6 @@ class NIDAQ(Instrument):
 
             data[key] = value
 
-
         # Make sure there's at least one input channel (or DAQmx complains)
         if chan_in is None:
             chan_in = ['ai23'] # just a random channel
@@ -263,7 +262,9 @@ class NIDAQ(Instrument):
                 received[chan] = np.delete(value, 0)  # removes first data point, which is wrong
             else:
                 received[chan] = np.delete(value,-1)  # removes last data point, a duplicate
-        for chan, value in received.items():
+
+        received2 = received.copy()
+        for chan, value in received2.items():
             if chan not in input_labels and chan is not 't':
                 received[getattr(self, chan).label] = received.pop(chan)  # change back to the given channel labels if different from the real channel names
 
