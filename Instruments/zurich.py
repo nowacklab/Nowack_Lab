@@ -2,8 +2,11 @@
 
 import time, numpy as np
 from .instrument import Instrument
-import zhinst.ziPython as ziP
-import zhinst.utils as utils
+try:
+    import zhinst.ziPython as ziP
+    import zhinst.utils as utils
+except:
+    print('zhinst not imported in zurich.py!')
 
 class gateVoltageError(Exception):
     pass
