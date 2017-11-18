@@ -130,6 +130,17 @@ class Montana(Instrument):
         except:
             raise Exception('Problem connecting to Montana! Try again.')
 
+    def check_status(self):
+        '''
+        Returns True if Montana status is okay. Returns False if there is a
+        communication issue, implying the software has closed.
+        '''
+        try:
+            self.temperature['platform']
+            return True
+        except:
+            return False
+
     def cooldown(self):
         resp = self.ask('SCD', to_float = False)
         print(resp)

@@ -176,6 +176,13 @@ class Scanplane(Measurement):
 
         # Loop over each line in the scan
         for i in range(num_lines):
+
+            if not self.montana.check_status(): # returns False if problem
+                self.piezos.zero()
+                self.squidarray.zero()
+                self.atto.z.move(-1000)
+                raise Exception('Montana error!')
+
             # If we detected a keyboard interrupt stop the scan here
             # The DAQ is not in use at this point so ending the scan
             # should be safe.
