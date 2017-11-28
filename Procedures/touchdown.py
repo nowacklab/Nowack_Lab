@@ -335,7 +335,7 @@ n: Sweep z piezo down and redo without moving z attocube.\n \
             self._move_attocube()
             start = -self.Vz_max # start far away next time
 
-            self.piezos.z.V = 0  # bring the piezo back to zero
+        self.piezos.z.V = 0  # bring the piezo back to zero
 
 
     def do_sweep(self, start):

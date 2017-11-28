@@ -207,13 +207,14 @@ class Planefit(Measurement):
 
         return obj
 
-    def move_and_update(self, x=0, y=0, z=0, ux=0, uy=0):
+    def move_and_update(self, x=0, y=0, z=0, ux=0, uy=0, disable_atto=True):
         '''
         Move the attocubes by a specified distance and then update the plane.
 
         Arguments:
         x (y, z) - positive or negative distance to move in x (y, z) direction (~um)
         ux (uy) - x (y) coordinate at which to update the plane (piezo V)
+        disable_atto - disable atto during touchdown to prevent crashing?
         '''
         self.piezos.z.V = -self.piezos.z.Vmax
         if x != 0:
@@ -223,7 +224,7 @@ class Planefit(Measurement):
         if z != 0:
             self.atto.z.move(z)
 
-        self.update_c(ux, uy)
+        self.update_c(ux, uy, disable_atto=disable_atto)
 
 
     def plane(self, x, y):
