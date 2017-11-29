@@ -119,6 +119,29 @@ class PPMS(Instrument):
             raise e
         print('PPMS Connected. Process ID %s' %self._pid)
 
+
+    def cool_to_4K(self):
+        '''
+        Cool to 10 K at 20 K/min.
+        Then wait a half hour for thermalization.
+        Then cool to 4K at .2 K/min.
+        Total time ~2 hours.
+        '''
+        print('Cooling to 10 K.')
+        self.temperature_rate = 20
+        self.temperature = 10
+        while self.temperature > 10.1:
+            time.sleep(60)
+        print('Waiting a half hour for thermalization.')
+        time.sleep(60*30)
+        print('Cooling to 4 K')
+        self.temperature_rate = .2
+        self.temperature = 4
+        while self.temperature > 4.1:
+            time.sleep(60)
+        print('At 4 K.')
+
+
     def kill_server(self,):
         '''
         Terminates the running IronPython (ipy.exe) server and closes cmd window.

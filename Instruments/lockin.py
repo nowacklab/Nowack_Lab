@@ -13,27 +13,29 @@ _input_modes = ['A', 'A-B', 'I (10^6)', 'I (10^8)']
 
 class SR830(VISAInstrument):
     _label = 'lockin'
+    _idn = 'SR830'
+
     time_constant_options = {
-            "10 us": 0,
-            "30 us": 1,
-            "100 us": 2,
-            "300 us": 3,
-            "1 ms": 4,
-            "3 ms": 5,
-            "10 ms": 6,
-            "30 ms": 7,
-            "100 ms": 8,
-            "300 ms": 9,
-            "1 s": 10,
-            "3 s": 11,
-            "10 s": 12,
-            "30 s": 13,
-            "100 s": 14,
-            "300 s": 15,
-            "1 ks": 16,
-            "3 ks": 17,
-            "10 ks": 18,
-            "30 ks": 19
+            '10 us': 0,
+            '30 us': 1,
+            '100 us': 2,
+            '300 us': 3,
+            '1 ms': 4,
+            '3 ms': 5,
+            '10 ms': 6,
+            '30 ms': 7,
+            '100 ms': 8,
+            '300 ms': 9,
+            '1 s': 10,
+            '3 s': 11,
+            '10 s': 12,
+            '30 s': 13,
+            '100 s': 14,
+            '300 s': 15,
+            '1 ks': 16,
+            '3 ks': 17,
+            '10 ks': 18,
+            '30 ks': 19
         }
     '''
     Instrument driver for SR830, modified from Guen's squidpy driver
@@ -47,18 +49,18 @@ class SR830(VISAInstrument):
         self._visa_handle.timeout = 3000 # default
 
     def __getstate__(self):
-        self._save_dict = {"sensitivity": self.sensitivity,
-                          "frequency": self.frequency,
-                          "amplitude": self.amplitude,
+        self._save_dict = {'sensitivity': self.sensitivity,
+                          'frequency': self.frequency,
+                          'amplitude': self.amplitude,
                           'harmonic': self.harmonic,
                           'phase': self.phase,
-                          "time_constant": self.time_constant,
-                          "reserve": self.reserve,
-                          "gpib_address": self.gpib_address,
-                          "X": self.X,
-                          "Y": self.Y,
-                          "R": self.R,
-                          "theta": self.theta}
+                          'time_constant': self.time_constant,
+                          'reserve': self.reserve,
+                          'gpib_address': self.gpib_address,
+                          'X': self.X,
+                          'Y': self.Y,
+                          'R': self.R,
+                          'theta': self.theta}
         return self._save_dict
 
 
@@ -349,7 +351,9 @@ class SR830(VISAInstrument):
             return False
 
     def set_out(self, chan, param):
-        """ set output on channel [1,2] to parameter [Ch1:['R','X'],Ch2:['Y','theta']]"""
+        '''
+        set output on channel [1,2] to parameter [Ch1:['R','X'],Ch2:['Y','theta']]
+        '''
         if chan == 1:
             if param not in ('R','X'):
                 raise Exception('Cannot display %s on Channel 1!!' %param)
@@ -392,15 +396,3 @@ class SR830(VISAInstrument):
         '''
         Vstep = 0.01
         self.sweep(self.amplitude, 0, Vstep, sweep_rate)
-
-
-if __name__ == '__main__':
-    lockin = SR830('GPIB::09::INSTR')
-    #print(lockin.time_constant)
-    #lockin.auto_phase()
-    print(lockin.get_all())
-    #print(lockin.time_constant)
-
-    #lockin.auto_gain()
-
-    # lockin.auto_phase() # test this

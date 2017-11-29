@@ -330,6 +330,17 @@ class Measurement:
             with open(filename+'.json', 'w', encoding='utf-8') as f:
                 json.dump(obj_dict, f, sort_keys=True, indent=4)
 
+
+    def check_instruments(self):
+        '''
+        Check to make sure all required instruments (specified in instrument
+        list) are loaded.
+        '''
+        for i in self.instrument_list:
+            if not hasattr(self, i):
+                raise Exception('Instrument %s not loaded. Cannot run Measurement!' %i)
+
+
     def do(self):
         '''
         Do the main part of the measurement. Write this function for subclasses.
@@ -408,18 +419,20 @@ class Measurement:
         self.interrupt = False
         done = None
 
-        ## Before the do.
+        # Before the do.
         if plot:
             self.setup_plots()
         time_start = time.time()
 
-        ## The do.
+        self.check_instruments()
+
+        # The do.
         try:
             done = self.do(**kwargs)
         except KeyboardInterrupt:
             self.interrupt = True
 
-        ## After the do.
+        # After the do.
         time_end = time.time()
         self.time_elapsed_s = time_end-time_start
 

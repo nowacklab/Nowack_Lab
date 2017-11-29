@@ -11,6 +11,8 @@ FILTER = [0, 0.03, 0.1, 0.3, 1, 3, 10, 30, 100, 300, 1000, 3000, 10000, 30000, 1
 
 class SR5113(VISAInstrument):
     _label = 'preamp'
+    _idn = None # *IDN? does not work
+
     _gain = None
     _filter = None
 
@@ -29,8 +31,8 @@ class SR5113(VISAInstrument):
 
 
     def __getstate__(self):
-        self._save_dict = {"gain": self.gain,
-                          "filter": self.filter}
+        self._save_dict = {'gain': self.gain,
+                          'filter': self.filter}
         return self._save_dict
 
 

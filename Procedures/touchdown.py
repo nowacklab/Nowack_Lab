@@ -50,14 +50,14 @@ class Touchdown(Measurement):
 
     baseline = 0
 
-    def __init__(self, instruments={}, disable_attocubes=False, Vz_max=None):
+    def __init__(self, instruments={}, disable_atto=False, Vz_max=None):
         '''
         Approach the sample to the SQUID while recording the capacitance
         of the cantelever in a lockin measurement to detect touchdown.
 
         Arguments:
         instruments -- dictionary containing instruments for the touchdown.
-        disable_attocubes -- if set to True the attocubes will not move.
+        disable_atto -- if set to True the z attocube will not move.
         Vz_max -- the maximum voltage that can be applied to the Z piezo.
 
         Required instruments:
@@ -82,7 +82,7 @@ class Touchdown(Measurement):
                 self.Vz_max = 200  # just for the sake of having something
 
         self._init_arrays()
-        self.disable_attocubes = disable_attocubes
+        self.disable_atto = disable_atto
         self.error_flag = False
 
 
@@ -93,10 +93,10 @@ class Touchdown(Measurement):
         to make code prettier
 
         Determines the piezo voltage to set before doing another touchdown.
-        The goal is to move the attocubes into a position where the z bender
+        The goal is to move the z attocube into a position where the z piezo
         can easily bring the sample and squid into contact.
 
-        If the touchdown voltage is within the bender range (set by
+        If the touchdown voltage is within the piezo range (set by
         constants inside this function), then nothing is done.  Else,
         sets start to the lowest possible value and sets the self.attoshift
         to the best guess as to where the scanner should be.
@@ -134,7 +134,7 @@ class Touchdown(Measurement):
         self.C0 = None # offset: will take on value of the first point
 
 
-    def _move_attocubes(self):
+    def _move_attocube(self):
         '''
         Helper function for do():
         Copied directly from do() at 2017-05-30 by dhl88
@@ -143,17 +143,17 @@ class Touchdown(Measurement):
         1) moves piezos to the lowest possible value
         2) sets start to that value (-self.Vz_max)
         3) check balance, make sure we didn't crash
-        4) move attocubes to the position self.attoshift
+        4) move z attocube to the position self.attoshift
         5) sleep until capacitance settles
         6) if capacitance is overloading, backoff
         '''
-        if (self.disable_attocubes is False and
+        if (self.disable_atto is False and
             self.touchdown is False and
             self.error_flag is False):
-            # Confirm that the attocubes should move
+            # Confirm that the attocube should move
             inp = input(
-'[y]: Sweep z piezo down, move attocubes by %s um, and redo touchdown\n \
-n: Sweep z piezo down and redo without moving attocubes.\n \
+'[y]: Sweep z piezo down, move z attocube by %+.1f um, and redo touchdown\n \
+n: Sweep z piezo down and redo without moving z attocube.\n \
 #: Enter custom attocube movement. ' %self.attoshift)
             try:
                 float(inp)
@@ -301,7 +301,7 @@ n: Sweep z piezo down and redo without moving attocubes.\n \
         Can specify a voltage from which to start the sweep
 
         Args:
-        start (float) -- Starting position (in voltage) of Z peizo.
+        start (float) -- Starting position (in voltage) of Z piezo.
         '''
 
         self.Vtd = None
@@ -313,7 +313,7 @@ n: Sweep z piezo down and redo without moving attocubes.\n \
         # Z atto is moved up between iterations
         # Loop breaks when true touchdown detected.
         while not self.touchdown:
-            # Specify a starting voltage for the Z bender.
+            # Specify a starting voltage for the Z piezo.
             self.piezos.z.V = start
 
             # Wait for capacitance to settle, then
@@ -321,8 +321,8 @@ n: Sweep z piezo down and redo without moving attocubes.\n \
             time.sleep(_TIME_UNTIL_STABLE)
 
             # Get a baseline measurement of the variance
-            self.get_baseline()
             self.check_balance()
+            self.get_baseline()
 
             # Reinitialize arrays
             self._init_arrays()
@@ -330,12 +330,12 @@ n: Sweep z piezo down and redo without moving attocubes.\n \
             # Inner loop to sweep z-piezo
             self.do_sweep(start)
 
-            # Move the attocubes
+            # Move the z attocube
             # Either we're too far away for a touchdown or Vtd not centered
-            self._move_attocubes()
+            self._move_attocube()
             start = -self.Vz_max # start far away next time
 
-            self.piezos.z.V = 0  # bring the piezo back to zero
+        self.piezos.z.V = 0  # bring the piezo back to zero
 
 
     def do_sweep(self, start):
@@ -381,7 +381,7 @@ n: Sweep z piezo down and redo without moving attocubes.\n \
                 self.plot_td()
 
                 # Don't want to move attos during planescan or bad fit
-                if not self.disable_attocubes and not self.error_flag:
+                if not self.disable_atto and not self.error_flag:
                     # Check if touchdown near center of z piezo +V range
                     self._determine_attoshift_to_center()
                     start = -self.Vz_max # start far away next time
@@ -469,7 +469,7 @@ n: Sweep z piezo down and redo without moving attocubes.\n \
 
     def plot_threshold(self):
         if np.nanvar(self.C) is not np.nan:
-            std_diff = np.sqrt(np.nanvar(self.C) - self.baseline)
+            std_diff = np.sqrt(np.abs(np.nanvar(self.C) - self.baseline))
             if not hasattr(self, 'line_var1'):
                 std = np.sqrt(_VAR_THRESHOLD)
                 self.ax.axhline(std, color='C9', linestyle='--')

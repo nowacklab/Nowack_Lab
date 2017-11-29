@@ -50,10 +50,12 @@ class Scanplane(Measurement):
     def __init__(self, instruments={}, plane=None, span=[800, 800],
                  center=[0, 0], numpts=[20, 20],
                  scanheight=15, scan_rate=120, raster=False,
-                 direction=['+','+']):
+                 direction=['+','+'], ROI=None):
         '''
         direction: +/- to sweep each axis forwards or backwards.
         Flips scan image. TODO: don't flip
+        ROI: List of [Vx1, Vx2, Vy1, Vy2] to specify a region of interest.
+            Will draw a box from Vx1 < Vx < Vx2 and Vy1 < Vy < Vy2.
         '''
 
 
@@ -82,6 +84,7 @@ class Scanplane(Measurement):
         self.plane = plane
         self.scanheight = scanheight
         self.direction = direction
+        self.ROI = ROI
 
         self.V = AttrDict({
             chan: np.nan for chan in self._daq_inputs + ['piezo']
@@ -123,13 +126,15 @@ class Scanplane(Measurement):
                 self._units[chan] = 'V'
 
 
-    def do(self, fast_axis='x'):
+    def do(self, fast_axis='x', wait=None):
         '''
         Routine to perform a scan over a plane.
 
         Keyword arguments:
             fast_axis: If 'x' (default) take linecuts in the X direction
             If 'y', take linecuts in the Y direction.
+            wait: Time in seconds to wait at the beginning of a scan.
+            If wait == None, will wait 3 * time const of lockin.
         '''
         self.fast_axis = fast_axis
 
@@ -171,6 +176,13 @@ class Scanplane(Measurement):
 
         # Loop over each line in the scan
         for i in range(num_lines):
+
+            if not self.montana.check_status(): # returns False if problem
+                self.piezos.zero()
+                self.squidarray.zero()
+                self.atto.z.move(-1000)
+                raise Exception('Montana error!')
+
             # If we detected a keyboard interrupt stop the scan here
             # The DAQ is not in use at this point so ending the scan
             # should be safe.
@@ -208,7 +220,10 @@ class Scanplane(Measurement):
             # Go to first point of scan
             self.piezos.sweep(self.piezos.V, Vstart)
             #self.squidarray.reset()
-            #time.sleep(0.5)
+            if wait is None:
+                wait = 3*self.lockin_squid.time_constant
+            time.sleep(wait)
+
             # Begin the sweep
             output_data, received = self.piezos.sweep(Vstart, Vend,
                                           chan_in=self._daq_inputs,
@@ -372,6 +387,19 @@ class Scanplane(Measurement):
             title = ax.set_title(self.timestamp, size="medium", y=1.02)
             # If the title intersects the exponent label from the colorbar
             # shift the title up and center it
+
+            # ROI
+            if self.ROI is not None:
+                # make closed path of coordinates
+                xy = [[self.ROI[0], self.ROI[2]],
+                      [self.ROI[1], self.ROI[2]],
+                      [self.ROI[1], self.ROI[3]],
+                      [self.ROI[0], self.ROI[3]],
+                      [self.ROI[0], self.ROI[2]],
+                      ]
+                p = matplotlib.patches.Polygon(xy)
+                c = matplotlib.collections.PatchCollection([p], facecolors=['none'], edgecolors=['k'])
+                ax.add_collection(c)
 
         # Plot the last linecut for DC, AC and capacitance signals
         for ax, chan, clabel in zip(self.axes_cuts,

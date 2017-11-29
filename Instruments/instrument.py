@@ -20,6 +20,7 @@ class Instrument:
 
 class VISAInstrument(Instrument):
     _label = 'VISAinstrument'
+    _idn = None
 
     def __del__(self):
         '''
@@ -43,6 +44,10 @@ class VISAInstrument(Instrument):
         '''
         self._visa_handle = visa.ResourceManager().open_resource(resource)
         self._visa_handle.read_termination = termination
+        if self._idn is not None:
+            idn = self.ask('*IDN?')
+            if self._idn not in idn:
+                raise Exception('Instrument not recognized. Expected string %s in *IDN?: %s' %(self._idn, idn))
 
     def ask(self, cmd, timeout=3000):
         '''
