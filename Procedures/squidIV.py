@@ -18,10 +18,113 @@ from ..Utilities import save
 from ..Utilities.utilities import AttrDict
 from . import squid_plotting
 
+class IV(Measurement):
+    _daq_inputs = ['iv']
+    _daq_outputs = ['iv']
+    instrument_list = ['daq']
+
+    _IV_MAX_I = 100e-6
+    #_MOD_MAX_I = 100e-6
+    #_FC_MAX_I = 2e-3
+
+    def __init__(self,
+                 instruments = {},
+                 iv_Is = [],
+                 iv_Rbias = 2000,
+                 samplerate = 1000,
+                 gain = 5000, # FIXME
+                 ):
+        super().__init__(instruments=instruments)
+        
+        self.iv_Rbias  = iv_Rbias
+        self.iv_Is     = np.array(iv_Is)
+        self.iv_Vs     = self.iv_Is * self.iv_Rbias
+        self.samplerate= samplerate
+        self.gain      = 5000
+
+        self._safetychecker()
+
+    def _safetychecker(self):
+        if max(abs(iv_Is)) > _IV_MAX_I:
+            print('max(IV current) > {0}'.format(_IV_MAX_I))
+
+    def do(self, hysteresis=True, safe=True, plot=True):
+        if safe: # sweeps slowly to the first voltage
+            pre_od, pre_r = self.daq.sweep(
+                Vstart = {'iv': self.daq.outputs['iv'].V},   
+                Vend   = {'iv': self.iv_Vs[0]},
+                chan_in = self._daq_inputs,
+                sample_rate = self.samplerate,
+                numsteps = len(self.iv_Vs)/2
+            )
+
+        fu_od, fu_r = self.daq.sweep(
+            Vstart = {'iv': self.iv_Vs[ 0]},
+            Vend   = {'iv': self.iv_Vs[-1]},
+            chan_in = self._daq_inputs,
+            sample_rate = self.samplerate,
+            numsteps = len(self.iv_Vs)
+        )
+
+        if hysteresis:
+            fd_od, fd_r = self.daq.sweep(
+                Vstart = {'iv': self.iv_Vs[ 0]},
+                Vend   = {'iv': self.iv_Vs[-1]},
+                chan_in = self._daq_inputs,
+                sample_rate = self.samplerate,
+                numsteps = len(self.iv_Vs)
+            )
+
+        if safe: # sweep slowly to zero
+            post_od, post_r = self.daq.sweep(
+                Vstart = {'iv': self.daq.outputs['iv'].V},   
+                Vend   = {'iv': 0},
+                chan_in = self._daq_inputs,
+                sample_rate = self.samplerate,
+                numsteps = len(self.iv_Vs)/2
+            )
+
+        self.Vmeas_up = np.array( fu_r['iv']/self.gain)
+        self.Vsrc_up  = np.array(fu_od['iv'])
+
+        if hysteresis:
+            self.Vmeas_down = np.array(fd_r['iv'])
+            self.Vsrc_down  = np.array(fd_od['iv'])
+        
+        if plot:
+            self.plot(hysteresis=hysteresis)
+
+
+    def plot(self, hysteresis=True):
+        super().plot()
+        self.ax.plot(self.Vsrc_up / self.iv_Rbias / 1e-6, 
+                     self.Vmeas_up / 1e-6,
+                     label='UP')
+        if hysteresis:
+            self.ax.plot(self.Vsrc_down / self.iv_Rbias / 1e-6,
+                         self.Vmeas_down / 1e-6,
+                         label='DOWN')
+            self.ax.legend()
+        self.ax.set_xlabel('I ($\mu A$)')
+        self.ax.set_ylabel('V ($\mu V$)')
+
+    def setup_plots(self):
+        self.fig, self.ax = plt.subplots()
+        plt.pause(.01)
+
+
+class Mod(Measurement):
+    pass
+
+
+
+
+
+
 
 class SquidIV(Measurement):
     _chan_labels = ['squidout', 'modout', 'squidin', 'currentin']
-    instrument_list = ['daq','preamp','montana','preamp_I']
+    instrument_list = ['daq','preamp','preamp_I']
 
     V = np.array([0]*2) # to make plotting happy with no real data
     I = np.array([0]*2)

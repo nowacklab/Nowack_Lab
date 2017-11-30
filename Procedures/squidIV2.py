@@ -1,11 +1,18 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from ..Utilities.save import Measurement
+from ..Utilities.nestedmeasurement import NestedMeasurement
+from scipy.interpolate import UnivariateSpline
+from ..Utilities.plotting import plot_mpl
 
 class SQUID_IV(Measurement):
+    ''' Take Squid IV'''
     _daq_inputs = ['iv']
     _daq_outputs = ['iv']
     instrument_list = ['daq']
+
+    _XLABEL = r'$I_{squid}$ ($\mu A$)'
+    _YLABEL = r'$V_{squid}$ ($\mu V$)'
 
     _IV_MAX_I = 100e-6
 
@@ -16,6 +23,16 @@ class SQUID_IV(Measurement):
                  samplerate = 1000,
                  gain = 5000, # FIXME
                  ):
+        '''
+        Make a SQUID IV
+
+        Arguments:
+            instruments (dict): instruments for measurement
+            iv_Is       (nparray): currents to set, approximate
+            iv_Rbias    (float): resistance of cold+warm bias on IV
+            samplerate  (float): samples/s for measurement
+            gain        (float): gain on preamp
+        '''
         super().__init__(instruments=instruments)
         
         self.iv_Rbias  = iv_Rbias
@@ -27,58 +44,66 @@ class SQUID_IV(Measurement):
         self._safetychecker()
 
     def _safetychecker(self):
-        if max(abs(self.iv_Is)) > SQUID_IV._IV_MAX_I:
-            print('WARNING: max(IV current) > {0}'.format(SQUID_IV._IV_MAX_I))
+        if max(abs(self.iv_Is)) > self._IV_MAX_I:
+            print('WARNING: max({2} current) = {0} > {1}'.format(
+                max(abs(self.iv_Is)),
+                self._IV_MAX_I,
+                self._daq_outputs[0]
+                )
+            )
 
     def do(self, hysteresis=True, safe=True, plot=True, removeplot=False):
-        if safe: # sweeps slowly to the first voltage
-            _,_ = self.daq.singlesweep('iv', self.iv_Vs[0], 
-                                       numsteps=len(self.iv_Vs)/2)
-            #pre_od, pre_r = self.daq.sweep(
-            #    Vstart = {'iv': self.daq.outputs['iv'].V},   
-            #    Vend   = {'iv': self.iv_Vs[0]},
-            #    chan_in = self._daq_inputs,
-            #    sample_rate = self.samplerate,
-            #    numsteps = len(self.iv_Vs)/2
-            #)
+        '''
+        Run measurement
 
+        Arguments:
+            hysteresis  (boolean): sweep up and down?
+            safe        (boolean): sweep to first voltage, then to zero at end?
+            plot        (boolean): should I plot?
+            removeplot  (boolean): close plot upon completion?
+        '''
+        # Sweep to the first voltage if running safe
+        if safe: 
+            _,_ = self.daq.singlesweep(self._daq_outputs[0], self.iv_Vs[0], 
+                                       numsteps=len(self.iv_Vs)/2)
+        
+        # Sweep voltage up
         fu_od, fu_r = self.daq.sweep(
-            Vstart = {'iv': self.iv_Vs[ 0]},
-            Vend   = {'iv': self.iv_Vs[-1]},
+            Vstart = {self._daq_outputs[0]: self.iv_Vs[ 0]},
+            Vend   = {self._daq_outputs[0]: self.iv_Vs[-1]},
             chan_in = self._daq_inputs,
             sample_rate = self.samplerate,
             numsteps = len(self.iv_Vs)
         )
-
+        
+        # Sweep voltage down, if doing hysteresis
         if hysteresis:
             fd_od, fd_r = self.daq.sweep(
-                Vstart = {'iv': self.iv_Vs[-1]},
-                Vend   = {'iv': self.iv_Vs[ 0]},
+                Vstart = {self._daq_outputs[0]: self.iv_Vs[-1]},
+                Vend   = {self._daq_outputs[0]: self.iv_Vs[ 0]},
                 chan_in = self._daq_inputs,
                 sample_rate = self.samplerate,
                 numsteps = len(self.iv_Vs)
             )
 
-        if safe: # sweep slowly to zero
-            _,_ = self.daq.singlesweep('iv', 0
+        # Sweep voltage to zero, if running safe
+        if safe: 
+            _,_ = self.daq.singlesweep(self._daq_outputs[0], 0,
                                        numsteps=len(self.iv_Vs)/2)
-            #post_od, post_r = self.daq.sweep(
-            #    Vstart = {'iv': self.daq.outputs['iv'].V},   
-            #    Vend   = {'iv': 0},
-            #    chan_in = self._daq_inputs,
-            #    sample_rate = self.samplerate,
-            #    numsteps = len(self.iv_Vs)/2
-            #)
 
-        self.Vmeas_up = np.array( fu_r['iv']/self.gain)
-        self.Vsrc_up  = np.array(fu_od['iv'])
+        # save data in object
+        self.Vmeas_up = np.array( fu_r[self._daq_inputs[0]]/self.gain)
+        self.Vsrc_up  = np.array(fu_od[self._daq_outputs[0]])
 
         if hysteresis:
-            self.Vmeas_down = np.array(fd_r['iv']/self.gain)
-            self.Vsrc_down  = np.array(fd_od['iv'])
+            self.Vmeas_down = np.array( fd_r[self._daq_inputs[0]]/self.gain)
+            self.Vsrc_down  = np.array(fd_od[self._daq_outputs[0]])
         
+        # Plot
         if plot:
             self.plot(hysteresis=hysteresis)
+
+        # If I want to close plots, e.g. Mod2D, do so
         if removeplot:
             plt.close()
 
@@ -93,12 +118,15 @@ class SQUID_IV(Measurement):
                          self.Vmeas_down / 1e-6,
                          label='DOWN')
             self.ax.legend()
-        self.ax.set_xlabel('I ($\mu A$)')
-        self.ax.set_ylabel('V ($\mu V$)')
+        self.ax.set_xlabel(self._XLABEL)
+        self.ax.set_ylabel(self._YLABEL)
         self.ax.annotate(self.filename, xy=(.02,.98), xycoords='axes fraction',
                          fontsize=8, ha='left', va='top', family='monospace')
 
     def plot_resistance(self, hysteresis=True):
+        '''
+        Trying to use filter to plot resistance.  Does not work
+        '''
         self.ax_res = self.ax.twinx()
         s = self.Vsrc_up/self.iv_Rbias
         spacing = abs(s[0]-s[1])
@@ -117,6 +145,45 @@ class SQUID_IV(Measurement):
         self.ax_res.set_ylabel('Resistance ($\Omega$)')
         self.ax_res.legend()
 
+    def plot_resistance_spline(self, s=1e-8):
+        '''
+        Model IV with cubic spline with precision s.  
+        Plots spline and derivative (resistance)
+
+        Arguments:
+            s (float): precision of fit, similar to max 
+                       total least-squares error of fit
+        '''
+        try:
+            self.ax_res.cla()
+        except:
+            self.ax_res = self.ax.twinx()
+
+        try:
+            self.ax.lines.pop(2)
+            self.ax.lines.pop(2)
+        except:
+            pass
+        sp_up = UnivariateSpline(self.Vsrc_up / self.iv_Rbias, self.Vmeas_up, s=s)
+        sp_dw = UnivariateSpline(self.Vsrc_down[::-1] / self.iv_Rbias, self.Vmeas_down[::-1], s=s)
+        sp_up_1 = sp_up.derivative()
+        sp_dw_1 = sp_dw.derivative()
+
+        xs = np.linspace(self.Vsrc_up[0], self.Vsrc_up[-1],1000) / self.iv_Rbias
+
+        self.ax.plot(xs/1e-6, sp_up(xs)/1e-6, label='up spline')
+        self.ax.plot(xs/1e-6, sp_dw(xs)/1e-6, label='down spline')
+        self.ax_res.plot(xs/1e-6, sp_up_1(xs), linestyle='--',label='Rup (spline, s={0}'.format(s))
+        self.ax_res.plot(xs/1e-6, sp_dw_1(xs), linestyle='--',label='Rdown (spline, s={0}'.format(s))
+        self.ax_res.set_ylabel('Resistance ($\Omega$)')
+
+        #self.ax.legend()
+        #self.ax_res.legend()
+
+        lines = self.ax.lines+self.ax_res.lines
+        labels = [l.get_label() for l in lines]
+        self.ax.legend(lines, labels)
+
 
     def setup_plots(self):
         self.fig, self.ax = plt.subplots()
@@ -125,6 +192,10 @@ class SQUID_IV(Measurement):
 
 class SQUID_Mod(Measurement):
     _daq_outputs = ['mod']
+    instrument_list = ['daq']
+    _MOD_MAX_I = 100e-6
+    _NESTED_CALLABLE = SQUID_IV
+    _cmap = 'PiYG'
 
     def __init__(self,
                  instruments = {},
@@ -135,6 +206,19 @@ class SQUID_Mod(Measurement):
                  samplerate = 1000,
                  gain = 5000, # FIXME
                  ):
+        '''
+        SQUID_Mod: Create an object take squid modulations
+
+        Arguments:
+            instruments (dict): dictionary of instruments
+            iv_Is       (nparray): currents passed to SQUID_IV
+            mod_Is      (nparray): currents to set mod coil for each SQUID_IV
+            iv_Rbias    (float): bias resistor for IV
+            mod_Rbias   (float): bias resistor for Mod
+            samplerate  (float): samples/s sampling rate
+            gain        (float): gain of preamp
+
+        '''
         super().__init__(instruments=instruments)
         self.mod_Is     = mod_Is
         self.iv_Is      = iv_Is
@@ -142,112 +226,191 @@ class SQUID_Mod(Measurement):
         self.mod_Rbias  = mod_Rbias
         self.samplerate = samplerate
         self.gain       = gain
+        self.instruments = instruments
 
-        self.mod_Vs = self.mod_Is / self.mod_Rbias
+        self.mod_Vs = self.mod_Is * self.mod_Rbias
+        self.V = np.full( (len(self.mod_Is), len(self.iv_Is)), np.nan)
+        self._safetychecker()
+
+    def _safetychecker(self):
+        if max(abs(self.mod_Is)) > self._MOD_MAX_I:
+            print('WARNING: max({2} current) = {0} > {1}'.format(
+                max(abs(self.mod_Is)),
+                SQUID_Mod._MOD_MAX_I,
+                self._daq_outputs[0]
+                ))
 
     def do(self):
 
-        _,_ = daq.singlesweep('mod', self.mod_Vs[0], 
+        _,_ = self.daq.singlesweep(self._daq_outputs[0], self.mod_Vs[0], 
                               numsteps=len(self.mod_Vs)/2)
         filenames = []
         ivs = []
-        self.V = np.full( (len(self.mod_Is), len(self.iv_Is)), np.nan)
         # multithread this?
+        localpath = ''
+        remotepath = ''
+        i = 0
         for m_v in self.mod_Vs:
-            daq.outputs['mod'].V = m_v
-            iv = SQUID_IV(instruments, 
-                          iv_Is = self.iv_Is,
-                          iv_Rbias = self.iv_Rbias,
-                          samplerate = self.samplerate,
-                          gain = self.gain
+            self.daq.outputs[self._daq_outputs[0]].V = m_v
+            iv = self._NESTED_CALLABLE(self.instruments, 
+                          self.iv_Is,
+                          self.iv_Rbias,
+                          self.samplerate,
+                          self.gain
                          )
+            NestedMeasurement.saveinfolder(self.filename, iv, localpath, remotepath)
             ivs.append(iv)
             iv.run(removeplot=True)
 
-        _,_ = daq.singlesweep('mod', 0, numsteps=len(self.mod_Vs)/2)
-       
-        for i,iv in zip(range(len(ivs)),ivs):
-            self.V[:][i] = iv.Vmeas_up
-        
+            if localpath != iv._localpath:
+                localpath = iv._localpath
+            if remotepath != iv._remotepath:
+                remotepath = iv._remotepath
 
-        self.plot()
+            self.V[i,:] = iv.Vmeas_up
+
+            self.plot()
+            i += 1
+
+        _,_ = self.daq.singlesweep(self._daq_outputs[0], 0, numsteps=len(self.mod_Vs)/2)
+       
+        del self.instruments
+
 
     def setup_plots(self):
-        pass
+        self.fig, self.ax = plt.subplots()
+        self.im = plot_mpl.plot2D(self.ax, 
+                                  self.iv_Is*1e6, 
+                                  self.mod_Is*1e6,
+                                  self.V,
+                                  cmap=self._cmap,
+                                  xlabel='$I_{IV}$ ($\mu$ A)',
+                                  ylabel='$I_{Mod}$ ($\mu$ A)',
+                                  clabel='$V_{squid} (V)$',
+                                  equal_aspect=False
+                                  )
+        self.ax.set_title(self.filename)
+
 
     def plot(self):
+        plot_mpl.update2D(self.im, self.V, equal_aspect=False)
+        plot_mpl.aspect(self.ax, 1)
+        plt.pause(0.01)
+
+    def plot_cut_iv(self, ivcurrent):
+        i = np.abs(self.iv_Is - ivcurrent).argmin()
+        v = self.V[:,i]
+        fig,ax = plt.subplots()
+        ax.plot(self.mod_Is*1e6, v*1e6)
+        ax.set_xlabel('Mod current ($\mu$ A)')
+        ax.set_ylabel('Squid Voltage ($\mu$ V)')
+        ax.annotate(self.filename, xy=(.02,.98), xycoords='axes fraction',
+                         fontsize=8, ha='left', va='top', family='monospace')
+        ax.annotate('Imod = {0:2.2f} uA'.format(ivcurrent*1e6), 
+                         xy=(.02,.1), xycoords='axes fraction',
+                         fontsize=8, ha='left', va='top', family='monospace')
         pass
 
+    def max_modulation(self):
+        '''
+        Find the iv current that maximizes the squid response as a function
+        of modulation current.  Plot it
+        '''
+        maxmod = 0
+        current = 0
+        for i,ivcurrent in zip(range(len(self.iv_Is)), self.iv_Is):
+            v = self.V[:,i]
+            if maxmod < (abs(max(v) - min(v))):
+                maxmod = abs( max(v)-min(v) )
+                current = ivcurrent
+        self.plot_cut_iv(current)
+        return current
 
 
-def savitzky_golay(y, window_size, order, deriv=0, rate=1):
-    r"""Smooth (and optionally differentiate) data with a Savitzky-Golay filter.
-    The Savitzky-Golay filter removes high frequency noise from data.
-    It has the advantage of preserving the original shape and
-    features of the signal better than other types of filtering
-    approaches, such as moving averages techniques.
-    Parameters
-    ----------
-    y : array_like, shape (N,)
-        the values of the time history of the signal.
-    window_size : int
-        the length of the window. Must be an odd integer number.
-    order : int
-        the order of the polynomial used in the filtering.
-        Must be less then `window_size` - 1.
-    deriv: int
-        the order of the derivative to compute (default = 0 means only smoothing)
-    Returns
-    -------
-    ys : ndarray, shape (N)
-        the smoothed signal (or it's n-th derivative).
-    Notes
-    -----
-    The Savitzky-Golay is a type of low-pass filter, particularly
-    suited for smoothing noisy data. The main idea behind this
-    approach is to make for each point a least-square fit with a
-    polynomial of high order over a odd-sized window centered at
-    the point.
-    Examples
-    --------
-    t = np.linspace(-4, 4, 500)
-    y = np.exp( -t**2 ) + np.random.normal(0, 0.05, t.shape)
-    ysg = savitzky_golay(y, window_size=31, order=4)
-    import matplotlib.pyplot as plt
-    plt.plot(t, y, label='Noisy signal')
-    plt.plot(t, np.exp(-t**2), 'k', lw=1.5, label='Original signal')
-    plt.plot(t, ysg, 'r', label='Filtered signal')
-    plt.legend()
-    plt.show()
-    References
-    ----------
-    .. [1] A. Savitzky, M. J. E. Golay, Smoothing and Differentiation of
-       Data by Simplified Least Squares Procedures. Analytical
-       Chemistry, 1964, 36 (8), pp 1627-1639.
-    .. [2] Numerical Recipes 3rd Edition: The Art of Scientific Computing
-       W.H. Press, S.A. Teukolsky, W.T. Vetterling, B.P. Flannery
-       Cambridge University Press ISBN-13: 9780521880688
-    """
-    import numpy as np
-    from math import factorial
+class SQUID_FCIV(SQUID_IV):
+    _daq_inputs = ['iv']
+    _daq_outputs = ['fc']
+    instrument_list = ['daq']
+    
 
-    try:
-        window_size = np.abs(np.int(window_size))
-        order = np.abs(np.int(order))
-    except ValueError:
-        raise ValueError("window_size and order have to be of type int")
-    if window_size % 2 != 1 or window_size < 1:
-        raise TypeError("window_size size must be a positive odd number")
-    if window_size < order + 2:
-        raise TypeError("window_size is too small for the polynomials order")
-    order_range = range(order+1)
-    half_window = (window_size -1) // 2
-    # precompute coefficients
-    b = np.mat([[k**i for i in order_range] for k in range(-half_window, half_window+1)])
-    m = np.linalg.pinv(b).A[deriv] * rate**deriv * factorial(deriv)
-    # pad the signal at the extremes with
-    # values taken from the signal itself
-    firstvals = y[0] - np.abs( y[1:half_window+1][::-1] - y[0] )
-    lastvals = y[-1] + np.abs(y[-half_window-1:-1][::-1] - y[-1])
-    y = np.concatenate((firstvals, y, lastvals))
-    return np.convolve( m[::-1], y, mode='valid')
+    _XLABEL = r'$I_{fc}$ ($\mu A$)'
+    _YLABEL = r'$V_{squid}$ ($\mu V$)'
+
+    _IV_MAX_I = 2e-3
+
+
+    def __init__(self,
+                 instruments = {},
+                 fc_Is = np.linspace(-.5e-3, .5e-3, 100),
+                 fc_Rbias = 2000,
+                 samplerate = 1000,
+                 gain = 5000,
+                 ):
+        '''
+        Make a SQUID IV
+
+        Arguments:
+            instruments (dict): instruments for measurement
+            fc_Is       (nparray): currents to set, approximate
+            fc_Rbias    (float): resistance of cold+warm bias on IV
+            samplerate  (float): samples/s for measurement
+            gain        (float): gain on preamp
+        '''
+        super().__init__(instruments=instruments,
+                         iv_Is = fc_Is,
+                         iv_Rbias = fc_Rbias,
+                         samplerate = samplerate,
+                         gain=gain
+                         )
+
+                
+class SQUID_FC(SQUID_Mod):
+    _daq_outputs = ['mod','iv']
+    instrument_list = ['daq']
+    _MOD_MAX_I = 100e-6
+    _IV_MAX_I = 100e-6
+    _NESTED_CALLABLE = SQUID_FCIV
+    _cmap = 'magma'
+
+    def __init__(self,
+                 instruments = {},
+                 iv_I = 20e-6,
+                 fc_Is = np.linspace(-.5e-3, .5e-3, 100),
+                 mod_Is = np.linspace(-100e-6,100e-6, 100),
+                 iv_Rbias = 2000,
+                 fc_Rbias = 2000,
+                 mod_Rbias = 2000,
+                 samplerate = 1000,
+                 gain = 5000,
+                 ):
+        '''
+        SQUID_FC: Create an object take squid fieldcoil sweeps
+
+        Arguments:
+        '''
+        super().__init__(instruments=instruments,
+                         iv_Is = fc_Is,
+                         mod_Is = mod_Is,
+                         iv_Rbias = fc_Rbias,
+                         mod_Rbias = mod_Rbias,
+                         samplerate = samplerate,
+                         gain=gain
+                         )
+        self.iv_I = iv_I
+        self.iv_Rbias = iv_Rbias
+        self.iv_V = self.iv_I * self.iv_Rbias
+        # TODO: add checker here
+
+    def do(self):
+        _,_ = self.daq.singlesweep(self._daq_outputs[1], self.iv_V,
+                              numsteps=len(self.mod_Vs)/2)
+        super().do()
+        _,_ = self.daq.singlesweep(self._daq_outputs[1], 0,
+                              numsteps=len(self.mod_Vs)/2)
+
+    def plot(self):
+        super().plot()
+        self.ax.annotate('Squid Ibias = {0:2.2f} uA'.format(self.iv_I*1e6), 
+                        xy=(.02,.98), xycoords='axes fraction',
+                        fontsize=8, ha='left', va='top', family='monospace')
+

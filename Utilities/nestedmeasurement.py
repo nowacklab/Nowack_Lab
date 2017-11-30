@@ -161,11 +161,12 @@ class NestedMeasurement(Measurement):
     @staticmethod
     def saveinfolder(foldername, obj, localpath, remotepath):
         def newsave(self, **kwargs):
-            return super(type(obj), obj).save(appendedpath=foldername,
-                                              savepath=True,
-                                              localpath=localpath,
-                                              remotepath=remotepath,
-                                              **kwargs)
+            return super(type(obj), obj).save(
+                    appendedpath=foldername,
+                    savepath=True,
+                    localpath=localpath,
+                    remotepath=remotepath,
+                    **kwargs)
         obj.save = types.MethodType(newsave, obj)
             
     def setup_plots(self):
