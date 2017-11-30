@@ -301,6 +301,16 @@ class NIDAQ(Instrument):
 
         return output_data, received
 
+    def singlesweep(self, outputchan, endpt, chan_in=None, sample_rate=100, numsteps=1000):
+        '''
+        Sweeps outputchan from current voltage to endpt
+        '''
+        return self.sweep(
+                Vstart = {outputchan: self.outputs[outputchan].V},
+                Vend   = {outputchan: endpt},
+                chan_in = chan_in,
+                sample_rate = sample_rate,
+                numsteps = numsteps)
 
     def zero(self, rate=100000, numsteps=100000):
         for chan in self.outputs.values(): # loop over output channel objects
