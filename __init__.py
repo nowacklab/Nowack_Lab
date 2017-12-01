@@ -51,6 +51,7 @@ import sys, os
 from Nowack_Lab.Utilities import utilities, save, logging, conversions, anim, constants
 from Nowack_Lab.Utilities.plotting import plot_mpl
 from Nowack_Lab.Utilities.save import Measurement
+from Nowack_Lab.Utilities.say import say
 from Nowack_Lab.Procedures.daqspectrum import DaqSpectrum, SQUIDSpectrum
 from Nowack_Lab.Procedures.dctransport import DAQ_IV
 from Nowack_Lab.Procedures.heightsweep import Heightsweep
