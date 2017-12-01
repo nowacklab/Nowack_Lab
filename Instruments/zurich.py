@@ -15,6 +15,15 @@ import zhinst.utils
 class gateVoltageError( Exception ):
     pass
 
+#class CheckArray(object):
+#    def __init__(self, *args):
+#        """
+#        """
+#
+#    def check(self):
+
+class subnode():
+    pass
 
 class HF2LI(Instrument):
     '''
@@ -43,6 +52,15 @@ class HF2LI(Instrument):
                             uses first avaliable ZI.
 
         '''
+        numberlookup = {'0': 'zero','1':'one','2':'two','3':'three','4':'four',
+                        '5':'five','6':'six','7':'seven','8':'eight',
+                        '9':'nine'}
+        def check_add(obj, nodes_check):
+                passedobj = obj
+                for node_check in nodes_check:
+                    if not hasattr(passedobj, node_check):
+                        setattr(passedobj, node_check, subnode())
+                    passedobj = getattr(passedobj, node_check)
         # Accesses the DAQServer at the instructed address and port.
         self.daq = zhinst.ziPython.ziDAQServer(server_address, server_port)
         # Gets the list of ZI devices connected to the Zurich DAQServer
@@ -64,35 +82,139 @@ class HF2LI(Instrument):
         else:
             # Sets device_id to the first avaliable. Prints SN.
             self.device_id = zhinst.utils.autoDetect(self.daq)
+        allNodes = self.daq.listNodes(self.device_id, 0x07)
+        typeNodes = self.daq.getList(self.device_id)
+        for elem in allNodes:
+            nodes = elem.split('/')
+            nodes = [x for x in nodes if x != '']
+            attrPath = 'self'
+            nodesclean = []
+            for node in nodes:
+                if node in numberlookup.keys():
+                    nodesclean.append(numberlookup[node])
+                else:
+                    nodesclean.append(node)
+            for node in nodesclean[:-1]:
+                attrPath  = attrPath + '.' + node
+            if elem in list(map(list, zip(*typeNodes)))[0]:
+                prop  = property(fget=eval("lambda self: self.daq.getDouble('%s')" %elem),
+                                                    fset=eval("lambda self, value: self.daq.getDouble(%s)" %elem))
+            else:
+                prop  = property(fget=eval("lambda self: self.daq.getSample('%s')" %elem))
+            check_add(self, nodesclean)
+            print(nodesclean)
+            print(attrPath)
+            setattr(eval(attrPath), nodesclean[-1],prop)
+    def demod_sample(self, demod_numbers, keys_to_include):
+            '''
+            Returns the sample dict from one demod.
+            '''
+            datadict = {}
+            for i in demod_numbers:
+                datadict['demod%i' % i] = {}
+                raw = self.daq.getSample('dev1056/DEMODS/%i/SAMPLE' % i)
+                for key in keys_to_include:
+                    datadict['demod%i' % i][key] = raw[key]
+            return datadict
+
+    @property
+    def sigout0_offset(self):
+            '''
+            Returns the output offset in volts
+            '''
+            offset = self.daq.getDouble('/dev1056/sigouts/0/offset')
+            outputrange = self.daq.getDouble('/dev1056/sigouts/0/range')
+
+            return offset*outputrange
 
 
-    def zurich_setup(self, config):
+    @sigout0_offset.setter
+    def sigout0_offset(self,value):
+            '''
+            Sets the offset in voltage
+            '''
+            outputrange = self.daq.getDouble('/dev1056/sigouts/0/range')
+            self.daq.setDouble('/dev1056/sigouts/0/offset', value/outputrange)
+
+    @property
+    def sigout1_offset(self):
+            '''
+            Returns the output offset in volts
+            '''
+            offset = self.daq.getDouble('/dev1056/sigouts/1/offset')
+            outputrange = self.daq.getDouble('/dev1056/sigouts/1/range')
+
+            return offset*outputrange
+
+
+    @sigout1_offset.setter
+    def sigout1_offset(self,value):
+            '''
+            Sets the offset in voltage
+            '''
+            outputrange = self.daq.getDouble('/dev1056/sigouts/1/range')
+            self.daq.setDouble('/dev1056/sigouts/1/offset', value/outputrange)
+
+    @property
+    def osc0_freq(self):
+        '''
+        Returns the frequency of osc0
+        '''
+        return self.daq.getDouble('/dev1056/oscs/0/freq')
+
+    @osc0_freq.setter
+    def osc0_freq(self,value):
+        '''
+        Sets the frequency of osc0
+        '''
+        return self.daq.setDouble('/dev1056/oscs/0/freq')
+
+    @property
+    def osc1_freq(self):
+        '''
+        Returns the frequency of osc0
+        '''
+        return self.daq.getDouble('/dev1056/oscs/1/freq')
+
+    @osc0_freq.setter
+    def osc1_freq(self,value):
+        '''
+        Sets the frequency of osc0
+        '''
+        return self.daq.setDouble('/dev1056/oscs/1/freq')
+
+    def setup(self, config):
             '''
             Pass in a dictionary with the desired configuration. If an element
-            is ommited from the dictionary, no change.
+            is ommited from the dictionary, no change. Dictionary will be
+            compared to a check array. To determine formatting, structure your
+            dictionary the same way as the checkarray, but the inner most
+            element in the dict (a list) replaced by the value you want. The
+            value must be of the type given in the first element of the array
+            at that dict location, and if the second element of the list is an
+            array, it must be an element of that array. Conversely, if the
+            second element is a number, the value must be inclusive between
+            the second and third elements.
             Obey the following conventions:
 
-            Signal input config:
-            key: sigin'#' (str, e.g. sigin0)
-            elem: {ac:(boolean), range:(float, 1e-4:2), diff:(boolean)}
+            checkarray = {'sigin': {'ac': [bool], 'range': [float, 1e-4, 2],
+                                                                'diff':[bool]},
 
-            Demodulator config:
-            key: demod'#' (str, e.g. demod0)
-            elem: {enable:(boolean), rate:(float), oscselect: (int), order:(int),
-                    timeconstant:(float), harmonic:(int) }
+                          'demod': {'enable':[bool], 'rate': [float],
+                            'oscselect':[int, [0,1]], 'order': [int, 1,8],
+                            'timeconstant':[float], 'harmonic':[int, 1, 1023]},
 
-            Oscillator config:
-            key: osc'#' (str, e.g. osc0)
-            elem: {freq: (float)}
+                          'osc':{'freq': [float, 0, 1e8]},
 
-            Signal output config:
-            key: sigout'#' (str, e.g. sigout0)
-            elem: {enable:(boolean), range: (float, .01,.1,1,10),
-                    amplitude: (float, -1,1, scaling of signal to output range), offset: (float, -1:1 of FR)
+                          'sigout':{'enable':[bool],
+                                                'range':[float, [.01,.1,1,10]],
+                             'amplitude':[float, -1,1],'offset':[float, -1,1]},
 
-            TA config:
-            key: tamp'#' (str, e.g. tamp0)
-            elem: {currentgain: (float, 1:1e8), dc: (boolean)}
+                          'TAMP':{
+                            'currentgain': [int,[1e2,1e3,1e4,1e5,1e6,1e7,1e8]],
+                            'dc':[bool], 'voltagegain': [int, [1,10]],
+                            'offset':[float]}
+                          }
             '''
             zCONFIG = []
             checkarray = {'sigin': {'ac': [bool], 'range': [float, 1e-4, 2],
@@ -104,7 +226,7 @@ class HF2LI(Instrument):
 
                           'osc':{'freq': [float, 0, 1e8]},
 
-                          'sigout':{'enable';[bool],
+                          'sigout':{'enable':[bool],
                                                 'range':[float, [.01,.1,1,10]],
                              'amplitude':[float, -1,1],'offset':[float, -1,1]},
 
@@ -115,7 +237,7 @@ class HF2LI(Instrument):
                           }
             tampchannel = -1
             for i in [0,1]:
-                if self.daq.getString('/%s/ZCTRLS/%d/TAMP/AVAILABLE'
+                if self.daq.getInt('/%s/ZCTRLS/%d/TAMP/AVAILABLE'
                                                         % (self.device_id, i)):
                                                         tampchannel = i
             for subsystem in config.keys():
@@ -140,32 +262,41 @@ class HF2LI(Instrument):
                                     ):
                                     if subsystem[:-1] == 'TAMP':
                                         if tampchannel == -1:
-                                            Exception('No TA connected!')
+                                            raise Exception('No TA connected!')
                                         else:
                                             zCONFIG.append([
                                             '/%s/ZCTRLS/%i/TAMP/%i/%s'
                                             % (self.device_id,tampchannel,
                                                 subsystem[-1], param), value])
                                     else:
-                                        zCONFIG.append(['/%s/%s/%d/%s'
+                                        zCONFIG.append(['/%s/%ss/%s/%s'
                                         % (self.device_id,subsystem[:-1],
                                             subsystem[-1], param), value])
                                 else:
-                                    Exception('Parameter ' + param +' of ' +
-                                                subsystem + 'is out of domain')
+                                    raise Exception('Parameter ' + param +' of '
+                                               + subsystem + 'is out of domain')
                             else:
-                                Exception('Parameter ' + param +' of ' +
-                                            subsystem +
-                                            'is the wrong type, should be' +
-                                            str(paramchk[0]))
+                                raise Exception('Parameter ' + param +' of ' +
+                                    subsystem + ' is the wrong type, should be'
+                                    + str(paramchk[0]))
                         else:
-                            Exception(param +'is not a valid parameter for'
-                                                                   + subsystem)
+                            raise Exception(param +
+                                    'is not a valid parameter for' + subsystem)
                 else:
-                    Exception(subsystem + 'is not a valid Zurich subsystem')
+                    raise Exception(subsystem + 'is not a Zurich subsystem')
             self.daq.set(zCONFIG)
-            config_as_set =  self.daq.get(*,True)
+            config_as_set_changed = []
             for subconfig in zCONFIG:
-                if config_as_set[subconfig[0]] != subconfig[1]
-                    print(str(subconfig[0] + ' was set to ' +
-                    config_as_set[subconfig[0]]))
+                if type(subconfig[1]) is int:
+                    config_as_set_changed.append([subconfig[0],
+                                            self.daq.getInt(subconfig[0])])
+                elif type(subconfig[1]) is str:
+                    config_as_set_changed.append([subconfig[0],
+                                            self.daq.getString(subconfig[0])])
+                elif type(subconfig[1]) is float:
+                    config_as_set_changed.append([subconfig[0],
+                                            self.daq.getDouble(subconfig[0])])
+                else:
+                    raise Exception('type not handled!')
+            return config_as_set_changed
+            #return zCONFIG
