@@ -12,30 +12,31 @@ class Recorder(Measurement):
     '''
     def __init__(self):
         self.datatypes = [];
+        self.returns = True
 
     def __call__(self):
         data = {}
-        for obj in self.datatypes:
-            data[obj.name] = obj
+        for elem in self.datatypes:
+            data[elem[0]] = getattr(elem[1],elem[2])
         return data
 
-    def add_datatype(self, add_me):
+    def add_datatype(self, obj, property):
         '''
         Adds a data type to the recorder.
         '''
-        self.datatypes.append(add_me)
+        self.datatypes.append([obj.name + ' ' + property, obj, property])
 
-    def remove_datatype(self, remove_me):
+    def remove_datatype(self, obj, property):
         '''
         Removes a data type from the recorder
         '''
-        self.datatypes.remove(remove_me)
+        self.datatypes.remove([obj.name + ' ' + property, obj, property])
     def list_datatypes(self):
         '''
         Lists the datatypes included in the recorder.
         '''
-        for obj in self.datatypes:
-            print(obj.name)
+        for elem in self.datatypes:
+            print(elem[0])
 
 class Sweep(Measurement):
 
@@ -48,28 +49,33 @@ class Sweep(Measurement):
         '''
         Runs the sweep, appending the sweep data to self.sweeps_data.
         '''
-        if is_active:
+        if self.is_active:
             sweep_data = {}
             for value in self.values_to_take:
-                self.active = value;
+                setattr(self.object_to_sweep, self.property_to_sweep, value)
                 sweep_data[value] = {}
-                for r in repeaters:
-                    sweep_data[n][r.name] = r
-            self.sweeps_data.append[sweep_data]
+                for r in self.repeaters:
+                    ret = False
+                    try:
+                        ret = r.returns
+                    except:
+                        pass
+                    if ret:
+                        sweep_data[value][r.name] = r
         else:
-            for n in range(self.points):
-                self.active = value;
-                sweep_data[n] = {}
-                for r in repeaters:
-                    sweep_data[n][r.name] = r
-        self.sweeps_data.append[sweep_data]
-    def active(self, object_to_sweep, values_to_take):
+            for point in range(self.points):
+                sweep_data[point] = {}
+                for r in self.repeaters:
+                    sweep_data[point][r.name] = r
+        self.sweeps_data.append(sweep_data)
+    def active(self, obj, prop, values_to_take):
         '''
         Sets the active to be swept. There may only be one!
         Object to sweep must have a name attribute.
         '''
         self.values_to_take = values_to_take
-        self.object_to_sweep = object_to_sweep
+        self.object_to_sweep = obj
+        self.property_to_sweep = prop
 
     def add_repeater(self, add_me):
         '''

@@ -22,14 +22,10 @@ class gateVoltageError( Exception ):
 #
 #    def check(self):
 
-class subnode():
-    pass
-
 class HF2LI(Instrument):
     '''
     Creates a Zurich HF2Li object, to control a zurich lock in amplifier
     '''
-
     _label = 'Zurich HF2LI'
 
     def __init__(self, server_address = 'localhost', server_port = 8005 ,
@@ -52,15 +48,6 @@ class HF2LI(Instrument):
                             uses first avaliable ZI.
 
         '''
-        numberlookup = {'0': 'zero','1':'one','2':'two','3':'three','4':'four',
-                        '5':'five','6':'six','7':'seven','8':'eight',
-                        '9':'nine'}
-        def check_add(obj, nodes_check):
-                passedobj = obj
-                for node_check in nodes_check:
-                    if not hasattr(passedobj, node_check):
-                        setattr(passedobj, node_check, subnode())
-                    passedobj = getattr(passedobj, node_check)
         # Accesses the DAQServer at the instructed address and port.
         self.daq = zhinst.ziPython.ziDAQServer(server_address, server_port)
         # Gets the list of ZI devices connected to the Zurich DAQServer
@@ -82,106 +69,16 @@ class HF2LI(Instrument):
         else:
             # Sets device_id to the first avaliable. Prints SN.
             self.device_id = zhinst.utils.autoDetect(self.daq)
+        self.name = 'zurich ' + self.device_id
         allNodes = self.daq.listNodes(self.device_id, 0x07)
-        typeNodes = self.daq.getList(self.device_id)
         for elem in allNodes:
-            nodes = elem.split('/')
-            nodes = [x for x in nodes if x != '']
-            attrPath = 'self'
-            nodesclean = []
-            for node in nodes:
-                if node in numberlookup.keys():
-                    nodesclean.append(numberlookup[node])
-                else:
-                    nodesclean.append(node)
-            for node in nodesclean[:-1]:
-                attrPath  = attrPath + '.' + node
-            if elem in list(map(list, zip(*typeNodes)))[0]:
-                prop  = property(fget=eval("lambda self: self.daq.getDouble('%s')" %elem),
-                                                    fset=eval("lambda self, value: self.daq.getDouble(%s)" %elem))
+            nameofattr = elem.replace('/','_')[9:]
+            if not 'SAMPLE' == elem[-6:]:
+                setattr(HF2LI, nameofattr, property(
+               fget=eval("lambda self: self.daq.getDouble('%s')" %elem),
+               fset=eval("lambda self, value: self.daq.setDouble('%s', value)" %elem)))
             else:
-                prop  = property(fget=eval("lambda self: self.daq.getSample('%s')" %elem))
-            check_add(self, nodesclean)
-            print(nodesclean)
-            print(attrPath)
-            setattr(eval(attrPath), nodesclean[-1],prop)
-    def demod_sample(self, demod_numbers, keys_to_include):
-            '''
-            Returns the sample dict from one demod.
-            '''
-            datadict = {}
-            for i in demod_numbers:
-                datadict['demod%i' % i] = {}
-                raw = self.daq.getSample('dev1056/DEMODS/%i/SAMPLE' % i)
-                for key in keys_to_include:
-                    datadict['demod%i' % i][key] = raw[key]
-            return datadict
-
-    @property
-    def sigout0_offset(self):
-            '''
-            Returns the output offset in volts
-            '''
-            offset = self.daq.getDouble('/dev1056/sigouts/0/offset')
-            outputrange = self.daq.getDouble('/dev1056/sigouts/0/range')
-
-            return offset*outputrange
-
-
-    @sigout0_offset.setter
-    def sigout0_offset(self,value):
-            '''
-            Sets the offset in voltage
-            '''
-            outputrange = self.daq.getDouble('/dev1056/sigouts/0/range')
-            self.daq.setDouble('/dev1056/sigouts/0/offset', value/outputrange)
-
-    @property
-    def sigout1_offset(self):
-            '''
-            Returns the output offset in volts
-            '''
-            offset = self.daq.getDouble('/dev1056/sigouts/1/offset')
-            outputrange = self.daq.getDouble('/dev1056/sigouts/1/range')
-
-            return offset*outputrange
-
-
-    @sigout1_offset.setter
-    def sigout1_offset(self,value):
-            '''
-            Sets the offset in voltage
-            '''
-            outputrange = self.daq.getDouble('/dev1056/sigouts/1/range')
-            self.daq.setDouble('/dev1056/sigouts/1/offset', value/outputrange)
-
-    @property
-    def osc0_freq(self):
-        '''
-        Returns the frequency of osc0
-        '''
-        return self.daq.getDouble('/dev1056/oscs/0/freq')
-
-    @osc0_freq.setter
-    def osc0_freq(self,value):
-        '''
-        Sets the frequency of osc0
-        '''
-        return self.daq.setDouble('/dev1056/oscs/0/freq')
-
-    @property
-    def osc1_freq(self):
-        '''
-        Returns the frequency of osc0
-        '''
-        return self.daq.getDouble('/dev1056/oscs/1/freq')
-
-    @osc0_freq.setter
-    def osc1_freq(self,value):
-        '''
-        Sets the frequency of osc0
-        '''
-        return self.daq.setDouble('/dev1056/oscs/1/freq')
+                setattr(HF2LI, nameofattr, property(fget=eval("lambda self: self.daq.getSample('%s')" %elem)))
 
     def setup(self, config):
             '''
