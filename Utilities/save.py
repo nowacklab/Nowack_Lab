@@ -425,7 +425,7 @@ class Measurement:
             self.setup_plots()
 
 
-    def run(self, plot=True, **kwargs):
+    def run(self, plot=True, save_appendedpath='', **kwargs):
         '''
         Wrapper function for do() that catches keyboard interrrupts
         without leaving open DAQ tasks running. Allows scans to be
@@ -465,7 +465,8 @@ class Measurement:
             t_unit = 'hours'
         # Print elapsed time e.g. "Scanplane took 2.3 hours."
         print('%s took %.1f %s.' %(self.__class__.__name__, t, t_unit))
-        self.save()
+        #print(save_appendedpath)
+        self.save(appendedpath = save_appendedpath)
 
         return done
 
