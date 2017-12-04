@@ -461,10 +461,10 @@ class Line(Measurement):
     def __init__(self):
         super().__init__()
 
-    def save(self):
+    def save(self, **kwargs):
         filename_in_extras = os.path.join(
             get_local_data_path(),
             get_todays_data_dir(),
             'extras',
             self.filename)
-        self._save(filename_in_extras)
+        self._save(filename_in_extras, **kwargs)

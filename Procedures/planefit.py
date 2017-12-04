@@ -260,7 +260,7 @@ class Planefit(Measurement):
         plt.tight_layout()
         return fig, axes
         
-    def save(self, savefig=True):
+    def save(self, savefig=True, **kwargs):
         '''
         Saves the planefit object to json.
         Also saves the figure as a pdf, if wanted.
@@ -268,7 +268,7 @@ class Planefit(Measurement):
         logging.log('Plane saved. a=%.4f, b=%.4f, c=%.4f' %
                     (self.a, self.b, self.c))
 
-        self._save(self.filename, savefig)
+        self._save(self.filename, savefig, **kwargs)
 
     def setup_plots(self):
         numX, numY = self.numpts
