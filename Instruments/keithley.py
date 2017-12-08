@@ -351,6 +351,8 @@ class Keithley2400(VISAInstrument):
 
 
 class Keithley2450(Keithley2400):
+    _label = 'keithley'
+    _idn = 'MODEL 2450'
 
     def __init__(self, resource='USB0::0x05E6::0x2450::04110400::INSTR'):
         super().__init__(resource)

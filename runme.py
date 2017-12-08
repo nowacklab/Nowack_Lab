@@ -27,6 +27,7 @@ packages = [
     'setuptools',
     'tornado',
     'peakutils',
+    'gtts',
     'https://github.com/nowacklab/Instrumental/tarball/master',
     'https://github.com/nowacklab/PyANC350/tarball/master',
 ]
