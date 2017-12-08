@@ -65,6 +65,8 @@ class MutualInductance2(Measurement):
                      label='data')
         self.ax.set_ylabel('SQUID response ($\Phi_0$)')
         self.ax.set_xlabel('Field Coil (mA)')
+        self.ax.annotate(self.filename, xy=(0.02, .98), xycoords='axes fraction',
+                        fontsize=8, ha='left', va='top', family='monospace')
         self.ax.set_title(self.title)
 
     def plot_fit(self):
