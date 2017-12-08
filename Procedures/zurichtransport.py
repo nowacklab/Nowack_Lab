@@ -994,6 +994,7 @@ class ziTransport(Measurement):
                 time.sleep(settleTCs*time_constant)
                 dataDict=self.daq.poll(avgTCs*time_constant, 500, 2, True)
                 data[gate] = {}
+                data[gate]['leakage'] = keithley.I
                 for key in dataDict.keys():
                     data[gate][key] = {}
                     dataDict[key].pop('time',None)
@@ -1031,8 +1032,10 @@ class ziTransport(Measurement):
             plt.subplot(211)
             deviceR = [];
             gatevoltages = []
+            leakages = []
             for gate in currentdata.keys():
                 gatevoltages.append(gate)
+                leakages.append(data[gate]['leakage']*1e9)
                 #set y axis to the calculated conductivity. Uses passed
                 # ta_gain and amplitude
                 deviceR.append(-currentdata[gate]['x']
@@ -1040,10 +1043,13 @@ class ziTransport(Measurement):
             plt.semilogy(np.array(gatevoltages),np.array(deviceR))
             #Get the current axis
             ax = plt.gca()
+            ax2 = ax.twinx()
+            ax2.plot(np.array(gatevoltages),np.array(leakages), color = 'red')
             # turn on grid, for Brian
             plt.grid(True)
             # label axes
-            plt.ylabel(r'Device conductivity DS (nA/V)')
+            ax.set_ylabel(r'Device conductivity DS (nA/V)')
+            ax2.set_ylabel(r'Leakage current (nA)', color = 'red')
             plt.xlabel('Gate Voltage')
             plt.subplot(212)
             sheetR = [];
