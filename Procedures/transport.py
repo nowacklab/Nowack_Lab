@@ -363,6 +363,8 @@ class VvsF(Measurement):
     def plot(self):
         pass
 
+
+
 class VvsIdc(Measurement):
     instrument_list = ['nidaq', 'keithley', 'preamp']
 
@@ -446,6 +448,52 @@ class VvsIdc(Measurement):
         self.ax.set_xlabel('I (A)')
         self.ax.set_ylabel('V (V)')
         return [self.fig,self.ax]
+
+
+class VvsIdc_daq(VvsIdc):
+
+    instrument_list = ['nidaq', 'preamp']
+    _daq_inputs = ['iv']
+    _daq_outputs= ['iv']
+
+    def __init__(self, instruments={}, iouts=[], 
+                 iv_Rbias = 3165, dwelltime=.01):
+        super().__init__(instruments=instruments)
+        self.iouts=np.array(iouts)
+        self.iv_Rbias = iv_Rbias
+        self.vouts= self.iouts * self.iv_Rbias
+        self.dwelltime=dwelltime
+        self.dwelltime = dwelltime
+        self.rate = 1/self.dwelltime
+
+    def do(self, plot=True, removeplot=True):
+
+        _,_ = self.nidaq.singlesweep(self._daq_outputs[0], 
+                                     self.vouts[0], 
+                                     numsteps = int(len(self.iouts)/2),
+                                     rate = self.rate*2)
+
+        vmeas = []
+        for v in self.vouts:
+            self.nidaq.outputs[self._daq_outputs[0]].V = v
+            time.sleep(self.dwelltime)
+            self.vmeas.append(self.nidaq.inputs[self._daq_inputs[0]].V)
+
+
+        _,_ = self.nidaq.singlesweep(self._daq_outputs[0], 
+                                     0,
+                                     numsteps = int(len(self.iouts)/2),
+                                     rate = self.rate*2)
+
+
+        # So I don't have to write another plotting routine
+        self.Vmea = np.array(vmeas)
+        self.Isrc = np.array(self.iouts)
+            
+        if plot:
+            self.plot()
+        if removeplot:
+            plt.close()
 
 
 

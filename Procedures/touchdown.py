@@ -599,7 +599,7 @@ class Touchdown(Measurement):
         plt.pause(0.01) #  helps with not responding plots outside notebooks
         self.fig.canvas.draw()
 
-    def save(self, savefig=True):
+    def save(self, savefig=True, **kwargs):
         '''
         Saves the touchdown object.
         Also saves the figure as a pdf, if wanted.
@@ -609,7 +609,7 @@ class Touchdown(Measurement):
                                           get_todays_data_dir(),
                                           'extras',
                                           self.filename)
-        self._save(filename_in_extras, savefig)
+        self._save(filename_in_extras, savefig, **kwargs)
 
     def setup_plots(self):
         display.clear_output(wait=True)

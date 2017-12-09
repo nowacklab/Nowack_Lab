@@ -115,7 +115,7 @@ class MutualInductance2(Measurement):
         super().plot()
         self.ax.plot(self.Vsrc / self.Rbias / 1e-3, self.Vmeas * self.conversion,
                      label='data')
-        self.ax.set_ylabel('SQUID response ($\phi_0$)')
+        self.ax.set_ylabel('SQUID response ($\Phi_0$)')
         self.ax.set_xlabel('Field Coil (mA)')
         self.ax.annotate(self.filename, xy=(0.02, .98), xycoords='axes fraction',
                         fontsize=8, ha='left', va='top', family='monospace')
