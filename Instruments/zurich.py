@@ -15,13 +15,6 @@ import zhinst.utils
 class gateVoltageError( Exception ):
     pass
 
-#class CheckArray(object):
-#    def __init__(self, *args):
-#        """
-#        """
-#
-#    def check(self):
-
 class HF2LI(Instrument):
     '''
     Creates a Zurich HF2Li object, to control a zurich lock in amplifier
@@ -69,16 +62,28 @@ class HF2LI(Instrument):
         else:
             # Sets device_id to the first avaliable. Prints SN.
             self.device_id = zhinst.utils.autoDetect(self.daq)
+        #Sets the default name of the zurich object. It can, of course,
+        #be changed later.
         self.name = 'zurich ' + self.device_id
+        #Retrieve all the nodes on the zurich
         allNodes = self.daq.listNodes(self.device_id, 0x07)
+        #Index through nodes
         for elem in allNodes:
+            #generates the name of the attribute, simply replacing the
+            # / of the the zurich path with underscores. Removes the "dev1056"
             nameofattr = elem.replace('/','_')[9:]
+            # Checks that the node is not a special high speed streaming node
             if not 'SAMPLE' == elem[-6:]:
+                #Sets an attribute of the class, specifically a property
+                #with getters and setters going to elem
                 setattr(HF2LI, nameofattr, property(
                fget=eval("lambda self: self.daq.getDouble('%s')" %elem),
-               fset=eval("lambda self, value: self.daq.setDouble('%s', value)" %elem)))
+               fset=eval("lambda self, value: self.daq.setDouble('%s', value)"
+                                                                        %elem)))
             else:
-                setattr(HF2LI, nameofattr, property(fget=eval("lambda self: self.daq.getSample('%s')" %elem)))
+                #If it is a high speed streaming node, use getsample.
+                setattr(HF2LI, nameofattr, property(fget=eval(
+                                "lambda self: self.daq.getSample('%s')" %elem)))
 
     def setup(self, config):
             '''
