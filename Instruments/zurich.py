@@ -14,7 +14,6 @@ import zhinst.utils
 
 class gateVoltageError( Exception ):
     pass
-
 class zurichInstrument(Instrument):
     '''
     Creates a Zurich object, to control a zurich lock in amplifier. Do
@@ -202,9 +201,7 @@ class zurichInstrument(Instrument):
                     raise Exception('type not handled!')
             return config_as_set_changed
             #return zCONFIG
-
-  class HF2LI(zurichInstrument):
+class HF2LI(zurichInstrument):
       pass
-
-  class MFLI(zurichInstrument):
+class MFLI(zurichInstrument):
       pass
