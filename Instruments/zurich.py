@@ -75,7 +75,7 @@ class zurichInstrument(Instrument):
             if not 'SAMPLE' == elem[-6:]:
                 #Sets an attribute of the class, specifically a property
                 #with getters and setters going to elem
-                setattr(HF2LI, nameofattr, property(
+                setattr(self.__class__, nameofattr, property(
                fget=eval("lambda self: self.daq.getDouble('%s')" %elem),
                fset=eval("lambda self, value: self.daq.setDouble('%s', value)"
                                                                         %elem)))
