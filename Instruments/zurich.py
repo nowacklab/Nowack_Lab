@@ -51,7 +51,7 @@ class zurichInstrument(Instrument):
             # Sets class variable device_id to the serial number
             self.device_id = device_serial
             # Tells the user that the ZI they asked for was found
-            print('Using ' _label +' with serial %s' % self.device_id)
+            print('Using ' label +' with serial %s' % self.device_id)
 
         # Checks if you actually asked for a specific serial
         elif device_serial != '' :
@@ -204,7 +204,9 @@ class zurichInstrument(Instrument):
             #return zCONFIG
 
   class HF2LI(zurichInstrument):
-      _label = 'Zurich HF2LI'
+      label = 'Zurich HF2LI'
+      _label = label
 
   class MFLI(zurichInstrument):
-      _lable = 'Zurich MFLI'
+      lable = 'Zurich MFLI'
+      _label = label
