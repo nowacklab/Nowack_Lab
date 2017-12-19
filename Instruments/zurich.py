@@ -15,11 +15,11 @@ import zhinst.utils
 class gateVoltageError( Exception ):
     pass
 
-class HF2LI(Instrument):
+class zurichInstrument(Instrument):
     '''
-    Creates a Zurich HF2Li object, to control a zurich lock in amplifier
+    Creates a Zurich object, to control a zurich lock in amplifier. Do
+    not call this class, call it's subclasses.
     '''
-    _label = 'Zurich HF2LI'
 
     def __init__(self, server_address = 'localhost', server_port = 8005 ,
                 device_serial = ''):
@@ -51,7 +51,7 @@ class HF2LI(Instrument):
             # Sets class variable device_id to the serial number
             self.device_id = device_serial
             # Tells the user that the ZI they asked for was found
-            print('Using Zurich HF2LI with serial %s' % self.device_id)
+            print('Using ' _label +' with serial %s' % self.device_id)
 
         # Checks if you actually asked for a specific serial
         elif device_serial != '' :
@@ -202,3 +202,9 @@ class HF2LI(Instrument):
                     raise Exception('type not handled!')
             return config_as_set_changed
             #return zCONFIG
+
+  class HF2LI(zurichInstrument):
+      _label = 'Zurich HF2LI'
+
+  class MFLI(zurichInstrument):
+      _lable = 'Zurich MFLI'
