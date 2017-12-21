@@ -59,11 +59,15 @@ class Sweep(Measurement):
         returning it.
         '''
         sweep_data = {}
+        if self.waiter:
+            self.waiter.reset()
         for point in range(self.points):
             clear_output()
             print('On point ' + str(point) + ' out of ' + str(self.points))
             sweep_data[point] = {}
             for r in self.repeaters:
+                if(self.waiter and self.waiter.test(n)):
+                    break
                 sweep_data[point][r.name] = r(point)
 
         self.sweeps_data.append(sweep_data)
@@ -102,12 +106,30 @@ class Sweep(Measurement):
         '''
         self.repeaters.remove(remove_me)
 
-    def set_points(self, points):
+    def set_points(self, points, waiter = False):
         '''
         Sets the number of points to take. All array based repeaters must have
-        enough data points for the given number of points.
+        enough data points for the given number of points. If waiter is set
+        to a wait object, the sweep will terminate when that wait object's
+        test as applied to the nth element of it's values is true.
         '''
         self.points = points
+        self.waiter = waiter
+
+    def process_data(self, sweepnum, listofkeys):
+        '''
+        Returns a one d array of the data at location list of keys from the
+        sweepnum-th sweep
+        '''
+        sweep = self.sweeps_data[sweepnum]
+        data = []
+        for n in length(sweep):
+            elem = sweep[n]
+            for key in listofkeys:
+                elem = elem[key]
+        data.append(elem)
+        return data
+
 
 class Time(Measurement):
     '''
@@ -165,7 +187,17 @@ class Wait(Measurement):
         self.valence = valence
         self.tolerance  = tolerance
         self.timeout = timeout
-    def test(self):
+        self.timetoaccept = timetoaccept
+        self.start_time_in_range = False
+
+    def reset(self):
+        '''
+        Resets the timer on acceptance so that the test can be used multiple
+        times. This is unnecessary if the waiter is called itself.
+        '''
+        self.start_time_in_range = False
+
+    def insttest(self, n):
         currst = getattr(self.obj, self.prop)
         if self.elem:
             currst = currst[self.elem]
@@ -175,10 +207,22 @@ class Wait(Measurement):
         elif self.valence == 1:
             test = currst >= self.values[n]
         elif self.valence == 0:
-            test = abs(currst - self.values[n]) < tolerance
+            test = abs(currst - self.values[n]) < self.tolerance
         else:
             raise Exception('Valence must be -1,1 or 0')
         return test
+
+    def test(self, n):
+        if not self.insttest(n) or not self.start_time_in_range:
+            self.start_time_in_range = time.time()
+            return False
+        elif self.insttest(n) and (time.time() - self.start_time_in_range)
+                                                    >  self.timetoaccept:
+            return True
+        else:
+            return False
+
+
     def __call__(self, n):
         tstart = time.time()
         start_time_in_range = tstart
@@ -186,20 +230,6 @@ class Wait(Measurement):
             if time.time()- tstart > self.timeout:
                 raise('Waiting timed out at value ' + str(self.values[n])
                         + ' of waiter ' + self.name)
-            if not test:
-                start_time_in_range = time.time()
-            elif test and (time.time() - start_time_in_range) > timetoaccept:
+            if test(n)
                 break
         return currst
-
-def replace_values(ref, newvalues):
-    '''
-    Replaces values in a list passed by reference without disturbing
-    the reference
-    '''
-    if len(ref) != len(newvalues):
-        raise Exception("newvalues must have the same length as ref!")
-    length = len(ref)
-    ref.extend(newvalues)
-    for i in range(length):
-        ref.pop(0)
