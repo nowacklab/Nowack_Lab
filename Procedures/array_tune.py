@@ -140,3 +140,4 @@ class ArrayTune(Measurement):
         self.sweep.run()
         plt.close()
         self.plot()
+        plt.close()
