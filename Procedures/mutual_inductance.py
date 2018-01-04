@@ -4,6 +4,55 @@ from ..Utilities.save import Measurement
 from ..Utilities.plotting import plot_mpl
 from ..Utilities.utilities import AttrDict
 
+class MutualInductance_sweep(Measurement):
+    instrument_list = ['daq', 'squidarray']
+    _daq_inputs = ['dc']
+    _daq_outputs = ['fieldcoil']
+
+    def __init__(self, 
+                 instruments = {},
+                 fc_Is = [],
+                 sbias = [],
+                 Rbias = 3165,
+                 rate = 100,
+                 numsteps = 1000,
+                 conversion = 1/14.4):
+        super().__init__(instruments=instruments)
+        self.fc_Is = np.array(fc_Is)
+        self.sbias = np.array(sbias)
+        self.Rbias = Rbias
+        self.rate = rate
+        self.numsteps = numsteps
+
+    def do(self):
+        self.mutuals = []
+        self.sbias_live = []
+        for sb in self.sbias:
+            self.squidarray.S_bias = sb
+            self.squidarray.reset()
+            m = MutualInductance2(instruments, 
+                                  self.fc_Is, 
+                                  self.Rbias, 
+                                  self.rate, 
+                                  self.numsteps,
+                                  self.conversion)
+                 
+            m.run(removeplot=True, save_appendedpath=self.filename)
+            self.mutuals.append(m)
+            self.sbias_live.append(sb)
+            self.plot()
+
+    def setup_plots(self):
+        self.fig, self.ax = plt.subplots()
+        self.ax.set_ylabel('Squid Response ($\phi_0$)')
+        self.ax.set_xlabel('Field Coil Current (mA)')
+
+    def plot(self):
+        m = self.mutuals[-1]
+        self.ax.plot(m.Vsrc / m.Rbias / 1e-3, m.Vmeas * m.conversion, 
+                     label='Sbias={0:2.2f} uA'.format(self.sbias_live[-1]*1e6))
+        self.ax.legend()
+
 
 class MutualInductance2(Measurement):
     instrument_list = ['daq']
@@ -27,7 +76,7 @@ class MutualInductance2(Measurement):
         self.title = title
         self.conversion = conversion
 
-    def do(self, title=''):
+    def do(self, title='', plot=True, removeplot = False):
         if title != '':
             self.title = title
         outputdata, received = self.daq.sweep(Vstart = {'fieldcoil':
@@ -53,7 +102,10 @@ class MutualInductance2(Measurement):
                              numsteps   = int(self.numsteps/5)
                             )
 
-        self.plot()
+        if plot:
+            self.plot()
+        if removeplot:
+            plt.close()
 
     def setup_plots(self):
         self.fig, self.ax = plt.subplots()

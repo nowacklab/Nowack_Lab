@@ -19,7 +19,8 @@ class ArrayTune(Measurement):
                  squid_bias,
                  squid_tol = 100e-3,
                  aflux_tol = 10e-3,
-                 offset = 0.0):
+                 sflux_offset = 0.0,
+                 aflux_offset = 0.0):
         """Given a lock SAA, tune the input SQUID and lock it.
         Args:
         instruments (dict): Dictionary of instruments
@@ -33,7 +34,8 @@ class ArrayTune(Measurement):
         self.conversion = 10 # Conversion between mod current and voltage
         self.squid_tol = squid_tol
         self.aflux_tol = aflux_tol
-        self.offset = offset
+        self.sflux_offset = sflux_offset
+        self.aflux_offset = aflux_offset
 
     def acquire(self):
         """Ramp the modulation coil current and monitor the SAA response."""
@@ -61,14 +63,15 @@ class ArrayTune(Measurement):
         """Tune the SQUID and adjust the DC SAA flux."""
         self.tune_squid_setup()
         self.char = self.acquire()
-        error = np.mean(self.char[-1])
+        error = np.mean(self.char[-1]) - self.aflux_offset
         if np.abs(error) < self.aflux_tol:
-            self.lock_squid()
+            return self.lock_squid()
         elif attempts == 0:
             print("could not tune array flux.")
+            return False
         else:
             self.adjust("A_flux", error)
-            self.tune_squid(attempts = attempts-1)
+            return self.tune_squid(attempts = attempts-1)
 
     def lock_squid(self, attempts=5):
         """Lock the SQUID and adjust the DC SQUID flux."""
@@ -76,17 +79,17 @@ class ArrayTune(Measurement):
         self.squidarray.testSignal = "Off"
         self.squidarray.reset()
         ret = self.daq.monitor(["saa"], 0.01, sample_rate = 100000)
-        error = np.mean(ret["saa"]) - self.offset
+        error = np.mean(ret["saa"]) - self.sflux_offset
         print(error)
         if np.abs(error) < self.squid_tol:
             print("locked with {} attempts".format(5-attempts))
-            return
+            return True
         elif attempts == 0:
             print("could not tune SQUID flux.")
-            return
+            return False
         else:
             self.adjust("S_flux", error)
-            self.lock_squid(attempts - 1)
+            return self.lock_squid(attempts - 1)
 
     def adjust(self, attr, error):
         """Adjust DC flux to center the trace @ 0 V."""
@@ -122,12 +125,15 @@ class ArrayTune(Measurement):
         ax[1].set_title("DC SQUID Signal ($\Phi_o$)",
                         size="medium")
 
-    def run(self):
-        self.tune_squid()
+    def run(self, save_appendedpath = ''):
+        self.istuned = self.tune_squid()
+        if self.istuned == False:
+            return False
         self.preamp.filter = (1, 300000)
         self.squidarray.reset()
         self.spectrum = SQUIDSpectrum(self.instruments)
-        self.spectrum.run()
+        self.spectrum.saa_status = self.squidarray.__dict__
+        self.spectrum.run(save_appendedpath = save_appendedpath)
         plt.close()
         self.squidarray.sensitivity = "Medium"
         self.squidarray.reset()
@@ -137,7 +143,9 @@ class ArrayTune(Measurement):
         self.sweep = MutualInductance2(self.instruments,
                                        np.linspace(-1e-3, 1e-3, 1000),
                                        conversion = 1/1.44)
-        self.sweep.run()
+        self.sweep.saa_status = self.squidarray.__dict__
+        self.sweep.run(save_appendedpath = save_appendedpath)
         plt.close()
         self.plot()
         plt.close()
+        return True

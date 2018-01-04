@@ -122,6 +122,10 @@ class SQUID_IV(Measurement):
         self.ax.set_ylabel(self._YLABEL)
         self.ax.annotate(self.filename, xy=(.02,.98), xycoords='axes fraction',
                          fontsize=8, ha='left', va='top', family='monospace')
+        self.ax.annotate('rate={0:2.2f} Sa/s'.format(self.samplerate), 
+                         xy=(.02, .1), xycoords='axes fraction',
+                         fontsize=8, ha='left', va='top', family='monospace')
+
 
     def plot_resistance(self, hysteresis=True):
         '''
@@ -247,8 +251,6 @@ class SQUID_Mod(Measurement):
         filenames = []
         ivs = []
         # multithread this?
-        localpath = ''
-        remotepath = ''
         i = 0
         for m_v in self.mod_Vs:
             self.daq.outputs[self._daq_outputs[0]].V = m_v
@@ -258,14 +260,8 @@ class SQUID_Mod(Measurement):
                           self.samplerate,
                           self.gain
                          )
-            NestedMeasurement.saveinfolder(self.filename, iv, localpath, remotepath)
             ivs.append(iv)
-            iv.run(removeplot=True)
-
-            if localpath != iv._localpath:
-                localpath = iv._localpath
-            if remotepath != iv._remotepath:
-                remotepath = iv._remotepath
+            iv.run(save_appendedpath = self.filename, removeplot=True)
 
             self.V[i,:] = iv.Vmeas_up
 
@@ -413,4 +409,18 @@ class SQUID_FC(SQUID_Mod):
         self.ax.annotate('Squid Ibias = {0:2.2f} uA'.format(self.iv_I*1e6), 
                         xy=(.02,.98), xycoords='axes fraction',
                         fontsize=8, ha='left', va='top', family='monospace')
+
+
+class SQUID_SAA_FC(Measurement):
+    _instrument_list = ['daq', 'squidarray']
+    _daq_outputs = ['fc']
+    _daq_inputs = ['dc']
+
+    def __init__(self,
+                 instruments = {},
+                 fc_Is = np.linspace(-.5e-3,.5e-3, 100),
+                 fc_Rbias = 2000,
+                 ):
+        pass
+
 
