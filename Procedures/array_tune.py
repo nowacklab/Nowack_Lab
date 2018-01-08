@@ -10,6 +10,9 @@ from ..Utilities.save import Measurement
 from ..Procedures.daqspectrum import SQUIDSpectrum
 from ..Procedures.mutual_inductance import MutualInductance2
 
+import matplotlib.cm
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 class ArrayTune(Measurement):
     instrument_list = ["daq", "squidarray", "preamp"]
     _daq_inputs = ["saa", "test"]
@@ -106,33 +109,34 @@ class ArrayTune(Measurement):
         self.squidarray.reset()
 
     def plot(self):
-        fig, ax = plt.subplots(1,3,figsize=(12,4))
+        self.fig, self.ax = plt.subplots(1,3,figsize=(12,4))
         # Plot the charactaristic
-        ax[0].plot(self.char[1], self.char[2])
-        ax[0].set_xlabel("Test Signal (V)")
-        ax[0].set_ylabel("SAA Signal (V)", size="medium")
+        self.ax[0].plot(self.char[1], self.char[2])
+        self.ax[0].set_xlabel("Test Signal (V)")
+        self.ax[0].set_ylabel("SAA Signal (V)", size="medium")
 
         # Plot the spectrum
-        ax[2].loglog(self.spectrum.f,
+        self.ax[2].loglog(self.spectrum.f,
                      self.spectrum.psdAve * self.spectrum.conversion)
-        ax[2].set_xlabel("Frequency (Hz)")
-        ax[2].set_title("PSD ($\mathrm{%s/\sqrt{Hz}}$)" % self.spectrum.units,
+        self.ax[2].set_xlabel("Frequency (Hz)")
+        self.ax[2].set_title("PSD ($\mathrm{%s/\sqrt{Hz}}$)" % self.spectrum.units,
                         size="medium")
         
         # Plot the sweep
-        self.sweep.ax = ax[1]
+        self.sweep.ax = self.ax[1]
         self.sweep.plot()
-        ax[1].set_ylabel("")
-        ax[1].set_title("DC SQUID Signal ($\Phi_o$)",
+        self.ax[1].set_ylabel("")
+        self.ax[1].set_title("DC SQUID Signal ($\Phi_o$)",
                         size="medium")
 
-    def run(self, save_appendedpath = ''):
+    def run(self, save_appendedpath = '', save=True):
         self.istuned = self.tune_squid()
         if self.istuned == False:
             return False
         self.preamp.filter = (1, 300000)
         self.squidarray.reset()
-        self.spectrum = SQUIDSpectrum(self.instruments)
+        self.spectrum = SQUIDSpectrum(self.instruments, 
+                                      preamp_dccouple_override=True)
         self.spectrum.saa_status = self.squidarray.__dict__
         self.spectrum.run(save_appendedpath = save_appendedpath)
         plt.close()
@@ -149,18 +153,12 @@ class ArrayTune(Measurement):
         plt.close()
         self.plot()
         plt.close()
+        if save:
+            self.ax = list(self.ax.flatten())
+            self.save(appendedpath=save_appendedpath)
         return True
 
-    @staticmethod
-    def __init__(self,
-                 instruments,
-                 squid_bias,
-                 squid_tol = 100e-3,
-                 aflux_tol = 10e-3,
-                 sflux_offset = 0.0,
-                 aflux_offset = 0.0):
-
-class Array_Tune_Batch(Measurement):
+class ArrayTuneBatch(Measurement):
     def __init__(self, 
                  instruments,
                  sbias = [0], 
@@ -170,21 +168,31 @@ class Array_Tune_Batch(Measurement):
                  aflux_tol = 10e-3, 
                  save_appendedpath = ''):
         '''
+        Test a squid automatically with a SAA 
+
+        Work in progress
+
         live plotting only plots the first element of sflux, all of 
         sbias and aflux
         '''
         
-        super(Array_Tune_Batch, self).__init__(instruments=instruments)
+        super(ArrayTuneBatch, self).__init__(instruments=instruments)
 
         self.instruments = instruments
-        self.sbias = sbias
-        self.aflux = sflux
-        self.sflux = sflux
+        self.sbias = np.array(sbias) 
+        self.aflux = np.array(aflux)
+        self.sflux = np.array(sflux)
         self.squid_tol = squid_tol
         self.aflux_tol = aflux_tol
         self.save_appendedpath = save_appendedpath
 
-    def do(liveplot = True)
+        self.cmap = matplotlib.cm.viridis
+        self.cmap.set_bad('white', 1.)
+        self.arraytunefilenames = []
+        self.leastlineari = 0
+        self.leastlinearval = 1e9
+
+    def do(self, liveplot = True):
 
         # Take 1 arraytune scan
         # use that to create the entire structure
@@ -219,8 +227,8 @@ class Array_Tune_Batch(Measurement):
 
 
         for sb in self.sbias:
+            plottingindex = [] # for live plotting
             for af in self.aflux:
-                plottingindex = [] # for live plotting
                 plottingindex.append(index)
                 for sf in self.sflux:
                     [index, first] = self._tunesave(index,sb,af,sf,first)
@@ -232,6 +240,10 @@ class Array_Tune_Batch(Measurement):
                 self.plot_live()
 
             sbindex += 1 
+
+        print('Least linear: {0:2.2e} ({1})'.format(
+                self.leastlinearval,
+                self.leastlineari))
         
 
     def _tunesave(self, index, sb, af, sf, first):
@@ -243,7 +255,9 @@ class Array_Tune_Batch(Measurement):
                        aflux_tol = self.aflux_tol,
                        sflux_offset = sf,
                        aflux_offset = af)
-        locked = at.run(save_appendedpath=self.save_appendedpath)
+        locked = at.run(save_appendedpath=self.save_appendedpath, save=True)
+
+        self.arraytunefilenames.append(at.filename)
 
         if not locked:
             index += 1
@@ -260,75 +274,86 @@ class Array_Tune_Batch(Measurement):
                  ]
 
         if first: # do not know size until you try
-            Array_Tune_Batch._makestruct(self, tosave, self.savenames)
+            maxlen = len(self.sbias)*len(self.aflux)*len(self.sflux)
+            ArrayTuneBatch._makestruct(self, tosave, self.savenames, maxlen)
             self.spectrum_f = np.array(at.spectrum.f)
             first = False
 
-        Array_Tune_Batch._savetostruct(self, tosave, self.savenames, index)
+        ArrayTuneBatch._savetostruct(self, tosave, self.savenames, index)
         index += 1
 
         return [index, first]
 
 
     def plot_makeline(self, indexes):
-        n_l_z = np.full(self.aflux, np.nan)
-        l_l_z = np.full(self.aflux, np.nan)
+        n_l_z = np.full(len(self.aflux), np.nan)
+        l_l_z = np.full(len(self.aflux), np.nan)
 
         index_fstart = np.argmin(abs(self.spectrum_f - 100))
         index_fstop  = np.argmin(abs(self.spectrum_f - 1000))
 
-        for n,l,i in zip(n_l_z, l_l_z, indexes):
+        for j,i in zip(range(len(n_l_z)), indexes):
             if not self.success[i]:
                 continue
-            n = np.sqrt(np.mean(np.square(
-                    (self.spectrum_psd[i])[index_fstart, index_fstop])))
+            n_l_z[j] = np.sqrt(np.mean(np.square(
+                    (self.spectrum_psd[i])[index_fstart:index_fstop])))
             [p,v] = np.polyfit(self.sweep_fcIsrc[i], self.sweep_sresp[i],1,
-                             covar=True)
-            l = v[0]
+                             cov=True)
+            l_l_z[j] = v[0][0]
+            
+            if l_l_z[j] < self.leastlinearval:
+                self.leastlinearval = l_l_z[j]
+                self.leastlineari = i
         return [n_l_z, l_l_z]
 
-    def setup_plots():
+    def setup_plots(self):
         # 2D live plot:
         #   squid bias vs array flux vs noise
         #   squid bias vs array flux vs measure of linearity
         # 1D plot:
         #   waterfall (offset by array flux) of squid characteristic
 
-        self.fig, self.axes = plt.subplots(1,3)
+        self.fig, self.axes = plt.subplots(1,2, figsize=(16,4))
         self.axes = list(self.axes.flatten())
 
         self.plotting_z = [
-                np.full((len(self.aflux), len(self.sbias)), np.nan),
-                np.full((len(self.aflux), len(self.sbias)), np.nan)
+                np.full((len(self.sbias), len(self.aflux)), np.nan),
+                np.full((len(self.sbias), len(self.aflux)), np.nan)
                           ]
         self.images = []
         self.cbars  = []
         for ax, data, cbarlabel in zip(
                 [self.axes[0], self.axes[1]], 
                 self.plotting_z,
-                [r'noise ($\phi_0/\sqrt{Hz}$)', 
+                [r'rms noise ($\phi_0/\sqrt{Hz}$)', 
                  r'linearity (covar of fit)']
                 ):
-            masked_data = np.ma.array(data mask=np.isnan(data))
+            masked_data = np.ma.array(data, mask=np.isnan(data))
             image = ax.imshow(masked_data, self.cmap, origin='lower',
-                              excent=[self.sbias.min(), self.sbias.max(),
-                                      self.aflux.min(), self.aflux.max()])
+                              extent=[self.aflux.min(), self.aflux.max(),
+                                      self.sbias.min()*1e-3,
+                                      self.sbias.max()*1e-3])
 
-            d = max_axes_locatable(ax)
+            d = make_axes_locatable(ax)
             cax = d.append_axes('right', size=.1, pad=.1)
             cbar = plt.colorbar(image, cax=cax)
             cbar.set_label(cbarlabel, rotation=270, labelpad=12)
+            cbar.formatter.set_powerlimits( (-2,2))
 
-            ax.set_xlabel('S bias (uA)')
-            ax.set_ylabel('A flux offset (a.u.)')
+            ax.set_ylabel('S bias (mA)')
+            ax.set_xlabel('A flux offset (V)')
 
             self.cbars.append(cbar)
             self.images.append(image)
 
+            self.fig.tight_layout()
+            self.fig.canvas.draw()
+            plt.pause(.001)
 
-    def plot_live():
+
+    def plot_live(self):
         for image,cbar,data in zip(self.images,self.cbars,self.plotting_z):
-            masked_data = np.ma.array(data mask=np.isnan(data))
+            masked_data = np.ma.array(data, mask=np.isnan(data))
             image.set_data(masked_data)
             cbar.set_clim([masked_data.min(), masked_data.max()])
             cbar.draw_all()
@@ -336,26 +361,58 @@ class Array_Tune_Batch(Measurement):
         plt.pause(.001)
 
 
+    def plot_characteristic(self):
+        fig,ax = plt.subplots(1,2)
 
-    def plot():
+        # max/min
+        charmaxmin = np.array( [c.max - c.min() for c in self.char_saasig])
+        charmaxmin.reshape( self.plotting_z[0].shape)
+        masked_maxmin = np.ma.array(charmaxmin, mask=charmaxmin==0)
+
+        ax[0].imshow(masked_maxmin, self.cmap, origin='lower',
+                              extent=[self.aflux.min(), self.aflux.max(),
+                                      self.sbias.min()*1e-3,
+                                      self.sbias.max()*1e-3])
+        d = make_axes_locatable(ax[0])
+        cax = d.append_axes('right', size=.1, pad=.1)
+        cbar = plt.colorbar(image, cax=cax)
+        cbar.set_label('Vpp of characteristic (V)', 
+                        rotation=270, labelpad=12)
+        cbar.formatter.set_powerlimits( (-2,2))
+
+        ax[0].set_ylabel('S bias (mA)')
+        ax[0].set_xlabel('A flux offset (V)')
+
+        # slope
+        # work in progress
+        # argsort, sort the testsignal, return indicies
+        # order char by those indicies
+        # argmin(abs(char)), find sufficiently large gap in V around
+        # that point, that is the gradient
+
+
+
+
+
+    def plot(self):
         pass
 
 
-    @classmethod
+    @staticmethod
     def _makestruct(obj, tosave, savenames, maxlen):
         for name, item in zip(savenames, tosave):
-            setattr(obj, name, np.zeros( (maxlen, len(item))))
+            setattr(obj, name, np.full( (maxlen, len(item)), np.nan))
 
-    @classmethod
+    @staticmethod
     def _savetostruct(obj, tosave, savenames, index):
         for name, item in zip(savenames, tosave):
             try:
                 getattr(obj, name)[index] = item
             except:
-                print(['Cannot set {0} of len {1}'.format(item, len(item))
+                print('Cannot set {0} of len {1}'.format(item, len(item)),
                        ' to {2} expecting len {3}'.format(name, 
                            len(getattr(obj, name)[index]))
-                      ])
+                      )
 
                     
                                    
