@@ -255,6 +255,19 @@ class RvsT(RvsSomething):
             self.T = np.append(self.T, self.ppms.temperature)
             self.do_measurement(delay=self.delay, plot=plot)
 
+class RvsT_RT_to_4K(Measurement):
+    def __init__(self, instruments):
+        self.instruments = instruments
+
+    def do(self):
+        r300_10 = RvsT(self.instruments, Tstart=305, Tend=10, delay=1, sweep_rate=20)
+        r300_10.run()
+        
+        print('Waiting a half hour.')
+        time.sleep(60*30)
+
+        r10_4 = RvsT(self.instruments, Tstart=10, Tend=4, delay=1, sweep_rate=.2)
+        r10_4.run()
 
 class RvsT_Bluefors(RvsSomething):
     instrument_list = ['lakeshore', 'lockin_V1', 'lockin_I']
