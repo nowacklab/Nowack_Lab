@@ -31,9 +31,10 @@ class DaqSpectrum(Measurement):
             preamp_gain = 1,
             preamp_filter_override = True,
             preamp_filter = (0,100e3),
-            preamp_dccouple_override = False,
+            preamp_dccouple_override = True,
             preamp_dccouple=True,
-            preamp_autoOL=True
+            preamp_autoOL=False,
+            preamp_diff_mode = False
             ):
         """Create a DaqSpectrum object
         
@@ -69,7 +70,8 @@ class DaqSpectrum(Measurement):
                     'preamp_filter_override',
                     'preamp_dccouple',
                     'preamp_dccouple_override',
-                    'preamp_autoOL'
+                    'preamp_autoOL',
+                    'preamp_diff_mode'
                     ]:
             setattr(self, arg, eval(arg))
 
@@ -81,13 +83,25 @@ class DaqSpectrum(Measurement):
             ( self.averages, int(self.measure_time * self.measure_freq) )
         );
 
-    def do(self):
+    def do(self, welch=False):
         """Do the DaqSpectrum measurment."""
         self.setup_preamp()
 
-        self.psdAve = self.get_spectrum()
+        if welch:
+            self.psdAve = self.get_spectrum_welch()
+        else:
+            self.psdAve = self.get_spectrum()
 
         self.plot()
+
+    def get_spectrum_welch(self):
+        received = self.daq.monitor('dc', self.measure_time*self.averages,
+                                          sample_rate=self.measure_freq)
+        self.V = received['dc'] / self.preamp.gain
+        self.t = received['t']
+        self.f, self.psd = signal.welch(self.V, fs = self.measure_freq)
+
+        return np.sqrt(self.psd)
 
     def get_spectrum(self):
         """Collect time traces from the DAQ and compute the FFT.
@@ -106,6 +120,8 @@ class DaqSpectrum(Measurement):
             # Divide out any preamp gain applied.
             self.V[i] = received['dc'] / self.preamp.gain
             self.t = received['t']
+
+            # Note: this is barlett's method
             self.f, psd = signal.periodogram(self.V[i], self.measure_freq,
                                              'blackmanharris')
             psdAve = psdAve + psd
@@ -160,7 +176,7 @@ class DaqSpectrum(Measurement):
         if not self.preamp_dccouple_override:
             self.preamp.dc_coupling(self.preamp_dccouple)
 
-        self.preamp.diff_input(False)
+        self.preamp.diff_input(self.preamp_diff_mode)
         self.preamp.filter_mode('low', 12)
 
         if self.preamp.is_OL() and self.preamp_autoOL:
