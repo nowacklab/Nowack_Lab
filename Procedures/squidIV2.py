@@ -200,6 +200,9 @@ class SQUID_Mod(Measurement):
     _MOD_MAX_I = 100e-6
     _NESTED_CALLABLE = SQUID_IV
     _cmap = 'PiYG'
+    _xlabel=r'$I_{IV}$ ($\mu$ A)'
+    _ylabel=r'$I_{Mod}$ ($\mu$ A)'
+    _clabel=r'$V_{squid} (V)$'
 
     def __init__(self,
                  instruments = {},
@@ -280,9 +283,9 @@ class SQUID_Mod(Measurement):
                                   self.mod_Is*1e6,
                                   self.V,
                                   cmap=self._cmap,
-                                  xlabel='$I_{IV}$ ($\mu$ A)',
-                                  ylabel='$I_{Mod}$ ($\mu$ A)',
-                                  clabel='$V_{squid} (V)$',
+                                  xlabel=self._xlabel,
+                                  ylabel=self._ylabel,
+                                  clabel=self._clabel,
                                   equal_aspect=False
                                   )
         self.ax.set_title(self.filename)
@@ -367,6 +370,10 @@ class SQUID_FC(SQUID_Mod):
     _IV_MAX_I = 100e-6
     _NESTED_CALLABLE = SQUID_FCIV
     _cmap = 'magma'
+
+    _xlabel = r'$I_{fc}$ ($\mu A$)'
+    _ylabel = r'$I_{mod}$ ($\mu V$)'
+    _clabel = r'$V_{squid}$ ($\mu V$)'
 
     def __init__(self,
                  instruments = {},
