@@ -35,7 +35,7 @@ class ArrayTune(Measurement):
         super(ArrayTune, self).__init__(instruments=instruments)
         self.instruments = instruments
         self.squid_bias = squid_bias
-        self.conversion = 10 # Conversion between mod current and voltage
+        self.conversion = 5 # Conversion between mod current and voltage
         self.squid_tol = squid_tol
         self.aflux_tol = aflux_tol
         self.sflux_offset = sflux_offset
@@ -166,6 +166,8 @@ class ArrayTuneBatch(Measurement):
                  sflux = [0],
                  squid_tol = 100e-3, 
                  aflux_tol = 10e-3, 
+                 sbias_ex = 100,
+                 aflux_ex = 0,
                  save_appendedpath = ''):
         '''
         Test a squid automatically with a SAA 
@@ -185,6 +187,8 @@ class ArrayTuneBatch(Measurement):
         self.squid_tol = squid_tol
         self.aflux_tol = aflux_tol
         self.save_appendedpath = save_appendedpath
+        self.sbias_ex = sbias_ex
+        self.aflux_ex = aflux_ex
 
         self.cmap = matplotlib.cm.viridis
         self.cmap.set_bad('white', 1.)
@@ -225,6 +229,11 @@ class ArrayTuneBatch(Measurement):
 
         sbindex = 0
 
+        # try out a point that you know will work to tell the code 
+        # how large stuff should be
+        [_, first] = self._tunesave(index, self.sbias_ex, self.aflux_ex, 0, 
+                                    first, save=False)
+
 
         for sb in self.sbias:
             plottingindex = [] # for live plotting
@@ -246,7 +255,7 @@ class ArrayTuneBatch(Measurement):
                 self.leastlineari))
         
 
-    def _tunesave(self, index, sb, af, sf, first):
+    def _tunesave(self, index, sb, af, sf, first, save=True):
 
         self.lockparams[index] = np.array([sb, af, sf])
 
@@ -257,7 +266,8 @@ class ArrayTuneBatch(Measurement):
                        aflux_offset = af)
         locked = at.run(save_appendedpath=self.save_appendedpath, save=True)
 
-        self.arraytunefilenames.append(at.filename)
+        if save:
+            self.arraytunefilenames.append(at.filename)
 
         if not locked:
             index += 1
@@ -279,7 +289,8 @@ class ArrayTuneBatch(Measurement):
             self.spectrum_f = np.array(at.spectrum.f)
             first = False
 
-        ArrayTuneBatch._savetostruct(self, tosave, self.savenames, index)
+        if save:
+            ArrayTuneBatch._savetostruct(self, tosave, self.savenames, index)
         index += 1
 
         return [index, first]
