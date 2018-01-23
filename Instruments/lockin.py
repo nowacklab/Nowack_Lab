@@ -185,7 +185,7 @@ class SR830(VISAInstrument):
         '''
         Set the reference phase shift (degrees)
         '''
-        phase = (phase + 180) % 360 - 180 # restrict from -180 to 180
+        phase = (value + 180) % 360 - 180 # restrict from -180 to 180
         self.write('PHAS %f' %value)
 
     @property
