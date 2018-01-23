@@ -50,11 +50,15 @@ class PFL102(Instrument):
         'A_flux': 0b0001,
         'offset': 0b0100}
     TestSignalOptions = {'Off': 0, 'On': 1, 'Auto': 2}
-    S_bias_lim = 2000
+
+    # Limits; N.B. these are hard-coded by the resistors in the PFL box.
+    # Do not change in software unless you change the resistors.
+    S_bias_lim = 200
     A_bias_lim = 100
     S_flux_lim = 100
     A_flux_lim = 200
     offset_lim = 9.8
+
     amplifierGain = 5040.0
     param_filename = os.path.join(
         os.path.dirname(__file__),
@@ -231,7 +235,7 @@ class PFL102(Instrument):
 # resistor
     @property
     def feedbackResistor(self):
-        '''" Feedback resistor; 1kOhm, 10kOhm, 100kOhm '''
+        ''' Feedback resistor; 1kOhm, 10kOhm, 100kOhm '''
         return self._feedbackResistor
 
     @feedbackResistor.setter
@@ -245,7 +249,7 @@ class PFL102(Instrument):
 # Test signal
     @property
     def testSignal(self):
-        '''" Test signal; On, Auto (only on when tuning), Off '''
+        ''' Test signal; On, Auto (only on when tuning), Off '''
         return self._testSignal
 
     @testSignal.setter
@@ -259,7 +263,7 @@ class PFL102(Instrument):
  # Test input
     @property
     def testInput(self):
-        '''" Test input; S_bias, A_bias, S_flux, A_flux '''
+        ''' Test input; S_bias, A_bias, S_flux, A_flux '''
 
         return self._testInput
 
@@ -274,7 +278,7 @@ class PFL102(Instrument):
  # Sensitivity
     @property
     def sensitivity(self):
-        '''" Sensitivity, chooses R and C in feedback; High, Med, Low '''
+        ''' Sensitivity, chooses R and C in feedback; High, Med, Low '''
         return self._sensitivity
 
     @sensitivity.setter
@@ -317,7 +321,7 @@ class PFL102(Instrument):
         self.reset()  # will reset the integrator and restore settings
 
     @staticmethod
-    def load(json_file=None):
+    def load(json_file=None, port='COM3'):
         '''
         Load last saved parameters for the array from a file.
         '''
@@ -336,7 +340,7 @@ class PFL102(Instrument):
         obj_string = json.dumps(obj_dict)
         obj = jsp.decode(obj_string)
 
-        obj.pci = PCI100()
+        obj.pci = PCI100(port=port)
         return obj
 
     def lock(self, what):
