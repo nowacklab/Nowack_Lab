@@ -55,11 +55,16 @@ class Measurement:
                     if m == 'matplotlib':
                         d[var] = None
                 elif type(d[var]) is list: # check for lists of mpl objects
-                    if hasattr(d[var][0], '__module__'): # built-in types won't have __module__
-                        m = d[var][0].__module__
-                        m = m[:m.find('.')] # will strip out "matplotlib"
-                        if m == 'matplotlib':
-                            d[var] = None
+                    try:
+                        if hasattr(d[var][0], '__module__'): # built-in types won't have __module__
+                            m = d[var][0].__module__
+                            m = m[:m.find('.')] # will strip out "matplotlib"
+                            if m == 'matplotlib':
+                                d[var] = None
+                    except:
+                        print('Error saving ', var)
+                        print(str(self))
+                        d[var] = ['This list was empty.  Empty lists do not save well']
 
                 ## Walk through dictionaries
                 if 'dict' in utilities.get_superclasses(d[var]):
@@ -89,11 +94,21 @@ class Measurement:
                         # check if it's a dictionary or object
                         if f.get(key, getclass=True) is h5py._hl.group.Group:
                             if key[0] == '!': # it's an object
-                                walk(d[key[1:]].__dict__, f[key])
-                                # [:1] strips the !; walks through the subobject
+                                # try/except in case it is somehow a dict
+                                try:
+                                    walk(d[key[1:]].__dict__, f[key])
+                                    # [:1] strips the !; walks through the subobject
+                                except:
+                                    walk(d[key[1:]], f[key])
                             else: # it's a dictionary
                                 # walk through the subdictionary
-                                walk(d[key], f[key])
+
+                                # try/except if somehow the key does not exist
+                                try:
+                                    walk(d[key], f.get(key))
+                                except:
+                                    d[key] = {};
+                                    walk(d[key], f.get(key))
                         else:
                             d[key] = f[key][:] # we've arrived at a dataset
 
@@ -159,15 +174,17 @@ class Measurement:
         try:
             exec(obj_dict['py/object']) # see if class is in the namespace
         except:
+            print('Cannot find class definition {0}: '.format(
+                obj_dict['py/object']) + 'using measurement object')
             obj_dict['py/object'] = 'Nowack_Lab.Utilities.save.Measurement'
 
-        # Decode with jsonpickle.
+        # Decode with jsonpickle
         obj_string = json.dumps(obj_dict)
         obj = jsp.decode(obj_string)
 
         return obj
 
-    def _save(self, filename=None, savefig=True, extras=False, ignored = []):
+    def _save(self, filename=None, savefig=True, ignored = [], appendedpath=''):
         '''
         Saves data. numpy arrays are saved to one file as hdf5, everything else
         is saved to JSON
@@ -180,11 +197,12 @@ class Measurement:
         savefig -- If "True" figures are saved. If "False" only data and config
         are saved
 
-        extras -- If True, saved to a subfolder of the current data directory
-        named "extras" to reduce clutter. If False, saved in the normal way.
-
         ignored -- Array of objects to be ignored during saving. Passed to
         _save_hdf5 and _save_json.
+
+        appendedpath -- name of optional subdirectory in current save path. Use
+         this to store uninteresting measurements that add clutter
+         (e.g. Touchdowns)
 
         Saved data stored locally but also copied to the data server.
         If you specify no filename, one will be automatically generated.
@@ -206,25 +224,23 @@ class Measurement:
                 self.make_timestamp_and_filename()
             filename = self.filename
 
-        if extras is True:
-            extras = 'extras'
+        # If you did not specify a filename with a path, generate a path
+        if os.path.dirname(filename) == '':
+                local_path = os.path.join(get_local_data_path(),
+                                          get_todays_data_dir(),
+                                          appendedpath,
+                                          filename)
+                remote_path = os.path.join(get_remote_data_path(),
+                                           get_todays_data_dir(),
+                                           appendedpath,
+                                           filename)
+        # Else, you specified some sort of path
         else:
-            extras = ''
-
-        if os.path.dirname(filename) == '':  # you specified a filename with no preceding path
-            local_path = os.path.join(get_local_data_path(),
-                                      get_todays_data_dir(),
-                                      extras,
-                                      filename)
-            remote_path = os.path.join(get_remote_data_path(),
-                                       get_todays_data_dir(),
-                                       extras,
-                                       filename)
-
-        # Saving to a custom path
-        else: # you specified some sort of path
             local_path = filename
-            remote_path = os.path.join(get_remote_data_path(), '..', 'other', *filename.replace('\\', '/').split('/')[1:]) # removes anything before the first slash. e.g. ~/data/stuff -> data/stuff
+            remote_path = os.path.join(get_remote_data_path(),
+                                        '..', 'other',
+                                        *filename.replace('\\', '/').split('/')[1:])
+            # removes anything before the first slash. e.g. ~/data/stuff -> data/stuff
             # All in all, remote_path should look something like: .../labshare/data/bluefors/other/
 
         # Save locally:
@@ -347,7 +363,7 @@ class Measurement:
         run() wraps this function to enable keyboard interrupts.
         run() also includes saving and elapsed time logging.
         '''
-        print('Doing stuff!')
+        pass
 
 
     @classmethod
@@ -405,7 +421,7 @@ class Measurement:
             self.setup_plots()
 
 
-    def run(self, plot=True, **kwargs):
+    def run(self, plot=True, appendedpath='', **kwargs):
         '''
         Wrapper function for do() that catches keyboard interrrupts
         without leaving open DAQ tasks running. Allows scans to be
@@ -413,6 +429,7 @@ class Measurement:
 
         Keyword arguments:
             plot: boolean; to plot or not to plot?
+            appendedpath: name of appended directory
 
         Check the do() function for additional available kwargs.
         '''
@@ -447,7 +464,7 @@ class Measurement:
             t_unit = 'hours'
         # Print elapsed time e.g. "Scanplane took 2.3 hours."
         print('%s took %.1f %s.' %(self.__class__.__name__, t, t_unit))
-        self.save()
+        self.save(appendedpath=appendedpath)
 
         # If this run is in a loop, then we want to raise the KeyboardInterrupt
         # to terminate the loop.
@@ -456,11 +473,11 @@ class Measurement:
 
         return done
 
-    def save(self, filename=None, savefig=True, extras=False):
+    def save(self, filename=None, savefig=True, **kwargs):
         '''
         Basic save method. Just calls _save. Overwrite this for each subclass.
         '''
-        self._save(filename, savefig=savefig, extras=extras)
+        self._save(filename, savefig=savefig, **kwargs)
 
 
     def setup_plots(self):

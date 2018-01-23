@@ -479,4 +479,4 @@ class Line(Measurement):
         super().__init__()
 
     def save(self):
-        super().save(extras=True)
+        super().save(appendedpath='lines')
