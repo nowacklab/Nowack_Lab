@@ -53,7 +53,7 @@ class PFL102(Instrument):
 
     # Limits; N.B. these are hard-coded by the resistors in the PFL box.
     # Do not change in software unless you change the resistors.
-    S_bias_lim = 200
+    S_bias_lim = 2000
     A_bias_lim = 100
     S_flux_lim = 100
     A_flux_lim = 200
