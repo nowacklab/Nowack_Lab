@@ -57,10 +57,10 @@ class PPMS(Instrument):
         for param in self._params:
             fget = eval("lambda self: self._get_param('%s')" %param)
             if param in getsetparams:
-                fset = eval("lambda self, value: self._set_param('%s',value)" %param))
+                fset = eval("lambda self, value: self._set_param('%s',value)" %param)
             else:
                 fset = None
-            setattr(PPMS,param,property(fget=fget, fset=fset)
+            setattr(PPMS,param,property(fget=fget, fset=fset))
 
     def __del__(self):
         if self._pid is not None:

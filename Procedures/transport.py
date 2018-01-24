@@ -25,6 +25,7 @@ class RvsSomething(Measurement):
         super().__init__(instruments=instruments)
 
         # Set up dictionaries for each voltage channel.
+        # Empty arrays for each lockin
         self.Vx = {i: np.array([]) for i in range(self.num_lockins)}
         self.Vy = {i: np.array([]) for i in range(self.num_lockins)}
         self.Ix = np.array([])
