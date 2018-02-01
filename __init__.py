@@ -32,8 +32,7 @@ if not os.path.exists(setup_path):
     shutil.copy(template_path, setup_path)
 
 # Run the setup file.
-
 from IPython import get_ipython, display
 ip = get_ipython()
 if ip: # if we are in an IPython/Jupyter environment
-    ip.magic('run %s' %setup_path)
+    ip.magic('run \"%s\"' %setup_path)
