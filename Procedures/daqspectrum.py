@@ -11,6 +11,7 @@ from ..Utilities import conversions
 import time
 
 
+
 class DaqSpectrum(Measurement):
     """Monitor a DAQ channel and compute the power spectral density
 
@@ -99,9 +100,23 @@ class DaqSpectrum(Measurement):
                                           sample_rate=self.measure_freq)
         self.V = received['dc'] / self.preamp.gain
         self.t = received['t']
-        self.f, self.psd = signal.welch(self.V, fs = self.measure_freq)
+        self.makepsd(1)
 
-        return np.sqrt(self.psd)
+        return self.psdAve # to make sure do stays ok...
+
+    def _makewindow(self, freqspace):
+        n = int(self.measure_freq/freqspace)
+        return [signal.blackmanharris(n, False), n]
+
+    def makepsd(self, freqspace):
+        '''
+        Updates self.f, self.psd for welch method if you desire a frequency 
+        spacing between calculated spectral densities to be freqspace
+        '''
+        [window, nperseg] = self._makewindow(freqspace)
+        [self.f, self.psd] = signal.welch(self.V, fs=self.measure_freq, 
+                                          window=window, nperseg=nperseg)
+        self.psdAve = np.sqrt(self.psd)
 
     def get_spectrum(self):
         """Collect time traces from the DAQ and compute the FFT.
@@ -134,6 +149,13 @@ class DaqSpectrum(Measurement):
     def plot(self):
         """Plot the PDS on a loglog and semilog scale"""
         super().plot()
+
+        try:
+            self.ax['loglog'].lines.pop()
+            self.ax['semilog'].lines.pop()
+        except:
+            pass
+
         self.ax['loglog'].loglog(self.f, self.psdAve*self.conversion)
         self.ax['semilog'].semilogy(self.f, self.psdAve*self.conversion)
         self.ax['semilog'].set_xlim([self.f[0],1e3]);
@@ -223,10 +245,61 @@ class DaqSpectrum(Measurement):
                 time.sleep(12) # >10, in case slow communication
 
 
+class TwoSpectrum(DaqSpectrum):
 
+    instrument_list = ['daq', 'preamp']
+    _daq_inputs = ['dc', 'dc2']  
+    
+    def __init__(self, nonpreamp_gain, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.nonpreamp_gain = nonpreamp_gain
 
+    def do(self):
+        self.get_spectrum()
+        self.plot()
 
+    def get_spectrum(self):
+        received = self.daq.monitor(['dc', 'dc2'], 
+                                    self.measure_time*self.averages,
+                                    sample_rate=self.measure_freq)
+        self.V1 = received['dc'] / self.preamp.gain
+        self.V2 = received['dc2'] / self.nonpreamp_gain
+        self.t = received['t']
 
+    def makepsd(self, freqspace):
+        '''
+        Updates self.f, self.psd for welch method if you desire a frequency 
+        spacing between calculated spectral densities to be freqspace
+        '''
+        [window, nperseg] = self._makewindow(freqspace)
+        [self.f1, self.psd1] = signal.welch(self.V1, fs=self.measure_freq, 
+                                          window=window, nperseg=nperseg)
+        [self.f2, self.psd2] = signal.welch(self.V2, fs=self.measure_freq, 
+                                          window=window, nperseg=nperseg)
+        self.psdAve1 = np.sqrt(self.psd1)
+        self.psdAve2 = np.sqrt(self.psd2)
+
+    def plot(self, freqspace1 = 1):
+        try:
+            self.ax['loglog'].lines.pop()
+            self.ax['semilog'].lines.pop()
+        except:
+            pass
+
+        self.makepsd(freqspace1)
+
+        self.ax['loglog'].loglog(self.f1, self.psdAve1*self.conversion, 
+                                 label='dc')
+        self.ax['loglog'].loglog(self.f2, self.psdAve2*self.conversion, 
+                                 label='dc2')
+        self.ax['semilog'].semilogy(self.f1, self.psdAve1*self.conversion, 
+                                 label='dc')
+        self.ax['semilog'].semilogy(self.f2, self.psdAve2*self.conversion,
+                                label='dc2')
+        self.ax['semilog'].set_xlim([self.f1[0],1e3]);
+
+        self.ax['loglog'].legend()
+        self.ax['semilog'].legend()
 
 
 class SQUIDSpectrum(DaqSpectrum):
