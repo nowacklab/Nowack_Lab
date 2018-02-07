@@ -1,7 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import scipy.optimize.curve_fit as curve_fit
-import scipy import signal
+import scipy.optimize as sciopt
+from scipy import signal
+import time
+from scipy import signal
 
 from .daqspectrum import DaqSpectrum
 from .daqspectrum import TwoSpectrum
@@ -15,7 +17,8 @@ class Geophone_calibrate(Measurement):
     Zi = 10e9
     arg0 = [4.5, 2, 380, .1, 33**2/.023]
 
-    def __init__(self, instruments={}, Rs, sample_rate=1000):
+    def __init__(self, instruments={}, Rs=340, sample_rate=1000, maxV = .2, numpts = 8191, 
+            inputfnct = 'heaviside'):
         '''
         Arguments:
         Rs(float): resistor used as divider with geophone
@@ -25,8 +28,11 @@ class Geophone_calibrate(Measurement):
         super().__init__(instruments=instruments)
         self.Rs = Rs
         self.sample_rate = sample_rate
+        self.maxV = maxV
+        self.numpts = numpts
+        self.inputfnct = inputfnct
 
-    def _Ze(self, f, f0, Q0, Rt, Lt Z12sqOvMo):
+    def _Ze(self, f, f0, Q0, Rt, Lt, Z12sqOvMo):
         return Rt + 2j * np.pi * f * Lt + Z12sqOvMo * (2j * np.pi * f)/(
                 (2 * np.pi*f0)**2 * (1 - (f/f0)**2 + (1j/Q0)* (f/f0)))
 
@@ -37,13 +43,23 @@ class Geophone_calibrate(Measurement):
         return Ze*Zi/(Ze + Zi)
 
     def rho(self, f, f0, Q0, Rt, Lt, Z12sqOvMo):
-        Ze = self._Ze(f, f0, Q0, Rt, Lt, Z12spOvMo)
+        Ze = self._Ze(f, f0, Q0, Rt, Lt, Z12sqOvMo)
         Zep = self._Zep(Ze, self.Zi)
-        return Zep/(Zep + self.Zsp(self.Rs, self.Zi))
+        return np.abs(Zep/(Zep + self._Zsp(self.Rs, self.Zi)))
 
     def do(self):
         # send random noise signal and montor the input channels
-        noise = np.random.uniform(-10,10,8191) # max size of FIFO
+        if self.inputfnct == 'uniform':
+            noise = np.random.uniform(-self.maxV,self.maxV,self.numpts) # noise
+        if self.inputfnct == 'linear':
+            noise = np.linspace(-self.maxV,self.maxV,self.numpts) # linear (debug)
+        if self.inputfnct == 'heaviside':
+            noise = np.sign(np.linspace(-self.maxV,self.maxV,self.numpts))*.4 - .2  # heaviside
+        if self.inputfnct == 'delta':
+            noise = -.2*np.ones(self.numpts); 
+            noise[int(self.numpts/2)  ] = .2 #delta
+        self.daq.outputs['out'].V = noise[0]
+        time.sleep(1)
         data = {'out': noise}
         received = self.daq.send_receive(data, chan_in=['inA', 'inB'], 
                                          sample_rate=self.sample_rate)
@@ -57,11 +73,24 @@ class Geophone_calibrate(Measurement):
         # fit to rho with parameters
         self.ratio = self.Vb/self.Va
         self.f, self.ratiopsd = signal.welch(self.ratio, fs=self.sample_rate)
-        self.dft = np.sqrt(self.ratiopsd)
+        self.makepsd(.5)
+        self.dft = np.sqrt(self.psd)
 
-        self.popt, self.pcov = curve_fit(self.rho, self.f, self.dft, p0=self.arg0)
+        self.plot_debug()
+        self.popt, self.pcov = sciopt.curve_fit(self.rho, self.f, self.dft, p0=self.arg0)
 
         self.plot()
+
+    def makepsd(self, freqspace):
+        [window, nperseg] = self._makewindow(freqspace)
+        [self.f, self.psd] = signal.welch(self.ratio, fs=self.sample_rate,
+                                          window=window, nperseg=nperseg)
+
+    def _makewindow(self, freqspace):
+        #n = min(int(self.sample_rate/freqspace), self.numpts)
+        n = max(256, self.sample_rate / freqspace)
+        return [signal.blackmanharris(n, False), n]
+
 
     def setup_plots(self):
         self.fig, self.ax = plt.subplots()
@@ -74,7 +103,7 @@ class Geophone_calibrate(Measurement):
         self.ax.loglog(self.f, self.dft, marker='o', linestyle='', label='data')
         ylims = self.ax.get_ylim()
 
-        xdata = np.linspace(1/self.sample_freq, self.sample_freq, 1000)
+        xdata = np.linspace(1/self.sample_rate, self.sample_rate, 1000)
         self.ax.loglog(xdata, self.rho(xdata, *self.popt), label='fit')
 
         self.ax.set_ylim(ylims)
@@ -85,6 +114,7 @@ class Geophone_calibrate(Measurement):
         ax.plot(self.t, self.Va, label='Va')
         ax.plot(self.t, self.Vb, label='Vb')
         ax.plot(self.t, self.ratio, label='Vb/Va')
+        ax.legend()
 
     def print_params(self):
         names = ['f0', 'Q0', 'Rt', 'Lt']
