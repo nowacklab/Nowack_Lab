@@ -199,7 +199,7 @@ class SQUID_Mod(Measurement):
     instrument_list = ['daq']
     _MOD_MAX_I = 100e-6
     _NESTED_CALLABLE = SQUID_IV
-    _cmap = 'PiYG'
+    _cmap = 'coolwarm'
     _xlabel=r'$I_{IV}$ ($\mu$ A)'
     _ylabel=r'$I_{Mod}$ ($\mu$ A)'
     _clabel=r'$V_{squid} (V)$'
