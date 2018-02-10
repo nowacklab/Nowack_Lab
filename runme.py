@@ -9,8 +9,9 @@ site_packages = os.path.dirname(os.path.abspath(os.path.join(matplotlib.__file__
 package_path = os.path.join(os.getcwd(),'Utilities','notebook','jupyter_notebook_config.py')
 jupyter_path = os.path.join(home, '.jupyter', 'jupyter_notebook_config.py')
 
-os.makedirs(os.path.dirname(jupyter_path))
-open(jupyter_path, 'w').close() # make empty file
+if not os.path.exists(jupyter_path):
+    os.makedirs(os.path.dirname(jupyter_path))
+    open(jupyter_path, 'w').close() # make empty file
 shutil.copyfile(package_path, jupyter_path)
 
 ## Add github.pth file to enable "from Nowack_Lab import *"
