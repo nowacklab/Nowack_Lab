@@ -264,7 +264,7 @@ class RvsT_RT_to_4K(Measurement):
     def do(self):
         r300_10 = RvsT(self.instruments, Tstart=305, Tend=10, delay=1, sweep_rate=20)
         r300_10.run()
-        
+
         print('Waiting a half hour.')
         time.sleep(60*30)
 
@@ -661,3 +661,10 @@ class RvsVg_T(RvsVg):
                 ax[j].set_ylabel('T (K)', fontsize=20)
                 plot_mpl.aspect(ax[j], 1)
                 ax[j].set_title(self.filename)
+
+def PPMS_cool(instruments):
+    r300_10 = RvsT(instruments, Tstart=instruments['ppms'].temperature, Tend=10, delay=1, sweep_rate=20)
+    r300_10.run()
+    time.sleep(60*30)
+    r10_4 = RvsT(instruments, Tstart=10, Tend=4, delay=1, sweep_rate=.2)
+    r10_4.run()
