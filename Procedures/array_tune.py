@@ -24,13 +24,15 @@ class ArrayTune(Measurement):
                  squid_tol = 100e-3,
                  aflux_tol = 10e-3,
                  sflux_offset = 0.0,
-                 aflux_offset = 0.0):
+                 aflux_offset = 0.0,
+                 conversion=1/1.44):
         """Given a lock SAA, tune the input SQUID and lock it.
         Args:
         instruments (dict): Dictionary of instruments
         squid_bias (float): Bias point for SQUID lock
         squid_tol (float): Allowed DC offset for the locked SQUID
         offset (float): Tune the lockpoint up/down on the SQUID characaristic.
+        conversion (float): in phi_0/V (1/1.44 ibm, 1/2.1 hypres)
         """
         super(ArrayTune, self).__init__(instruments=instruments)
         self.instruments = instruments
@@ -40,6 +42,7 @@ class ArrayTune(Measurement):
         self.aflux_tol = aflux_tol
         self.sflux_offset = sflux_offset
         self.aflux_offset = aflux_offset
+        self.saaconversion = conversion # FIXME
 
     def acquire(self):
         """Ramp the modulation coil current and monitor the SAA response."""
@@ -98,6 +101,9 @@ class ArrayTune(Measurement):
     def adjust(self, attr, error):
         """Adjust DC flux to center the trace @ 0 V."""
         value = getattr(self.squidarray, attr)
+
+        #conversion = self.calibrate_adjust(attr)
+
         if value + error * self.conversion < 0:
             # Force a jump by resetting
             setattr(self.squidarray, attr, value + 50)
@@ -107,6 +113,30 @@ class ArrayTune(Measurement):
             # Directly correct the offset
             setattr(self.squidarray, attr, value + self.conversion * error)
         self.squidarray.reset()
+
+    def _getmean(self, monitortime):
+        received = self.daq.monitor('saa', monitortime, sample_rate=256000)
+        return np.mean(received['saa'])
+
+    def calibrate_adjust(self, attr, monitortime=.1):
+        """ create conversion factor for adjust in V/[attr]"""
+        conversion = 0
+        step       = 1
+        ts_state   = self.squidarray.testSignal
+        attr_state = getattr(self.squidarray,attr)  
+
+        self.squidarray.testSignal='Off'
+        mean1 = self._getmean(monitortime)
+        setattr(self.squidarray, attr, attr_state + step)
+        mean2 = self._getmean(monitortime)
+
+        conversion = abs(mean2-mean1)/1
+
+        self.squidarray.testSignal = ts_state
+        setattr(self.squidarray, attr, attr_state)
+
+        return conversion
+
 
     def plot(self):
         self.fig, self.ax = plt.subplots(1,3,figsize=(12,4))
@@ -137,6 +167,7 @@ class ArrayTune(Measurement):
         self.squidarray.reset()
         self.spectrum = SQUIDSpectrum(self.instruments, 
                                       preamp_dccouple_override=True)
+        self.spectrum.conversion = self.saaconversion
         self.spectrum.saa_status = self.squidarray.__dict__
         self.spectrum.run(save_appendedpath = save_appendedpath)
         plt.close()
@@ -147,7 +178,7 @@ class ArrayTune(Measurement):
         self.squidarray.reset()
         self.sweep = MutualInductance2(self.instruments,
                                        np.linspace(-1e-3, 1e-3, 1000),
-                                       conversion = 1/1.44)
+                                       conversion = self.saaconversion)
         self.sweep.saa_status = self.squidarray.__dict__
         self.sweep.run(save_appendedpath = save_appendedpath)
         plt.close()
@@ -168,7 +199,8 @@ class ArrayTuneBatch(Measurement):
                  aflux_tol = 10e-3, 
                  sbias_ex = 100,
                  aflux_ex = 0,
-                 save_appendedpath = ''):
+                 save_appendedpath = '',
+                 conversion=1/1.44):
         '''
         Test a squid automatically with a SAA 
 
@@ -189,6 +221,7 @@ class ArrayTuneBatch(Measurement):
         self.save_appendedpath = save_appendedpath
         self.sbias_ex = sbias_ex
         self.aflux_ex = aflux_ex
+        self.conversion = conversion
 
         self.cmap = matplotlib.cm.viridis
         self.cmap.set_bad('white', 1.)
@@ -263,7 +296,8 @@ class ArrayTuneBatch(Measurement):
                        squid_tol = self.squid_tol,
                        aflux_tol = self.aflux_tol,
                        sflux_offset = sf,
-                       aflux_offset = af)
+                       aflux_offset = af,
+                       conversion=self.conversion)
         locked = at.run(save_appendedpath=self.save_appendedpath, save=True)
 
         if save:
