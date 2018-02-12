@@ -479,5 +479,5 @@ class Line(Measurement):
     def __init__(self):
         super().__init__()
 
-    def save(self):
-        super().save(appendedpath='lines')
+    def save(self, appendedpath='lines', **kwargs):
+        super().save(appendedpath=appendedpath, **kwargs)
