@@ -1,5 +1,4 @@
-import matplotlib
-import matplotlib.pyplot as plt
+import matplotlib, matplotlib.pyplot as plt, numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 class Plotter():
