@@ -1,7 +1,6 @@
-from IPython import display
 from scipy.optimize import curve_fit
 import time, os, matplotlib, matplotlib.pyplot as plt, numpy as np
-from ..Utilities.save import Measurement, get_todays_data_dir, get_local_data_path
+from ..Utilities.save import Measurement
 from ..Utilities import conversions
 from ..Utilities.utilities import AttrDict
 

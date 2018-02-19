@@ -464,7 +464,11 @@ class Measurement:
             t_unit = 'hours'
         # Print elapsed time e.g. "Scanplane took 2.3 hours."
         print('%s took %.1f %s.' %(self.__class__.__name__, t, t_unit))
-        self.save(appendedpath=appendedpath)
+
+        if appendedpath != '': # Overwrite the default
+            self.save(appendedpath=appendedpath)
+        else:
+            self.save() # Use the default
 
         # If this run is in a loop, then we want to raise the KeyboardInterrupt
         # to terminate the loop.
