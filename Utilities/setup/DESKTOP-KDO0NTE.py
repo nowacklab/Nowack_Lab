@@ -13,7 +13,7 @@ ip = get_ipython()
 here = os.path.dirname(__file__)
 path = os.path.join(here, 'common_imports.py')
 
-ip.magic('run \"%s\"' %path)
+ip.magic('run %s' %path)
 
 # Comment out undesired import commands below
 from Nowack_Lab.Utilities import utilities, save, logging, conversions, anim, constants
@@ -32,7 +32,7 @@ from Nowack_Lab.Procedures.scanplane import Scanplane
 from Nowack_Lab.Procedures.scanspectra import Scanspectra
 from Nowack_Lab.Procedures.squidIV import SquidIV
 from Nowack_Lab.Procedures.touchdown import Touchdown
-from Nowack_Lab.Procedures.transport import RvsVg, RvsTime, RvsT, RvsVg_Vtg, RvsT_RT_to_4K, RvsVg_T, PPMS_cool
+from Nowack_Lab.Procedures.transport import RvsVg, RvsTime, RvsT, RvsVg_Vtg, RvsT_RT_to_4K, RvsVg_T
 from Nowack_Lab.Procedures.magnetotransport import RvsB, RvsVg_B, RvsB_BlueFors, RvsVg_B_BlueFors
 from Nowack_Lab.Instruments.attocube import Attocube
 from Nowack_Lab.Instruments.keithley import Keithley2400, Keithley2450, Keithley2600, KeithleyPPMS

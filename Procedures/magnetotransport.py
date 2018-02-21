@@ -119,7 +119,8 @@ class RvsVg_B(RvsVg):
     field_sweep_class = RvsB
 
     def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1,
-                delay=1, Bstart = 0, Bend = 14, Bstep=1, Bdelay=1,sweep_rate=.1, Vg_sweep=None):
+                delay=1, Bstart = 0, Bend = 14, Bstep=1, Bdelay=1,sweep_rate=.1,
+                Vg_sweep=None, raster=False):
         '''
         Does gatesweeps at a series of magnetic fields.
         Stores the full gatesweeps at each field, as well as a RvsB curve done
@@ -135,6 +136,7 @@ class RvsVg_B(RvsVg):
         Bdelay: delay between resistance measurements during fieldsweep
         sweep_rate: field sweep rate (Tesla/min)
         Vg_sweep: gate voltage at which to do the field sweep (V). Leave at None if you don't care.
+        raster: sweep forwards and backwards to save time with gatesweeps
         '''
         super().__init__(instruments=instruments, Vstart=Vstart, Vend=Vend, Vstep=Vstep, delay=delay)
         self.__dict__.update(locals()) # cute way to set attributes from arguments
@@ -166,7 +168,7 @@ class RvsVg_B(RvsVg):
         for i, B in enumerate(self.B):
             if self.Vg_sweep is not None:
                 self.keithley.sweep_V(self.keithley.V, self.Vg_sweep, .1, 1) # set desired gate voltage for the field sweep
-            else: # otherwise we will go as quickly as possible and reverse every other gatesweep
+            elif self.raster: # otherwise we will go as quickly as possible and reverse every other gatesweep
                 self.Vstart, self.Vend = self.Vend, self.Vstart
 
             ## reset field sweep
