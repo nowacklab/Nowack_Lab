@@ -447,6 +447,7 @@ class Measurement:
         try:
             done = self.do(**kwargs)
         except KeyboardInterrupt:
+            print('interrupting kernel, please wait...\n')
             self.interrupt = True
 
         # After the do.
