@@ -278,6 +278,13 @@ class GeophoneAccelerometer(Geophone_sr5113):
     def setup_plots(self):
         self.fig, self.ax = plt.subplots(3,1,figsize=(12,8))
         self.ax = list(self.ax.flatten())
+        self.ax[2].set_xlabel('Hz')
+        for a in self.ax:
+            a.set_ylabel('Acceleration (m/s/s)')
+            a.annotate(self.timestamp, xy=(.02,.98), 
+                         xycoords='axes fraction',
+                         fontsize=10, ha='left', va='top', 
+                         family='monospace')
 
     def clearplot(self):
         '''
