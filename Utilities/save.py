@@ -388,13 +388,11 @@ class Measurement(Plotter):
             for i in range(len(folders)):
                 l = l + list(glob.iglob(os.path.join(folders[i],'*_%s.json' %cls.__name__)))
             try:
-                filename =  max(glob.iglob(os.path.join(get_local_data_path(), get_todays_data_dir(),'*_%s.json' %cls.__name__)),
-                                        key=os.path.getctime)
-            except: # we must have taken one during the previous day's work
-                folders = list(glob.iglob(os.path.join(get_local_data_path(), get_todays_data_dir(),'..','*')))
-                # -2 should be the previous day (-1 is today)
-                filename =  max(glob.iglob(os.path.join(folders[-2],'*_%s.json' %cls.__name__)),
-                                        key=os.path.getctime)
+                filename = l[filename] # filename was an int
+            except:
+                pass
+            if type(filename) is int:  # still
+                raise Exception('could not find %s to load.' %cls.__name__)
         elif os.path.dirname(filename) == '': # if no path specified
             os.path.join(get_local_data_path(), get_todays_data_dir(), filename)
 
