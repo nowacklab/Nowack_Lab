@@ -4,6 +4,134 @@ from ..Utilities.save import Measurement
 from ..Utilities.plotting import plot_mpl
 from ..Utilities.utilities import AttrDict
 
+class MutualInductance_sweep(Measurement):
+    instrument_list = ['daq', 'squidarray']
+    _daq_inputs = ['dc']
+    _daq_outputs = ['fieldcoil']
+
+    def __init__(self,
+                 instruments = {},
+                 fc_Is = [],
+                 sbias = [],
+                 Rbias = 3165,
+                 rate = 100,
+                 numsteps = 1000,
+                 conversion = 1/14.4):
+        super().__init__(instruments=instruments)
+        self.fc_Is = np.array(fc_Is)
+        self.sbias = np.array(sbias)
+        self.Rbias = Rbias
+        self.rate = rate
+        self.numsteps = numsteps
+
+    def do(self):
+        self.mutuals = []
+        self.sbias_live = []
+        for sb in self.sbias:
+            self.squidarray.S_bias = sb
+            self.squidarray.reset()
+            m = MutualInductance2(instruments,
+                                  self.fc_Is,
+                                  self.Rbias,
+                                  self.rate,
+                                  self.numsteps,
+                                  self.conversion)
+
+            m.run(removeplot=True, save_appendedpath=self.filename)
+            self.mutuals.append(m)
+            self.sbias_live.append(sb)
+            self.plot()
+
+    def setup_plots(self):
+        self.fig, self.ax = plt.subplots()
+        self.ax.set_ylabel('Squid Response ($\phi_0$)')
+        self.ax.set_xlabel('Field Coil Current (mA)')
+
+    def plot(self):
+        m = self.mutuals[-1]
+        self.ax.plot(m.Vsrc / m.Rbias / 1e-3, m.Vmeas * m.conversion,
+                     label='Sbias={0:2.2f} uA'.format(self.sbias_live[-1]*1e6))
+        self.ax.legend()
+
+
+class MutualInductance2(Measurement):
+    instrument_list = ['daq']
+    _daq_inputs = ['dc']
+    _daq_outputs = ['fieldcoil']
+
+    def __init__(self,
+                instruments = {},
+                Is = [],
+                Rbias = 3165,
+                rate=100,
+                numsteps = 1000,
+                title='',
+                conversion = 1/14.4):
+        super().__init__(instruments=instruments)
+        self.Is = np.array(Is)
+        self.Rbias = Rbias
+        self.Vs = self.Is * self.Rbias
+        self.rate = rate
+        self.numsteps = numsteps
+        self.title = title
+        self.conversion = conversion
+
+    def do(self, title='', plot=True, removeplot = False):
+        if title != '':
+            self.title = title
+        outputdata, received = self.daq.sweep(Vstart = {'fieldcoil':
+                                                        self.daq.outputs['fieldcoil'].V},
+                                              Vend   = {'fieldcoil': self.Vs[0]},
+                                              chan_in    = self._daq_inputs,
+                                              sample_rate= self.rate,
+                                              numsteps   = int(self.numsteps/5)
+                                              )
+        outputdata, received = self.daq.sweep(Vstart = {'fieldcoil': self.Vs[0]},
+                                              Vend   = {'fieldcoil': self.Vs[-1]},
+                                              chan_in    = self._daq_inputs,
+                                              sample_rate= self.rate,
+                                              numsteps   = self.numsteps
+                                              )
+        self.Vmeas = np.array(received['dc'])
+        self.Vsrc  = np.array(outputdata['fieldcoil'])
+        _,_ = self.daq.sweep(Vstart = {'fieldcoil':
+                                       self.daq.outputs['fieldcoil'].V},
+                             Vend   = {'fieldcoil': 0},
+                             chan_in    = self._daq_inputs,
+                             sample_rate= self.rate,
+                             numsteps   = int(self.numsteps/5)
+                            )
+
+        if plot:
+            self.plot()
+        if removeplot:
+            plt.close()
+
+    def setup_plots(self):
+        self.fig, self.ax = plt.subplots()
+        # plt.pause(.01)
+
+    def plot(self):
+        super().plot()
+        self.ax.plot(self.Vsrc / self.Rbias / 1e-3, self.Vmeas * self.conversion,
+                     label='data')
+        self.ax.set_ylabel('SQUID response ($\Phi_0$)')
+        self.ax.set_xlabel('Field Coil (mA)')
+        self.ax.annotate(self.filename, xy=(0.02, .98), xycoords='axes fraction',
+                        fontsize=8, ha='left', va='top', family='monospace')
+        self.ax.set_title(self.title)
+
+    def plot_fit(self):
+        fit = np.polyfit(self.Vsrc / self.Rbias / 1e-3, self.Vmeas * self.conversion, 1)
+        xs = np.linspace(self.Vsrc[0] /self.Rbias / 1e-3,
+                         self.Vsrc[-1]/self.Rbias / 1e-3, 100)
+        ys = np.poly1d(fit)(xs)
+        self.ax.plot(xs, ys, linestyle='--',
+                    label='M={0:3.3f} $\phi_0/A$'.format(fit[0]*1e3))
+        self.ax.legend()
+
+
+
 class MutualInductance(Measurement):
     instrument_list = ['squidarray', 'lockin_squid', 'lockin_I']
 

@@ -1,12 +1,13 @@
 from jsonpickle.ext import numpy as jspnp
-import json, os, pickle, bz2, jsonpickle as jsp, numpy as np, re, sys, subprocess
-from datetime import datetime
-jspnp.register_handlers()
-from copy import copy
-import h5py, glob, matplotlib, inspect, platform, hashlib, shutil, time
+import json, os, jsonpickle as jsp, numpy as np, subprocess
+from datetime import datetime as dt
+jspnp.register_handlers() # what is purpose of this line?
+import h5py, glob, matplotlib, platform, hashlib, shutil, time
 import matplotlib.pyplot as plt
 from . import utilities
-import Nowack_Lab
+import Nowack_Lab # Necessary for saving as Nowack_Lab-defined types
+
+from .plotting.plotter import Plotter
 
 '''
 How saving and loading works:
@@ -23,14 +24,14 @@ as necessary) and populate the numpy arrays.
 '''
 
 
-class Measurement:
+class Measurement(Plotter):
     _daq_inputs = [] # DAQ input labels expected by this class
-    _daq_outputs = [] # DAQ input labels expected by this class
+    _daq_outputs = [] # DAQ output labels expected by this class
     instrument_list = []
-    fig = None
     interrupt = False # boolean variable used to interrupt loops in the do.
 
     def __init__(self, instruments = {}):
+        super().__init__()
         self.make_timestamp_and_filename()
         self._load_instruments(instruments)
 
@@ -55,11 +56,16 @@ class Measurement:
                     if m == 'matplotlib':
                         d[var] = None
                 elif type(d[var]) is list: # check for lists of mpl objects
-                    if hasattr(d[var][0], '__module__'): # built-in types won't have __module__
-                        m = d[var][0].__module__
-                        m = m[:m.find('.')] # will strip out "matplotlib"
-                        if m == 'matplotlib':
-                            d[var] = None
+                    try:
+                        if hasattr(d[var][0], '__module__'): # built-in types won't have __module__
+                            m = d[var][0].__module__
+                            m = m[:m.find('.')] # will strip out "matplotlib"
+                            if m == 'matplotlib':
+                                d[var] = None
+                    except:
+                        print('Error saving ', var)
+                        print(str(self))
+                        d[var] = ['This list was empty.  Empty lists do not save well']
 
                 ## Walk through dictionaries
                 if 'dict' in utilities.get_superclasses(d[var]):
@@ -89,11 +95,21 @@ class Measurement:
                         # check if it's a dictionary or object
                         if f.get(key, getclass=True) is h5py._hl.group.Group:
                             if key[0] == '!': # it's an object
-                                walk(d[key[1:]].__dict__, f[key])
-                                # [:1] strips the !; walks through the subobject
+                                # try/except in case it is somehow a dict
+                                try:
+                                    walk(d[key[1:]].__dict__, f[key])
+                                    # [:1] strips the !; walks through the subobject
+                                except:
+                                    walk(d[key[1:]], f[key])
                             else: # it's a dictionary
                                 # walk through the subdictionary
-                                walk(d[key], f[key])
+
+                                # try/except if somehow the key does not exist
+                                try:
+                                    walk(d[key], f.get(key))
+                                except:
+                                    d[key] = {};
+                                    walk(d[key], f.get(key))
                         else:
                             d[key] = f[key][:] # we've arrived at a dataset
 
@@ -159,6 +175,8 @@ class Measurement:
         try:
             exec(obj_dict['py/object']) # see if class is in the namespace
         except:
+            print('Cannot find class definition {0}: '.format(
+                obj_dict['py/object']) + 'using measurement object')
             obj_dict['py/object'] = 'Nowack_Lab.Utilities.save.Measurement'
 
         # Decode with jsonpickle.
@@ -167,7 +185,7 @@ class Measurement:
 
         return obj
 
-    def _save(self, filename=None, savefig=True, extras=False, ignored = []):
+    def _save(self, filename=None, savefig=True, ignored = [], appendedpath=''):
         '''
         Saves data. numpy arrays are saved to one file as hdf5, everything else
         is saved to JSON
@@ -180,11 +198,12 @@ class Measurement:
         savefig -- If "True" figures are saved. If "False" only data and config
         are saved
 
-        extras -- If True, saved to a subfolder of the current data directory
-        named "extras" to reduce clutter. If False, saved in the normal way.
-
         ignored -- Array of objects to be ignored during saving. Passed to
         _save_hdf5 and _save_json.
+
+        appendedpath -- name of optional subdirectory in current save path. Use
+         this to store uninteresting measurements that add clutter
+         (e.g. Touchdowns)
 
         Saved data stored locally but also copied to the data server.
         If you specify no filename, one will be automatically generated.
@@ -206,25 +225,23 @@ class Measurement:
                 self.make_timestamp_and_filename()
             filename = self.filename
 
-        if extras is True:
-            extras = 'extras'
+        # If you did not specify a filename with a path, generate a path
+        if os.path.dirname(filename) == '':
+                local_path = os.path.join(get_local_data_path(),
+                                          get_todays_data_dir(),
+                                          appendedpath,
+                                          filename)
+                remote_path = os.path.join(get_remote_data_path(),
+                                           get_todays_data_dir(),
+                                           appendedpath,
+                                           filename)
+        # Else, you specified some sort of path
         else:
-            extras = ''
-
-        if os.path.dirname(filename) == '':  # you specified a filename with no preceding path
-            local_path = os.path.join(get_local_data_path(),
-                                      get_todays_data_dir(),
-                                      extras,
-                                      filename)
-            remote_path = os.path.join(get_remote_data_path(),
-                                       get_todays_data_dir(),
-                                       extras,
-                                       filename)
-
-        # Saving to a custom path
-        else: # you specified some sort of path
             local_path = filename
-            remote_path = os.path.join(get_remote_data_path(), '..', 'other', *filename.replace('\\', '/').split('/')[1:]) # removes anything before the first slash. e.g. ~/data/stuff -> data/stuff
+            remote_path = os.path.join(get_remote_data_path(),
+                                        '..', 'other',
+                                        *filename.replace('\\', '/').split('/')[1:])
+            # removes anything before the first slash. e.g. ~/data/stuff -> data/stuff
             # All in all, remote_path should look something like: .../labshare/data/bluefors/other/
 
         # Save locally:
@@ -347,7 +364,7 @@ class Measurement:
         run() wraps this function to enable keyboard interrupts.
         run() also includes saving and elapsed time logging.
         '''
-        print('Doing stuff!')
+        pass
 
 
     @classmethod
@@ -391,21 +408,12 @@ class Measurement:
         '''
         Makes a timestamp and filename from the current time.
         '''
-        now = datetime.now()
+        now = dt.now()
         self.timestamp = now.strftime("%Y-%m-%d %I:%M:%S %p")
         self.filename = now.strftime('%Y-%m-%d_%H%M%S')
         self.filename += '_' + self.__class__.__name__
 
-
-    def plot(self):
-        '''
-        Update all plots.
-        '''
-        if self.fig is None:
-            self.setup_plots()
-
-
-    def run(self, plot=True, **kwargs):
+    def run(self, plot=True, appendedpath='', **kwargs):
         '''
         Wrapper function for do() that catches keyboard interrrupts
         without leaving open DAQ tasks running. Allows scans to be
@@ -413,6 +421,7 @@ class Measurement:
 
         Keyword arguments:
             plot: boolean; to plot or not to plot?
+            appendedpath: name of appended directory
 
         Check the do() function for additional available kwargs.
         '''
@@ -430,6 +439,7 @@ class Measurement:
         try:
             done = self.do(**kwargs)
         except KeyboardInterrupt:
+            print('interrupting kernel, please wait...\n')
             self.interrupt = True
 
         # After the do.
@@ -447,7 +457,11 @@ class Measurement:
             t_unit = 'hours'
         # Print elapsed time e.g. "Scanplane took 2.3 hours."
         print('%s took %.1f %s.' %(self.__class__.__name__, t, t_unit))
-        self.save()
+
+        if appendedpath != '': # Overwrite the default
+            self.save(appendedpath=appendedpath)
+        else:
+            self.save() # Use the default
 
         # If this run is in a loop, then we want to raise the KeyboardInterrupt
         # to terminate the loop.
@@ -456,19 +470,42 @@ class Measurement:
 
         return done
 
-    def save(self, filename=None, savefig=True, extras=False):
+    def save(self, filename=None, savefig=True, **kwargs):
         '''
         Basic save method. Just calls _save. Overwrite this for each subclass.
         '''
-        self._save(filename, savefig=savefig, extras=extras)
+        self._save(filename, savefig=savefig, **kwargs)
 
+
+class FakeMeasurement(Measurement):
+    '''
+    Fake measurement to test methods a real measurement would have.
+    '''
+    def __init__(self):
+        self.x = np.linspace(-10,10,20)
+        self.y = np.full(self.x.shape, np.nan)
+
+    def do(self):
+        for i in range(len(self.x)):
+            time.sleep(.1)
+            self.y[i] = self.x[i]**2
+            self.plot()
+
+    def plot(self):
+        super().plot()
+        self.line.set_data(self.x, self.y)
+        self.fig.tight_layout()
+
+        self.ax.relim()
+        self.ax.autoscale_view(True,True,True)
+
+        self.plot_draw()
 
     def setup_plots(self):
-        '''
-        Set up all plots.
-        '''
-        self.fig, self.ax = plt.subplots() # example: just one figure
-
+        self.fig, self.ax = plt.subplots()
+        self.line = self.ax.plot(self.x, self.y)[0]
+        self.ax.set_xlabel('x')
+        self.ax.set_ylabel('y')
 
 
 def exists(filename):
@@ -503,8 +540,9 @@ def get_experiment_data_dir():
     #     if re.match(r'\d{4}-', name[:5]): # make sure directory starts with "20XX-"
     #         exp_dirs.append(name)
 
-    # exp_dirs.sort(key=lambda x: datetime.strptime(x[:10], '%Y-%m-%d')) # sort by date
+    # exp_dirs.sort(key=lambda x: dt.strptime(x[:10], '%Y-%m-%d')) # sort by date
     #
+
     # return exp_dirs[-1] # this is the most recent
 
 
@@ -550,7 +588,7 @@ def get_todays_data_dir():
     Returns name of today's data directory.
     '''
     experiment_path = get_experiment_data_dir()
-    now = datetime.now()
+    now = dt.now()
     todays_data_path = os.path.join(experiment_path, now.strftime('%Y-%m-%d'))
 
     # Make local and remote directory
@@ -569,10 +607,10 @@ def get_todays_data_dir():
 
 def open_experiment_data_dir():
     filename = get_local_data_path()
-    if sys.platform == "win32":
+    if platform.system() == "Windows":
         os.startfile(filename)
     else:
-        opener ="open" if sys.platform == "darwin" else "xdg-open"
+        opener ="open" if platform.system() == "Darwin" else "xdg-open"
         subprocess.call([opener, filename])
 
 def set_experiment_data_dir(description=''):
@@ -581,7 +619,7 @@ def set_experiment_data_dir(description=''):
     Makes a new directory in the data folder corresponding to your computer
     with the current date and a description of the experiment.
     '''
-    now = datetime.now()
+    now = dt.now()
     now_fmt = now.strftime('%Y-%m-%d')
 
     # Make local and remote directories:

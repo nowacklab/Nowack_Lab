@@ -1,7 +1,6 @@
-from IPython import display
 from scipy.optimize import curve_fit
 import time, os, matplotlib, matplotlib.pyplot as plt, numpy as np
-from ..Utilities.save import Measurement, get_todays_data_dir, get_local_data_path
+from ..Utilities.save import Measurement
 from ..Utilities import conversions
 from ..Utilities.utilities import AttrDict
 
@@ -461,10 +460,9 @@ n: Sweep z piezo down and redo without moving z attocube.\n \
         self.ax.set_ylim(-0.5, max(np.nanmax(self.C), 1))
 
         self.fig.tight_layout()
-        # Do not pause for inline or notebook backends
-        inline = 'module://ipykernel.pylab.backend_inline'
-        if matplotlib.get_backend() not in ('nbAgg', inline):
-            plt.pause(1e-6)
+
+        self.flush_events()
+
         self.fig.canvas.draw()
 
 
@@ -490,12 +488,12 @@ n: Sweep z piezo down and redo without moving z attocube.\n \
         self.plot()
 
 
-    def save(self, savefig=True, extras=True):
+    def save(self, savefig=True, appendedpath='touchdowns'):
         '''
         Saves the touchdown object.
         Also saves the figure as a pdf, if wanted.
         '''
-        self._save(savefig=savefig, extras=extras)
+        self._save(savefig=savefig, appendedpath=appendedpath)
 
 
     def setup_plots(self):

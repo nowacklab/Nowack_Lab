@@ -9,14 +9,15 @@ from ..Utilities.plotting.plot_mpl import extents, using_notebook_backend
 
 
 class Scanplane(Measurement):
-    """Scan over a plane while monitoring signal on DAQ
+    '''
+    Scan over a plane while monitoring signal on DAQ
 
     Attributes:
         _daq_inputs (list): list of channel names for DAQ to monitor
         _conversions (AttrDict): mapping from DAQ voltages to real units
         instrument_list (list): instrument names that Scanplane needs in
             order to be initialized.
-    """
+    '''
     # DAQ channel labels required for this class.
     _daq_inputs = ['dc', 'cap', 'acx', 'acy']
     _conversions = AttrDict({
@@ -369,12 +370,12 @@ class Scanplane(Measurement):
             masked_data = np.ma.masked_where(np.isnan(nan_data), nan_data)
 
             # Plot masked data on the appropriate axis with imshow
-            image = ax.imshow(masked_data, cmap=cmap, origin="lower",
+            image = ax.imshow(masked_data, cmap=cmap, origin='lower',
                               extent = extents(self.X, self.Y))
 
             # Create a colorbar that matches the image height
             d = make_axes_locatable(ax)
-            cax = d.append_axes("right", size=0.1, pad=0.1)
+            cax = d.append_axes('right', size=0.1, pad=0.1)
             cbar = plt.colorbar(image, cax=cax)
             cbar.set_label(clabel, rotation=270, labelpad=12)
             cbar.formatter.set_powerlimits((-2, 2))
@@ -382,9 +383,9 @@ class Scanplane(Measurement):
             self.cbars[chan] = cbar
 
             # Label the axes - including a timestamp
-            ax.set_xlabel("X Position (V)")
-            ax.set_ylabel("Y Position (V)")
-            title = ax.set_title(self.timestamp, size="medium", y=1.02)
+            ax.set_xlabel('X Position (V)')
+            ax.set_ylabel('Y Position (V)')
+            title = ax.set_title(self.timestamp, size='medium', y=1.02)
             # If the title intersects the exponent label from the colorbar
             # shift the title up and center it
 
@@ -417,9 +418,9 @@ class Scanplane(Measurement):
             # Scientific notation for <10^-2, >10^2
             ax.yaxis.get_major_formatter().set_powerlimits((-2, 2))
         # Label the X axis of only the bottom plot
-        self.axes_cuts[-1].set_xlabel("Position (V)")
+        self.axes_cuts[-1].set_xlabel('Position (V)')
         # Title the top plot with the timestamp
-        self.axes_cuts[0].set_title(self.timestamp, size="medium")
+        self.axes_cuts[0].set_title(self.timestamp, size='medium')
 
         # Adjust subplot layout so all labels are visible
         # First call tight layout to prevent axis label overlap.
@@ -440,7 +441,7 @@ class Scanplane(Measurement):
                    'AC X ($\Phi_o$)',
                    'AC Y ($\Phi_o$)']
         for ax, chan, clabel in zip(self.axes_cuts, self._daq_inputs, clabels):
-            # Update X and Y data for the "full data"
+            # Update X and Y data for the 'full data'
             self.lines_full[chan].set_xdata(self.Vfull['piezo'])
             self.lines_full[chan].set_ydata(self.Vfull[chan] *
                                             self._conversions[chan])
@@ -478,5 +479,5 @@ class Line(Measurement):
     def __init__(self):
         super().__init__()
 
-    def save(self):
-        super().save(extras=True)
+    def save(self, appendedpath='lines', **kwargs):
+        super().save(appendedpath=appendedpath, **kwargs)

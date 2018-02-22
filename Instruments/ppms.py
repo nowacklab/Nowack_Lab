@@ -4,20 +4,24 @@ Adapted for use by the Nowack lab Jan 2017
 '''
 
 from .instrument import Instrument
-import select, os, time, subprocess
+import select, os, time, subprocess, socket
 
 class PPMS(Instrument):
     r'''
     For remote operation of the Quantum Design PPMS.
-    Makes use of PyQDInstrument (https://github.com/guenp/PyQDInstrument)
-    Make sure to run PyQDInstrument.run_server() in an IronPython console on a machine that can connect to the PPMS control PC's QDInstrument_Server.exe program.
+    Makes use of PyQDInstrument (https://github.com/guenp/PyQDInstrument).
+    Make sure to run PyQDInstrument.run_server() in an IronPython console on a
+    machine that can connect to the PPMS control PC's QDInstrument_Server.exe
     The basic commands to set up the server for the blue PPMS are:
         import sys
-        sys.path.append(r'C:\Users\ccmradmin\Documents\GitHub') (if pyQDInstrument is in the GitHub directory)
+        sys.path.append(r'C:\Users\ccmradmin\Documents\GitHub')
+            (if pyQDInstrument is in the GitHub directory)
         import pyQDInstrument as pqi
         pqi.run_server('192.168.0.103', 50009, '192.168.0.100', 11000)
     Attributes represent the system control parameters:
-    'temperature', 'temperature_rate', 'temperature_approach', 'field', 'field_rate', 'field_approach', 'field_mode', 'temperature_status', 'field_status', 'chamber'
+    'temperature', 'temperature_rate', 'temperature_approach', 'field',
+    'field_rate', 'field_approach', 'field_mode', 'temperature_status',
+    'field_status', 'chamber'
     '''
     _pid = None # process id number for server
 
@@ -34,13 +38,29 @@ class PPMS(Instrument):
         self._units = {'temperature': 'K', 'temperature_rate': 'K/min','field': 'Oe', 'field_rate': 'Oe/min'}
 
         # Getters and setters for available commands
-        for param in ['temperature', 'temperature_rate', 'field', 'field_rate', 'temperature_approach', 'field_approach', 'field_mode']:
-            setattr(PPMS,param,property(fget=eval("lambda self: self._get_param('%s')" %param),
-                                                fset=eval("lambda self, value: self._set_param('%s',value)" %param)))
-        for param in ['temperature_status', 'field_status', 'chamber']:
-            setattr(PPMS,param,property(fget=eval("lambda self: self._get_param('%s')" %param)))
-        self._params = ['temperature', 'temperature_rate', 'temperature_approach', 'field', 'field_rate', 'field_approach', 'field_mode', 'temperature_status', 'field_status', 'chamber']
-        self._functions = []
+        getsetparams = [
+            'temperature',
+            'temperature_rate',
+            'field',
+            'field_rate',
+            'temperature_approach',
+            'field_approach',
+            'field_mode'
+        ]
+        setonlyparams = [
+            'temperature_status',
+            'field_status',
+            'chamber'
+        ]
+        self._params = getsetparams + setonlyparams
+
+        for param in self._params:
+            fget = eval("lambda self: self._get_param('%s')" %param)
+            if param in getsetparams:
+                fset = eval("lambda self, value: self._set_param('%s',value)" %param)
+            else:
+                fset = None
+            setattr(PPMS,param,property(fget=fget, fset=fset))
 
     def __del__(self):
         if self._pid is not None:
@@ -158,7 +178,6 @@ class PPMS(Instrument):
 
 
 def connect_socket(HOST, PORT):
-    import socket
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((HOST, PORT))
     return s
@@ -178,7 +197,6 @@ def ask_socket(s, cmd, startbytes=0):
     return ans
 
 def ask_socket_raw(s, cmd):
-    import time
     '''query socket and return response'''
     #empty socket buffer
     while socket_poll(s):
