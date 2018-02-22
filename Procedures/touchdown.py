@@ -460,10 +460,9 @@ n: Sweep z piezo down and redo without moving z attocube.\n \
         self.ax.set_ylim(-0.5, max(np.nanmax(self.C), 1))
 
         self.fig.tight_layout()
-        # Do not pause for inline or notebook backends
-        inline = 'module://ipykernel.pylab.backend_inline'
-        if matplotlib.get_backend() not in ('nbAgg', inline):
-            plt.pause(1e-6)
+
+        self.flush_events()
+
         self.fig.canvas.draw()
 
 

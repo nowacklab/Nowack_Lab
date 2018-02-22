@@ -9,7 +9,7 @@ class Plotter():
     fig = None
 
     def __init__(self):
-        pass
+        plt.ion()  # Enable interactive plots in command line
 
     def add_colorbar(self, ax, label=None, **kwargs):
         '''
@@ -24,6 +24,15 @@ class Plotter():
         cbar.set_label(label, rotation=270, labelpad=12)
         cbar.formatter.set_powerlimits((-2,2))
         return cbar
+
+    def flush_events(self, fig):
+        '''
+        Flush events for a GUI backend; not needed for notebook or inline
+        '''
+        if matplotlib.get_backend() not in ('nbAgg',
+                                'module://ipykernel.pylab.backend_inline'):
+            fig.canvas.flush_events()
+            plt.pause(1e-6)
 
     def plot(self, **kwargs):
         '''
@@ -52,10 +61,7 @@ class Plotter():
                         c.draw_all()
             fig.canvas.draw()  # draw the figure
 
-            # Flush events for a GUI backend; not needed for notebook or inline
-            if matplotlib.get_backend() not in ('nbAgg',
-                                    'module://ipykernel.pylab.backend_inline'):
-                fig.canvas.flush_events()
+            self.flush_events(fig)
 
     def plot_update(self):
         '''

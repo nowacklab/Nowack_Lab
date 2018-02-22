@@ -477,6 +477,37 @@ class Measurement(Plotter):
         self._save(filename, savefig=savefig, **kwargs)
 
 
+class FakeMeasurement(Measurement):
+    '''
+    Fake measurement to test methods a real measurement would have.
+    '''
+    def __init__(self):
+        self.x = np.linspace(-10,10,20)
+        self.y = np.full(self.x.shape, np.nan)
+
+    def do(self):
+        for i in range(len(self.x)):
+            time.sleep(.1)
+            self.y[i] = self.x[i]**2
+            self.plot()
+
+    def plot(self):
+        super().plot()
+        self.line.set_data(self.x, self.y)
+        self.fig.tight_layout()
+
+        self.ax.relim()
+        self.ax.autoscale_view(True,True,True)
+
+        self.plot_draw()
+
+    def setup_plots(self):
+        self.fig, self.ax = plt.subplots()
+        self.line = self.ax.plot(self.x, self.y)[0]
+        self.ax.set_xlabel('x')
+        self.ax.set_ylabel('y')
+
+
 def exists(filename):
     inp='y'
     if os.path.exists(filename+'.json'):
