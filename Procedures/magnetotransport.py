@@ -160,6 +160,7 @@ class RvsVg_B(RvsVg):
         for j in range(self.num_lockins):
             setattr(self, 'R%ifull' %j, np.array([]))
 
+        self.gs_names = []
 
     def do(self, delay=0, auto_gain=False):
         '''
@@ -188,6 +189,7 @@ class RvsVg_B(RvsVg):
             ## reset arrays for gatesweep
             self.gs = RvsVg(self.instruments, self.Vstart, self.Vend, self.Vstep, self.delay)
             self.gs.run(auto_gain=auto_gain)
+            self.gs_names.append(self.gs.filename)
 
             for j in range(self.num_lockins):
                 if self.Vstart > self.Vend:
