@@ -19,7 +19,8 @@ class Heightsweep(Measurement):
     instrument_list = ['piezos','montana','squidarray']
 
 
-    def __init__(self, instruments = {}, plane=None, x=0, y=0, z0=0, scan_rate=120):
+    def __init__(self, instruments = {}, plane=None, x=0, y=0, z0=0, scan_rate=120,
+                 conv=None, current=None):
         super().__init__(instruments=instruments)
 
         self.x = x
@@ -33,6 +34,8 @@ class Heightsweep(Measurement):
         self.Vdown = AttrDict({
             chan: np.nan for chan in self._daq_inputs + ['piezo', 'z']
         })
+        self.conv = conv
+        self.current = current
 
 
     def do(self, zstart=0.0):
@@ -48,8 +51,10 @@ class Heightsweep(Measurement):
                                         chan_in = self._daq_inputs,
                                         sweep_rate = self.scan_rate)
 
-        for chan in self._daq_inputs:
-            self.Vup[chan] = received[chan]
+        self.Vup["acx"] = self.lockin_squid.convert_output(received["acx"], "X")
+        self.Vup["acy"] = self.lockin_squid.convert_output(received["acy"], "Y")
+        self.Vup["dc"] = received["dc"]
+        self.Vup["cap"] = received["cap"]
         self.Vup['z'] = np.array(output_data['z'])
 
         time.sleep(1)
@@ -58,8 +63,10 @@ class Heightsweep(Measurement):
                                         chan_in = self._daq_inputs,
                                         sweep_rate = self.scan_rate)
 
-        for chan in self._daq_inputs:
-            self.Vdown[chan] = received[chan]
+        self.Vdown["acx"] = self.lockin_squid.convert_output(received["acx"], "X")
+        self.Vdown["acy"] = self.lockin_squid.convert_output(received["acy"], "Y")
+        self.Vdown["dc"] = received["dc"]
+        self.Vdown["cap"] = received["cap"]
         self.Vdown['z'] = np.array(output_data['z'])
 
         self.piezos.zero()
@@ -75,22 +82,23 @@ class Heightsweep(Measurement):
         self.axes[3] = self.fig.add_subplot(414, sharex=self.axes[0])
 
     def plot(self):
-        #super().plot()
-        labels = {'dc':'DC Flux (A.U.)', 'cap':"Capacitance (A.U.)", 
-                'acx':"AC X (A.U.)", 'acy':"AC Y (A.U.)"}
+        if self.conv and self.current:
+            labels = {'dc':'DC Flux ($\Phi_o$)', 'cap':"Capacitance (A.U.)", 
+                      'acx':"AC X ($\Phi_o$/A)", 'acy':"AC Y ($\Phi_o$/A)"}
+            convs = {'dc': self.conv, "acx": self.conv * self.current,
+                     "acy": self.conv * self.current, "cap": 1}
+        else:
+            labels = {'dc':'DC Flux (A.U.)', 'cap':"Capacitance (A.U.)", 
+                      'acx':"AC X (A.U.)", 'acy':"AC Y (A.U.)"}
+            convs = {'dc': 1, "acx": 1, "acy": 1, "cap": 1}
+            
 
-        #self.fig, self.axes = plt.subplots(4, 1, figsize=(6,10), sharex=True)
         self.fig.subplots_adjust(hspace=0)
         axes = [self.axes[0], self.axes[1], self.axes[2], self.axes[3]]
         for chan, ax in zip(self._daq_inputs, axes):
-            ax.plot(self.Vup['z'], self.Vup[chan])
-            ax.plot(self.Vdown['z'], self.Vdown[chan])
+            ax.plot(self.Vup['z'], self.Vup[chan]/convs[chan])
+            ax.plot(self.Vdown['z'], self.Vdown[chan]/convs[chan])
             ax.set_ylabel(labels[chan])
 
         self.axes[3].set_xlabel("Z Position (V)")
         self.axes[0].set_title(self.timestamp, size="medium")
-
-
-    #def save(self, filename=None, savefig=True, **kwargs):
-        # the problem is axes is not an attrdict
-    #    self._save(filename, savefig=True, ignored=["axes"], **kwargs)

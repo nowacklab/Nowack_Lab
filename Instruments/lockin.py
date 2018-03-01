@@ -50,6 +50,8 @@ class SR830(Instrument):
 
     _reserve_options = ('High Reserve', 'Normal', 'Low Noise')
     _input_modes = ('A', 'A-B', 'I (10^6)', 'I (10^8)')
+    CHANNELS = ['X', 'Y', 'R']
+    EXPANSION_VALUES = [1, 10, 100]
 
     def __init__(self, gpib_address=''):
         if type(gpib_address) is int:
@@ -95,6 +97,34 @@ class SR830(Instrument):
         self.__dict__.update(state)
 
 
+    def auto_offset(self, channel):
+        """ Offsets the channel (X, Y, or R) to zero """
+        if channel not in self.CHANNELS:
+            raise ValueError('SR830 channel is invalid')
+        channel = self.CHANNELS.index(channel) + 1
+        self.write("AOFF %d" % channel)
+
+    def get_scaling(self, channel):
+        """ Returns the offset precent and the exapnsion term
+        that are used to scale the channel in question
+        """
+        if channel not in self.CHANNELS:
+            raise ValueError('SR830 channel is invalid')
+        channel = self.CHANNELS.index(channel) + 1
+        offset, expand = self.ask("OEXP? %d" % channel).split(',')
+        return float(offset), self.EXPANSION_VALUES[int(expand)]
+
+    def set_scaling(self, channel, precent, expand=0):
+        """ Sets the offset of a channel (X=1, Y=2, R=3) to a
+        certain precent (-105% to 105%) of the signal, with
+        an optional expansion term (0, 10=1, 100=2)
+        """
+        if channel not in self.CHANNELS:
+            raise ValueError('SR830 channel is invalid')
+        channel = self.CHANNELS.index(channel) + 1
+        expand = discreteTruncate(expand, self.EXPANSION_VALUES)
+        self.write("OEXP %i,%.2f,%i" % (channel, precent, expand))
+
     @property
     def sensitivity(self):
         '''Get the lockin sensitivity'''
@@ -128,7 +158,7 @@ class SR830(Instrument):
         elif value > 1:
             value = 1
 
-        ## Go to the nearest sensitivity above the set value
+        # Go to the nearest sensitivity above the set value
         index = abs(np.array([v - value  if (v - value)>=0 else -100000 for v in self._sensitivity_options])).argmin() #finds sensitivity just above input
         good_value = self._sensitivity_options[index]
 
@@ -399,11 +429,12 @@ class SR830(Instrument):
             self.write('DDEF%i,1,0' %chan)
             self.write('FPOP%i,0' %chan)
 
-    def convert_output(self, value):
+    def convert_output(self, value, channel):
         if not np.isscalar(value):
             value = np.array(value)
-            return np.array(value/10*self.sensitivity) # will give actual output in volts, since output is scaled to 10 V == sensitivity
-        return value/10*self.sensitivity
+        offset, expand = self.get_scaling(channel)
+        # Note that offset is returned in % so we divide by 100
+        return (value/(10.*expand) + (offset/100))*self.sensitivity
 
     def close(self):
         if hasattr(self, '_visa_handle'):

@@ -140,7 +140,7 @@ class Touchdown(Measurement):
         '''
         # Read daq voltage and convert to real lockin voltage
         Vcap = self.daq.inputs['cap'].V
-        Vcap = self.lockin_cap.convert_output(Vcap)
+        Vcap = self.lockin_cap.convert_output(Vcap, "R")
 
         if Vcap > V_unbalanced:
             inp = input(
@@ -235,7 +235,7 @@ class Touchdown(Measurement):
         Vcap = self.daq.inputs['cap'].V
 
         # convert to a real capacitance
-        Vcap = self.lockin_cap.convert_output(Vcap)
+        Vcap = self.lockin_cap.convert_output(Vcap, "R")
         Cap = Vcap * conversions.V_to_C
 
         if self.C0 == None:
