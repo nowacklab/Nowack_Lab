@@ -2,6 +2,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+
 class Plotter():
     '''
     Class containing methods useful for plotting data using matplotlib.
@@ -54,8 +55,7 @@ class Plotter():
             fig.canvas.draw()  # draw the figure
 
             # Flush events for a GUI backend; not needed for notebook or inline
-            if matplotlib.get_backend() not in ('nbAgg',
-                                    'module://ipykernel.pylab.backend_inline'):
+            if using_notebook_backend():
                 fig.canvas.flush_events()
 
     def plot_update(self):
@@ -69,3 +69,8 @@ class Plotter():
         Set up all plots.
         '''
         self.fig, self.ax = plt.subplots() # example: just one figure
+
+
+def using_notebook_backend():
+    inline = 'module://ipykernel.pylab.backend_inline'
+    return matplotlib.get_backend() in ('nbAgg', inline)
