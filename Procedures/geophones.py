@@ -90,7 +90,7 @@ class Geophone_calibrate(Measurement):
 
     def _makewindow(self, freqspace):
         #n = min(int(self.sample_rate/freqspace), self.numpts)
-        n = max(256, self.sample_rate / freqspace)
+        n = int(max(256, self.sample_rate / freqspace))
         return [signal.blackmanharris(n, False), n]
 
 
@@ -126,7 +126,7 @@ class Geophone_calibrate(Measurement):
                                                (self.pcov[4]*.023)**.5, n))
 
 class Geophone_calibrate_fnctgen(Geophone_calibrate):
-    def __init__(self, instruments={}, Rs=340, measure_dur = 1, sample_rate=256000):
+    def __init__(self, instruments={}, Rs=340, measure_dur = 2, sample_rate=256000):
         super().__init__(instruments=instruments, Rs=Rs, sample_rate=sample_rate, maxV=2,
                          numpts = sample_rate*measure_dur, inputfnct='heaviside')
 
