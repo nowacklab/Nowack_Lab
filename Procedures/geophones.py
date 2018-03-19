@@ -8,6 +8,8 @@ from scipy import signal
 from .daqspectrum import DaqSpectrum
 from .daqspectrum import TwoSpectrum
 from ..Utilities.save import Measurement
+from ..Utilities.geophones import Geophone
+
 
 class Geophone_calibrate(Measurement):
     _daq_inputs = ['inA', 'inB']
@@ -54,7 +56,7 @@ class Geophone_calibrate(Measurement):
         if self.inputfnct == 'linear':
             noise = np.linspace(-self.maxV,self.maxV,self.numpts) # linear (debug)
         if self.inputfnct == 'heaviside':
-            noise = np.sign(np.linspace(-self.maxV,self.maxV,self.numpts))*.4 - .2  # heaviside
+            noise = np.sign(np.linspace(-1,1,self.numpts))*self.maxV + self.maxV   # heaviside
         if self.inputfnct == 'delta':
             noise = -.2*np.ones(self.numpts); 
             noise[int(self.numpts/2)  ] = .2 #delta
@@ -122,6 +124,13 @@ class Geophone_calibrate(Measurement):
             print(r"{2}: {0:f} $\pm$ {1:f}".format(self.popt[i], self.pcov[i], n))
         print(r"L12: {0:f} $\pm$ {1:f}".format((self.popt[4]*.023)**.5, 
                                                (self.pcov[4]*.023)**.5, n))
+
+class Geophone_calibrate_fnctgen(Geophone_calibrate):
+    def __init__(self, instruments={}, Rs=340, measure_dur = 1, sample_rate=256000):
+        super().__init__(instruments=instruments, Rs=Rs, sample_rate=sample_rate, maxV=2,
+                         numpts = sample_rate*measure_dur, inputfnct='heaviside')
+
+    
 
 class Geophone_sr5113(Measurement):
     _daq_inputs = ['dc']
@@ -235,7 +244,7 @@ class GeophoneAccelerometer(Geophone_sr5113):
         self.nonpreamp_gain = nonpreamp_gain
         self.accelerometerconv = accelerometerconv
 
-    def do(self):
+    def do(self, notes=False):
         self.spectra = TwoSpectrum(self.nonpreamp_gain, 
                                    instruments=self.instruments,
                                    measure_time=self.measure_time,
@@ -247,6 +256,9 @@ class GeophoneAccelerometer(Geophone_sr5113):
                                    preamp_autoOL=False,
                                    preamp_diff_mode=self.preamp_diff_mode
                                    )
+        if notes:
+            self.notes = input('Enter notes:\n')
+            self.spectra.notes = self.notes
         self.spectra.run()
         self._populate()
         self.plot()
@@ -323,30 +335,3 @@ class GeophoneAccelerometer(Geophone_sr5113):
         mini = np.abs((setx-targetx)).argmin()
         return min(sety1[0:mini+1].min(), sety2[0:mini+1].min())
 
-class Geophone(object):
-    '''
-    Conversions for geophones
-    '''
-    conversion = 0
-    c_acc = lambda f, G: np.abs(G * 2j*np.pi*f /
-                                ((2j*np.pi*f)**2 + 18*2j*np.pi*f + 760))
-    c_vel = lambda f, G: np.abs(G * (2j*np.pi*f)**2 /
-                                ((2j*np.pi*f)**2 + 18*2j*np.pi*f + 760))
-    c_pos = lambda f, G: np.abs(G * (2j*np.pi*f)**3 /
-                                ((2j*np.pi*f)**2 + 18*2j*np.pi*f + 760))
-
-    def __init__(self, 
-                 conversion=31.5 # V/(m/s)
-                 ):
-        self.conversion = conversion
-
-    def convert(self, psd_V, f):
-        '''
-        Converts the psd in f space from volts to 
-        [acceleration, velocity, position]
-        '''
-        acc = psd_V / self.__class__.c_acc(f, self.conversion)
-        vel = psd_V / self.__class__.c_vel(f, self.conversion)
-        pos = psd_V / self.__class__.c_pos(f, self.conversion)
-
-        return [acc, vel, pos]
