@@ -25,10 +25,12 @@ class Plotter():
         cbar.formatter.set_powerlimits((-2,2))
         return cbar
 
-    def flush_events(self, fig):
+    def flush_events(self, fig=None):
         '''
         Flush events for a GUI backend; not needed for notebook or inline
         '''
+        if fig is None:
+            fig = self.fig
         if matplotlib.get_backend() not in ('nbAgg',
                                 'module://ipykernel.pylab.backend_inline'):
             fig.canvas.flush_events()
