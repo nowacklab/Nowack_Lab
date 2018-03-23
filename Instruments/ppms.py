@@ -39,7 +39,7 @@ class PPMS(Instrument):
 
         # Getters and setters for available commands
         getsetparams = [
-            'temperature',
+            # 'temperature',
             'temperature_rate',
             'field',
             'field_rate',
@@ -47,12 +47,12 @@ class PPMS(Instrument):
             'field_approach',
             'field_mode'
         ]
-        setonlyparams = [
+        getonlyparams = [
             'temperature_status',
             'field_status',
-            'chamber'
+            'chamber',
         ]
-        self._params = getsetparams + setonlyparams
+        self._params = getsetparams + getonlyparams
 
         for param in self._params:
             fget = eval("lambda self: self._get_param('%s')" %param)
@@ -61,6 +61,11 @@ class PPMS(Instrument):
             else:
                 fset = None
             setattr(PPMS,param,property(fget=fget, fset=fset))
+
+        # Read temperature with map23 if available
+        fget = eval("lambda self: self._get_temperature()")
+        fset = eval("lambda self, value: self._set_param('temperature', value)")
+        setattr(PPMS,'temperature',property(fget=fget, fset=fset))
 
     def __del__(self):
         if self._pid is not None:
@@ -74,6 +79,20 @@ class PPMS(Instrument):
 
     def __setstate__(self, state):
         self.__dict__.update(state)
+
+    def _get_temperature(self, map23=True):
+        '''
+        Get temperature using custom thermometer (map23=True) or chamber
+        thermometer (map23=False). If custom thermometer could not be read,
+        then returns chamber thermometer reading.
+        '''
+        if map23:
+            ret = ask_socket(self._s, 'map23')
+            if type(ret) is not float:
+                ret = ask_socket(self._s, 'temperature')
+        else:
+            ret = ask_socket(self._s, 'temperature')
+        return ret
 
     def _get_param(self, param):
         return ask_socket(self._s, param)
