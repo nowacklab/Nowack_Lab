@@ -159,7 +159,7 @@ class PPMS(Instrument):
         print('PPMS Connected. Process ID %s' %self._pid)
 
 
-    def cool_to_4K(self):
+    def cool_to_4K(self, wait=True):
         '''
         Cool to 10 K at 20 K/min.
         Then wait a half hour for thermalization.
@@ -171,8 +171,9 @@ class PPMS(Instrument):
         self.temperature = 10
         while self.temperature > 10.1:
             time.sleep(60)
-        print('Waiting a half hour for thermalization.')
-        time.sleep(60*30)
+        if wait:
+            print('Waiting a half hour for thermalization.')
+            time.sleep(60*30)
         print('Cooling to 4 K')
         self.temperature_rate = .2
         self.temperature = 4
