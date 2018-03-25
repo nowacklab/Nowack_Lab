@@ -388,13 +388,11 @@ class Measurement(Plotter):
             for i in range(len(folders)):
                 l = l + list(glob.iglob(os.path.join(folders[i],'*_%s.json' %cls.__name__)))
             try:
-                filename =  max(glob.iglob(os.path.join(get_local_data_path(), get_todays_data_dir(),'*_%s.json' %cls.__name__)),
-                                        key=os.path.getctime)
-            except: # we must have taken one during the previous day's work
-                folders = list(glob.iglob(os.path.join(get_local_data_path(), get_todays_data_dir(),'..','*')))
-                # -2 should be the previous day (-1 is today)
-                filename =  max(glob.iglob(os.path.join(folders[-2],'*_%s.json' %cls.__name__)),
-                                        key=os.path.getctime)
+                filename = l[filename] # filename was an int
+            except:
+                pass
+            if type(filename) is int:  # still
+                raise Exception('could not find %s to load.' %cls.__name__)
         elif os.path.dirname(filename) == '': # if no path specified
             os.path.join(get_local_data_path(), get_todays_data_dir(), filename)
 
@@ -441,6 +439,7 @@ class Measurement(Plotter):
         try:
             done = self.do(**kwargs)
         except KeyboardInterrupt:
+            print('interrupting kernel, please wait...\n')
             self.interrupt = True
 
         # After the do.
@@ -458,7 +457,11 @@ class Measurement(Plotter):
             t_unit = 'hours'
         # Print elapsed time e.g. "Scanplane took 2.3 hours."
         print('%s took %.1f %s.' %(self.__class__.__name__, t, t_unit))
-        self.save(appendedpath=appendedpath)
+
+        if appendedpath != '': # Overwrite the default
+            self.save(appendedpath=appendedpath)
+        else:
+            self.save() # Use the default
 
         # If this run is in a loop, then we want to raise the KeyboardInterrupt
         # to terminate the loop.
@@ -472,6 +475,37 @@ class Measurement(Plotter):
         Basic save method. Just calls _save. Overwrite this for each subclass.
         '''
         self._save(filename, savefig=savefig, **kwargs)
+
+
+class FakeMeasurement(Measurement):
+    '''
+    Fake measurement to test methods a real measurement would have.
+    '''
+    def __init__(self):
+        self.x = np.linspace(-10,10,20)
+        self.y = np.full(self.x.shape, np.nan)
+
+    def do(self):
+        for i in range(len(self.x)):
+            time.sleep(.1)
+            self.y[i] = self.x[i]**2
+            self.plot()
+
+    def plot(self):
+        super().plot()
+        self.line.set_data(self.x, self.y)
+        self.fig.tight_layout()
+
+        self.ax.relim()
+        self.ax.autoscale_view(True,True,True)
+
+        self.plot_draw()
+
+    def setup_plots(self):
+        self.fig, self.ax = plt.subplots()
+        self.line = self.ax.plot(self.x, self.y)[0]
+        self.ax.set_xlabel('x')
+        self.ax.set_ylabel('y')
 
 
 def exists(filename):
