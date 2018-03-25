@@ -1,5 +1,4 @@
-import matplotlib
-import matplotlib.pyplot as plt
+import matplotlib, numpy as np, matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
@@ -27,6 +26,7 @@ class Plotter():
         cbar.formatter.set_powerlimits((-2,2))
         return cbar
 
+
     def plot(self, **kwargs):
         '''
         Update all plots.
@@ -35,6 +35,7 @@ class Plotter():
             self.setup_plots()
         self.plot_update()  # update plot data
         self.plot_draw()  # draw plots
+
 
     def plot_draw(self, autoscale=False):
         '''
@@ -55,20 +56,30 @@ class Plotter():
             fig.canvas.draw()  # draw the figure
 
             # Flush events for a GUI backend; not needed for notebook or inline
-            if using_notebook_backend():
+            if not using_notebook_backend():
                 fig.canvas.flush_events()
+
 
     def plot_update(self):
         '''
-        Update plot data.
+        Update plot data. Best practice here is perhaps to define in each class.
         '''
         pass
+
 
     def setup_plots(self):
         '''
         Set up all plots.
         '''
         self.fig, self.ax = plt.subplots() # example: just one figure
+
+
+    def update_image(self, im, data):
+        '''
+        Update an image with new data. Masks NaN values.
+        '''
+        data_masked = np.ma.masked_where(np.isnan(data), data)
+        im.set_data(data_masked)
 
 
 def using_notebook_backend():
