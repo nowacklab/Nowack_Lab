@@ -294,17 +294,20 @@ class Scanplane(Measurement):
 
         # Iterate over the color plots and update data with new line
         for chan in self._daq_inputs:
-            data_nan = np.array(self.V[chan] * self._conversions[chan],
-                                dtype=np.float)
-            data_masked = np.ma.masked_where(np.isnan(data_nan), data_nan)
+            try:
+                data_nan = np.array(self.V[chan] * self._conversions[chan],
+                                    dtype=np.float)
+                data_masked = np.ma.masked_where(np.isnan(data_nan), data_nan)
 
-            # Set a new image for the plot
-            self.im[chan].set_data(data_masked)
-            # Adjust colorbar limits for new data
-            self.cbars[chan].set_clim([data_masked.min(),
-                                       data_masked.max()])
-            # Update the colorbars
-            self.cbars[chan].draw_all()
+                # Set a new image for the plot
+                self.im[chan].set_data(data_masked)
+                # Adjust colorbar limits for new data
+                self.cbars[chan].set_clim([data_masked.min(),
+                                           data_masked.max()])
+                # Update the colorbars
+                self.cbars[chan].draw_all()
+            except:
+                pass
 
         self.fig.canvas.draw()
 
