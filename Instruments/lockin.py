@@ -4,6 +4,7 @@ from .instrument import Instrument
 
 import visa
 
+# TODO add filter slope parameter
 
 
 

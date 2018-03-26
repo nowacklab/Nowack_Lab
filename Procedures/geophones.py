@@ -9,6 +9,8 @@ from .daqspectrum import DaqSpectrum
 from .daqspectrum import TwoSpectrum
 from ..Utilities.save import Measurement
 from ..Utilities.geophones import Geophone
+from ..Utilities.geophones import Geophone_cal
+from ..Utilities.welch import Welch
 
 
 class Geophone_calibrate(Measurement):
@@ -33,21 +35,7 @@ class Geophone_calibrate(Measurement):
         self.maxV = maxV
         self.numpts = numpts
         self.inputfnct = inputfnct
-
-    def _Ze(self, f, f0, Q0, Rt, Lt, Z12sqOvMo):
-        return Rt + 2j * np.pi * f * Lt + Z12sqOvMo * (2j * np.pi * f)/(
-                (2 * np.pi*f0)**2 * (1 - (f/f0)**2 + (1j/Q0)* (f/f0)))
-
-    def _Zsp(self, Rs, Zi):
-        return Rs*Zi/(Rs + Zi)
-
-    def _Zep(self, Ze, Zi):
-        return Ze*Zi/(Ze + Zi)
-
-    def rho(self, f, f0, Q0, Rt, Lt, Z12sqOvMo):
-        Ze = self._Ze(f, f0, Q0, Rt, Lt, Z12sqOvMo)
-        Zep = self._Zep(Ze, self.Zi)
-        return np.abs(Zep/(Zep + self._Zsp(self.Rs, self.Zi)))
+        self.geophone_cal = Geophone_cal(Rs)
 
     def do(self):
         # send random noise signal and montor the input channels
@@ -73,20 +61,29 @@ class Geophone_calibrate(Measurement):
 
         # Ratio of the input voltages should look like rho
         # fit to rho with parameters
-        self.ratio = self.Vb/self.Va
-        self.f, self.ratiopsd = signal.welch(self.ratio, fs=self.sample_rate)
-        self.makepsd(.5)
-        self.dft = np.sqrt(self.psd)
+
+        # this was wrong, should be the ratio of the 
+        # fourier transforms, not the time traces
+        #self.ratio = self.Vb/self.Va 
+        #self.f, self.ratiopsd = signal.welch(self.ratio, fs=self.sample_rate)
+
+        self.f, self.Vapsd = self.makepsd(self.Va, .5)
+        self.f, self.Vbpsd = self.makepsd(self.Vb, .5)
+        self.ratiopsd = self.Vbpsd/self.Vapsd
+
+        self.dft = np.sqrt(self.ratiopsd)
 
         self.plot_debug()
-        self.popt, self.pcov = sciopt.curve_fit(self.rho, self.f, self.dft, p0=self.arg0)
+
+        self.popt, self.pcov = self.geophone_cal._calfit(self.f, self.dft, p0=self.arg0)
 
         self.plot()
 
-    def makepsd(self, freqspace):
+    def makepsd(self, timetrace, freqspace):
         [window, nperseg] = self._makewindow(freqspace)
-        [self.f, self.psd] = signal.welch(self.ratio, fs=self.sample_rate,
+        [f, psd] = signal.welch(timetrace, fs=self.sample_rate,
                                           window=window, nperseg=nperseg)
+        return f,psd
 
     def _makewindow(self, freqspace):
         #n = min(int(self.sample_rate/freqspace), self.numpts)
@@ -115,7 +112,7 @@ class Geophone_calibrate(Measurement):
         fig,ax, = plt.subplots()
         ax.plot(self.t, self.Va, label='Va')
         ax.plot(self.t, self.Vb, label='Vb')
-        ax.plot(self.t, self.ratio, label='Vb/Va')
+    #    ax.plot(self.t, self.ratio, label='Vb/Va')
         ax.legend()
 
     def print_params(self):
@@ -129,6 +126,93 @@ class Geophone_calibrate_fnctgen(Geophone_calibrate):
     def __init__(self, instruments={}, Rs=340, measure_dur = 2, sample_rate=256000):
         super().__init__(instruments=instruments, Rs=Rs, sample_rate=sample_rate, maxV=2,
                          numpts = sample_rate*measure_dur, inputfnct='heaviside')
+
+class Geophone_calibrate_lockins(Geophone_calibrate):
+    _instruments_list=['lockinA', 'lockinB'] # lockinA reads A and outputs into A, lockinB just reads
+
+    def __init__(self, instruments={}, 
+                 Rs=340, minf=.1, 
+                 maxf=1000, numpts=1000):
+        super().__init__(instruments=instruments, Rs=Rs, sample_rate='N/A', maxV='N/A', numpts=numpts,
+                        inputfnct='N/A')
+        self.freqs = 10**np.linspace(np.log10(minf), np.log10(maxf), numpts)
+
+    def do(self):
+        self.Var = []
+        self.Vat = []
+        self.Vbr = []
+        self.Vbt = []
+        self.isol = []
+        self.guessETC()
+        for f in self.freqs:
+            self.lockinA.frequency = f
+            tcguess = (1/f)*10
+            closests = np.array(self.lockinA._time_constant_values) - tcguess
+            tcguess_i = np.argmin(closests - 30000*np.sign(closests))
+            tc = self.lockinA._timeconstant_values[tcguess_i]
+            self.lockinA.time_constant = tc
+            self.lockinB.time_constant = tc
+            self.isol.append((self.lockinA.is_OL(), self.lockinB.is_OL()))
+            sleep(tc*10)
+            self.Var.append(self.lockinA.R)
+            self.Vat.append(self.lockinA.theta)
+            self.Vbr.append(self.lockinB.R)
+            self.Vbt.append(self.lockinB.theta)
+            self.Vax.append(self.lockinA.X)
+            self.Vay.append(self.lockinA.Y)
+            self.Vbx.append(self.lockinB.X)
+            self.Vby.append(self.lockinB.Y)
+        self.Var = np.array(self.Var)
+        self.Vat = np.array(self.Vat)
+        self.Vbr = np.array(self.Vbr)
+        self.Vbt = np.array(self.Vbt)
+        self.Vax = np.array(self.Vax)
+        self.Vay = np.array(self.Vay)
+        self.Vbx = np.array(self.Vbx)
+        self.Vby = np.array(self.Vby)
+        self.impedence_r = (self.Vbr/(self.Var-Vbr)*self.Rs)
+        self.impedence_t = (self.Vbt/(self.Vat-Vbt)*self.Rs)
+        self.impedence_x = (self.Vbx/(self.Vax-Vbx)*self.Rs)
+        self.impedence_y = (self.Vby/(self.Vay-Vby)*self.Rs)
+
+    def fit_z_rt(self):
+        self.z_abs = lambda f, f0, q0, rt, lt, z12: np.abs(
+                    self.geophone_cal._Ze(
+                        f, f0, q0, rt, lt, z12
+                    )
+                )
+        self.z_pha = lambda f, f0, q0, rt, lt ,z12: np.angle(
+                    self.geophone_cal._Ze(
+                        f, f0, q0, rt, lt, z12
+                    )
+                )
+        self.popt_abs, self.pcov_abs = curve_fit(
+                self.z_abs, self.freqs, self.impedence_r, p0=self.geophone_cal.arg0)
+        self.popt_pha, self.pcov_pha = curve_fit(
+                self.z_pha, self.freqs, self.impedence_t, p0=self.geophone_cal.arg0)
+
+    def plot_z(self):
+        fig,ax_abs = plt.subplots()
+        fs = np.linspace(self.freqs[0], self.freqs[-1], 1000)
+        ax.loglog(self.freqs, self.impedence_r)
+        ax.loglog(fs, self.z_abs(fs, *(self.popt_abs)))
+        fig,ax_pha = plt.subplots()
+        ax.loglog(self.freqs, self.impedence_a, self.z_pha(fs, *(self.popt_abs)))
+        ax.loglog(fs, self.z_pha(fs, *(self.popt_abs)))
+        return [ax_abs, ax_pha]
+
+
+    def guessETC(self):
+        tcguess = (1/self.freqs)*10
+        tcs = []
+
+        for tg in tcguess:
+            closests = np.array(self.lockinA._time_constant_values) - tg
+            tg_i = np.argmin(closests - 30000*np.sign(closests))
+            tc = self.lockinA._timeconstant_values[tcguess_i]
+            tcs.append(tc)
+
+        print('Estimated Time to Completion: {0}s'.format(sum(tcs)*10))
 
     
 
