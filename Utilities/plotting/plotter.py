@@ -1,6 +1,7 @@
 import matplotlib, matplotlib.pyplot as plt, numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+
 class Plotter():
     '''
     Class containing methods useful for plotting data using matplotlib.
@@ -45,6 +46,7 @@ class Plotter():
         self.plot_update()  # update plot data
         self.plot_draw()  # draw plots
 
+
     def plot_draw(self, autoscale=False):
         '''
         Redraw plots after plot data updated.
@@ -65,14 +67,29 @@ class Plotter():
 
             self.flush_events(fig)
 
+
     def plot_update(self):
         '''
-        Update plot data.
+        Update plot data. Best practice here is perhaps to define in each class.
         '''
         pass
+
 
     def setup_plots(self):
         '''
         Set up all plots.
         '''
         self.fig, self.ax = plt.subplots() # example: just one figure
+
+
+    def update_image(self, im, data):
+        '''
+        Update an image with new data. Masks NaN values.
+        '''
+        data_masked = np.ma.masked_where(np.isnan(data), data)
+        im.set_data(data_masked)
+
+
+def using_notebook_backend():
+    inline = 'module://ipykernel.pylab.backend_inline'
+    return matplotlib.get_backend() in ('nbAgg', inline)

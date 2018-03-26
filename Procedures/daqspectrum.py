@@ -13,7 +13,7 @@ class DaqSpectrum(Measurement):
     Average the time traces and compute the power spectral density.
     '''
     _daq_inputs = ['dc']
-    instrument_list = ['daq', 'preamp']
+    instrument_list = ['daq'] # 'preamp' optional
     f = 1
     V = 1
     t = 1
@@ -68,7 +68,11 @@ class DaqSpectrum(Measurement):
                                         )
             # Unpack data recieved from daq.
             # Divide out any preamp gain applied.
-            self.V = received['dc'] / self.preamp.gain
+            if hasattr(self, 'preamp'):
+                gain = self.preamp.gain
+            else:
+                gain = 1
+            self.V = received['dc'] / gain
             self.t = received['t']
             self.f, psd = signal.periodogram(self.V, self.measure_freq,
                                              'blackmanharris')

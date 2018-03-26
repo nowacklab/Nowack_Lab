@@ -28,7 +28,7 @@ packages = [
     'pydaqmx',
     'pyvisa',
     'setuptools',
-    'tornado',
+    'tornado==4.5.3',
     'peakutils',
     'gtts',
     'https://github.com/nowacklab/Instrumental/tarball/master',
