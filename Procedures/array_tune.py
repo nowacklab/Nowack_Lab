@@ -42,7 +42,7 @@ class ArrayTune(Measurement):
         self.aflux_tol = aflux_tol
         self.sflux_offset = sflux_offset
         self.aflux_offset = aflux_offset
-        self.saaconversion = conversion # FIXME
+        self.saaconversion = conversion # FIXME high? med?
 
     def acquire(self):
         """Ramp the modulation coil current and monitor the SAA response."""
@@ -178,6 +178,7 @@ class ArrayTune(Measurement):
         self.squidarray.reset()
         self.sweep = MutualInductance2(self.instruments,
                                        np.linspace(-1e-3, 1e-3, 1000),
+                                       Rbias=340,
                                        conversion = self.saaconversion)
         self.sweep.saa_status = self.squidarray.__dict__
         self.sweep.run(save_appendedpath = save_appendedpath)
