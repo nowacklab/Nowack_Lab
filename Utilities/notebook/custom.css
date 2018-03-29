@@ -1,0 +1,31 @@
+.end_space {
+    min-height: 500px;
+    transition: height .2s ease;
+}
+
+
+/*div#notebook-container {
+    margin-left: 2px; margin-right:2px;
+}*/
+
+/*
+ .fix{
+position:fixed;
+bottom:0px;
+left:50%;
+}
+
+img {
+ src:"http://www.ryanphotographic.com/images/JPEGS/Squid%20from%20kaikoura%20montage%20copy.jpg";
+ class:"fix";
+ }
+ */
+/*
+#footer {
+   position:absolute;
+   bottom:0;
+   width:100%;
+   height:60px;   /* Height of the footer */
+   background:#6cf;
+}
+ */

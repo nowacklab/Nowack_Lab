@@ -1,1 +1,1 @@
-__all__ = ['dummy', 'make_instruments', 'plotting']
+from .plotting import plot_mpl

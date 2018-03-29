@@ -4,22 +4,27 @@ from IPython import display
 import matplotlib.pyplot as plt
 import numpy as np
 import time, os
-from . import squidIV
-from ..Utilities import plotting
-from .save import Measurement
-
+from datetime import datetime
+from .squidIV import SquidIV
+from ..Utilities.plotting import plot_mpl
+from ..Utilities.save import Measurement
+from ..Utilities.utilities import AttrDict
 
 class Mod2D(Measurement):
-    def __init__(self, instruments=None, squidout=None, squidin=None, modout=None, rate=900):
+    _daq_inputs = ['squidin']
+    _daq_outputs = ['squidout', 'modout']
+    notes = ''
+    instrument_list = SquidIV.instrument_list
+
+    def __init__(self, instruments={}, rate=900):
         '''
         Example: Mod2D({'daq': daq, 'preamp': preamp}, 'ao0','ai0','ao1', rate=900).
-        To make an empty object, then just call Mod2D(). You can do this if you want to plot previously collected data.
+        To make an empty object, then just call Mod2D().
+        You can do this if you want to plot previously collected data.
         '''
+        super().__init__(instruments=instruments)
 
-        self.filename = ''
-        self.notes = ''
-
-        self.IV = squidIV.SquidIV(instruments, squidout, squidin, modout, rate=rate)
+        self.IV = SquidIV(instruments, rate=rate)
 
         self.IV.Rbias = 2e3 # Ohm # 1k cold bias resistors on the SQUID testing PCB
         self.IV.Rbias_mod = 2e3 # Ohm # 1k cold bias resistors on the SQUID testing PCB
@@ -34,46 +39,32 @@ class Mod2D(Measurement):
 
         display.clear_output()
 
-    def __getstate__(self):
-        self.save_dict = {"timestamp": self.timestamp,
-                          "IV": self.IV,
-                          "Imodspan": self.Imodspan,
-                          "Imodstep": self.Imodstep,
-                          "V": self.V,
-                          "notes": self.notes,
-                          "time": self.time,
-                          "Imod": self.Imod}
-        return self.save_dict
 
     def calc_ramp(self):
         self.numpts = int(self.Imodspan/self.Imodstep)
         self.Imod = np.linspace(-self.Imodspan/2, self.Imodspan/2, self.numpts) # Squid current
-        self.V = np.full((self.numpts, self.IVnumpts), np.nan)
+        self.V = np.full((self.numpts, self.IV.numpts), np.nan)
+        self.Isquid = self.IV.I
 
     def do(self):
-        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_mod2D'
-        self.timestamp = time.strftime("%Y-%m-%d @ %I:%M%:%S%p")
-
-
         self.calc_ramp() #easy way to clear self.V
         self.IV.V = self.IV.V*0
 
         self.param_prompt() # Check parameters
-        self.setup_plot()
 
         for i in range(len(self.Imod)):
             self.IV.Imod = self.Imod[i]
+
             self.IV.do_IV()
-            self.axIV.clear()
-            self.IV.plot(self.axIV)
-            self.V[:][i] = self.IV.V
             self.plot()
+            self.ax['IV'].clear()
+            self.IV.plot(self.ax['IV'])
+            self.V[:][i] = self.IV.V
             self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
         self.IV.daq.zero() # zero everything
 
-        self.notes = input('Notes for this mod2D (q to quit without saving): ')
-        if inp != 'q':
-            self.save()
+        self.notes = input('Notes for this mod2D: ')
+
 
     def param_prompt(self):
         """ Check and confirm values of parameters """
@@ -106,50 +97,32 @@ class Mod2D(Measurement):
                 display.clear_output()
                 print('Invalid command\n')
 
+
     def plot(self):
         '''
         Plot the 2D mod image
         '''
-        plotting.update2D(self.im, self.V)
+        super().plot()
+        V = np.ma.masked_where(np.isnan(self.V), self.V) # hide Nans
+        plot_mpl.update2D(self.im, V, equal_aspect=False)
+        plot_mpl.aspect(self.ax['2D'], 1)
 
 
-    def save(self):
-        home = os.path.expanduser("~")
-        data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'squid_testing', 'mod2D')
-
-        filename = os.path.join(data_folder, self.filename)
-        with open(filename+'.csv', 'w') as f:
-            f.write(self.notes+'\n')
-            f.write('Montana info: \n'+self.IV.montana.log()+'\n')
-            for param in ['rate', 'Rbias', 'Rbias_mod', 'Irampspan', 'Irampstep']:
-                f.write('IV' + param + ': ' + str(getattr(self.IV, param)) + '\n')
-            for parammod in ['Imodspan','Imodstep']:
-                f.write(parammod + ': ' + str(getattr(self, parammod)) + '\n')
-            for paramamp in ['gain','filter']:
-                f.write('IV preamp ' + paramamp + ': ' + str(getattr(self.IV.preamp, paramamp)) + '\n')
-
-            f.write('Isquid (V),Imod (V),Vsquid (V)\n')
-            for i in range(self.numpts):
-                for j in range(self.IV.numpts):
-                    if self.V[i][j] != None:
-                        f.write('%f' %self.IV.I[j] + ',' + '%f' %self.Imod[i] + ',' + '%f' %self.V[i][j] + '\n')
-
-        self.fig.savefig(filename+'.pdf')
-
-    def setup_plot(self):
+    def setup_plots(self):
         '''
         Set up the figure. 2D mod image and last IV trace.
         '''
-        self.fig, (self.axIV, self.ax2D) = plt.subplots(2,1,figsize=(7,7),gridspec_kw = {'height_ratios':[1, 3]})
-        self.fig.suptitle(self.filename+'\n'+self.notes)
-
+        self.ax = AttrDict()
+        self.fig, (self.ax['IV'], self.ax['2D']) = plt.subplots(2,1,figsize=(7,7),gridspec_kw = {'height_ratios':[1, 3]})
+        self.ax['IV'].set_title(self.filename+'\n'+self.notes)
         ## Set up 2D plot
-        self.im = plotting.plot2D(self.ax2D,
+        self.im = plot_mpl.plot2D(self.ax['2D'],
                                 self.IV.I*1e6,
                                 self.Imod*1e6,
                                 self.V,
                                 xlabel=r'$I_{\rm{bias}} = V_{\rm{bias}}/R_{\rm{bias}}$ ($\mu \rm A$)',
                                 ylabel = r'$I_{\rm{mod}} = V_{\rm{mod}}/R_{\rm{mod}}$ ($\mu \rm A$)',
                                 clabel = r'$V_{\rm{squid}}$ $(\rm V)$',
-                                fontsize=20
+                                fontsize=20,
+                                equal_aspect=False
                             )

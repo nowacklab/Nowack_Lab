@@ -1,184 +1,147 @@
 import numpy as np
-from . import planefit
 import time, os
 import matplotlib.pyplot as plt
-from ..Utilities import dummy, plotting
-from ..Instruments import piezos, nidaq, montana, squidarray
-from .save import Measurement
+from ..Utilities import conversions
+from ..Utilities.save import Measurement
+from ..Utilities.utilities import AttrDict
+
 
 class Scanline(Measurement):
-    def __init__(self, instruments=None, start=(-100,-100), end=(100,100), plane=dummy.Dummy(planefit.Planefit), scanheight=0, sig_in=0, cap_in=1, sig_in_ac_x=None, sig_in_ac_y=None):
-        if instruments:
-            self.piezos = instruments['piezos']
-            self.daq = instruments['nidaq']
-            self.montana = instruments['montana']
-            self.array = instruments['squidarray']
-        else:
-            self.piezos = dummy.Dummy(piezos.Piezos)
-            self.daq = dummy.Dummy(nidaq.NIDAQ)
-            self.montana = dummy.Dummy(montana.Montana)
-            self.array = dummy.Dummy(squidarray.SquidArray)
+    _daq_inputs = ['dc','cap','acx','acy']
+    _conversions = AttrDict({
+        # Assume high; changed in init when array loaded
+        'dc': conversions.Vsquid_to_phi0['High'],
+        'cap': conversions.V_to_C,
+        'acx': conversions.Vsquid_to_phi0['High'],
+        'acy': conversions.Vsquid_to_phi0['High'],
+        'x': conversions.Vx_to_um,
+        'y': conversions.Vy_to_um
+    })
+    _units = AttrDict({
+        'dc': 'phi0',
+        'cap': 'C',
+        'acx': 'phi0',
+        'acy': 'phi0',
+        'x': '~um',
+        'y': '~um',
+    })
+    instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto']
 
-        self.sig_in = 'ai%s' %sig_in
-        self.daq.add_input(self.sig_in)
+    def __init__(self, instruments={}, plane=None, start=(-100,-100),
+                 end=(100,100), scanheight=15, scan_rate=120, zero=True):
+        super().__init__(instruments=instruments)
 
-        self.sig_in_ac_x = 'ai%s' %sig_in_ac_x
-        self.daq.add_input(self.sig_in_ac_x)
-
-        self.sig_in_ac_y = 'ai%s' %sig_in_ac_y
-        self.daq.add_input(self.sig_in_ac_y)
-
-        self.cap_in = 'ai%s' %cap_in
-        self.daq.add_input(self.cap_in)
+        # Load the correct SAA sensitivity based on the SAA feedback
+        # resistor
+        try:  # try block enables creating object without instruments
+            Vsquid_to_phi0 = conversions.Vsquid_to_phi0[self.squidarray.sensitivity]
+            self._conversions['acx'] = Vsquid_to_phi0
+            self._conversions['acy'] = Vsquid_to_phi0
+            # doesn't consider preamp gain. If preamp communication fails, then
+            # this will be recorded
+            self._conversions['dc'] = Vsquid_to_phi0
+            # Divide out the preamp gain for the DC channel
+            self._conversions['dc'] /= self.preamp.gain
+        except:
+            pass
 
         self.start = start
         self.end = end
+        self.zero = zero
 
         self.plane = plane
+
         if scanheight < 0:
             inp = input('Scan height is negative, SQUID will ram into sample! Are you sure you want this? If not, enter \'quit.\'')
             if inp == 'quit':
                 raise Exception('Terminated by user')
         self.scanheight = scanheight
+        self.scan_rate = scan_rate
 
-        self.filename = ''
+        self.V = AttrDict({
+            chan: np.nan for chan in self._daq_inputs + ['piezo']
+        })
+        self.Vout = np.nan
 
-        home = os.path.expanduser("~")
-        self.path = os.path.join(home,
-                                'Dropbox (Nowack lab)',
-                                'TeamData',
-                                'Montana',
-                                'Scans'
-                            )
-        
-    def __getstate__(self):
-        self.save_dict = {"timestamp": self.timestamp,
-                          "piezos": self.piezos,
-                          "daq": self.daq,
-                          "montanta": self.montana,
-                          "squidarray": self.array,
-                          "lockin": self.lockin,
-                          "preamp":self.preamp,
-                          "span": self.span,
-                          "center": self.center,
-                          "numpts": self.numpts,
-                          "Vstart": Vstart,
-                          "Vend": Vend,
-                          "V": self.V,
-                          "Vac_x": self.Vac_x,
-                          "Vac_y": self.Vac_y
-                          }
-        return self.save_dict
+        for chan in self._daq_inputs:
+            # If no conversion factor is given then directly record the
+            # voltage by setting conversion = 1
+            if chan not in self._conversions.keys():
+                self._conversions[chan] = 1
+            if chan not in self._units.keys():
+                self._units[chan] = 'V'
 
     def do(self):
-        ## Start time and temperature
-        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_line'
-        self.timestamp = time.strftime("%Y-%m-%d @ %I:%M%:%S%p")
-        tstart = time.time()
-        self.temp_start = self.montana.temperature['platform']
-
-        ## Start and end points
+        # Start and end points
         Vstart = {'x': self.start[0],
                 'y': self.start[1],
-                'z': self.plane.plane(self.start[0],self.start[1])
+                'z': self.plane.plane(self.start[0],self.start[1]) - self.scanheight
                 }
         Vend = {'x': self.end[0],
                 'y': self.end[1],
-                'z': self.plane.plane(self.end[0],self.end[1])
+                'z': self.plane.plane(self.end[0],self.end[1]) - self.scanheight
                 }
 
-        ## Explicitly go to first point of scan
+        # Explicitly go to first point of scan
         self.piezos.V = Vstart
-        self.array.reset()
-        time.sleep(3)
+        self.squidarray.reset()
+        time.sleep(3*self.lockin_squid.time_constant)
 
-        ## Do the sweep
-        self.out, V, t = self.piezos.sweep(Vstart, Vend) # sweep over Y
+        # Do the sweep
+        output_data, received = self.piezos.sweep(Vstart, Vend,
+                                                  chan_in=self._daq_inputs,
+                                                  sweep_rate=self.scan_rate
+                                                  ) # sweep over Y
 
-        dist_between_points = np.sqrt((self.out['x'][0]-self.out['x'][-1])**2+(self.out['y'][0]-self.out['y'][-1])**2)
-        self.Vout = np.linspace(0, dist_between_points, len(self.out['x'])) # plots vs 0 to whatever the maximum distance travelled was
-        self.V = V[self.sig_in]
-        self.C = V[self.cap_in]
-        self.Vac_x = V[self.sig_in_ac_x]
-        self.Vac_y = V[self.sig_in_ac_y]
+        for axis in ['x','y','z']:
+            self.V[axis] = output_data[axis]
+
+        dist_between_points = np.sqrt((self.V['x'][0]-self.V['x'][-1])**2+(self.V['y'][0]-self.V['y'][-1])**2)
+        self.Vout = np.linspace(0, dist_between_points, len(self.V['x'])) # plots vs 0 to whatever the maximum distance travelled was
+
+        # Store this line's signals for Vdc, Vac x/y, and Cap
+        # Convert from DAQ volts to lockin volts
+        for chan in self._daq_inputs:
+            self.V[chan] = received[chan]
+
+        for chan in ['acx','acy']:
+            self.V[chan] = self.lockin_squid.convert_output(self.V[chan])
+        self.V['cap'] = self.lockin_cap.convert_output(self.V['cap'])
 
         self.plot()
 
-        self.piezos.V = 0
-        self.save()
-
-        tend = time.time()
-        print('Scan took %f minutes' %((tend-tstart)/60))
-        return
-
+        if self.zero:
+            self.piezos.V = 0
 
     def plot(self):
         '''
         Set up all plots.
         '''
-        self.fig = plt.figure(figsize=(8,5))
+        super().plot()
 
-        ## DC magnetometry
-        self.ax_squid = self.fig.add_subplot(221)
-        self.ax_squid.plot(self.Vout, self.V, '-b')
-        self.ax_squid.set_xlabel('$\sqrt{\Delta V_x^2+\Delta V_y^2}$')
-        self.ax_squid.set_ylabel('Voltage from %s' %self.sig_in)
-        self.ax_squid.set_title('%s\nDC SQUID signal' %self.filename)
+        for chan in self._daq_inputs:
+            self.ax[chan].plot(self.Vout*self._conversions['x'],
+                               self.V[chan] * self._conversions[chan], '-')
 
-        ## AC in-phase
-        self.ax_squid = self.fig.add_subplot(223)
-        self.ax_squid.plot(self.Vout, self.Vac_x, '-b')
-        self.ax_squid.set_xlabel('$\sqrt{\Delta V_x^2+\Delta V_y^2}$')
-        self.ax_squid.set_ylabel('Voltage from %s' %self.sig_in_ac_x)
-        self.ax_squid.set_title('%s\nAC x SQUID signal' %self.filename)
-
-        ## AC out-of-phase
-        self.ax_squid = self.fig.add_subplot(224)
-        self.ax_squid.plot(self.Vout, self.Vac_y, '-b')
-        self.ax_squid.set_xlabel('$\sqrt{\Delta V_x^2+\Delta V_y^2}$')
-        self.ax_squid.set_ylabel('Voltage from %s' %self.sig_in_ac_y)
-        self.ax_squid.set_title('%s\nAC y SQUID signal' %self.filename)
-
-        ## Capacitance
-        self.ax_squid = self.fig.add_subplot(222)
-        self.ax_squid.plot(self.Vout, self.C, '-b')
-        self.ax_squid.set_xlabel('$\sqrt{\Delta V_x^2+\Delta V_y^2}$')
-        self.ax_squid.set_ylabel('Voltage from %s' %self.cap_in)
-        self.ax_squid.set_title('%s\nCapacitance signal' %self.filename)
-
-        ## Draw everything in the notebook
+        self.fig.tight_layout()
         self.fig.canvas.draw()
 
 
-    def save(self):
-        filename = os.path.join(self.path, self.filename)
+    def setup_plots(self):
+        self.fig = plt.figure(figsize=(8,5))
+        self.ax = AttrDict()
 
-        self.fig.savefig(filename+'.pdf')
+        self.ax['dc'] = self.fig.add_subplot(221)
+        self.ax['acx'] = self.fig.add_subplot(223)
+        self.ax['acy'] = self.fig.add_subplot(224)
+        self.ax['cap'] = self.fig.add_subplot(222)
 
-        with open(filename+'.csv', 'w') as f:
-            for s in ['start', 'end']:
-                f.write('%s = %f, %f \n' %(s, float(getattr(self, s)[0]),float(getattr(self, s)[1])))
-            for s in ['a','b','c']:
-                f.write('plane.%s = %f\n' %(s, float(getattr(self.plane, s))))
-            f.write('scanheight = %f\n' %self.scanheight)
-            f.write('Montana info: \n'+self.montana.log()+'\n')
-            f.write('starting temperature: %f' %self.temp_start)
+        for label, ax in self.ax.items():
+            ax.set_xlabel(r'$\sim\mu\mathrm{m} (|V_{piezo}|*%.2f)$'
+                                %self._conversions['x']
+                    )
+            ax.set_ylabel('%s ($\phi_0$)' %label)
+            ax.set_title(self.filename)
+            ax.yaxis.get_major_formatter().set_powerlimits((-2, 2))
 
-            f.write('\nDC signal\n')
-            f.write('Xout (V),Yout (V), V (V)\n')
-            for i in range(len(self.Vout)):
-                f.write('%f' %self.out['x'][i] + ',' +'%f' %self.out['y'][i] + ',' + '%f' %self.V[i] + '\n')
-
-            f.write('AC x signal\n')
-            f.write('Xout (V),Yout (V), V (V)\n')
-            for i in range(len(self.Vout)):
-                f.write('%f' %self.out['x'][i] + ',' +'%f' %self.out['y'][i] + ',' + '%f' %self.Vac_x[i] + '\n')
-
-            f.write('AC y signal\n')
-            f.write('Xout (V),Yout (V), V (V)\n')
-            for i in range(len(self.Vout)):
-                f.write('%f' %self.out['x'][i] + ',' +'%f' %self.out['y'][i] + ',' + '%f' %self.Vac_y[i] + '\n')
-
-
-if __name__ == '__main__':
-    'hey'
+        self.ax['cap'].set_ylabel('cap (F)')

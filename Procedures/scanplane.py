@@ -1,316 +1,483 @@
-import numpy as np
-from numpy.linalg import lstsq
-from . import navigation, planefit
-import time, os
-from scipy.interpolate import interp1d as interp
-import matplotlib.pyplot as plt
-from IPython import display
-from numpy import ma
-from ..Utilities import dummy, plotting
-from ..Instruments import piezos, nidaq, montana, squidarray
-from .save import Measurement
+import time, os, matplotlib, matplotlib.pyplot as plt, numpy as np
+from scipy.interpolate import interp1d
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+from ..Utilities import conversions
+from ..Utilities.save import Measurement, get_todays_data_dir, get_local_data_path
+from ..Utilities.utilities import AttrDict
+from ..Utilities.plotting.plot_mpl import extents, using_notebook_backend
+
 
 class Scanplane(Measurement):
-    def __init__(self, instruments=None, span=[100,100], center=[0,0], numpts=[50,50], plane=dummy.Dummy(planefit.Planefit), scanheight=5, sig_in=0, cap_in=1, sig_in_ac_x=None, sig_in_ac_y=None):
-        if instruments:
-            self.piezos = instruments['piezos']
-            self.daq = instruments['nidaq']
-            self.montana = instruments['montana']
-            self.array = instruments['squidarray']
-        else:
-            self.piezos = dummy.Dummy(piezos.Piezos)
-            self.daq = dummy.Dummy(nidaq.NIDAQ)
-            self.montana = dummy.Dummy(montana.Montana)
-            self.array = dummy.Dummy(squidarray.SquidArray)
+    '''
+    Scan over a plane while monitoring signal on DAQ
 
-        self.sig_in = 'ai%s' %sig_in
-        self.daq.add_input(self.sig_in)
+    Attributes:
+        _daq_inputs (list): list of channel names for DAQ to monitor
+        _conversions (AttrDict): mapping from DAQ voltages to real units
+        instrument_list (list): instrument names that Scanplane needs in
+            order to be initialized.
+    '''
+    # DAQ channel labels required for this class.
+    _daq_inputs = ['dc', 'cap', 'acx', 'acy']
+    _conversions = AttrDict({
+        # Assume high; changed in init when array loaded
+        'dc': conversions.Vsquid_to_phi0['High'],
+        'cap': conversions.V_to_C,
+        'acx': conversions.Vsquid_to_phi0['High'],
+        'acy': conversions.Vsquid_to_phi0['High'],
+        'x': conversions.Vx_to_um,
+        'y': conversions.Vy_to_um
+    })
+    _units = AttrDict({
+        'dc': 'phi0',
+        'cap': 'C',
+        'acx': 'phi0',
+        'acy': 'phi0',
+        'x': '~um',
+        'y': '~um',
+    })
+    instrument_list = ['piezos',
+                       'montana',
+                       'squidarray',
+                       'preamp',
+                       'lockin_squid',
+                       'lockin_cap',
+                       'atto',
+                       'daq']
+    fast_axis = 'x'
 
-        self.sig_in_ac_x = 'ai%s' %sig_in_ac_x
-        self.daq.add_input(self.sig_in_ac_x)
 
-        self.sig_in_ac_y = 'ai%s' %sig_in_ac_y
-        self.daq.add_input(self.sig_in_ac_y)
+    def __init__(self, instruments={}, plane=None, span=[800, 800],
+                 center=[0, 0], numpts=[20, 20],
+                 scanheight=15, scan_rate=120, raster=False,
+                 direction=['+','+'], ROI=None):
+        '''
+        direction: +/- to sweep each axis forwards or backwards.
+        Flips scan image. TODO: don't flip
+        ROI: List of [Vx1, Vx2, Vy1, Vy2] to specify a region of interest.
+            Will draw a box from Vx1 < Vx < Vx2 and Vy1 < Vy < Vy2.
+        '''
 
-        self.cap_in = 'ai%s' %cap_in
-        self.daq.add_input(self.cap_in)
 
+        super().__init__(instruments=instruments)
+
+        # Load the correct SAA sensitivity based on the SAA feedback
+        # resistor
+        try:  # try block enables creating object without instruments
+            Vsquid_to_phi0 = conversions.Vsquid_to_phi0[self.squidarray.sensitivity]
+            self._conversions['acx'] = Vsquid_to_phi0
+            self._conversions['acy'] = Vsquid_to_phi0
+            # doesn't consider preamp gain. If preamp communication fails, then
+            # this will be recorded
+            self._conversions['dc'] = Vsquid_to_phi0
+            # Divide out the preamp gain for the DC channel
+            self._conversions['dc'] /= self.preamp.gain
+        except:
+            pass
+
+        # Define variables specified in init
+        self.scan_rate = scan_rate
+        self.raster = raster
         self.span = span
         self.center = center
         self.numpts = numpts
-
         self.plane = plane
-        if scanheight < 0:
-            inp = input('Scan height is negative, SQUID will ram into sample! Are you sure you want this? If not, enter \'quit.\'')
-            if inp == 'quit':
-                raise Exception('Terminated by user')
         self.scanheight = scanheight
+        self.direction = direction
+        self.ROI = ROI
 
-        self.x = np.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
-        self.y = np.linspace(center[1]-span[1]/2, center[1]+span[1]/2, numpts[1])
+        self.V = AttrDict({
+            chan: np.nan for chan in self._daq_inputs + ['piezo']
+        })
+        self.Vfull = AttrDict({
+            chan: np.nan for chan in self._daq_inputs + ['piezo']
+        })
+        self.Vinterp = AttrDict({
+            chan: np.nan for chan in self._daq_inputs + ['piezo']
+        })
 
-        self.X, self.Y = np.meshgrid(self.x, self.y, indexing='ij') # indexing ij follows matrix indexing convention
-        self.Z = self.plane.plane(self.X, self.Y) - self.scanheight
+        x = np.linspace(center[0] - span[0] / 2,
+                        center[0] + span[0] / 2,
+                        numpts[0])
+        y = np.linspace(center[1] - span[1] / 2,
+                        center[1] + span[1] / 2,
+                        numpts[1])
 
-        self.V = np.full(self.X.shape, np.nan)
-        self.Vac_x = np.full(self.X.shape, np.nan)
-        self.Vac_y = np.full(self.X.shape, np.nan)
-        self.C = np.full(self.X.shape, np.nan)
+        # Reverse scan direction
+        if direction[0] == '-':
+            x = x[::-1]
+        if direction[1] == '-':
+            y = y[::-1]
 
-        self.last_full_out = []
-        self.last_full_sweep = []
-        self.last_interp_out = []
-        self.last_interp_sweep = []
-        self.linecuts = {}
+        self.X, self.Y = np.meshgrid(x, y)
+        try:
+            self.Z = self.plane.plane(self.X, self.Y) - self.scanheight
+        except:
+            print('plane not loaded')
 
-        # self.swap = swap
-        # if swap: # Will rotate scan 90 degrees? Not really tested. Got bugs if false. Keep it true for now. #20160717: just noticed kwarg default is False. Don't touch this for now...
-        #     self.X = self.X.transpose()
-        #     self.Y = self.Y.transpose()
-        #     self.Z = self.Z.transpose()
+        for chan in self._daq_inputs:
+            # Initialize one array per DAQ channel
+            self.V[chan] = np.full(self.X.shape, np.nan)
+            # If no conversion factor is given then directly record the
+            # voltage by setting conversion = 1
+            if chan not in self._conversions.keys():
+                self._conversions[chan] = 1
+            if chan not in self._units.keys():
+                self._units[chan] = 'V'
 
-        self.filename = ''
 
-        home = os.path.expanduser("~")
-        self.path = os.path.join(home,
-                                'Dropbox (Nowack lab)',
-                                'TeamData',
-                                'Montana',
-                                'Scans'
-                            )
+    def do(self, fast_axis='x', wait=None):
+        '''
+        Routine to perform a scan over a plane.
 
-    def __getstate__(self):
-        self.save_dict = {"timestamp": self.timestamp,
-                          "piezos": self.piezos,
-                          "daq": self.daq,
-                          "montana": self.montana,
-                          "array": self.array,
-                          "linecuts": self.linecuts,
-                          "V": self.V,
-                          "Vac_x": self.Vac_x,
-                          "Vac_y": self.Vac_y,
-                          "C": self.C,
-                          "plane": self.plane,
-                          "span": self.span,
-                          "center": self.center,
-                          "numpts": self.numpts}
-        return self.save_dict
-    
-    def do(self):
-        self.setup_plots()
+        Keyword arguments:
+            fast_axis: If 'x' (default) take linecuts in the X direction
+            If 'y', take linecuts in the Y direction.
+            wait: Time in seconds to wait at the beginning of a scan.
+            If wait == None, will wait 3 * time const of lockin.
+        '''
+        self.fast_axis = fast_axis
 
-        ## Start time and temperature
-        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_scan'
-        self.timestamp = time.strftime("%Y-%m-%d @ %I:%M%:%S%p")
-        tstart = time.time()
-        self.temp_start = self.montana.temperature['platform']
-
-        ## make sure all points are not out of range of piezos before starting anything
+        # Check if points in the scan are within the voltage limits of
+        # Piezos
         for i in range(self.X.shape[0]):
-            self.piezos.check_lim({'x':self.X[i,:],
-                                    'y':self.Y[i,:],
-                                    'z':self.Z[i,:]
-                                    }
-                                )
+            self.piezos.x.check_lim(self.X[i, :])
+            self.piezos.y.check_lim(self.Y[i, :])
+            self.piezos.z.check_lim(self.Z[i, :])
 
-        ## Loop over Y values
-        for i in range(self.X.shape[1]):
+        # Loop over Y values if fast_axis is x,
+        # Loop over X values if fast_axis is y
+        # Print a warning if the fast_axis has fewer points than the slow.
+        def slow_axis_alert():
+            print('Slow axis has more points than fast axis!')
+            import winsound
+            winsound.Beep(int(440*2**(1/2)),200) # play a tone
+            winsound.Beep(440,200) # play a tone
 
-            ## Explicitly go to first point of scan
-            self.piezos.V = {'x': self.X[0,i],
-                            'y': self.Y[0,i],
-                            'z': self.Z[0,i]
-                            }
-            self.array.reset()
-            time.sleep(3)
+        if fast_axis == 'x':
+            num_lines = int(self.X.shape[0])  # loop over Y
+            if num_lines > int(self.X.shape[1]):  # if more Y points than X
+                slow_axis_alert()
+        elif fast_axis == 'y':
+            num_lines = int(self.X.shape[1])  # loop over X
+            if num_lines > int(self.X.shape[0]):  # if more X points than Y
+                slow_axis_alert()
+        else:
+            raise Exception('Specify x or y as fast axis!')
 
-            ## Do the sweep
-            Vstart = {'x': self.X[0,i], 'y': self.Y[0,i], 'z': self.Z[0,i]}
-            Vend = {'x': self.X[-1,i], 'y': self.Y[-1,i], 'z': self.Z[-1,i]}
-            out, V, t = self.piezos.sweep(Vstart, Vend) # sweep over X
+        # Measure capacitance offset
+        Vcap_offset = []
+        for i in range(5):
+            time.sleep(0.5)
+            Vcap_offset.append(
+                self.lockin_cap.convert_output(self.daq.inputs['cap'].V)
+            )
+        Vcap_offset = np.mean(Vcap_offset)
 
-            ## Save linecuts
-            linecuts[str(i)] = {"Vstart": Vstart,
-                                "Vend": Vend,
-                                "Vsquid": {"Vdc": V[self.sig_in], 
-                                           "Vac_x": V[self.sig_in_ac_x],
-                                           "Vac_y": V[self.sig_in_ac_y]}}
+        # Loop over each line in the scan
+        for i in range(num_lines):
 
-            ## Interpolate to the number of lines
-            interp_func = interp(out['x'], V[self.sig_in])
-            self.V[:,i] = interp_func(self.X[:,i]) # changes from actual output data to give desired number of points
+            if not self.montana.check_status(): # returns False if problem
+                self.piezos.zero()
+                self.squidarray.zero()
+                self.atto.z.move(-1000)
+                raise Exception('Montana error!')
 
-            interp_func = interp(out['x'], V[self.sig_in_ac_x])
-            self.Vac_x[:,i] = interp_func(self.X[:,i])
+            # If we detected a keyboard interrupt stop the scan here
+            # The DAQ is not in use at this point so ending the scan
+            # should be safe.
+            if self.interrupt:
+                break
+            k = 0
+            if self.raster:
+                if i % 2 == 0:  # if even
+                    # k keeps track of sweeping forward vs. backwards
+                    k = 0
+                else:  # if odd
+                    k = -1
+            # if not rastering, k=0, meaning always forward sweeps
 
-            interp_func = interp(out['x'], V[self.sig_in_ac_y])
-            self.Vac_y[:,i] = interp_func(self.X[:,i])
+            # Starting and ending piezo voltages for the line
+            # for forward, starts at 0,i; backward: -1, i
+            if fast_axis == 'x':
+                Vstart = {'x': self.X[i, k],
+                          'y': self.Y[i, k],
+                          'z': self.Z[i, k]}
+                # for forward, ends at -1,i; backward: 0, i
+                Vend = {'x': self.X[i, -(k + 1)],
+                        'y': self.Y[i, -(k + 1)],
+                        'z': self.Z[i, -(k + 1)]}
+            elif fast_axis == 'y':
+                # for forward, starts at i,0; backward: i,-1
+                Vstart = {'x': self.X[k, i],
+                          'y': self.Y[k, i],
+                          'z': self.Z[k, i]}
+                # for forward, ends at i,-1; backward: i,0
+                Vend = {'x': self.X[-(k + 1), i],
+                        'y': self.Y[-(k + 1), i],
+                        'z': self.Z[-(k + 1), i]}
 
-            interp_func = interp(out['x'], V[self.cap_in])
-            self.C[:,i] = interp_func(self.X[:,i])
+            # Go to first point of scan
+            self.piezos.sweep(self.piezos.V, Vstart)
+            #self.squidarray.reset()
+            if wait is None:
+                wait = 3*self.lockin_squid.time_constant
+            time.sleep(wait)
 
-            self.last_full_out = out['x']
-            self.last_full_sweep = V[self.sig_in]
+            # Begin the sweep
+            output_data, received = self.piezos.sweep(Vstart, Vend,
+                                          chan_in=self._daq_inputs,
+                                          sweep_rate=self.scan_rate
+                                          )
+            # Flip the backwards sweeps
+            if k == -1:  # flip only the backwards sweeps
+                for d in output_data, received:
+                    for key, value in d.items():
+                        d[key] = value[::-1]  # flip the 1D array
+
+            # Back off with the Z piezo before moving to the next line
+            self.piezos.z.V = 0
+            self.squidarray.reset()
+
+            # Interpolate to the number of lines
+            self.Vfull['piezo'] = output_data[fast_axis]
+            if fast_axis == 'x':
+                self.Vinterp['piezo'] = self.X[i, :]
+            elif fast_axis == 'y':
+                self.Vinterp['piezo'] = self.Y[:, i]
+
+            # Store this line's signals for Vdc, Vac x/y, and Cap
+            # Sometimes the daq doesn't return the right keys
+            # Using try/except to try to diagnose for the future.
+            for chan in self._daq_inputs:
+                try:
+                    self.Vfull[chan] = received[chan]
+                except Exception as e:
+                    print(received)
+                    raise e
+
+            # Convert from DAQ volts to lockin volts where applicable
+            for chan in ['acx', 'acy']:
+                self.Vfull[chan] = self.lockin_squid.convert_output(
+                    self.Vfull[chan])
+            self.Vfull['cap'] = self.lockin_cap.convert_output(
+                self.Vfull['cap']) - Vcap_offset
+
+            # Interpolate the data and store in the 2D arrays
+            for chan in self._daq_inputs:
+                if fast_axis == 'x':
+                    self.Vinterp[chan] = interp1d(
+                        self.Vfull['piezo'],
+                        self.Vfull[chan])(self.Vinterp['piezo']
+                                          )
+                    self.V[chan][i, :] = self.Vinterp[chan]
+                else:
+                    self.Vinterp[chan] = interp1d(
+                        self.Vfull['piezo'],
+                        self.Vfull[chan])(self.Vinterp['piezo']
+                                          )
+                    self.V[chan][:, i] = self.Vinterp[chan]
+
             self.save_line(i, Vstart)
-
-            self.last_interp_out = self.X[:,i]
-            self.last_interp_sweep = self.V[:,i]
-
             self.plot()
-
         self.piezos.V = 0
-        self.save()
-
-        tend = time.time()
-        print('Scan took %f minutes' %((tend-tstart)/60))
-        return
-
 
     def plot(self):
         '''
         Update all plots.
         '''
-        plotting.update2D(self.im_squid, self.V)
-        plotting.update2D(self.im_cap, self.C)
-        plotting.update2D(self.im_ac_x, self.Vac_x)
-        plotting.update2D(self.im_ac_y, self.Vac_y)
+        super().plot()
+
+        # Update the line plot
         self.plot_line()
+
+        # Iterate over the color plots and update data with new line
+        for chan in self._daq_inputs:
+            data_nan = np.array(self.V[chan] * self._conversions[chan],
+                                dtype=np.float)
+            data_masked = np.ma.masked_where(np.isnan(data_nan), data_nan)
+
+            # Set a new image for the plot
+            self.im[chan].set_data(data_masked)
+            # Adjust colorbar limits for new data
+            self.cbars[chan].set_clim([data_masked.min(),
+                                       data_masked.max()])
+            # Update the colorbars
+            self.cbars[chan].draw_all()
 
         self.fig.canvas.draw()
 
+        # Do not flush events for inline or notebook backends
+        if using_notebook_backend():
+            return
+
+        self.fig.canvas.flush_events()
 
     def setup_plots(self):
         '''
         Set up all plots.
         '''
-        self.fig = plt.figure(figsize=(11,11))
+        # Use the aspect ratio of the image set subplot size.
+        # The aspect ratio is Xspan/Yspan
+        aspect = self.span[0] / self.span[1]
+        numplots = 4
+        # If X is longer than Y we want 2 columns of wide plots
+        if aspect > 1:
+            num_row = int(np.ceil(numplots / 2))
+            num_col = 2
+            width = 14
+            # Add 1 to height for title/axis labels
+            height = min(width, width / aspect) + 1
+        # If Y is longer than X we want 2 rows of tall plots
+        else:
+            num_row = 2
+            num_col = int(np.ceil(numplots / 2))
+            height = 10
+            # Pad the plots for the colorbars/axis labels
+            width = min(height, height * aspect) + 4
 
-        ## DC magnetometry
-        self.ax_squid = self.fig.add_subplot(321)
-        self.im_squid = plotting.plot2D(self.ax_squid,
-                                        self.X,
-                                        self.Y,
-                                        self.V,
-                                        title = '%s\nDC SQUID signal' %self.filename,
-                                        xlabel = r'$X (V_{piezo})$',
-                                        ylabel = r'$Y (V_{piezo})$',
-                                        clabel = 'Voltage from %s' %self.sig_in
-                                    )
+        self.fig, self.axes = plt.subplots(num_row,
+                                           num_col,
+                                           figsize=(width, height))
+        self.fig_cuts, self.axes_cuts = plt.subplots(4, 1, figsize=(6, 8),
+                                                     sharex=True)
+        # Convert the axis numpy arrays to list so they aren't saved as data.
+        self.axes = list(self.axes.flatten())
+        self.axes_cuts = list(self.axes_cuts.flatten())
+        cmaps = ['RdBu',
+                 'afmhot',
+                 'magma',
+                 'magma']
+        clabels = ['DC Flux ($\Phi_0$)',
+                   'Capacitance (fF)',
+                   'AC X ($\Phi_0$)',
+                   'AC Y ($\Phi_0$)']
 
-        ## AC x
-        self.ax_ac_x = self.fig.add_subplot(323)
-        self.im_ac_x = plotting.plot2D(self.ax_ac_x,
-                                        self.X,
-                                        self.Y,
-                                        self.Vac_x,
-                                        cmap='rainbow',
-                                        title = '%s\nAC x SQUID signal' %self.filename,
-                                        xlabel = r'$X (V_{piezo})$',
-                                        ylabel = r'$Y (V_{piezo})$',
-                                        clabel = 'Voltage from %s' %self.sig_in_ac_x
-                                    )
+        self.im = AttrDict()
+        self.cbars = AttrDict()
+        self.lines_full = AttrDict()
+        self.lines_interp = AttrDict()
 
-        ## AC y
-        self.ax_ac_y = self.fig.add_subplot(325)
-        self.im_ac_y = plotting.plot2D(self.ax_ac_y,
-                                        self.X,
-                                        self.Y,
-                                        self.Vac_y,
-                                        cmap='rainbow',
-                                        title = '%s\nAC y SQUID signal' %self.filename,
-                                        xlabel = r'$X (V_{piezo})$',
-                                        ylabel = r'$Y (V_{piezo})$',
-                                        clabel = 'Voltage from %s' %self.sig_in_ac_y
-                                    )
+        # Plot the DC signal, capactitance and AC signal on 2D colorplots
+        for ax, chan, cmap, clabel in zip(self.axes,
+                                          self._daq_inputs,
+                                          cmaps,
+                                          clabels):
+            # Convert None in data to NaN
+            nan_data = np.array(self.V[chan] * self._conversions[chan])
+            # Create masked array where data is NaN
+            masked_data = np.ma.masked_where(np.isnan(nan_data), nan_data)
 
-        ## Capacitance
-        self.ax_cap = self.fig.add_subplot(324)
-        self.im_cap = plotting.plot2D(self.ax_cap,
-                                    self.X,
-                                    self.Y,
-                                    self.C,
-                                    cmap='afmhot',
-                                    title = '%s\nCapacitance' %self.filename,
-                                    xlabel = r'$X (V_{piezo})$',
-                                    ylabel = r'$Y (V_{piezo})$',
-                                    clabel = 'Voltage from %s' %self.cap_in
-                                )
+            # Plot masked data on the appropriate axis with imshow
+            image = ax.imshow(masked_data, cmap=cmap, origin='lower',
+                              extent = extents(self.X, self.Y))
 
-        ## "Last full scan" plot
-        self.ax_line = self.fig.add_subplot(326)
-        self.ax_line.set_title('last full line scan', fontsize=8)
-        self.line_full = self.ax_line.plot(self.last_full_out, self.last_full_sweep, '-.k') # commas only take first element of array? ANyway, it works.
-        self.line_interp = self.ax_line.plot(self.last_interp_out, self.last_interp_sweep, '.r', markersize=12)
-        self.ax_line.set_xlabel('X (a.u.)', fontsize=8)
-        self.ax_line.set_ylabel('V', fontsize=8)
+            # Create a colorbar that matches the image height
+            d = make_axes_locatable(ax)
+            cax = d.append_axes('right', size=0.1, pad=0.1)
+            cbar = plt.colorbar(image, cax=cax)
+            cbar.set_label(clabel, rotation=270, labelpad=12)
+            cbar.formatter.set_powerlimits((-2, 2))
+            self.im[chan] = image
+            self.cbars[chan] = cbar
 
-        self.line_full = self.line_full[0] # it is given as an array
-        self.line_interp = self.line_interp[0]
+            # Label the axes - including a timestamp
+            ax.set_xlabel('X Position (V)')
+            ax.set_ylabel('Y Position (V)')
+            title = ax.set_title(self.timestamp, size='medium', y=1.02)
+            # If the title intersects the exponent label from the colorbar
+            # shift the title up and center it
 
-        ## Draw everything in the notebook
+            # ROI
+            if self.ROI is not None:
+                # make closed path of coordinates
+                xy = [[self.ROI[0], self.ROI[2]],
+                      [self.ROI[1], self.ROI[2]],
+                      [self.ROI[1], self.ROI[3]],
+                      [self.ROI[0], self.ROI[3]],
+                      [self.ROI[0], self.ROI[2]],
+                      ]
+                p = matplotlib.patches.Polygon(xy)
+                c = matplotlib.collections.PatchCollection([p], facecolors=['none'], edgecolors=['k'])
+                ax.add_collection(c)
+
+        # Plot the last linecut for DC, AC and capacitance signals
+        for ax, chan, clabel in zip(self.axes_cuts,
+                                    self._daq_inputs,
+                                    clabels):
+            # ax.plot returns a list containing the line
+            # Take the line object - not the list containing the line
+            self.lines_full[chan] = ax.plot(self.Vfull['piezo'],
+                                            self.Vfull[chan],
+                                            '-')[0]
+            self.lines_interp[chan] = ax.plot(self.Vinterp['piezo'],
+                                              self.Vinterp[chan], 'ok',
+                                              markersize=3)[0]
+            ax.set_ylabel(clabel)
+            # Scientific notation for <10^-2, >10^2
+            ax.yaxis.get_major_formatter().set_powerlimits((-2, 2))
+        # Label the X axis of only the bottom plot
+        self.axes_cuts[-1].set_xlabel('Position (V)')
+        # Title the top plot with the timestamp
+        self.axes_cuts[0].set_title(self.timestamp, size='medium')
+
+        # Adjust subplot layout so all labels are visible
+        # First call tight layout to prevent axis label overlap.
+        self.fig.tight_layout()
+        self.fig_cuts.tight_layout()
+
+        # Show the (now empty) figures
         self.fig.canvas.draw()
-
+        self.fig_cuts.canvas.draw()
 
     def plot_line(self):
-        self.line_full.set_xdata(self.last_full_out)
-        self.line_full.set_ydata(self.last_full_sweep)
-        self.line_interp.set_xdata(self.last_interp_out)
-        self.line_interp.set_ydata(self.last_interp_sweep)
+        '''
+        Update the data in the linecut plot.
 
-        self.ax_line.relim()
-        self.ax_line.autoscale_view()
+        '''
+        clabels = ['DC Flux ($\Phi_o$)',
+                   'Capacitance (F)',
+                   'AC X ($\Phi_o$)',
+                   'AC Y ($\Phi_o$)']
+        for ax, chan, clabel in zip(self.axes_cuts, self._daq_inputs, clabels):
+            # Update X and Y data for the 'full data'
+            self.lines_full[chan].set_xdata(self.Vfull['piezo'])
+            self.lines_full[chan].set_ydata(self.Vfull[chan] *
+                                            self._conversions[chan])
+            # Update X and Y data for the interpolated data
+            self.lines_interp[chan].set_xdata(self.Vfull['piezo'])
+            self.lines_interp[chan].set_ydata(self.Vfull[chan] *
+                                              self._conversions[chan])
+            # Rescale axes for newly plotted data
+            ax.relim()
+            ax.autoscale_view()
+        # Update the figure
+        self.fig_cuts.canvas.draw()
 
-        plotting.aspect(self.ax_line, .3)
+        # Do not flush events for inline or notebook backends
+        if using_notebook_backend():
+            return
 
-    def save(self):
-        filename = os.path.join(self.path, self.filename)
-
-        self.fig.savefig(filename+'.pdf')
-
-        with open(filename+'.csv', 'w') as f:
-            for s in ['span', 'center', 'numpts']:
-                f.write('%s = %f, %f \n' %(s, float(getattr(self, s)[0]),float(getattr(self, s)[1])))
-            for s in ['a','b','c']:
-                f.write('plane.%s = %f\n' %(s, float(getattr(self.plane, s))))
-            f.write('scanheight = %f\n' %self.scanheight)
-            f.write('Montana info: \n'+self.montana.log()+'\n')
-            f.write('starting temperature: %f' %self.temp_start)
-
-            f.write('DC signal\n')
-            f.write('X (V),Y (V),V (V)\n')
-            for i in range(self.X.shape[0]):
-                for j in range(self.X.shape[1]):
-                    if self.V[i][j] != None:
-                        f.write('%f' %self.X[i][j] + ',' + '%f' %self.Y[i][j] + ',' + '%f' %self.V[i][j] + '\n')
-
-            f.write('AC x signal\n')
-            f.write('X (V),Y (V),V (V)\n')
-            for i in range(self.X.shape[0]):
-                for j in range(self.X.shape[1]):
-                    if self.Vac_x[i][j] != None:
-                        f.write('%f' %self.X[i][j] + ',' + '%f' %self.Y[i][j] + ',' + '%f' %self.Vac_x[i][j] + '\n')
-
-            f.write('AC y signal\n')
-            f.write('X (V),Y (V),V (V)\n')
-            for i in range(self.X.shape[0]):
-                for j in range(self.X.shape[1]):
-                    if self.Vac_y[i][j] != None:
-                        f.write('%f' %self.X[i][j] + ',' + '%f' %self.Y[i][j] + ',' + '%f' %self.Vac_y[i][j] + '\n')
-
+        self.fig_cuts.canvas.flush_events()
 
     def save_line(self, i, Vstart):
-        filename = os.path.join(self.path, self.filename)
+        '''
+        Saves each line individually to JSON.
+        '''
+        line = Line()
+        line.scan_filename = self.filename
+        line.idx = i
+        line.Vstart = Vstart
+        line.Vfull = AttrDict()
+        line.Vfull['dc'] = self.Vfull['dc']
+        line.Vfull['piezo'] = self.Vfull['piezo']
+        line.save()
 
-        with open(filename+'_lines.csv', 'a') as f:
-            f.write('Line %i, starting at: ' %i)
-            for k in Vstart:
-                f.write(str(Vstart[k])+',')
-            f.write('\n Vpiezo:\n ')
-            for x in self.last_full_sweep:
-                f.write(str(x)+',')
-            f.write('\n Vsquid:\n')
-            for x in self.last_full_out:
-                f.write(str(x)+',')
 
-if __name__ == '__main__':
-    'hey'
+class Line(Measurement):
+    def __init__(self):
+        super().__init__()
+
+    def save(self, appendedpath='lines', **kwargs):
+        super().save(appendedpath=appendedpath, **kwargs)

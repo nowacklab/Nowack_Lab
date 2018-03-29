@@ -1,201 +1,382 @@
-import numpy
-from numpy.linalg import lstsq
-from . import touchdown, navigation
-import time, os, glob
-import matplotlib.pyplot as plt
-from ..Utilities import dummy
-from ..Instruments import piezos, montana
+import numpy as np, time, matplotlib.pyplot as plt, matplotlib
 from IPython import display
-from .save import Measurement
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+from .touchdown import Touchdown
+from ..Utilities.utilities import reject_outliers_plane, fit_plane
+from ..Utilities.save import Measurement
+from ..Utilities.plotting.plot_mpl import extents, using_notebook_backend
 
 class Planefit(Measurement):
     '''
-    For fitting to the plane of the sample. Will do a series of touchdowns in a grid of size specified by numpts. Vz_max sets the maximum voltage the Z piezo will reach. If None, will use the absolute max safe voltage set in the Piezos class.
+    Take touchdowns in a grid to define a plane.
     '''
-    def __init__(self, instruments=None, span=[400,400], center=[0,0], numpts=[4,4], Vz_max = None, cap_input=0):
+    instrument_list = ['daq', 'lockin_cap', 'piezos', 'atto']
+
+    a = np.nan
+    b = np.nan
+    c = np.nan
+
+    def __init__(self, instruments={}, span=[400, 400], center=[0, 0],
+                 numpts=[4, 4], Vz_max=None, first_td=None, gridplot=False):
+        '''
+        Take touchdowns in a grid to determine the slope of the sample
+        surface.
+
+        Args:
+        instruments (dict): must contain the instruments required for
+        the touchdown.
+
+        span (list): Specifices the size [X span, Y span] of the plane
+        in voltage applied to the X and Y peizos.
+
+        center (list): Specifies the center of the plane
+        [X center, Y center] in voltage applied to the X and Y peizos.
+
+        numpts (list): The numper of touchdowns to take on each axis
+        [X number, Y number].
+
+        Vz_max (float): Maximum voltage that can be applied to the Zpiezo.
+        If None then the the max voltage for the piezo is used.
+
+        first_td (Touchdown object or float): The touchdown object or touchdown
+        voltage used for the center of the plane. Skips the initial touchdown.
+
+        gridplot (bool): Whether or not to plot touchdowns in compact grid
+
+        Required instruments:
+        daq, lockin_cap, atto, piezos, montana
+
+        Required daq inputs:
+        'cap', 'capx', 'capy', 'theta'
+
+        Required daq outputs:
+        'x', 'y', 'z'
+
+        Examples:
+        plane = Planefit(instruments, span=[100, 200], center=[50, 50]
+        plane.run(edges_only = True)
+        '''
+        super().__init__(instruments=instruments)
+
         self.instruments = instruments
-        if instruments:
-            self.piezos = instruments['piezos']
-            self.montana = instruments['montana']
-        else:
-            self.piezos = dummy.Dummy(piezos.Piezos)
-            self.montana = dummy.Dummy(montana.Montana)
 
         self.span = span
         self.center = center
         self.numpts = numpts
+        self.first_td = first_td
+        self.gridplot = gridplot
 
         if Vz_max == None:
-            try:
-                self.Vz_max = self.piezos.Vmax['z']
-            except:
-                self.Vz_max = None # Will reach here if dummy piezos are used, unfortunately.
+            if hasattr(self, 'piezos'):
+                Vz_max = self.piezos.z.Vmax
+        self.Vz_max = Vz_max
+
+        self.x = np.linspace(center[0] - span[0] / 2,
+                             center[0] + span[0] / 2, numpts[0])
+        self.y = np.linspace(center[1] - span[1] / 2,
+                             center[1] + span[1] / 2, numpts[1])
+
+        self.X, self.Y = np.meshgrid(self.x, self.y)
+        self.Z = np.nan * self.X  # makes array of nans same size as grid
+        self.Zdiff = np.nan * self.X  # makes array of nans same size as grid
+
+
+    def calculate_plane(self, no_outliers=False): # disabled 7/21/2017
+        '''
+        Calculates the plane parameters a, b, and c.
+        z = ax + by + c
+        '''
+        # Remove outliers
+        if no_outliers:
+            Z = reject_outliers_plane(self.Z)
         else:
-            self.Vz_max = Vz_max
+            Z = self.Z
 
-        self.cap_input = cap_input
+        self.a, self.b, self.c = fit_plane(self.X, self.Y, Z)
 
-        self.x = numpy.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
-        self.y = numpy.linspace(center[1]-span[1]/2, center[1]+span[1]/2, numpts[1])
+    def do(self, edges_only=False):
+        '''
+        Do the planefit.
 
-        self.X, self.Y = numpy.meshgrid(self.x, self.y)
-        self.Z = numpy.nan*self.X # makes array of zeros same size as grid
+        Args:
+        edges_only (bool): If True, touchdowns are taken only around the
+        edges of the grid.
+        '''
+        # make sure we won't scan outside X, Y piezo ranges!
+        self.piezos.x.check_lim(self.X)
+        self.piezos.y.check_lim(self.Y)
 
-        self.a = None
-        self.b = None
-        self.c = None
+        # Initial touchdown at center of plane
+        # Skipped if a first touchdown was given or if doing edges only.
+        if not edges_only:
+            if self.first_td is None:
+                self.piezos.V = {'x': self.center[0],
+                                 'y': self.center[1],
+                                 'z': -self.Vz_max
+                             }
+                self.td = Touchdown(self.instruments, Vz_max=self.Vz_max, disable_atto=True)
+                self.td.run()
 
-        self.filename=''
+                # If the initial touchdown generates a poor fit, try again
+                n = 0
+                while self.td.error_flag and n < 5:
+                    self.td = Touchdown(self.instruments, Vz_max=self.Vz_max, disable_atto=True)
+                    self.td.run()
+                    n = n + 1
+            else:
+                if type(self.first_td) in (int, float):
+                    self.td = Touchdown()
+                    self.td.Vtd = self.first_td # because we passed a number
+                else:
+                    self.td = self.first_td
 
-    def __getstate__(self):
-        self.save_dict = {"timestamp": timestamp,
-                          "a": self.a,
-                          "b": self.b,
-                          "c": self.c,
-                          "span": self.span,
-                          "center": self.center,
-                          "numpts": self.numpts,
-                          "piezos": self.peizos,
-                          "montnana": self.montana}
-        return self.save_dict
-                          
-    def do(self):
-        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_plane'
-        self.timestamp = time.strftime("%Y-%m-%d @%I:%M%:%S%p")
-        
-        self.piezos.check_lim({'x':self.X, 'y':self.Y}) # make sure we won't scan outside X, Y piezo ranges!
+            if self.td.error_flag:
+                raise Exception(r'Can\'t fit capacitance signal.')
 
-        ## Initial touchdown
-        print('Sweeping z piezo down...')
-        self.piezos.V = {'x': self.center[0], 'y':self.center[1], 'z':-self.Vz_max}
-        print('...done.')
-        td = touchdown.Touchdown(self.instruments, self.cap_input, Vz_max = self.Vz_max)
-        td.do() # Will do initial touchdown at center of plane to (1) find the plane (2) make touchdown voltage near center of piezo's positive voltage range
+        # If only taking plane from edges, make masked array
+        if edges_only:
+            mask = np.full(self.X.shape, True)
+            mask[0, :] = False
+            mask[-1, :] = False
+            mask[:, 0] = False
+            mask[:, -1] = False
 
-        check_td = input('Does the initial touchdown look good? Enter \'quit\' to abort.')
-        if check_td == 'quit':
-            raise Exception('Terminated by user')
+            self.X = np.ma.masked_array(self.X, mask)
+            self.Y = np.ma.masked_array(self.Y, mask)
 
-        ## Loop over points sampled from plane.
+        # Loop over points sampled from plane.
         counter = 0
         for i in range(self.X.shape[0]):
             for j in range(self.X.shape[1]):
+                # If this point is masked, like in edges only, skip it
+                if np.ma.is_masked(self.X[i, j]):
+                    continue
+
                 counter = counter + 1
-                display.clear_output(wait=True)
 
-                ## Go to location of next touchdown
-                print('Moving to next location...')
-                self.piezos.V = {'x':self.X[i,j], 'y':self.Y[i,j], 'z': -self.Vz_max}
-                print('...done.')
+                # Go to location of next touchdown
+                self.piezos.V = {'x': self.X[i, j],
+                                 'y': self.Y[i, j],
+                                 'z': 0}
 
-                td = touchdown.Touchdown(self.instruments, self.cap_input, Vz_max = self.Vz_max, planescan=True) # new touchdown at this point
-                td.title = '(%i, %i). TD# %i' %(i,j, counter)
+                # New touchdown at this point
+                # Take touchdowns until the fitting algorithm gives a
+                # good result, up to 5 touchdowns
+                self.td = Touchdown(self.instruments,
+                               Vz_max=self.Vz_max, disable_atto=True)
+                self.td.error_flag = True # to force the following while loop
 
-                self.Z[i,j] = td.do() # Do the touchdown. Planescan True prevents attocubes from moving and only does one touchdown
+                n = 0
+                while self.td.error_flag is True and n < 5:
+                    if n > 0:
+                        print('Redo')
+
+                    self.td = Touchdown(self.instruments,
+                                   Vz_max = self.Vz_max, disable_atto=True)
+                    self.td._set_title('(%.2f, %.2f). TD# %i' % (self.X[i, j], self.Y[i, j], counter))
+                    self.td.run()
+                    n = i + 1
+                    plt.close(self.td.fig)
+
+                # Record the touchdown voltage and update the plots
+                self.Z[i, j] = self.td.Vtd
+                self.calculate_plane()
+                self.Zdiff = self.Z - self.plane(self.X, self.Y)
+                self.plot(i,j)
+
+                # Return to zero between points.
+                self.piezos.V = 0
+
+        if edges_only:
+            # to prepare it for lstsq
+            self.Z = np.ma.masked_array(self.Z, mask)
 
         self.piezos.V = 0
-        self.plane(0, 0, True) # calculates plane
-        self.save()
+        self.calculate_plane()
+
+    @classmethod
+    def load(cls, json_file=None, instruments={}, unwanted_keys=[]):
+        '''
+        Plane load method.
+        If no json_file specified, will load the last plane taken.
+        Useful if you lose the object while scanning.
+        '''
+        obj = super(Planefit, cls).load(json_file, instruments, unwanted_keys)
+        obj.instruments = instruments
+
+        return obj
+
+    def move_and_update(self, x=0, y=0, z=0, ux=0, uy=0, disable_atto=True):
+        '''
+        Move the attocubes by a specified distance and then update the plane.
+
+        Arguments:
+        x (y, z) - positive or negative distance to move in x (y, z) direction (~um)
+        ux (uy) - x (y) coordinate at which to update the plane (piezo V)
+        disable_atto - disable atto during touchdown to prevent crashing?
+        '''
+        self.piezos.z.V = -self.piezos.z.Vmax
+        if x != 0:
+            self.atto.x.move(x)
+        if y != 0:
+            self.atto.y.move(y)
+        if z != 0:
+            self.atto.z.move(z)
+
+        self.update_c(ux, uy, disable_atto=disable_atto)
 
 
-    def plane(self, x, y, recal=False):
-        X = self.X.flatten()
-        Y = self.Y.flatten()
-        Z = self.Z.flatten()
-        if self.a == None or recal: #calculate plane from current X, Y data
-            A = numpy.vstack([X, Y, numpy.ones(len(X))]).T
-            self.a, self.b, self.c = lstsq(A, Z)[0]
+    def plane(self, x, y):
+        '''
+        Given points x and y, calculates a point z on the plane.
+        '''
+        return self.a * x + self.b * y + self.c
 
-        return self.a*x + self.b*y + self.c
+    def plot(self, i=None, j=None):
+        '''
+        First plot:
+        Grid of individual touchdowns
+        Arguments:
+        i, j - indices of the current x,y point.
 
-    def plot(self):
+        Second plot:
+        Visualize a plane and compare to touchdown voltages.
+
+        Generates two colorplots:
+        1. Plots the touchdown voltages in a grid.
+        2. Plots the difference between the measured touchdown voltage
+        and the fit plane.
+        '''
+        if hasattr(self, 'td') and i is not None and j is not None and self.gridplot:
+            self.td.gridplot(self.ax_grid[-(i+1),j]) #FIXME indices...?
+
+        self.im[0].set_data(self.Z)
+        self.im[1].set_data(self.Zdiff)
+
+        # Adjust colorbar limits for new data
+        self.im[0].colorbar.set_clim([np.nanmin(self.Z), np.nanmax(self.Z)])
+        self.im[1].colorbar.set_clim([np.nanmin(self.Zdiff.flatten()),
+                                        np.nanmax(self.Zdiff.flatten())])
+        # Update the colorbars
+        self.im[0].colorbar.draw_all()
+        self.im[1].colorbar.draw_all()
+
+        if hasattr(self, 'fig_grid'):
+            self.fig_grid.canvas.draw()
+        self.fig.canvas.draw()
+
+        # Do not flush events for inline or notebook backends
+        if using_notebook_backend():
+            return
+
+        self.fig.canvas.flush_events()
+
+    def plot3D(self):
+        '''
+        Generates a 3D plot of the plane.
+        '''
         from mpl_toolkits.mplot3d import Axes3D
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
 
-        X = self.X
-        Y = self.Y
-        Z = self.Z
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        ax.set_zlabel('z')
 
-        ax.scatter(X, Y, Z)
+        ax.scatter(self.X, self.Y, self.Z)
+        Zfit = self.plane(self.X, self.Y)
+        ax.plot_surface(self.X, self.Y, Zfit, alpha=0.2, color=[0,1,0])
 
-        Zfit = self.plane(X,Y)
-        ax.plot_surface(X,Y,Zfit,alpha=0.2, color = [0,1,0])
-        plt.xlabel('x')
-        plt.title(self.filename,fontsize=15)
+        return fig, ax
 
-    def save(self):
-        home = os.path.expanduser("~")
-        data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Planes')
-        filename = os.path.join(data_folder, self.filename)
+    def save(self, savefig=True, **kwargs):
+        '''
+        Saves the planefit object to json.
+        Also saves the figure as a pdf, if wanted.
+        '''
+        self.ax = None
+        self.ax_grid = None #FIXME change to dict to enable auto ignore in save
+        self._save(self.filename, savefig, **kwargs)
 
-        with open(filename+'.csv', 'w') as f:
-            for s in ['span', 'center', 'numpts']:
-                f.write('%s = %f, %f \n' %(s, float(getattr(self, s)[0]),float(getattr(self, s)[1])))
-            for s in ['a','b','c']:
-                f.write('%s = %f\n' %(s, float(getattr(self, s))))
-            f.write('Montana info: \n'+self.montana.log()+'\n')
-            f.write('X (V),Y (V),Z (V)\n')
-            for i in range(self.X.shape[0]):
-                for j in range(self.X.shape[1]):
-                    if self.Z[i][j] != None:
-                        f.write('%f' %self.X[i][j] + ',' + '%f' %self.Y[i][j] + ',' + '%f' %self.Z[i][j] + '\n')
 
-        self.plot()
-        plt.savefig(filename+'.pdf', bbox_inches='tight')
+    def setup_plots(self):
+        '''
+        Set up a grid plot for the individual touchdowns on the plane.
+        '''
+        # Set up grid of touchdowns
+        if self.gridplot:
+            numX, numY = self.numpts
+            self.fig_grid = plt.figure(figsize=(numX*2, numY*2))
+            axes = []
+            for i in range(numX*numY):
+                ax = self.fig_grid.add_subplot(numX, numY, i+1)
+                ax.set_xticks([])
+                ax.set_yticks([])
+                axes.append(ax)
+            self.fig_grid.subplots_adjust(wspace=0, hspace=0)
+            self.ax_grid = np.reshape(axes, self.numpts)
 
-    def update_c(self):
+        # Set up colorplot figure
+        self.fig, self.ax = plt.subplots(1, 2, figsize=(12,6))
+        self.ax = list(self.ax)
+
+        extent = extents(self.X, self.Y)
+        im0 = self.ax[0].imshow(self.Z, origin='lower', extent=extent)
+        im1 = self.ax[1].imshow(self.Zdiff, origin='lower', cmap='RdBu', extent=extent)
+        self.im = [im0, im1]
+
+        self.ax[0].set_title('Touchdown Voltages', size='medium')
+        self.ax[1].set_title(r'$V_{\rm td} - V_{\rm fit}$', size='medium')
+
+        for ax, im in zip(self.ax, self.im):
+            ax.set_xlabel('X Position (V)')
+            ax.set_ylabel('Y Position (V)')
+
+            # Add colorbars
+            d = make_axes_locatable(ax)
+            cax = d.append_axes('right', size=0.1, pad=0.1)
+            cbar = plt.colorbar(im, cax)
+
+        self.fig.tight_layout(pad=5)
+
+
+    def update_c(self, Vx=0, Vy=0, start=None, disable_atto=True):
+        '''
+        Does a single touchdown to update the offset of the plane.
+
+        After the touchdown the corners of thep plane are checked
+        to see if any of the voltages within the X,Y scanrange
+        exceed the limits set for the voltage on the Z piezo.
+
+        Args:
+        Vx (float): X piezo voltage for the touchdown
+        Vy (float): Y piezo voltage for the thouchdown
+        start (float): Z piezo voltage where touchdown sweep starts
+        disable_atto (bool): If True, attocube motion is disabled
+        '''
+        self.make_timestamp_and_filename()
+
         old_c = self.c
-        td = touchdown.Touchdown(self.instruments, self.cap_input, Vz_max = self.Vz_max)
-        self.c = td.do()
-        for x in [-self.piezos.Vmax['x'], self.piezos.Vmax['x']]:
-            for y in [-self.piezos.Vmax['y'], self.piezos.Vmax['y']]:
-                z_maxormin = self.plane(x,y)
-                if z_maxormin > self.piezos.Vmax['z'] or z_maxormin < 0:
+        self.piezos.V = {'x': Vx, 'y': Vy, 'z': 0}
+        self.td = Touchdown(self.instruments,
+                       disable_atto = disable_atto,
+                       Vz_max = self.Vz_max,
+                       )
+        self.td.run(start=start)
+        center_z_value = self.td.Vtd
+        self.c = center_z_value - self.a * Vx - self.b * Vy
+
+        # Check that no points within the scan range exceed the limits
+        # set on the voltage over the piezos.
+        for x in [-self.piezos.x.Vmax, self.piezos.x.Vmax]:
+            for y in [-self.piezos.y.Vmax, self.piezos.y.Vmax]:
+                z_maxormin = self.plane(x, y)
+                if z_maxormin > self.piezos.z.Vmax or z_maxormin < 0:
                     self.c = old_c
-                    raise Exception('Plane now extends outside range of piezos! Move the attocubes and try again.')
-
-
-def load_last():
-    plane = Planefit(None)
-
-    home = os.path.expanduser("~")
-    data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Planes')
-    newest_plane =  max(glob.iglob(os.path.join(data_folder,'*.[ct][sx][vt]')), key=os.path.getctime) # finds the newest plane saved as a csv or txt
-    with open(newest_plane, 'r') as f:
-        for i, line in enumerate(f): # loop through lines
-            if i in (3,4,5): # these lines contain the plane information
-                exec('plane.'+line) # e.g., plane.c = 97.43
-            elif i == 6: # don't care about the rest of the file
-                break
-
-    return plane
-
-if __name__ == '__main__':
-    """ just testing fitting algorithm """
-    import random
-    from mpl_toolkits.mplot3d import Axes3D
-
-    def gauss(X, a):
-        random.seed(random.random())
-        r = [(random.random()+1/2+x) for x in X]
-        return numpy.exp(-a*(r-X)**2)
-
-    xx, yy = numpy.meshgrid(numpy.linspace(0,10,10), numpy.linspace(0,10,10))
-    X = xx.flatten()
-    Y = yy.flatten()
-
-    Z = X + 2*Y + 3
-
-    Z = Z*gauss(Z,1)
-
-    planefit = Planefit(X, Y, Z)
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-
-    ax.scatter(X, Y, Z)
-
-    zz = planefit.plane(xx,yy)
-    ax.plot_surface(xx, yy, zz, alpha=0.2, color=[0,1,0])
-    plt.show()
+                    raise Exception(
+                        'Plane now extends outside positive range of Z piezo! '+
+                        'Move the attocubes and try again.')
+        # Subtract old c, add new c
+        self.Z -= (old_c - self.c)
+        self.save(savefig=False)

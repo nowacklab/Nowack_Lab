@@ -1,116 +1,97 @@
 import numpy as np
-from . import planefit
 import matplotlib.pyplot as plt
-from ..Utilities import dummy
 from ..Instruments import piezos, nidaq, montana
 import time, os
-from .save import Measurement
+from datetime import datetime
+from ..Utilities.save import Measurement
+from ..Utilities import conversions
+from ..Utilities.utilities import AttrDict
 
 class Heightsweep(Measurement):
-    def __init__(self, instruments = None, x =0, y=0, plane=dummy.Dummy(planefit.Planefit), acx_in = 0, acy_in=1, dc_in = 2):
-        if instruments:
-            self.piezos = instruments['piezos']
-            self.daq = instruments['nidaq']
-            self.montana = instruments['montana']
-        else:
-            self.piezos = dummy.Dummy(piezos.Piezos)
-            self.daq = dummy.Dummy(nidaq.NIDAQ)
-            self.montana = dummy.Dummy(montana.Montana)
+    _daq_inputs = ['dc','acx','acy']
+    _conversions = AttrDict({
+        # Assume high; changed in init when array loaded
+        'dc': conversions.Vsquid_to_phi0['High'],
+        'cap': conversions.V_to_C,
+        'acx': conversions.Vsquid_to_phi0['High'],
+        'acy': conversions.Vsquid_to_phi0['High'],
+        'x': conversions.Vx_to_um,
+        'y': conversions.Vy_to_um
+    })
+    instrument_list = ['piezos','montana','squidarray']
 
+
+    def __init__(self, instruments = {}, plane=None, x=0, y=0, zstart=0, zend=None, scan_rate=60):
+        super().__init__(instruments=instruments)
+
+        self.plane = plane
         self.x = x
         self.y = y
-        self.plane = plane
-        self.acx_in = 'ai%s' %acx_in
-        self.acy_in = 'ai%s' %acy_in
-        self.dc_in = 'ai%s' %dc_in
+        self.zstart = self.plane.plane(self.x, self.y) - zstart
+        if zend is None:
+            self.zend = -self.piezos.z.Vmax
+        else:
+            self.zend = self.plane.plane(self.x, self.y) - zend
+        self.scan_rate = scan_rate
+        self.V = AttrDict({
+            chan: np.nan for chan in self._daq_inputs + ['piezo', 'z']
+        })
 
-        self.filename = ''
-        
-    def __getstate__(self):
-        self.save_dict = {"timestamp": self.timestasmp,
-                          "peizos": self.piezos,
-                          "daq": self.daq,
-                          "montanta": self.montana,
-                          "x": self.x,
-                          "y": self.y,
-                          "plane": self.plane,
-                          "acx_in": self.acx_in,
-                          "acy_in": self.acy_in,
-                          "dc_in": self.dc_}
-        return self.save_dict
+        # Load the correct SAA sensitivity based on the SAA feedback resistor
+        try:  # try block enables creating object without instruments
+            Vsquid_to_phi0 = conversions.Vsquid_to_phi0[self.squidarray.sensitivity]
+            self._conversions['acx'] = Vsquid_to_phi0
+            self._conversions['acy'] = Vsquid_to_phi0
+            # doesn't consider preamp gain. If preamp communication fails, then
+            # this will be recorded
+            self._conversions['dc'] = Vsquid_to_phi0
+            # Divide out the preamp gain for the DC channel
+            self._conversions['dc'] /= self.preamp.gain
+        except:
+            pass
 
     def do(self):
-        self.filename = time.strftime('%Y%m%d_%H%M%S') + '_heightsweep'
-        self.timestamp = time.strftime("%Y-%m-%d @ %I:%M:%S%p")
+
         self.temp_start = self.montana.temperature['platform']
 
-        Vstart = {'z': self.plane.plane(self.x, self.y)}
-        Vend = {'z': -self.piezos.Vmax['z']}
+        Vstart = {'z': self.zstart}
+        Vend = {'z': self.zend}
 
         self.piezos.V = {'x':self.x, 'y':self.y, 'z': Vstart['z']}
-        time.sleep(3) # wait at the surface
+        self.squidarray.reset()
+        time.sleep(10) # wait at the surface
 
-        self.daq.add_input(self.acx_in)
-        self.daq.add_input(self.acy_in)
-        self.daq.add_input(self.dc_in)
-        out, V, t = self.piezos.sweep(Vstart, Vend)
+        output_data, received = self.piezos.sweep(Vstart, Vend,
+                                        chan_in = self._daq_inputs,
+                                        sweep_rate = self.scan_rate)
 
-        self.z = self.plane.plane(self.x, self.y)-np.array(out['z'])
-        self.Vacx = V[self.acx_in]
-        self.Vacy = V[self.acy_in]
-        self.Vdc = V[self.dc_in]
+        for chan in self._daq_inputs:
+            self.V[chan] = received[chan]
+        self.V['z'] = self.zstart - np.array(output_data['z'])
 
         self.piezos.zero()
 
         self.plot()
 
-        self.save()
-
-
 
     def plot(self):
-        #self.fig, self.ax = plt.subplots()
-        #plt.title('%s\nHeight sweep at (%f, %f)' %(self.filename, self.x, self.y), fontsize=20)
-        #self.ax.set_xlabel(r'$V_z^{samp} - V_z (V)$', fontsize=20)
-        #self.ax.set_ylabel('AC Response (V)', fontsize=20)
+        super().plot()
 
-        #self.ax2 = self.ax.twinx()
-        #self.ax2.plot(self.z, self.Vdc, '.r', markersize=6, alpha=0.5)
-        #self.ax.plot(self.z, self.Vac, '.k', markersize=6, alpha=0.5)
-        #self.ax2.set_ylabel('DC Magnetometry (V)', color='r', fontsize=20)
+        for chan in self._daq_inputs:
+            self.ax[chan].plot(self.V['z'], self.V[chan]*self._conversions[chan], '.k', markersize=6, alpha=0.5)
+        self.fig.tight_layout()
+        self.fig.canvas.draw()
+
+
+    def setup_plots(self):
         self.fig = plt.figure()
+        self.fig.subplots_adjust(hspace=1.2)
+        self.ax = AttrDict({})
 
-        self.ax_dc = self.fig.add_subplot(311)
-        self.ax_dc.set_xlabel(r'$V_z^{samp} - V_z (V)$')
-        self.ax_dc.set_title('%s\nDC Magnetometry (V) at (%f,%f)' %(self.filename, self.x, self.y))
-        self.ax_dc.plot(self.z, self.Vdc, '.k', markersize=6, alpha=0.5)
+        self.ax['dc'] = self.fig.add_subplot(311)
+        self.ax['acx'] = self.fig.add_subplot(312)
+        self.ax['acy'] = self.fig.add_subplot(313)
 
-        self.ax_ac_x = self.fig.add_subplot(312)
-        self.ax_ac_x.set_xlabel(r'$V_z^{samp} - V_z (V)$')
-        self.ax_ac_x.set_title('%s\nX component AC Response (V) at (%f,%f)' %(self.filename, self.x, self.y))
-        self.ax_ac_x.plot(self.z, self.Vacx, '.k', markersize=6)
-
-        self.ax_ac_y = self.fig.add_subplot(313)
-        self.ax_ac_y.set_xlabel(r'$V_z^{samp} - V_z (V)$')
-        self.ax_ac_y.set_title('%s\nY component AC Response (V) at (%f,%f)' %(self.filename, self.x, self.y))
-        self.ax_ac_y.plot(self.z, self.Vacy, '.k', markersize=6)
-
-    def save(self):
-        home = os.path.expanduser("~")
-        data_folder = os.path.join(home, 'Dropbox (Nowack lab)', 'TeamData', 'Montana', 'Height sweeps')
-
-        filename = os.path.join(data_folder, self.filename)
-
-        with open(filename+'.csv', 'w') as f:
-            f.write('x = %f\n' %self.x)
-            f.write('y = %f\n' %self.y)
-            for s in ['a','b','c']:
-                f.write('plane.%s = %f\n' %(s, float(getattr(self.plane, s))))
-            f.write('Montana info: \n'+self.montana.log()+'\n')
-            f.write('starting temperature: %f\n' %self.temp_start)
-
-            f.write('Z(V), Vacx(V), Vacy, Vdc(V)\n')
-            for i in range(len(self.z)):
-                f.write('%f, %f, %f, %f\n' %(self.z[i], self.Vacx[i], self.Vacy[i], self.Vdc[i]))
-
-        self.fig.savefig(filename+'.pdf', bbox_inches='tight')
+        for label, ax in self.ax.items():
+            ax.set_xlabel(r'$V_z^{samp} - V_z (V)$')
+            ax.set_title('%s\n%s (V) at (%.2f, %.2f)' %(self.filename, label, self.x, self.y))
