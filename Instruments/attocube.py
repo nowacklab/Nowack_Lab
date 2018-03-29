@@ -289,6 +289,5 @@ class Positioner(Instrument):
         '''
         self.anc.saveParams()
 
-
 class Attocube(ANC350): ### ANC350 is closed loop controller, we use this one at the moment.
     pass
