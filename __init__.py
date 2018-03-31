@@ -1,3 +1,5 @@
+print('Importing a bunch of stuff, hang tight!')
+
 import os, shutil
 # Workaround for scipy altering KeyboardInterrupt behavior
 os.environ['FOR_DISABLE_CONSOLE_CTRL_HANDLER'] = '1'
