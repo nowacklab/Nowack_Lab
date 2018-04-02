@@ -32,17 +32,17 @@ class ArrayTune(Measurement):
         squid_bias (float): Bias point for SQUID lock
         squid_tol (float): Allowed DC offset for the locked SQUID
         offset (float): Tune the lockpoint up/down on the SQUID characaristic.
-        conversion (float): in phi_0/V (1/1.44 ibm, 1/2.1 hypres)
+        conversion (float): in phi_0/V (1/1.44 ibm, 1/2.1 hypres) in MED sens
         """
         super(ArrayTune, self).__init__(instruments=instruments)
         self.instruments = instruments
         self.squid_bias = squid_bias
-        self.conversion = 5 # Conversion between mod current and voltage
+        #self.conversion = 5 # Conversion between mod current and voltage
         self.squid_tol = squid_tol
         self.aflux_tol = aflux_tol
         self.sflux_offset = sflux_offset
         self.aflux_offset = aflux_offset
-        self.saaconversion = conversion # FIXME high? med?
+        self.saaconversion = conversion # med
 
     def acquire(self):
         """Ramp the modulation coil current and monitor the SAA response."""
@@ -58,7 +58,7 @@ class ArrayTune(Measurement):
     def tune_squid_setup(self):
         """Configure SAA for SQUID tuning."""
         self.squidarray.lock("Array")
-        self.squidarray.S_flux_lim = 150
+        self.squidarray.S_flux_lim = 100
         self.squidarray.S_flux = 0
         self.squidarray.testInput = "S_flux"
         self.squidarray.testSignal = "On"
@@ -70,7 +70,8 @@ class ArrayTune(Measurement):
         """Tune the SQUID and adjust the DC SAA flux."""
         self.tune_squid_setup()
         self.char = self.acquire()
-        error = np.mean(self.char[-1]) - self.aflux_offset
+        error = np.median(self.char[-1]) - self.aflux_offset
+        print('Tune_squid error:', error)
         if np.abs(error) < self.aflux_tol:
             return self.lock_squid()
         elif attempts == 0:
@@ -86,8 +87,8 @@ class ArrayTune(Measurement):
         self.squidarray.testSignal = "Off"
         self.squidarray.reset()
         ret = self.daq.monitor(["saa"], 0.01, sample_rate = 100000)
-        error = np.mean(ret["saa"]) - self.sflux_offset
-        print(error)
+        error = np.median(ret["saa"]) - self.sflux_offset
+        print('lock_squid error:', error)
         if np.abs(error) < self.squid_tol:
             print("locked with {} attempts".format(5-attempts))
             return True
@@ -99,40 +100,42 @@ class ArrayTune(Measurement):
             return self.lock_squid(attempts - 1)
 
     def adjust(self, attr, error):
-        """Adjust DC flux to center the trace @ 0 V."""
+        """Adjust DC flux to center the trace @ 0 V.
+        attr:   (string): parameter of squidarray to change
+        error:  (float):  distance in V from desired point
+        """
         value = getattr(self.squidarray, attr)
 
-        #conversion = self.calibrate_adjust(attr)
+        conversion = -1/(self.calibrate_adjust(attr))  
 
-        if value + error * self.conversion < 0:
+        print('    adjusting {0}: error={1:3.3f}, {0}+={2:3.3f}'.format(attr, 
+            error, error*conversion))
+
+        if value + error * conversion < 0:
             # Force a jump by resetting
             setattr(self.squidarray, attr, value + 50)
-        elif value + error * self.conversion > 150:
+        elif value + error * conversion > 150:
             setattr(self.squidarray, attr, 0)
         else:
             # Directly correct the offset
-            setattr(self.squidarray, attr, value + self.conversion * error)
+            setattr(self.squidarray, attr, value + conversion * error)
         self.squidarray.reset()
 
     def _getmean(self, monitortime):
         received = self.daq.monitor('saa', monitortime, sample_rate=256000)
         return np.mean(received['saa'])
 
-    def calibrate_adjust(self, attr, monitortime=.1):
+    def calibrate_adjust(self, attr, monitortime=.25, step=10):
         """ create conversion factor for adjust in V/[attr]"""
         conversion = 0
-        step       = 1
-        ts_state   = self.squidarray.testSignal
         attr_state = getattr(self.squidarray,attr)  
 
-        self.squidarray.testSignal='Off'
         mean1 = self._getmean(monitortime)
         setattr(self.squidarray, attr, attr_state + step)
         mean2 = self._getmean(monitortime)
 
-        conversion = abs(mean2-mean1)/1
+        conversion = (mean2-mean1)/step
 
-        self.squidarray.testSignal = ts_state
         setattr(self.squidarray, attr, attr_state)
 
         return conversion
@@ -158,19 +161,21 @@ class ArrayTune(Measurement):
         self.ax[1].set_ylabel("")
         self.ax[1].set_title("DC SQUID Signal ($\Phi_o$)",
                         size="medium")
-
-    def run(self, save_appendedpath = '', save=True):
-        self.istuned = self.tune_squid()
-        if self.istuned == False:
-            return False
-        self.preamp.filter = (1, 300000)
+    def run_spectrum(self, save_appendedpath=''):
+        self.squidarray.sensitivity = "High" #Essential, for some reason
+        self.preamp.gain = 1
+        self.preamp.filter = (1, 100000)
         self.squidarray.reset()
         self.spectrum = SQUIDSpectrum(self.instruments, 
                                       preamp_dccouple_override=True)
-        self.spectrum.conversion = self.saaconversion
+        self.spectrum.conversion = self.saaconversion/10
         self.spectrum.saa_status = self.squidarray.__dict__
-        self.spectrum.run(save_appendedpath = save_appendedpath)
-        plt.close()
+        #print('spectrum conversion = ', self.spectrum.conversion)
+        #print('spectrum gain = ', self.spectrum.preamp_gain)
+        print('squid sensitivity = ', self.squidarray.sensitivity)
+        self.spectrum.run(welch=True, save_appendedpath = save_appendedpath)
+
+    def run_mi(self, save_appendedpath=''):
         self.squidarray.sensitivity = "Medium"
         self.squidarray.reset()
         self.preamp.filter = (1, 300)
@@ -182,6 +187,15 @@ class ArrayTune(Measurement):
                                        conversion = self.saaconversion)
         self.sweep.saa_status = self.squidarray.__dict__
         self.sweep.run(save_appendedpath = save_appendedpath)
+
+    def run(self, save_appendedpath = '', save=True):
+        self.squidarray.sensitivity = "Medium"
+        self.istuned = self.tune_squid()
+        if self.istuned == False:
+            return False
+        self.run_spectrum(save_appendedpath)
+        plt.close()
+        self.run_mi(save_appendedpath)
         plt.close()
         self.plot()
         plt.close()
