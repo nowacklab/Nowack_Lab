@@ -1,12 +1,10 @@
 import time, os, matplotlib, matplotlib.pyplot as plt, numpy as np
 from scipy.interpolate import interp1d
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from ..Utilities import conversions
-from ..Utilities.save import Measurement, get_todays_data_dir, get_local_data_path
+from ..Utilities.save import Measurement
 from ..Utilities.utilities import AttrDict
-from ..Utilities.plotting.plot_mpl import extents, using_notebook_backend
-
+from ..Utilities.plotting.plot_mpl import extents
 
 class Scanplane(Measurement):
     '''
@@ -283,111 +281,96 @@ class Scanplane(Measurement):
             self.plot()
         self.piezos.V = 0
 
-    def plot(self):
-        '''
-        Update all plots.
-        '''
-        super().plot()
 
-        # Update the line plot
+    def plot_update(self):
+        '''
+        Update the data for all plots.
+        '''
+        # Update the line plot as well.
         self.plot_line()
 
         # Iterate over the color plots and update data with new line
         for chan in self._daq_inputs:
-            data_nan = np.array(self.V[chan] * self._conversions[chan],
+            # Convert None in data to NaN
+            data = np.array(self.V[chan] * self._conversions[chan],
                                 dtype=np.float)
-            data_masked = np.ma.masked_where(np.isnan(data_nan), data_nan)
+            self.update_image(self.im[chan], data)
 
-            # Set a new image for the plot
-            self.im[chan].set_data(data_masked)
-            # Adjust colorbar limits for new data
-            self.cbars[chan].set_clim([data_masked.min(),
-                                       data_masked.max()])
-            # Update the colorbars
-            self.cbars[chan].draw_all()
-
-        self.fig.canvas.draw()
-
-        # Do not flush events for inline or notebook backends
-        if using_notebook_backend():
-            return
-
-        self.fig.canvas.flush_events()
 
     def setup_plots(self):
         '''
         Set up all plots.
         '''
+
         # Use the aspect ratio of the image set subplot size.
         # The aspect ratio is Xspan/Yspan
         aspect = self.span[0] / self.span[1]
-        numplots = 4
-        # If X is longer than Y we want 2 columns of wide plots
+        numplots = len(self._daq_inputs)
+
+        # If X is longer than Y, we want 2 columns of wide plots
         if aspect > 1:
             num_row = int(np.ceil(numplots / 2))
             num_col = 2
             width = 14
-            # Add 1 to height for title/axis labels
-            height = min(width, width / aspect) + 1
+            height = width/aspect + 1  # +1 for title/axis labels
         # If Y is longer than X we want 2 rows of tall plots
         else:
             num_row = 2
             num_col = int(np.ceil(numplots / 2))
             height = 10
-            # Pad the plots for the colorbars/axis labels
-            width = min(height, height * aspect) + 4
+            width = height*aspect + 4  # pad for colorbars/axis labels
 
-        self.fig, self.axes = plt.subplots(num_row,
-                                           num_col,
-                                           figsize=(width, height))
-        self.fig_cuts, self.axes_cuts = plt.subplots(4, 1, figsize=(6, 8),
-                                                     sharex=True)
-        # Convert the axis numpy arrays to list so they aren't saved as data.
-        self.axes = list(self.axes.flatten())
-        self.axes_cuts = list(self.axes_cuts.flatten())
-        cmaps = ['RdBu',
-                 'afmhot',
-                 'magma',
-                 'magma']
-        clabels = ['DC Flux ($\Phi_0$)',
-                   'Capacitance (fF)',
-                   'AC X ($\Phi_0$)',
-                   'AC Y ($\Phi_0$)']
+        # Make axis dicts, with daq input channels as keys.
+        self.fig = plt.figure(figsize=(width,height))
+        self.fig_cuts = plt.figure(figsize=(6,8))
+        self.ax = AttrDict()
+        self.ax_cuts = AttrDict()
+        for i, chan in enumerate(self._daq_inputs):
+            # Populate axes in the figure.
+            self.ax[chan] = self.fig.add_subplot(num_row, num_col, i+1)
+            self.ax_cuts[chan] = self.fig_cuts.add_subplot(
+                                                len(self._daq_inputs), 1, i+1)
+
+        # Determine colormaps and labels for each channel.
+        cmaps = AttrDict(dc='RdBu', cap='afmhot', acx='magma', acy='magma')
+        clabels = AttrDict(
+            dc = 'DC Flux ($\Phi_0$)',
+            cap = 'Capacitance (fF)',
+            acx = 'AC X ($\Phi_0$)',
+            acy = 'AC Y ($\Phi_0$)',
+        )
 
         self.im = AttrDict()
-        self.cbars = AttrDict()
         self.lines_full = AttrDict()
         self.lines_interp = AttrDict()
 
-        # Plot the DC signal, capactitance and AC signal on 2D colorplots
-        for ax, chan, cmap, clabel in zip(self.axes,
-                                          self._daq_inputs,
-                                          cmaps,
-                                          clabels):
-            # Convert None in data to NaN
-            nan_data = np.array(self.V[chan] * self._conversions[chan])
-            # Create masked array where data is NaN
-            masked_data = np.ma.masked_where(np.isnan(nan_data), nan_data)
+        for chan in self._daq_inputs:
+            ax = self.ax[chan]
 
+            # Plot the DC signal, capactitance and AC signal on 2D colorplots
             # Plot masked data on the appropriate axis with imshow
-            image = ax.imshow(masked_data, cmap=cmap, origin='lower',
+            # self.V[chan] as initialized is just a 2D array of nans.
+            image = ax.imshow(self.V[chan], cmap=cmaps[chan], origin="lower",
                               extent = extents(self.X, self.Y))
-
-            # Create a colorbar that matches the image height
-            d = make_axes_locatable(ax)
-            cax = d.append_axes('right', size=0.1, pad=0.1)
-            cbar = plt.colorbar(image, cax=cax)
-            cbar.set_label(clabel, rotation=270, labelpad=12)
-            cbar.formatter.set_powerlimits((-2, 2))
             self.im[chan] = image
-            self.cbars[chan] = cbar
+            self.add_colorbar(ax, label=clabels[chan])
 
             # Label the axes - including a timestamp
-            ax.set_xlabel('X Position (V)')
-            ax.set_ylabel('Y Position (V)')
-            title = ax.set_title(self.timestamp, size='medium', y=1.02)
-            # If the title intersects the exponent label from the colorbar
-            # shift the title up and center it
+            ax.set_xlabel("X Position (V)")
+            ax.set_ylabel("Y Position (V)")
+            title = ax.set_title(self.timestamp, size=10, y=1.02)
+
+            # Plot the last linecut for DC, AC and capacitance signals
+            ax = self.ax_cuts[chan]
+
+            # ax.plot returns a list containing the line
+            # Take the line object - not the list containing the line
+            self.lines_full[chan] = ax.plot(np.nan, np.nan, '-')[0]
+            self.lines_interp[chan] = ax.plot(np.nan, np.nan, 'ok', ms=3)[0]
+            ax.set_ylabel(clabels[chan])
+
+            # Scientific notation for <10^-2, >10^2
+            ax.yaxis.get_major_formatter().set_powerlimits((-2,2))
 
             # ROI
             if self.ROI is not None:
@@ -402,64 +385,43 @@ class Scanplane(Measurement):
                 c = matplotlib.collections.PatchCollection([p], facecolors=['none'], edgecolors=['k'])
                 ax.add_collection(c)
 
-        # Plot the last linecut for DC, AC and capacitance signals
-        for ax, chan, clabel in zip(self.axes_cuts,
-                                    self._daq_inputs,
-                                    clabels):
-            # ax.plot returns a list containing the line
-            # Take the line object - not the list containing the line
-            self.lines_full[chan] = ax.plot(self.Vfull['piezo'],
-                                            self.Vfull[chan],
-                                            '-')[0]
-            self.lines_interp[chan] = ax.plot(self.Vinterp['piezo'],
-                                              self.Vinterp[chan], 'ok',
-                                              markersize=3)[0]
-            ax.set_ylabel(clabel)
-            # Scientific notation for <10^-2, >10^2
-            ax.yaxis.get_major_formatter().set_powerlimits((-2, 2))
         # Label the X axis of only the bottom plot
-        self.axes_cuts[-1].set_xlabel('Position (V)')
+        self.ax_cuts[self._daq_inputs[-1]].set_xlabel("Position (V)")
         # Title the top plot with the timestamp
-        self.axes_cuts[0].set_title(self.timestamp, size='medium')
+        self.ax_cuts[self._daq_inputs[0]].set_title(self.timestamp, size=10)
 
         # Adjust subplot layout so all labels are visible
         # First call tight layout to prevent axis label overlap.
         self.fig.tight_layout()
         self.fig_cuts.tight_layout()
 
-        # Show the (now empty) figures
-        self.fig.canvas.draw()
-        self.fig_cuts.canvas.draw()
+        # Update plots with actual data
+        self.plot()
+
 
     def plot_line(self):
         '''
         Update the data in the linecut plot.
-
         '''
-        clabels = ['DC Flux ($\Phi_o$)',
-                   'Capacitance (F)',
-                   'AC X ($\Phi_o$)',
-                   'AC Y ($\Phi_o$)']
-        for ax, chan, clabel in zip(self.axes_cuts, self._daq_inputs, clabels):
-            # Update X and Y data for the 'full data'
-            self.lines_full[chan].set_xdata(self.Vfull['piezo'])
-            self.lines_full[chan].set_ydata(self.Vfull[chan] *
+        for chan in self._daq_inputs:
+            ax = self.ax_cuts[chan]
+            l_full = self.lines_full[chan]
+            l_interp = self.lines_interp[chan]
+
+            # Update X and Y data for the "full data"
+            l_full.set_xdata(self.Vfull['piezo'] *
+                                            self._conversions[self.fast_axis])
+            l_full.set_ydata(self.Vfull[chan] *
                                             self._conversions[chan])
             # Update X and Y data for the interpolated data
-            self.lines_interp[chan].set_xdata(self.Vfull['piezo'])
-            self.lines_interp[chan].set_ydata(self.Vfull[chan] *
-                                              self._conversions[chan])
+            l_interp.set_xdata(self.Vinterp['piezo'] *
+                                            self._conversions[self.fast_axis])
+            l_interp.set_ydata(self.Vinterp[chan] *
+                                            self._conversions[chan])
             # Rescale axes for newly plotted data
             ax.relim()
             ax.autoscale_view()
-        # Update the figure
-        self.fig_cuts.canvas.draw()
 
-        # Do not flush events for inline or notebook backends
-        if using_notebook_backend():
-            return
-
-        self.fig_cuts.canvas.flush_events()
 
     def save_line(self, i, Vstart):
         '''

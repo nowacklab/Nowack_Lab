@@ -160,7 +160,3 @@ def update2D(im, z, center_at_zero=False, equal_aspect=True):
         clim(im, zm.min(), zm.max())
     else:
         clim(im, -abs(zm).max(), abs(zm).max())
-
-def using_notebook_backend():
-    inline = 'module://ipykernel.pylab.backend_inline'
-    return matplotlib.get_backend() in ('nbAgg', inline)
