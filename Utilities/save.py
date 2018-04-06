@@ -437,6 +437,7 @@ class Measurement:
         Check the do() function for additional available kwargs.
         '''
         self.interrupt = False
+        self._save_appendedpath = save_appendedpath
         done = None
 
         ## Before the do.
@@ -466,6 +467,7 @@ class Measurement:
         # Print elapsed time e.g. "Scanplane took 2.3 hours."
         print('%s took %.1f %s.' %(self.__class__.__name__, t, t_unit))
         #print(save_appendedpath)
+
         self.save(appendedpath = save_appendedpath)
 
         return done
