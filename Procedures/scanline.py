@@ -144,4 +144,4 @@ class Scanline(Measurement):
             ax.set_title(self.filename)
             ax.yaxis.get_major_formatter().set_powerlimits((-2, 2))
 
-        self.ax['cap'].set_ylabel('cap (F)')
+        self.ax['cap'].set_ylabel('cap (fF)')
