@@ -91,7 +91,7 @@ class ArrayTune(Measurement):
         if np.abs(error) < self.aflux_tol:
             return True
         elif attempts == 0:
-            print("could not tune array flux.")
+            print("Cannot tune SQUID.  Cannot find good place on characteristic")
             return False
         else:
             self.adjust("A_flux", error)
@@ -112,7 +112,7 @@ class ArrayTune(Measurement):
             print("locked with {} attempts".format(5-attempts))
             return True
         elif attempts == 0:
-            print("could not tune SQUID flux.")
+            print("Cannot lock SQUID. Cannot zero signal within squid_tol.")
             return False
         else:
             self.adjust("S_flux", error)
@@ -144,16 +144,16 @@ class ArrayTune(Measurement):
 
     def _getmean(self, monitortime):
         received = self.daq.monitor('saa', monitortime, sample_rate=256000)
-        return np.mean(received['saa'])
+        return np.mean(received['saa']), np.std(received['saa'])
 
     def calibrate_adjust(self, attr, monitortime=.25, step=10):
         """ create conversion factor for adjust in V/[attr]"""
         conversion = 0
         attr_state = getattr(self.squidarray,attr)  
 
-        mean1 = self._getmean(monitortime)
+        mean1,_ = self._getmean(monitortime)
         setattr(self.squidarray, attr, attr_state + step)
-        mean2 = self._getmean(monitortime)
+        mean2,_ = self._getmean(monitortime)
 
         conversion  = (mean2-mean1)/step
         conversion_ = np.sign(conversion) * np.minimum(
@@ -206,6 +206,10 @@ class ArrayTune(Measurement):
         self.spectrum.saa_status = self.squidarray.__dict__
         if self.debug:
             print('squid sensitivity = ', self.squidarray.sensitivity)
+
+        self.isOL = self.preamp.is_OL()
+        if self.isOL:
+            print('Overloaded Preamp!')
         self.spectrum.run(welch=True, save_appendedpath = save_appendedpath)
 
     def run_mi(self, save_appendedpath=''):
@@ -225,21 +229,28 @@ class ArrayTune(Measurement):
         # TODO: Measure array V/phi_0 conversion
         # TODO: take array spectrum
 
+        # Try to measure squid V/phi_0 conversion
+        #self.squidarray.S_flux_lim = 100
+        #[self.selfcal, 
+        # self.saaconversion, 
+        # self.conv_sflux]  = self.findconversion(stepsize=5, dur=.001)
+        #print('Self calibrated? = {0}, phi_0/V = {1}'.format(
+        #            self.selfcal, self.saaconversion))
+
         # Tune squid
-        self.squidarray.sensitivity = "Medium"
         self.istuned = self.tune_squid()
         if self.istuned == False:
             print('Array Tune Failed, will not save array_tune')
+            sys.stdout.flush()
             self._DO_NOT_SAVE = True
             return False
 
         self.islocked = self.lock_squid()
         if self.islocked == False:
             print('Array Tune Failed, will not save array_tune')
+            sys.stdout.flush()
             self._DO_NOT_SAVE = True
             return False
-
-        # TODO: Measure squid V/phi_0 conversion
 
         self.run_spectrum(self._save_appendedpath)
         plt.close()
@@ -255,6 +266,53 @@ class ArrayTune(Measurement):
             return
 
         self._save(filename, savefig=True, **kwargs)
+
+    def findconversion(self, dur=.1, stepsize=1):
+        '''
+        Returns false or 
+        [the phi_0/V to make phi_0 jump at med,
+         the flux bias point necessary to make the jump]
+        '''
+        istuned = self.tune_squid()
+        if not istuned:
+            return [False, self.saaconversion, -1]
+        islocked = self.lock_squid()
+        if not islocked:
+            return [False, self.saaconversion, -1]
+        self.squidarray.S_flux_lim = 100
+        self.squidarray.sensitivity = 'Medium'
+        return self._findconversion('S_flux', 100, stepsize, dur)
+
+    def _findconversion(self, attrname, maxattrval, stepsize=1, dur=.1):
+        '''
+        To find the phi_0/v, one must have a locked device (squid or saa)
+        and increment some parameter (s_flux, a_flux) until you see a 
+        jump.
+
+        returns false or 
+        [phi_0/V at med, sflux to get the jump]
+        '''
+
+
+        self.squidarray.testSignal='Off'
+        self.squidarray.sensitivity = 'Medium'
+        setattr(self.squidarray, attrname, 0)
+        self.squidarray.reset()
+
+        for attrval in np.arange(0, maxattrval+1, stepsize):
+            self.squidarray.sensitivity = 'Medium'
+            setattr(self.squidarray, attrname, attrval)
+            premean, prestd = self._getmean(dur)
+            self.squidarray.reset()
+            posmean, posstd = self._getmean(dur)
+            if np.abs(premean - posmean) > 3*np.maximum(prestd, posstd):
+                print(attrname, '=', attrval)
+                return [True, 1/abs(posmean - premean), attrval]
+
+        return [False, self.saaconversion, -1]
+
+
+
 
 class ArrayTuneBatch(Measurement):
     def __init__(self, 
@@ -553,6 +611,19 @@ class ArrayTuneBatch(Measurement):
                     m[0], m[1], sbias_y[m[3]], aflux_x[m[4]], filenames[m[2]])
             st += '\n'
         return st
+
+    @staticmethod
+    def sorter(master, *args):
+        ks = np.argsort(master.flatten())
+        arrs = [master, *args]
+        for i in len(arrs):
+            arrs[i] = arrs[i][ks]
+        return arrs
+
+    def currsort(self):
+        return sorter(self.plotting_z[0], self.plotting_z[1], 
+                      self.arraytunefilenames)
+            
         
     def currminstostr(self):
         return self.minstostr(
