@@ -6,9 +6,9 @@ ipython = get_ipython()
 class nbsave():
 
     def sv(self, filename):
-         ipython.magic('run -i C:\\Users\PHIL\\Documents'
+         ipython.magic('run -i C:\\Users\Orenstein\\Documents'
         + '\\GitHub\\Nowack_Lab\\Utilities\\varsaver.py %s' % filename)
          return filename
     def lv(self, filename):
-         ipython.magic('run -i C:\\Users\PHIL\\Documents'
+         ipython.magic('run -i C:\\Users\Orenstein\\Documents'
         + '\\GitHub\\Nowack_Lab\\Utilities\\varloader.py %s' % filename)
