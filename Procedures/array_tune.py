@@ -17,7 +17,10 @@ reload(Nowack_Lab.Utilities.save)
 from Nowack_Lab.Utilities.save import Measurement
 
 from ..Procedures.daqspectrum import SQUIDSpectrum
-from ..Procedures.mutual_inductance import MutualInductance2
+
+import Nowack_Lab.Procedures.mutual_inductance
+reload(Nowack_Lab.Procedures.mutual_inductance)
+from Nowack_Lab.Procedures.mutual_inductance import MutualInductance2
 
 
 class ArrayTune(Measurement):
@@ -68,8 +71,8 @@ class ArrayTune(Measurement):
     def tune_squid_setup(self):
         """Configure SAA for SQUID tuning."""
         self.squidarray.lock("Array")
-        self.squidarray.S_flux_lim = 100
-        self.squidarray.S_flux = 50
+        #self.squidarray.S_flux_lim = 100
+        self.squidarray.S_flux = self.squidarray.S_flux_lim/2
         self.squidarray.testInput = "S_flux"
         self.squidarray.testSignal = "On"
         self.squidarray.S_bias = self.squid_bias
@@ -181,6 +184,7 @@ class ArrayTune(Measurement):
         self.ax[0].plot(self.char[1], self.char[2])
         self.ax[0].set_xlabel("Test Signal (V)")
         self.ax[0].set_ylabel("SAA Signal (V)", size="medium")
+        self.ax[0].set_title(" {0:2.2e} phi_0/V".format(self.spectrum.conversion))
 
         # Plot the spectrum
         self.ax[2].loglog(self.spectrum.f,
@@ -188,12 +192,16 @@ class ArrayTune(Measurement):
         self.ax[2].set_xlabel("Frequency (Hz)")
         self.ax[2].set_title("PSD ($\mathrm{%s/\sqrt{Hz}}$)" % self.spectrum.units,
                         size="medium")
+        self.ax[2].annotate('Sbias = {0:2.2e} uA\nAflux = {1:2.2e} uA'.format(
+                            self.squid_bias, self.aflux_offset), 
+                            xy=(.02, .2), xycoords='axes fraction',
+                            fontsize=8, ha='left', va='top', family='monospace')
         
         # Plot the sweep
         self.sweep.ax = self.ax[1]
         self.sweep.plot()
         self.ax[1].set_ylabel("")
-        self.ax[1].set_title("DC SQUID Signal ($\Phi_o$)",
+        self.ax[1].set_title("DC SQUID Signal (V)",
                         size="medium")
     def run_spectrum(self, save_appendedpath=''):
         self.squidarray.sensitivity = "High" #Essential, for some reason
@@ -221,7 +229,8 @@ class ArrayTune(Measurement):
         self.sweep = MutualInductance2(self.instruments,
                                        np.linspace(-1e-3, 1e-3, 1000),
                                        Rbias=340,
-                                       conversion = self.saaconversion)
+                                       conversion = 1,
+                                       units = 'V')
         self.sweep.saa_status = self.squidarray.__dict__
         self.sweep.run(save_appendedpath = save_appendedpath)
 
@@ -279,9 +288,9 @@ class ArrayTune(Measurement):
         islocked = self.lock_squid()
         if not islocked:
             return [False, self.saaconversion, -1]
-        self.squidarray.S_flux_lim = 100
+        sfluxlim = self.squidarray.S_flux_lim
         self.squidarray.sensitivity = 'Medium'
-        return self._findconversion('S_flux', 100, stepsize, dur)
+        return self._findconversion('S_flux', sfluxlim, stepsize, dur)
 
     def _findconversion(self, attrname, maxattrval, stepsize=1, dur=.1):
         '''
@@ -305,7 +314,7 @@ class ArrayTune(Measurement):
             premean, prestd = self._getmean(dur)
             self.squidarray.reset()
             posmean, posstd = self._getmean(dur)
-            if np.abs(premean - posmean) > 3*np.maximum(prestd, posstd):
+            if np.abs(premean - posmean) > 8*np.maximum(prestd, posstd):
                 print(attrname, '=', attrval)
                 return [True, 1/abs(posmean - premean), attrval]
 
@@ -355,6 +364,52 @@ class ArrayTuneBatch(Measurement):
         self.leastlineari = -1 
         self.leastlinearval = 1e9
         self.debug = debug
+
+    def findconversion(self, stepsize=5, dur=.001):
+        self.caltrue       = np.zeros((len(self.sbias), len(self.aflux)))
+        self.saaconversion = np.full((len(self.sbias), len(self.aflux)), np.nan)
+        self.conv_sflux    = np.full((len(self.sbias), len(self.aflux)), np.nan)
+        ix = -1 
+        iy = -1 
+        for sb in self.sbias:
+            print('Sbias = ', sb)
+            ix += 1
+            iy = -1 
+            for af in self.aflux:
+                iy += 1
+                at = ArrayTune(self.instruments, squid_bias=sb, 
+                       squid_tol = self.squid_tol,
+                       aflux_tol = self.aflux_tol,
+                       sflux_offset = 0,
+                       aflux_offset = af,
+                       conversion=self.conversion, debug=self.debug)
+                [caltrue, 
+                 saaconversion, 
+                 conv_sflux
+                ] = at.findconversion( stepsize=stepsize, dur=dur)
+                if caltrue:
+                    self.caltrue[ix][iy] = caltrue 
+                    self.saaconversion[ix][iy] = saaconversion
+                    self.conv_sflux[ix][iy]  = conv_sflux
+
+    def plotconversion(self):
+        fig, axs = plt.subplots(1,2)
+        for data,cbarlabel,ax,cmap in zip(
+                [self.saaconversion, self.conv_sflux], 
+                ['V/phi_0', 'S_flux V'],
+                axs, 
+                ['viridis', 'magma']):
+            masked_data = np.ma.array(data, mask=np.isnan(data))
+            image = ax.imshow(masked_data, self.cmap, origin='lower',
+                              extent=[self.aflux.min(), self.aflux.max(),
+                                      self.sbias.min()*1e-3,
+                                      self.sbias.max()*1e-3])
+            d = make_axes_locatable(ax)
+            cax = d.append_axes('right', size=.1, pad=.1)
+            cbar = plt.colorbar(image, cax=cax)
+            cbar.set_label(cbarlabel, rotation=270, labelpad=12)
+
+                
 
     def do(self, liveplot = True):
 
@@ -616,13 +671,19 @@ class ArrayTuneBatch(Measurement):
     def sorter(master, *args):
         ks = np.argsort(master.flatten())
         arrs = [master, *args]
-        for i in len(arrs):
+        for i in range(len(arrs)):
             arrs[i] = arrs[i][ks]
         return arrs
 
     def currsort(self):
-        return sorter(self.plotting_z[0], self.plotting_z[1], 
-                      self.arraytunefilenames)
+        return self.sorter(self.plotting_z[0].flatten(), self.plotting_z[1].flatten(), 
+                      np.array(self.arraytunefilenames))
+
+    def printsort(self, num=10):
+        n, l, f = self.currsort()
+        print('Noise     Linearity  Filename')
+        for i in range(num):
+            print('{0:2.2e}  {1:2.2e}   {2}'.format(n[i], l[i], f[i]))
             
         
     def currminstostr(self):
