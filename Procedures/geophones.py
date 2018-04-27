@@ -12,7 +12,6 @@ from ..Utilities.geophones import Geophone
 from ..Utilities.geophones import Geophone_cal
 from ..Utilities.welch import Welch
 
-
 class Geophone_calibrate(Measurement):
     _daq_inputs = ['inA', 'inB']
     _daq_outputs= ['out']
@@ -213,6 +212,15 @@ class Geophone_calibrate_lockins(Geophone_calibrate):
             tcs.append(tc)
 
         print('Estimated Time to Completion: {0}s'.format(sum(tcs)*10))
+
+class Geophone_calibrate_zurich(Geophone_calibrate_lockins):
+    _instruments_list=['zurich'] 
+
+    def __init__(self, instruments={}, minf=.1, maxf=1000, numpts=1000):
+        super().__init__(instruments=instruments, Rs='N/A', sample_rate='N/A', maxV='N/A', numpts=numpts,
+                        inputfnct='N/A')
+        self.freqs = 10**np.linspace(np.log10(minf), np.log10(maxf), numpts)
+
 
     
 
