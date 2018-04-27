@@ -100,7 +100,7 @@ class DaqSpectrum(Measurement):
                                           sample_rate=self.measure_freq)
         self.V = received['dc'] / self.preamp.gain
         self.t = received['t']
-        self.makepsd(1)
+        self.makepsd(.5)
 
         return self.psdAve # to make sure do stays ok...
 

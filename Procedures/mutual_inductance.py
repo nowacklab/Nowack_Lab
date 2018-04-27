@@ -66,7 +66,8 @@ class MutualInductance2(Measurement):
                 rate=100,
                 numsteps = 1000,
                 title='',
-                conversion = 1/14.4):
+                conversion = 1/14.4,
+                units = r'\Phi_0'):
         super().__init__(instruments=instruments)
         self.Is = np.array(Is)
         self.Rbias = Rbias
@@ -75,6 +76,7 @@ class MutualInductance2(Measurement):
         self.numsteps = numsteps
         self.title = title
         self.conversion = conversion
+        self.units = units
 
     def do(self, title='', plot=True, removeplot = False):
         if title != '':
@@ -115,9 +117,13 @@ class MutualInductance2(Measurement):
         super().plot()
         self.ax.plot(self.Vsrc / self.Rbias / 1e-3, self.Vmeas * self.conversion,
                      label='data')
-        self.ax.set_ylabel('SQUID response ($\Phi_0$)')
+        self.ax.set_ylabel('SQUID response (${0}$)'.format(self.units))
         self.ax.set_xlabel('Field Coil (mA)')
         self.ax.annotate(self.filename, xy=(0.02, .98), xycoords='axes fraction',
+                        fontsize=8, ha='left', va='top', family='monospace')
+        self.ax.annotate('max={0:2.2e}, min={1:2.2e}'.format(
+                        np.max(self.Vmeas*self.conversion), np.min(self.Vmeas*self.conversion)), 
+                        xy=(0.02, .1), xycoords='axes fraction',
                         fontsize=8, ha='left', va='top', family='monospace')
         self.ax.set_title(self.title)
 
