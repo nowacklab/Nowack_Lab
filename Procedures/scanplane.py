@@ -1,4 +1,4 @@
-import time, os, matplotlib, matplotlib.pyplot as plt, numpy as np
+import time, os, matplotlib, matplotlib.pyplot as plt, numpy as np, winsound
 from scipy.interpolate import interp1d
 
 from ..Utilities import conversions
@@ -149,7 +149,6 @@ class Scanplane(Measurement):
         # Print a warning if the fast_axis has fewer points than the slow.
         def slow_axis_alert():
             print('Slow axis has more points than fast axis!')
-            import winsound
             winsound.Beep(int(440*2**(1/2)),200) # play a tone
             winsound.Beep(440,200) # play a tone
 
@@ -179,6 +178,15 @@ class Scanplane(Measurement):
             if not self.montana.check_status(): # returns False if problem
                 self.piezos.zero()
                 self.squidarray.zero()
+
+                tstart = time.time()
+                # play annoying sounds for 10 minutes
+                print ('Montana error! Will back off attocubes in 10 minutes \
+                       unless kernel interrupted')
+                while time.time()-tstart < 10*60:
+                    winsound.Beep(int(440*2**(1/2)),200) # play a tone
+                    winsound.Beep(440,200) # play a tone
+
                 self.atto.z.move(-1000)
                 raise Exception('Montana error!')
 

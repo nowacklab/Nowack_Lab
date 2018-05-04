@@ -131,3 +131,85 @@ class DAQ_IV(Measurement):
 
         l = self.ax.legend([i for i in self._daq_inputs], loc='best')
         self.ax.set_title(self.filename)
+
+class RvsT_Montana_Keithley(Measurement):
+    instrument_list = ['montana', 'keithley']
+    something = 'T'
+    something_units = 'K'
+
+    def __init__(self, instruments = {}, Ibias=100, Tend = 4.5, delay=5, numavg=5):
+        '''
+        Measurement will test voltage at +Ibias and -Ibias uA (changing instantaneously!)
+        Keithley in 4-wire mode.
+        Ibias: current bias (uA).
+        Tend: target temperature (when to stop taking data)
+        delay: time between measurements (seconds)
+        numavg: number of averages
+        '''
+        super().__init__(instruments=instruments)
+
+        self.Ibias = Ibias*1e-6
+        self.Tend = Tend
+        self.delay = delay
+        self.numavg = numavg
+
+        self.Vp = np.array([])
+        self.Vz = np.array([])
+        self.Vn = np.array([])
+        self.Ra = np.array([]) # (Vp-Vz)/I
+        self.Rb = np.array([]) # (Vz-Vn)/I
+        self.Rc = np.array([]) # (Vp-Vn)/(2I)
+        self.T = np.array([])
+
+
+
+    def do(self, plot=True):
+        while self.montana.temperature['platform'] > self.Tend:
+            time.sleep(self.delay)
+
+            self.T = np.append(self.T, self.montana.temperature['platform'])
+
+            self.keithley.Iout = 0
+            self.Vz = np.append(self.Vz, self.get_avg_voltage())
+
+            self.keithley.Iout = self.Ibias
+            self.Vp = np.append(self.Vp, self.get_avg_voltage())
+
+            self.keithley.Iout = -self.Ibias
+            self.Vn = np.append(self.Vn, self.get_avg_voltage())
+
+            self.keithley.Iout = 0
+
+            self.Ra = np.append(self.Ra, (self.Vp[-1] - self.Vz[-1])/self.Ibias)
+            self.Rb = np.append(self.Rb, (self.Vz[-1] - self.Vn[-1])/self.Ibias)
+            self.Rc = np.append(self.Rc, (self.Vp[-1] - self.Vn[-1])/self.Ibias/2)
+
+            self.plot()
+
+    def get_avg_voltage(self):
+        V = 0
+        for i in range(self.numavg):
+            V += self.keithley.V
+        return V / self.numavg
+
+
+    def plot_update(self):
+        self.la.set_xdata(self.T)
+        self.lb.set_xdata(self.T)
+        self.lc.set_xdata(self.T)
+        self.la.set_ydata(self.Ra)
+        self.lb.set_ydata(self.Rb)
+        self.lc.set_ydata(self.Rc)
+
+        self.ax.relim()
+        self.ax.autoscale_view()
+
+    def setup_plots(self):
+        self.fig, self.ax = plt.subplots()
+        self.la = self.ax.plot(self.T, self.Ra, label = '+')[0]
+        self.lb = self.ax.plot(self.T, self.Rb, label = '-')[0]
+        self.lc = self.ax.plot(self.T, self.Rc, label = 'full')[0]
+        self.ax.set_xlabel('Temperature (K)')
+        self.ax.set_ylabel('Resistance (Ohm)')
+
+        l = self.ax.legend(loc='best')

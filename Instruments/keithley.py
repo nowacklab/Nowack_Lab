@@ -16,6 +16,7 @@ class Keithley2400(VISAInstrument):
     _Vout = None
     _Vout_range = None
     _V_compliance = None
+    _rel = None
 
     def __init__(self, gpib_address=''):
         if type(gpib_address) is int:
@@ -271,6 +272,29 @@ class Keithley2400(VISAInstrument):
     def setup(self):
         self.write(':SENS:FUNC \"VOLT\"')
         self.write(':SENS:FUNC \"CURR\"') # set up to sense voltage and current
+
+
+    @property
+    def rel(self):
+        '''
+        Check whether REL is enabled.
+        '''
+        self._rel = bool(int(self.ask(':CALC2:NULL:STAT?')))
+        return self._rel
+
+    @rel.setter
+    def rel(self, value):
+        '''
+        Set value to True to take an offset measurement and enable REL mode.
+        Set value to False to disable REL mode.
+        '''
+        if value == True:
+            self.write(':CALC2:NULL:ACQ')
+            self.write(':CALC2:NULL:STAT ON')
+            self._rel = True
+        else:
+            self.write(':CALC2:NULL:STAT OFF')
+            self._rel = False
 
 
     def reset(self):

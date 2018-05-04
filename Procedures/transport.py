@@ -294,6 +294,27 @@ class RvsT_Bluefors(RvsSomething):
             self.do_measurement(delay=self.delay, plot=plot)
 
 
+class RvsT_Montana(RvsSomething):
+    instrument_list = ['montana', 'lockin_V1', 'lockin_I']
+    something = 'T'
+    something_units = 'K'
+
+    def __init__(self, instruments = {}, Tend = 5, delay=1):
+        '''
+        Tend: target temperature (when to stop taking data)
+        delay: time between measurements (seconds)
+        '''
+        super().__init__(instruments=instruments)
+
+        self.Tend = Tend
+        self.delay = delay
+
+    def do(self, plot=True):
+        while self.montana.temperature['platform'] > self.Tend:
+            self.T = np.append(self.T, self.montana.temperature['platform'])
+            self.do_measurement(delay=self.delay, plot=plot)
+
+
 class RvsVg(RvsSomething):
     '''
     Monitor R = lockin_V.X/lockin_I.Y from two different lockins.
