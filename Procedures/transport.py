@@ -364,14 +364,14 @@ class RvsVg(RvsSomething):
 
     def plot(self):
         '''
-        Plots using superclass function and adds warning for Ig > 0.5 nA
+        Plots using superclass function and adds warning for Ig > 1 nA
         '''
         super().plot()
         if self.Igwarning is None: # if no warning
             if len(self.Ig)>0: # if have data
-                if abs(self.Ig).max() >= 0.5e-9: # if should be warning
+                if abs(self.Ig).max() >= 1e-9: # if should be warning
                     self.Igwarning = self.ax.text(.02,.95,
-                                        r'$|I_g| \geq 0.5$ nA!',
+                                        r'$|I_g| \geq 1$ nA!',
                                         transform=self.ax.transAxes,
                                         color = 'C3'
                                     ) # warning
