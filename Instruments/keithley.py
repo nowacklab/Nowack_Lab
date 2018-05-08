@@ -324,6 +324,8 @@ class Keithley2400(VISAInstrument):
             return
         self.Vout = Vstart
 
+        print('Sweeping Keithley! %s V to %s V at %s V/s' %(Vstart, Vend, sweep_rate))
+
         self.write(':SENS:FUNC:CONC OFF') # turn off concurrent functions - so you can't measure both voltage and current simultaneously??
         self.write(':SOUR:VOLT:START %s' %Vstart)
         self.write(':SOUR:VOLT:STOP %s' %Vend)
@@ -348,6 +350,8 @@ class Keithley2400(VISAInstrument):
         self.Vout = Vend # make sure the last voltage is explicit
 
         self._visa_handle.timeout = old_timeout
+
+        print('Keithley sweep completed.')
         return [float(i) for i in a.split(',')] # not sure what this data represents
 
 
