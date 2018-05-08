@@ -36,7 +36,7 @@ class Montana(Instrument):
     def __getstate__(self):
         self._save_dict = {'temperature': self._temperature,
                           'stability': self._temperature_stability,
-                          'compressor speed': self._compressor_speed
+                          'compressor_speed': self._compressor_speed
                           }
         return self._save_dict
 
@@ -47,7 +47,7 @@ class Montana(Instrument):
         '''
         state['_temperature'] = state.pop('temperature')
         state['_temperature_stability'] = state.pop('stability')
-        state['_compressor_speed'] = state.pop('compressor speed')
+        state['_compressor_speed'] = state.pop('compressor_speed')
 
         self.__dict__.update(state)
 

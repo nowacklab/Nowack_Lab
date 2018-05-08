@@ -96,18 +96,18 @@ class PFL102(Instrument):
         self.updateDigitalControl()
 
     def __getstate__(self):
-        self._save_dict = {"Array bias": self._A_bias,
-                           "Array flux": self._A_flux,
-                           "SQUID bias": self._S_bias,
-                           "SQUID flux": self._S_flux,
-                           "Array locked": self._arrayLocked,
-                           "Feedback resistor": self._feedbackResistor,
-                           "Integrator capacitor": self._integratorCapacitor,
-                           "Preamp voltage offset": self._offset,
+        self._save_dict = {"Array_bias": self._A_bias,
+                           "Array_flux": self._A_flux,
+                           "SQUID_bias": self._S_bias,
+                           "SQUID_flux": self._S_flux,
+                           "Array_locked": self._arrayLocked,
+                           "Feedback_resistor": self._feedbackResistor,
+                           "Integrator_capacitor": self._integratorCapacitor,
+                           "Preamp_voltage_offset": self._offset,
                            "sensitivity": self._sensitivity,
-                           "SQUID locked": self._squidLocked,
-                           "Test input": self._testInput,
-                           "Test signal": self._testSignal,
+                           "SQUID_locked": self._squidLocked,
+                           "Test_input": self._testInput,
+                           "Test_signal": self._testSignal,
                            "channel": self.channel,
                            "resetIntegrator": self.resetIntegrator
                            }
@@ -117,18 +117,18 @@ class PFL102(Instrument):
         '''
         NOTE: this will load the real instrument. Load with caution!
         '''
-        state['_A_bias'] = state.pop('Array bias')
-        state['_A_flux'] = state.pop('Array flux')
-        state['_S_bias'] = state.pop('SQUID bias')
-        state['_S_flux'] = state.pop('SQUID flux')
-        state['_arrayLocked'] = state.pop('Array locked')
-        state['_feedbackResistor'] = state.pop('Feedback resistor')
-        state['_integratorCapacitor'] = state.pop('Integrator capacitor')
-        state['_offset'] = state.pop('Preamp voltage offset')
+        state['_A_bias'] = state.pop('Array_bias')
+        state['_A_flux'] = state.pop('Array_flux')
+        state['_S_bias'] = state.pop('SQUID_bias')
+        state['_S_flux'] = state.pop('SQUID_flux')
+        state['_arrayLocked'] = state.pop('Array_locked')
+        state['_feedbackResistor'] = state.pop('Feedback_resistor')
+        state['_integratorCapacitor'] = state.pop('Integrator_capacitor')
+        state['_offset'] = state.pop('Preamp_voltage_offset')
         state['_sensitivity'] = state.pop('sensitivity')
-        state['_testInput'] = state.pop('Test input')
-        state['_squidLocked'] = state.pop('SQUID locked')
-        state['_testSignal'] = state.pop('Test signal')
+        state['_testInput'] = state.pop('Test_input')
+        state['_squidLocked'] = state.pop('SQUID_locked')
+        state['_testSignal'] = state.pop('Test_signal')
 
         self.__dict__.update(state)
 
@@ -479,9 +479,13 @@ class SquidArray(PFL102):
         Port: where the PCI100 is connected
         load: Load previous parameters.
         '''
-        self.load_dict()
         self.channel = 1
         self.pci = PCI100(port)
+        if load:
+            self.load_dict()
+        else:
+            super().__init__(self.channel, self.pci)
+
 
     def load_dict(self, json_file=None):
         '''

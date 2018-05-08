@@ -46,18 +46,14 @@ class NIDAQ(Instrument):
         # for chan in self._ins + self._outs:
         #     self._save_dict[chan] = getattr(self, chan).V
         self._save_dict.update({
-            'device name': self._dev_name,
-            'input range': self._input_range,
-            'output range': self._output_range,
+            'device_name': self._dev_name,
+            'input_range': self._input_range,
+            'output_range': self._output_range,
             'inputs': self.inputs,
             'outputs': self.outputs,
         })
 
         return self._save_dict
-
-
-    def __setstate__(self, state):
-        pass
 
 
     def all(self):

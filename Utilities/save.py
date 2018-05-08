@@ -159,9 +159,10 @@ class Measurement(Plotter):
                 elif 'py/' in key:
                     if 'py/object' in d:
                         if 'Instruments' in d['py/object']: # if this is an instrument
-                            d = None # Don't load it.
+                            d['py/object'] = 'Nowack_Lab.Instruments.instrument.Instrument' # make it generic
+                            d['py/state'] = walk(d['py/state'])
                             break
-                    elif 'py/id' in d: # This is probably another instance of an Instrument.
+                    elif 'py/id' in d: # Probably another Instrument instance
                         d = None # Don't load it.
                         break
                 if 'dict' in utilities.get_superclasses(d[key]):

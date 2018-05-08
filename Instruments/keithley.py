@@ -30,17 +30,15 @@ class Keithley2400(VISAInstrument):
 
     def __getstate__(self):
         self._save_dict = {
-            'output current': self._Iout,
-            'output current range': self._Iout_range,
-            'current compliance': self._I_compliance,
-            'output voltage': self._Vout,
-            'output voltage range': self._Vout_range,
-            'voltage compliance': self._V_compliance
+            'output_current': self._Iout,
+            'output_current_range': self._Iout_range,
+            'current_compliance': self._I_compliance,
+            'output_voltage': self._Vout,
+            'output_voltage_range': self._Vout_range,
+            'voltage_compliance': self._V_compliance
         }
         return self._save_dict
 
-    def __setstate__(self, state):
-        pass
 
     @property
     def source(self):
@@ -790,9 +788,6 @@ class Keithley2400Old(Instrument):
         return self._save_dict
 
 
-    def __setstate__(self, state):
-        pass
-
     def ask(self, msg, tryagain=True):
         try:
             return self._visa_handle.ask(msg)
@@ -828,10 +823,6 @@ class Keithley2400Old(Instrument):
                           'voltage_range': self.voltage_range
                           }
         return self._save_dict
-
-
-    def __setstate__(self, state):
-        pass
 
 
     @property

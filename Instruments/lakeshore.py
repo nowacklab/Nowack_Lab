@@ -35,35 +35,35 @@ class LakeshoreChannel(VISAInstrument):
 
     def __getstate__(self):
         self._save_dict = {
-            'Channel number': self._num,
-            'Channel label': self._label,
-            'Channel enabled?': self.enabled,
-            'Channel being scanned?': self.scanned,
+            'Channel_number': self._num,
+            'Channel_label': self._label,
+            'Channel_enabled?': self.enabled,
+            'Channel_being_scanned?': self.scanned,
             'power': self.P,
             'resistance': self.R,
             'temperature': self.T,
             'status': self.status,
-            'dwell time': self.dwell,
+            'dwell_time': self.dwell,
             'pause': self.pause,
-            'curve number': self.curve_num,
-            'temperature coefficient 1pos, 2neg': self.temp_coef,
+            'curve_number': self.curve_num,
+            'temperature_coefficient_1pos_2neg': self.temp_coef,
         }
         return self._save_dict
 
 
     def __setstate__(self, state):
-        state['_num'] = state.pop('Channel number')
-        state['_label'] = state.pop('Channel label')
-        state['_enabled'] = state.pop('Channel enabled?')
-        state['_scanned'] = state.pop('Channel being scanned?')
+        state['_num'] = state.pop('Channel_number')
+        state['_label'] = state.pop('Channel_label')
+        state['_enabled'] = state.pop('Channel_enabled?')
+        state['_scanned'] = state.pop('Channel_being_scanned?')
         state['_P'] = state.pop('power')
         state['_R'] = state.pop('resistance')
         state['_T'] = state.pop('temperature')
         state['_status'] = state.pop('status')
-        state['_dwell'] = state.pop('dwell time')
+        state['_dwell'] = state.pop('dwell_time')
         state['_pause'] = state.pop('pause')
-        state['_curve_num'] = state.pop('curve number')
-        state['_temp_coef'] = state.pop('temperature coefficient 1pos, 2neg')
+        state['_curve_num'] = state.pop('curve_number')
+        state['_temp_coef'] = state.pop('temperature_coefficient_1pos_2neg')
 
         self.__dict__.update(state)
 

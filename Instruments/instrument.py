@@ -10,13 +10,12 @@ class Instrument:
     	return self.__dict__
 
     def __setstate__(self, state):
-    	'''
-    	Setstate for an instrument by default does not load an instrument.
-    	You must custom-write setstates if you want private variables to be loaded.
-    	It is not recommended to load directly into properties, in case this makes
-    	an unwanted change to the physical instrument.
-    	'''
-    	pass
+        '''
+        Recommended to write custom setstates for subclasses to avoid loading
+        directly into properties and write values directly to instrument.
+        '''
+        self.__dict__.update(state)
+
 
 class VISAInstrument(Instrument):
     _label = 'VISAinstrument'
