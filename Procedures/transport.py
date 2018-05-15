@@ -326,11 +326,17 @@ class RvsVg(RvsSomething):
     something_units = 'V'
     Igwarning = None
 
-    def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1, delay=1, fine_range=None):
+    def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1, delay=1, sweep=1, fine_range=None):
         '''
-        fine_range - [Vmin, Vmax], a list of two voltages that define a range
+        Vstart: starting voltage (V)
+        Vend: ending voltage (V)
+        Vstep: voltage step size (V)
+        delay: time delay between measurements (sec)
+        sweep: sweep rate to Vstart (V/s)
+        fine_range: [Vmin, Vmax], a list of two voltages that define a range
         in which we will take N times as many data points. N=5.
-        Note that Vmin is closer to Vstart and Vmax is closer to Vend.
+        Note that Vmin is closer to Vstart and Vmax is closer to Vend,
+        regardless of sweep direction.
         '''
         super().__init__(instruments=instruments)
 
@@ -338,6 +344,7 @@ class RvsVg(RvsSomething):
         self.Vend = Vend
         self.Vstep = Vstep
         self.delay = delay
+        self.sweep = sweep
 
         if fine_range is None:
             self.Vg_values = np.linspace(Vstart, Vend, round(abs(Vend-Vstart)/Vstep)+1)
@@ -363,7 +370,7 @@ class RvsVg(RvsSomething):
 #         self.keithley.output = 'on' #NO! will cause a spike!
 
         ## Sweep to Vstart
-        self.keithley.sweep_V(self.keithley.V, self.Vstart, .1, 1)
+        self.keithley.sweep_V(self.keithley.V, self.Vstart, self.Vstep, self.sweep)
         time.sleep(self.delay*3)
 
         ## Do the measurement sweep
