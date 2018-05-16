@@ -232,7 +232,7 @@ class RvsVg_B(RvsVg):
         num_squares: aspect ratio used to convert Rxx to resistivity
         Rxx_channel: Rxx channel number
         Rxy_channel: Rxy channel number
-        QH_type: 'MLG' or 'BLG' for monolayer/bilayer graphene
+        QH_type: 'MLG' or 'BLG' for monolayer/bilayer graphene. None for no plot
 
         Returns:
         fig - the figure
@@ -252,6 +252,8 @@ class RvsVg_B(RvsVg):
             plateaus = (np.array(range(9))-4+1/2)*4
         elif QH_type == 'BLG':
             plateaus = (np.array(range(9))-4)*4
+        elif QH_type == None:
+            plateaus = []
         else:
             plateaus = (np.array(range(9))-4)
         for i in plateaus:

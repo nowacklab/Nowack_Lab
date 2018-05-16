@@ -35,8 +35,13 @@ class Keithley2400(VISAInstrument):
             'current_compliance': self._I_compliance,
             'output_voltage': self._Vout,
             'output_voltage_range': self._Vout_range,
-            'voltage_compliance': self._V_compliance
+            'voltage_compliance': self._V_compliance,
         }
+        try:
+            self._save_dict['input_current'] = self.I
+            self._save_dict['input_voltage'] = self.V
+        except:
+            pass
         return self._save_dict
 
 
