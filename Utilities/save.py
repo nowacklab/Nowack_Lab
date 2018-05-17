@@ -526,6 +526,31 @@ def get_computer_name():
     return computer_name
 
 
+def get_data_paths(experiment='', measurement=''):
+    '''
+    Returns a list of the paths to every data file from a given experiment
+    directory, ignoring appendedpath. Returns all types of measurements unless
+    one is specified by the measurement kwarg.
+
+    Keyword arguments:
+    experiment (string): Full path of the experiment directory
+    measurement (string): name of the Measurement class
+    '''
+    # Get a list of all the date directories
+    p = os.path.join(experiment, '*')
+    g = list(glob.iglob(p))
+    g.sort()
+
+    paths = []
+    # Iterate over dates and add all paths to given Measurement data files
+    for dir in g:
+        p = os.path.join(dir, '*%s.json' %measurement)
+        g2 = list(glob.iglob(p))
+        g2.sort()
+        paths += g2
+
+    return paths
+
 def get_experiment_data_dir():
     '''
     Finds the most recently modified (current) experiment data directory. (Not the full path)

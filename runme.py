@@ -3,7 +3,7 @@ import os, shutil, matplotlib, pip
 
 
 home = os.path.expanduser('~')
-site_packages = os.path.dirname(os.path.abspath(os.path.join(matplotlib.__file__, '..')))
+site_packages = os.path.dirname(os.path.abspath(os.path.join(matplotlib.__file__, '..'))) #we know matplotlib is in site-packages
 
 ## Add utility to save jupyter notebook to HTML
 package_path = os.path.join(os.getcwd(),'Utilities','notebook','jupyter_notebook_config.py')
@@ -47,6 +47,12 @@ notebook_path = os.path.join(os.path.expanduser('~'), '.jupyter', 'custom', 'cus
 if not os.path.exists(os.path.dirname(notebook_path)):
     os.makedirs(os.path.dirname(notebook_path))
 shutil.copyfile(package_path, notebook_path)
+
+# ## Set default notebook template for scanning
+# package_path = os.path.join(os.getcwd(),'Utilities','nbbase.py')
+# nbformat_path = os.path.join(site_packages, 'nbformat', 'v4', 'nbbase.py')
+#
+# shutil.copyfile(package_path, nbformat_path)
 
 ## Add custom.js file to disable autosave
 # package_path = os.path.join(os.getcwd(),'Utilities','custom.js')
