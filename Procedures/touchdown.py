@@ -81,7 +81,7 @@ class Touchdown(Measurement):
     Vz_max = 400
     start_offset = 0
 
-    def __init__(self, instruments={}, planescan=False, Vz_max=None):
+    def __init__(self, instruments={}, planescan=False, Vz_max=None, runonce=False):
         '''Approach the sample to the SQUID while recording the capacitance 
         of the cantelever in a lockin measurement to detect touchdown.
 
@@ -116,6 +116,7 @@ class Touchdown(Measurement):
         self._init_arrays()
         self.planescan = planescan
         self.flagged = False
+        self.runonce=runonce
 
     def _init_arrays(self):
         ''' Generate arrays of NaN with the correct length for the touchdown'''
@@ -474,6 +475,10 @@ class Touchdown(Measurement):
 
             # end of inner loop (sweep z piezo)
 
+            if (self.runonce==True):
+                break
+
+
             # Move the attos;
             # either we're too far away for a touchdown or TD voltage not centered
             if (self.planescan is False and self.touchdown is False):
@@ -623,6 +628,10 @@ class Touchdown(Measurement):
 
         plt.xlim(self.V.min(), self.V.max())
 
+        self.ax.annotate("X:{0:2.2f}, Y:{1:2.2f}".format(self.piezos.x.V, self.piezos.y.V), 
+                xy=(0.05, 0.05),
+                  xycoords="axes fraction", fontsize=8)
+
         # Two lines for fitting
         orange = '#F18C22'
         blue = '#47C3D3'
@@ -632,13 +641,16 @@ class Touchdown(Measurement):
         self.line_td = line_td[0]  # plot gives us back an array
         self.line_app = line_app[0]
 
+
     def gridplot(self, axes):
         '''Compact plot of touchdown for use when taking planes'''
         C = self.C[~np.isnan(self.C)]
         V = self.V[~np.isnan(self.C)]
         axes.plot(V, C, '.', color='k', markersize=2)
-        axes.plot(V, piecewise_linear(V, *self.p))
-        axes.axvline(self.p[0], color='r')
-        axes.annotate("{0:.2f}".format(self.p[0]), xy=(0.05, 0.90),
+
+        if self.touchdown:
+            axes.plot(V, piecewise_linear(V, *self.p))
+            axes.axvline(self.p[0], color='r')
+            axes.annotate("{0:.2f}".format(self.p[0]), xy=(0.05, 0.90),
                       xycoords="axes fraction", fontsize=8)
         

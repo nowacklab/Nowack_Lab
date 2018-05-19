@@ -1,15 +1,20 @@
 import numpy as np
-from numpy.linalg import lstsq
-from .touchdown import Touchdown
 import time
 import os
 import glob
+from numpy.linalg import lstsq
+from importlib import reload
 from datetime import datetime
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from IPython import display
+
+#import Nowack_Lab.Procedures.touchdown
+#reload(Nowack_Lab.Procedures.touchdown)
+from Nowack_Lab.Procedures.touchdown import Touchdown
+
 from ..Utilities import logging
 from ..Instruments import piezos, montana
-from IPython import display
 from ..Utilities.utilities import reject_outliers_plane, fit_plane
 from ..Utilities.save import Measurement
 from ..Utilities.utilities import AttrDict
@@ -19,33 +24,32 @@ class Planefit(Measurement):
     '''
     Take touchdowns in a grid to define a plane.
     '''
-    instrument_list = ['piezos', 'montana']
+    instrument_list = ['piezos', 'montana', 'atto']
 
     a = np.nan
     b = np.nan
     c = np.nan
 
     def __init__(self, instruments={}, span=[400, 400], center=[0, 0],
-                 numpts=[4, 4], Vz_max=None):
+                 numpts=[4, 4], Vz_max=None, runonce=False):
         '''
         Take touchdowns in a grid to determine the slope of the sample
         surface.
 
         Args:
         instruments (dict): must contain the instruments required for
-        the touchdown.
-
+                            the touchdown.
         span (list): Specifices the size [X span, Y span] of the plane
-        in voltage applied to the X and Y peizos.
-
+                     in voltage applied to the X and Y peizos.
         center (list): Specifies the center of the plane 
-        [X center, Y center] in voltage applied to the X and Y peizos.
-
+                       [X center, Y center] in voltage applied to the 
+                       X and Y peizos.
         numpts (list): The numper of touchdowns to take on each axis 
-        [X number, Y number]. 
-
-        Vz_max (float):Maximum voltage that can be applied to the Zpiezo.
-        If None then the the max voltage for the piezo is used.
+                        [X number, Y number]. 
+        Vz_max (float): Maximum voltage that can be applied to the Zpiezo.
+                        If None then the the max voltage for the piezo is used.
+        runonce (bool): True if you only want the touchdowns to run once
+                        Useful for scanning near the edge of a sample
 
         Required instruments:
         daq, lockin_cap, attocubes, piezos, montana
@@ -67,6 +71,7 @@ class Planefit(Measurement):
         self.span = span
         self.center = center
         self.numpts = numpts
+        self.runonce = runonce
 
         if Vz_max == None:
             try:
@@ -113,12 +118,14 @@ class Planefit(Measurement):
         # Initial touchdown at center of plane
         self.piezos.V = {'x': self.center[0],
                          'y': self.center[1], 'z': -self.Vz_max}
-        td = Touchdown(self.instruments, Vz_max=self.Vz_max, planescan=True)
+        td = Touchdown(self.instruments, Vz_max=self.Vz_max, planescan=True,
+                        runonce=self.runonce)
         td.run()
         # If the initial touchdown generates a poor fit, try again
         n = 0
         while td.flagged and n < 5:
-            td = Touchdown(self.instruments, Vz_max=self.Vz_max, planescan=True)
+            td = Touchdown(self.instruments, Vz_max=self.Vz_max, planescan=True,
+                            runonce=self.runonce)
             td.run()
             n = n + 1
 
@@ -158,7 +165,8 @@ class Planefit(Measurement):
                 # Take touchdowns until the fitting algorithm gives a
                 # good result, up to 5 touchdowns
                 td = Touchdown(self.instruments,
-                               Vz_max=self.Vz_max, planescan=True)
+                               Vz_max=self.Vz_max, planescan=True, 
+                               runonce=self.runonce)
                 td.title = '(%i, %i). TD# %i' % (i, j, counter)
                 td.run()
                 plt.close(td.fig)
@@ -166,7 +174,8 @@ class Planefit(Measurement):
                 while td.flagged is True and n < 5:
                     print("Redo")
                     td = Touchdown(self.instruments,
-                                   Vz_max = self.Vz_max, planescan=True)
+                                   Vz_max = self.Vz_max, planescan=True,
+                                   runonce=self.runonce)
                     td.title = '(%i, %i). TD# %i' % (i, j, counter)
                     td.run()
                     n = i + 1
@@ -281,6 +290,11 @@ class Planefit(Measurement):
             axes.append(ax)
         self.fig.subplots_adjust(wspace=0, hspace=0)
         self.axes = np.reshape(axes, self.numpts)
+        self.fig.suptitle(self.filename + 
+                          '\n atto: X={0:2.2f}, Y={1:2.2f}, Z={2:2.2f}'.format(
+                              self.atto.x.pos,
+                              self.atto.y.pos,
+                              self.atto.z.pos))
     
     def surface(self, x, y):
         '''
