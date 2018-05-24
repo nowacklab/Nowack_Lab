@@ -9,6 +9,7 @@ import numpy as np
 from importlib import reload
 import matplotlib.cm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from scipy.signal import savgol_filter
 
 import sys
 
@@ -16,7 +17,13 @@ import Nowack_Lab.Utilities.save
 reload(Nowack_Lab.Utilities.save)
 from Nowack_Lab.Utilities.save import Measurement
 
-from ..Procedures.daqspectrum import SQUIDSpectrum
+import Nowack_Lab.Utilities.utilities
+reload(Nowack_Lab.Utilities.utilities)
+from Nowack_Lab.Utilities.utilities import running_std
+
+import Nowack_Lab.Procedures.daqspectrum
+reload(Nowack_Lab.Procedures.daqspectrum)
+from Nowack_Lab.Procedures.daqspectrum import SQUIDSpectrum
 
 import Nowack_Lab.Procedures.mutual_inductance
 reload(Nowack_Lab.Procedures.mutual_inductance)
@@ -36,6 +43,7 @@ class ArrayTune(Measurement):
                  sflux_offset = 0.0,
                  aflux_offset = 0.0,
                  conversion=1/1.44,
+                 testsignalconv = 10,
                  debug=False):
         """Given a lock SAA, tune the input SQUID and lock it.
         Args:
@@ -44,6 +52,7 @@ class ArrayTune(Measurement):
         squid_tol (float): Allowed DC offset for the locked SQUID
         offset (float): Tune the lockpoint up/down on the SQUID characaristic.
         conversion (float): in phi_0/V (1/1.44 ibm, 1/2.1 hypres) in MED sens
+        testsignalconv (float) in uA/V for test signal to S_flux
         """
         super(ArrayTune, self).__init__(instruments=instruments)
 
@@ -55,6 +64,7 @@ class ArrayTune(Measurement):
         self.sflux_offset = sflux_offset
         self.aflux_offset = aflux_offset
         self.saaconversion = conversion # med
+        self.testsignalconv = testsignalconv
         self.debug = debug
 
     def acquire(self):
@@ -72,7 +82,7 @@ class ArrayTune(Measurement):
         """Configure SAA for SQUID tuning."""
         self.squidarray.lock("Array")
         #self.squidarray.S_flux_lim = 100
-        self.squidarray.S_flux = self.squidarray.S_flux_lim/2
+        #self.squidarray.S_flux = self.squidarray.S_flux_lim/2
         self.squidarray.testInput = "S_flux"
         self.squidarray.testSignal = "On"
         self.squidarray.S_bias = self.squid_bias
@@ -178,24 +188,47 @@ class ArrayTune(Measurement):
         pass
 
 
+    @staticmethod #TODO: MOVE ME TO daqspectrum
+    def getnoisenum(f, specden, f0 = 1, fend = 1000):
+        index0 = np.argmin(np.abs(f-f0))
+        indexe = np.argmin(np.abs(f-fend))
+        return np.mean(specden[index0:indexe]), np.std(specden[index0:indexe])
+
+
+
     def plot(self):
         self.fig, self.ax = plt.subplots(1,3,figsize=(12,4))
         # Plot the charactaristic
-        self.ax[0].plot(self.char[1], self.char[2])
-        self.ax[0].set_xlabel("Test Signal (V)")
+        self.ax[0].plot(self.char[1]*self.testsignalconv, self.char[2])
+        self.ax[0].set_xlabel("Sflux (uA)")
         self.ax[0].set_ylabel("SAA Signal (V)", size="medium")
         self.ax[0].set_title(" {0:2.2e} phi_0/V".format(self.spectrum.conversion))
 
         # Plot the spectrum
+        mean,std = self.spectrum.findmeanstd()
+        self.noise_mean = mean
+        self.noise_std = std
+        
         self.ax[2].loglog(self.spectrum.f,
                      self.spectrum.psdAve * self.spectrum.conversion)
         self.ax[2].set_xlabel("Frequency (Hz)")
-        self.ax[2].set_title("PSD ($\mathrm{%s/\sqrt{Hz}}$)" % self.spectrum.units,
-                        size="medium")
-        self.ax[2].annotate('Sbias = {0:2.2e} uA\nAflux = {1:2.2e} uA'.format(
+        self.ax[2].set_title(r"PSD (Noise = {1:2.2f} $\mu \rm {0}/\sqrt{{Hz\rm}}$".format(
+                        self.spectrum.units, mean*1e6 ), size="medium")
+#        self.ax[2].set_title(r"PSD ($\rm {0}/\sqrt{{Hz\rm}}$".format( self.spectrum.units),
+#                        size="medium")
+        self.ax[2].annotate('Sbias        = {0:2.2e} uA\nAflux_offset = {1:2.2e} uA'.format(
                             self.squid_bias, self.aflux_offset), 
                             xy=(.02, .2), xycoords='axes fraction',
                             fontsize=8, ha='left', va='top', family='monospace')
+        self.ax[2].loglog(self.spectrum.f, 
+                          np.ones(self.spectrum.f.shape)*mean, 
+                          color='red', linewidth = .5)
+        self.ax[2].loglog(self.spectrum.f, 
+                          np.ones(self.spectrum.f.shape)*(mean+std), 
+                          color='red', linestyle=':', linewidth=.5)
+        self.ax[2].loglog(self.spectrum.f, 
+                          np.ones(self.spectrum.f.shape)*(mean-std), 
+                          color='red', linestyle=':', linewidth=.5)
         
         # Plot the sweep
         self.sweep.ax = self.ax[1]
@@ -320,7 +353,259 @@ class ArrayTune(Measurement):
 
         return [False, self.saaconversion, -1]
 
+    def findbestlocpoints(self, monitortime=.01, numsamples=200, numtestvals = 20, width=30):
+        self.squidarray.lock('Array')
+        self.squidarray.sensitivity = 'High'
+        self.squidarray.testSignal = 'On'
+        self.squidarray.testInput = 'S_flux'
+        self.sbiasList = np.linspace(0, self.squidarray.S_bias_lim, numsamples)
+        self.bestlocs_diffmean = np.zeros(numsamples)
+        self.bestlocs_std      = np.zeros( (numsamples, numtestvals))
+        self.bestlocs_mean     = np.zeros( (numsamples, numtestvals))
+        self.bestlocs_meangrad = np.zeros( (numsamples, numtestvals))
 
+        first = True
+        for sbias,x in zip(self.sbiasList, range(len(self.sbiasList))):
+            self.squidarray.S_bias = sbias
+            self.squidarray.reset()
+            received = self.daq.monitor(['saa', 'test'], monitortime, sample_rate=256000)
+            testsorted = np.array(received['test'])
+            order = np.argsort(testsorted)
+            testsorted = testsorted[order]
+            saasorted  = np.array(received['saa'])[order]
+
+            ileft = np.linspace(0, len(testsorted)-width-1, numtestvals, dtype=int)
+            tspacing = np.abs(testsorted[ileft[1]]-testsorted[ileft[0]])
+            for il,y in zip(ileft, range(len(ileft))):
+                self.bestlocs_mean[x,y] = np.mean(saasorted[il:il+width])
+                self.bestlocs_std[x,y]  = np.std(saasorted[il:il+width])
+
+        self.bestlocs_diffmean = np.max(self.bestlocs_mean,axis=1) - np.min(self.bestlocs_mean,axis=1)
+        self.bestlocs_meangrad = np.gradient(self.bestlocs_mean, 
+                                             tspacing, 
+                                             self.sbiasList[1]-self.sbiasList[0]
+                                            )[1]
+
+    def plotbestloc(self):
+        fig, axs = plt.subplots(2,2,figsize=(8,8))
+        axs = list(axs.flatten())
+
+        axs[0].plot(self.bestlocs_diffmean, self.sbiasList)
+        axs[0].set_ylabel('S_bias (uA)')
+        axs[0].set_xlabel('max[saa signal] - min[saa signal] (V)')
+
+        offset = np.tile(np.mean(self.bestlocs_mean, axis=1), (20,1)).T
+
+
+        for i,data,label,cmap in zip(
+                [1,2,3],
+                [self.bestlocs_mean-offset, self.bestlocs_std, np.abs(self.bestlocs_meangrad)],
+                ['mean of saa signal (V)', 'std of saa signal (V)', 'abs(gradient_x mean saa signal)'],
+                ['plasma', 'inferno', 'inferno']
+                ):
+            im = axs[i].imshow(data,
+                           origin='lower', 
+                           extent=[0, 2000, self.sbiasList[0], self.sbiasList[-1]])
+            d = make_axes_locatable(axs[i])
+            cax = d.append_axes('right', size=.1, pad=.1)
+            cbar = plt.colorbar(im, cax=cax)
+            cbar.set_label(label, rotation=270, labelpad=12)
+            axs[i].set_xlabel('Arbitrary units FIXME')
+            axs[i].set_ylabel('S_bias (uA)')
+        #axs[0].set_aspect(axs[1].get_aspect())
+
+        fig.tight_layout()
+        
+class BestLockPoint(Measurement):
+    instrument_list = ["daq", "squidarray", "preamp"]
+    _daq_inputs = ["saa", "test"]
+    _daq_outputs = ["test"]
+
+    def __init__(self, 
+                instruments,
+                 monitortime=.01, 
+                 numsamples=200,
+                 samplerate=256000,
+                 testinputconv = 10 # uA/V
+                 ):
+        
+        super(BestLockPoint, self).__init__(instruments=instruments)
+        self.monitortime = monitortime
+        self.numsamples = numsamples
+        self.samplerate = samplerate
+        self.testinputconv = testinputconv
+
+    def do(self):
+        self.findbestlocpoints_record()
+        self.findbestlocpoints_analyze()
+        self.plot()
+
+    def setup_plots(self):
+        self.fig, self.ax = plt.subplots(2,2, figsize=(12,9))
+        self.ax = list(self.ax.flatten())
+
+    @staticmethod
+    def vmax_xsigma_p(data, sigmas):
+        return np.mean(data) + sigmas*np.std(data)
+
+    @staticmethod
+    def vmax_xsigma_n(data, sigmas):
+        return np.mean(data) - sigmas*np.std(data)
+
+    def plot(self):
+        extent = (self.testinputconv*self.bestloc_testsort_test[0][0], 
+                  self.testinputconv*self.bestloc_testsort_test[0][-1],
+                  self.sbiasList[0], self.sbiasList[-1])
+        mean = self.bestloc_mean - np.tile(np.mean(self.bestloc_mean, axis=1), 
+                                          (self.bestloc_mean.shape[1],1)).T
+        data = [mean, self.bestloc_grad, self.bestloc_err, 
+                self.bestloc_absgrad_over_err]
+        labels = ['mean', 'gradient', 'error', 'gradient/error']
+        vmax = [
+                self.vmax_xsigma_p(mean,4),
+                self.vmax_xsigma_p(self.bestloc_grad,4),
+                self.vmax_xsigma_p(self.bestloc_err,4),
+                self.vmax_xsigma_p(self.bestloc_absgrad_over_err,4)]
+        vmin = [
+                self.vmax_xsigma_n(mean,4),
+                self.vmax_xsigma_n(self.bestloc_grad,4),
+                0,
+                0]
+        cmaps = ['PRGn', 'coolwarm', 'plasma', 'inferno']
+        for d,a,l,vp,vn,cm in zip(data, self.ax, labels,vmax,vmin,cmaps):
+            self.plot_1(a, d, extent,l,vp, vn, cm)
+
+        self.fig.tight_layout()
+        self.ax[0].annotate(self.filename, xy=(.02,.98), xycoords='axes fraction',
+                       fontsize=8, ha='left', va='top', family='monospace')
+
+
+    def plot_1(self, ax, data, extent, label, vmax,vmin,cmap):
+        im = ax.imshow(data, extent=extent, aspect='auto', 
+                      origin='lower',vmax=vmax, vmin=vmin,
+                      cmap=cmap)
+        d = make_axes_locatable(ax)
+        cax = d.append_axes('right', size=.1, pad=.1)
+        cbar = plt.colorbar(im, cax=cax)
+        cbar.set_label(label)
+        ax.set_xlabel('Sflux (uA)')
+        ax.set_ylabel('Sbias (uA)')
+
+
+    def plot_goodness(self, vmax):
+        fig,ax = plt.subplots()
+        extent = (self.bestloc_testsort_test[0][0], 
+                  self.bestloc_testsort_test[0][-1],
+                  self.sbiasList[0], 
+                  self.sbiasList[-1])
+        self.plot_1(ax,self.bestloc_absgrad_over_err,
+                    extent=extent, label='gradient/err',
+                    vmax=vmax)
+        
+
+    @staticmethod
+    def plotline(obj, index):
+        xs = obj.testinputconv * obj.bestloc_testsort_test[index]
+
+        fig,ax = plt.subplots(4,1, sharex=True, figsize=(5,9))
+
+        ax[0].plot(xs, obj.bestloc_testsort_saa[index])
+        ax[0].plot(xs, obj.bestloc_mean[index])
+        ax[0].set_ylabel('signal = SAA signal (V)')
+
+        ax[1].plot(xs, obj.bestloc_grad[index])
+        ax[1].set_ylabel('grad = Gradient of signal')
+
+        ax[2].plot(xs, obj.bestloc_err[index])
+        ax[2].set_ylabel('err = Binned STD')
+
+        ax[3].plot(xs, obj.bestloc_absgrad_over_err[index])
+        ax[3].set_ylabel('abs(grad of saa)/err')
+
+        ax[3].set_xlabel('Sflux (uA)')
+
+        ax[0].annotate(obj.filename, xy=(.02,.98), xycoords='axes fraction',
+                       fontsize=8, ha='left', va='top', family='monospace')
+
+        ax[1].annotate('S_bias = {0:2.2f} uA'.format(obj.sbiasList[index]), 
+                       xy=(.02,.98), xycoords='axes fraction',
+                       fontsize=8, ha='left', va='top', family='monospace')
+
+        fig.subplots_adjust(wspace=0, hspace=0)
+
+        fig.tight_layout()
+        
+        return fig,ax
+
+    @staticmethod
+    def plotline_current(obj, current):
+        return BestLockPoint.plotline(obj, np.argmin(np.abs(obj.sbiasList-current)))
+    
+
+    def findbestlocpoints_record(self):
+        monitortime = self.monitortime
+        numsamples = self.numsamples
+        samplerate = self.samplerate
+
+        self.squidarray.lock('Array')
+        self.squidarray.sensitivity = 'High'
+        self.squidarray.testSignal = 'On'
+        self.squidarray.testInput = 'S_flux'
+        self.sbiasList = np.linspace(0, self.squidarray.S_bias_lim, numsamples)
+
+        first = True
+        for sbias,x in zip(self.sbiasList, range(len(self.sbiasList))):
+            # take data
+            self.squidarray.S_bias = sbias
+            self.squidarray.reset()
+            received = self.daq.monitor(['saa', 'test'], monitortime, sample_rate=256000)
+
+            # store data
+            if first:
+                self.bestloc_raw_saa = np.zeros( (numsamples, len(received['saa'])))
+                self.bestloc_raw_test = np.zeros( self.bestloc_raw_saa.shape)
+                self.bestloc_raw_time = np.zeros( self.bestloc_raw_saa.shape)
+                self.bestloc_testsort_saa = np.zeros(  self.bestloc_raw_saa.shape)
+                self.bestloc_testsort_test = np.zeros( self.bestloc_raw_saa.shape)
+
+                first = False
+
+            self.bestloc_raw_saa[x] = received['saa']
+            self.bestloc_raw_test[x] = received['test']
+            self.bestloc_raw_time[x] = received['t']
+
+            # sort by the test signal
+            order = np.argsort(self.bestloc_raw_test[x])
+            self.bestloc_testsort_test[x] = self.bestloc_raw_test[x][order]
+            self.bestloc_testsort_saa[x]  = self.bestloc_raw_saa[x][order]
+
+
+    def findbestlocpoints_analyze(self, 
+                                  savgol_winlen_mean=201, 
+                                  savgol_polyorder_mean=5,
+                                  savgol_winlen_grad=201,
+                                  savgol_polyorder_grad=5,
+                                  std_winlen=201):
+
+        delta = np.abs(self.bestloc_testsort_test[0][0]-
+                       self.bestloc_testsort_test[0][-1]
+                       )/self.bestloc_testsort_test[0].shape[0]
+
+        self.bestloc_mean = savgol_filter(self.bestloc_testsort_saa, 
+                                          window_length=savgol_winlen_mean,
+                                          polyorder=savgol_polyorder_mean,
+                                          axis=1)
+        self.bestloc_grad = savgol_filter(self.bestloc_testsort_saa,
+                                          window_length=savgol_winlen_grad,
+                                          polyorder=savgol_polyorder_grad,
+                                          deriv=1, delta=delta,
+                                          axis=1)
+
+        self.bestloc_err = np.apply_along_axis(running_std, 1, 
+                                                  self.bestloc_testsort_saa-self.bestloc_mean, 
+                                                  windowlen=16, mode='same')
+        self.bestloc_absgrad_over_err = np.abs(self.bestloc_grad
+                                              )/self.bestloc_err
 
 
 class ArrayTuneBatch(Measurement):
@@ -434,7 +719,8 @@ class ArrayTuneBatch(Measurement):
         # order follows all the "n copies" of stuff in the above
         # comment
         self.savenames = ['spectrum_psd', 'sweep_fcIsrc', 'sweep_sresp',
-                           'char_testsig', 'char_saasig']
+                           'char_testsig', 'char_saasig', 'spectrum_mean',
+                           'spectrum_std']
         first = True
         maxlen = len(self.sbias)*len(self.aflux)*len(self.sflux)
         self.spectrum_f = np.array([])
@@ -508,7 +794,9 @@ class ArrayTuneBatch(Measurement):
                   np.array(at.sweep.Vsrc / at.sweep.Rbias),
                   np.array(at.sweep.Vmeas * at.sweep.conversion),
                   np.array(at.char[1]), 
-                  np.array(at.char[2])
+                  np.array(at.char[2]),
+                  np.array([at.noise_mean]),
+                  np.array([at.noise_std])
                  ]
 
         if first: # do not know size until you try
@@ -533,18 +821,19 @@ class ArrayTuneBatch(Measurement):
         n_l_z = np.full(len(self.aflux), np.nan)
         l_l_z = np.full(len(self.aflux), np.nan)
 
-        index_fstart = np.argmin(abs(self.spectrum_f - 100))
-        index_fstop  = np.argmin(abs(self.spectrum_f - 1000))
+        #index_fstart = np.argmin(abs(self.spectrum_f - 100))
+        #index_fstop  = np.argmin(abs(self.spectrum_f - 1000))
 
         for j,i in zip(range(len(n_l_z)), indexes):
-            print(i)
+            #print(i)
             sys.stdout.flush()
 
             if not self.success[i]:
                 continue
 
-            n_l_z[j] = np.sqrt(np.mean(np.square(
-                    (self.spectrum_psd[i])[index_fstart:index_fstop])))
+            #n_l_z[j] = np.sqrt(np.mean(np.square(
+            #        (self.spectrum_psd[i])[index_fstart:index_fstop])))
+            n_l_z[j] = self.spectrum_mean[i]
             
             fcIsrchasnan = np.any(np.isnan(self.sweep_fcIsrc[i]))
             sresphasnan  = np.any(np.isnan(self.sweep_sresp[i]))
