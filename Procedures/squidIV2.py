@@ -16,7 +16,7 @@ class SQUID_IV(Measurement):
     ''' Take Squid IV'''
     _daq_inputs = ['iv']
     _daq_outputs = ['iv']
-    instrument_list = ['daq']
+    instrument_list = ['daq','preamp']
 
     _XLABEL = r'$I_{squid}$ ($\mu A$)'
     _YLABEL = r'$V_{squid}$ ($\mu V$)'
@@ -28,7 +28,6 @@ class SQUID_IV(Measurement):
                  iv_Is = np.linspace(-100e-6,100e-6,1000),
                  iv_Rbias = 2000,
                  samplerate = 1000,
-                 gain = 5000, # FIXME
                  ):
         '''
         Make a SQUID IV
@@ -38,7 +37,6 @@ class SQUID_IV(Measurement):
             iv_Is       (nparray): currents to set, approximate
             iv_Rbias    (float): resistance of cold+warm bias on IV
             samplerate  (float): samples/s for measurement
-            gain        (float): gain on preamp
         '''
         super().__init__(instruments=instruments)
         
@@ -46,7 +44,6 @@ class SQUID_IV(Measurement):
         self.iv_Is     = np.array(iv_Is)
         self.iv_Vs     = self.iv_Is * self.iv_Rbias
         self.samplerate= samplerate
-        self.gain      = gain
 
         self._safetychecker()
 
@@ -101,11 +98,11 @@ class SQUID_IV(Measurement):
                                        sample_rate=self.samplerate)
 
         # save data in object
-        self.Vmeas_up = np.array( fu_r[self._daq_inputs[0]]/self.gain)
+        self.Vmeas_up = np.array( fu_r[self._daq_inputs[0]]/self.preamp.gain)
         self.Vsrc_up  = np.array(fu_od[self._daq_outputs[0]])
 
         if hysteresis:
-            self.Vmeas_down = np.array( fd_r[self._daq_inputs[0]]/self.gain)
+            self.Vmeas_down = np.array( fd_r[self._daq_inputs[0]]/self.preamp.gain)
             self.Vsrc_down  = np.array(fd_od[self._daq_outputs[0]])
         
         # Plot
@@ -224,7 +221,7 @@ class SQUID_IV(Measurement):
 
 class SQUID_Mod(Measurement):
     _daq_outputs = ['mod']
-    instrument_list = ['daq']
+    instrument_list = ['daq','preamp']
     _MOD_MAX_I = 100e-6
     _NESTED_CALLABLE = SQUID_IV
     _cmap = 'coolwarm'
@@ -240,7 +237,6 @@ class SQUID_Mod(Measurement):
                  iv_Rbias = 2000,
                  mod_Rbias = 2000,
                  samplerate = 1000,
-                 gain = 5000, # FIXME
                  ):
         '''
         SQUID_Mod: Create an object take squid modulations
@@ -252,7 +248,6 @@ class SQUID_Mod(Measurement):
             iv_Rbias    (float): bias resistor for IV
             mod_Rbias   (float): bias resistor for Mod
             samplerate  (float): samples/s sampling rate
-            gain        (float): gain of preamp
 
         '''
         super().__init__(instruments=instruments)
@@ -261,7 +256,6 @@ class SQUID_Mod(Measurement):
         self.iv_Rbias   = iv_Rbias
         self.mod_Rbias  = mod_Rbias
         self.samplerate = samplerate
-        self.gain       = gain
         self.instruments = instruments
 
         self.mod_Vs = self.mod_Is * self.mod_Rbias
@@ -292,7 +286,6 @@ class SQUID_Mod(Measurement):
                           self.iv_Is,
                           self.iv_Rbias,
                           self.samplerate,
-                          self.gain
                          )
             ivs.append(iv)
             iv.run(save_appendedpath = self.filename, removeplot=True)
@@ -370,7 +363,7 @@ class SQUID_Mod(Measurement):
 class SQUID_FCIV(SQUID_IV):
     _daq_inputs = ['iv']
     _daq_outputs = ['fc']
-    instrument_list = ['daq']
+    instrument_list = ['daq','preamp']
     
 
     _XLABEL = r'$I_{fc}$ ($\mu A$)'
@@ -384,7 +377,6 @@ class SQUID_FCIV(SQUID_IV):
                  fc_Is = np.linspace(-.5e-3, .5e-3, 100),
                  fc_Rbias = 2000,
                  samplerate = 1000,
-                 gain = 5000,
                  ):
         '''
         Make a SQUID IV
@@ -394,19 +386,17 @@ class SQUID_FCIV(SQUID_IV):
             fc_Is       (nparray): currents to set, approximate
             fc_Rbias    (float): resistance of cold+warm bias on IV
             samplerate  (float): samples/s for measurement
-            gain        (float): gain on preamp
         '''
         super().__init__(instruments=instruments,
                          iv_Is = fc_Is,
                          iv_Rbias = fc_Rbias,
                          samplerate = samplerate,
-                         gain=gain
                          )
 
                 
 class SQUID_FC(SQUID_Mod):
     _daq_outputs = ['mod','iv']
-    instrument_list = ['daq']
+    instrument_list = ['daq','preamp']
     _MOD_MAX_I = 100e-6
     _IV_MAX_I = 100e-6
     _NESTED_CALLABLE = SQUID_FCIV
@@ -426,7 +416,6 @@ class SQUID_FC(SQUID_Mod):
                  fc_Rbias = 2000,
                  mod_Rbias = 2000,
                  samplerate = 1000,
-                 gain = 5000,
                  ):
         '''
         SQUID_FC: Create an object take squid fieldcoil sweeps
@@ -439,7 +428,6 @@ class SQUID_FC(SQUID_Mod):
                          iv_Rbias = fc_Rbias,
                          mod_Rbias = mod_Rbias,
                          samplerate = samplerate,
-                         gain=gain
                          )
         self.iv_I = iv_I
         self.iv_Rbias = iv_Rbias
@@ -478,7 +466,7 @@ class SQUID_IV_MOD(SQUID_IV):
     '''For constant squid current bias, sweep modulation'''
     _daq_inputs = ['iv']
     _daq_outputs = ['mod']
-    instrument_list = ['daq']
+    instrument_list = ['daq','preamp']
 
     _XLABEL = r'$I_{mod}$ ($\mu A$)'
     _YLABEL = r'$V_{squid}$ ($\mu V$)'
@@ -490,18 +478,16 @@ class SQUID_IV_MOD(SQUID_IV):
                  mod_Is = np.linspace(-100e-6,100e-6,1000),
                  mod_Rbias = 2000,
                  samplerate = 1000,
-                 gain = 5000, # FIXME
                  ):
         super().__init__(instruments=instruments,
                          iv_Is = mod_Is,
                          iv_Rbias = mod_Rbias,
                          samplerate = samplerate,
-                         gain=gain
                          )
         
 class SQUID_Mod_FastMod(SQUID_Mod):
     _daq_outputs = ['iv']
-    instrument_list = ['daq']
+    instrument_list = ['daq','preamp']
     _MOD_MAX_I = 100e-6
     _NESTED_CALLABLE = SQUID_IV_MOD
     _cmap = 'coolwarm'
@@ -516,7 +502,6 @@ class SQUID_Mod_FastMod(SQUID_Mod):
                  iv_Rbias = 2000,
                  mod_Rbias = 2000,
                  samplerate = 1000,
-                 gain = 5000, # FIXME
                  ):
         '''
         SQUID_Mod_FastMod: Create an object take squid modulations
@@ -532,7 +517,6 @@ class SQUID_Mod_FastMod(SQUID_Mod):
             iv_Rbias    (float): bias resistor for IV
             mod_Rbias   (float): bias resistor for Mod
             samplerate  (float): samples/s sampling rate
-            gain        (float): gain of preamp
 
         '''
         super().__init__(instruments=instruments,
@@ -540,8 +524,7 @@ class SQUID_Mod_FastMod(SQUID_Mod):
                          mod_Is = iv_Is,
                          iv_Rbias = mod_Rbias,
                          mod_Rbias = iv_Rbias,
-                         samplerate = samplerate,
-                         gain=gain)
+                         samplerate = samplerate)
 
     def plot(self):
         plot_mpl.update2D(self.im, self.V.T, equal_aspect=False)
@@ -724,7 +707,7 @@ class ThreeParam_Sweep(Measurement):
     @staticmethod
     def plot_color_diff(obj,ax):
         imd = obj.Vmeas[0,:,0,:]*1e6 - np.tile(np.mean(imd, axis=1))
-        im = ax.imshow(obj.imd, 
+        im = ax.imshow(obj.imd, origin='lower',
                        extent=(obj.mod_Is[0]*1e6, obj.mod_Is[-1]*1e6,
                                obj.iv_Is[0]*1e6,  obj.iv_Is[-1]*1e6),
                        aspect='auto')
@@ -733,7 +716,8 @@ class ThreeParam_Sweep(Measurement):
 
     @staticmethod
     def plot_color(ax, xaxis, yaxis, z, cmap='viridis'):
-        im = ax.imshow(z, cmap, extent=(xaxis[0], xaxis[-1], yaxis[0], yaxis[-1]),
+        im = ax.imshow(z, cmap, origin='lower',
+                        extent=(xaxis[0], xaxis[-1], yaxis[0], yaxis[-1]),
                         aspect='auto')
         d = make_axes_locatable(ax)
         cax = d.append_axes('right', size=.1, pad=.1)
@@ -777,6 +761,13 @@ class ThreeParam_Sweep(Measurement):
 
         fig.tight_layout()
         return [fig,axs]
+    
+    @staticmethod
+    def plot_amplitude(ax,yaxis,z,axis=1):
+        ampz = np.abs(np.max(z, axis=axis) - np.min(z, axis=axis))
+        ax.plot(ampz, yaxis)
+        return ax
+
 
 
 
@@ -909,7 +900,7 @@ class SQUID_Mod_FastMod(ThreeParam_Sweep):
         self.ax = list(self.ax)
 
     def plot(self):
-        [self.fig, self.ax] = SQUID_FC_FastMod.plot_fastmod(
+        [self.fig, self.ax] = SQUID_Mod_FastMod.plot_fastmod(
             fig=self.fig,
             axs=self.ax, 
             v=self.Vmeas[0,:,0,:]*1e6, 
@@ -920,6 +911,16 @@ class SQUID_Mod_FastMod(ThreeParam_Sweep):
             vlabel='Vsquid (uV)', 
             dirlabel=r'$|\frac{\mathrm{d}V_{\rm squid}}{\mathrm{d}I_{\rm mod}}|$', 
             filename=self.filename)
+
+    def plot_amp(self):
+        fig,ax = plt.subplots()
+        ax = SQUID_Mod_FastMod.plot_amplitude(ax, 
+                                             self.iv_Is*1e6, 
+                                             self.Vmeas[0,:0,:]*1e6, 
+                                             axis=1)
+        ax.set_ylabel('Iiv (uA)')
+        ax.set_xlabel('Vsquid Amplitude (uV)')
+        return [fig,ax]
 
 
 class SQUID_FC_FastMod(ThreeParam_Sweep):
@@ -974,3 +975,13 @@ class SQUID_FC_FastMod(ThreeParam_Sweep):
             vlabel='Vsquid (uV)', 
             dirlabel=r'$|\frac{\mathrm{d}V_{\rm squid}}{\mathrm{d}I_{\rm mod}}|$', 
             filename=self.filename)
+
+    def plot_amp(self):
+        fig,ax = plt.subplots()
+        ax = SQUID_FC_FastMod.plot_amplitude(ax, 
+                                             self.fc_Is*1e6, 
+                                             self.Vmeas[0,:0,:]*1e6, 
+                                             axis=1)
+        ax.set_ylabel('Ifc (uA)')
+        ax.set_xlabel('Vsquid Amplitude (uA)')
+        return [fig,ax]
