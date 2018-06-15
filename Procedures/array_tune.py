@@ -9,6 +9,7 @@ import numpy as np
 from importlib import reload
 import matplotlib.cm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from scipy.signal import savgol_filter
 
 import sys
 
@@ -16,7 +17,13 @@ import Nowack_Lab.Utilities.save
 reload(Nowack_Lab.Utilities.save)
 from Nowack_Lab.Utilities.save import Measurement
 
-from ..Procedures.daqspectrum import SQUIDSpectrum
+import Nowack_Lab.Utilities.utilities
+reload(Nowack_Lab.Utilities.utilities)
+from Nowack_Lab.Utilities.utilities import running_std
+
+import Nowack_Lab.Procedures.daqspectrum
+reload(Nowack_Lab.Procedures.daqspectrum)
+from Nowack_Lab.Procedures.daqspectrum import SQUIDSpectrum
 
 import Nowack_Lab.Procedures.mutual_inductance
 reload(Nowack_Lab.Procedures.mutual_inductance)
@@ -36,25 +43,55 @@ class ArrayTune(Measurement):
                  sflux_offset = 0.0,
                  aflux_offset = 0.0,
                  conversion=1/1.44,
+                 testsignalconv = 10,
                  debug=False):
-        """Given a lock SAA, tune the input SQUID and lock it.
-        Args:
+        """
+        Lock a SQUID automatically, given a locked SAA
+
+        Constructor Parameters:
+        -----------------------
         instruments (dict): Dictionary of instruments
+
         squid_bias (float): Bias point for SQUID lock
+
         squid_tol (float): Allowed DC offset for the locked SQUID
-        offset (float): Tune the lockpoint up/down on the SQUID characaristic.
-        conversion (float): in phi_0/V (1/1.44 ibm, 1/2.1 hypres) in MED sens
+                           (SQUID locked)
+
+        aflux_tol (float): Allowed DC offset from the desired lock point 
+                           when choosing the SQUID lock point (Array locked)
+
+        sflux_offset (float): Desired DC offset from 0 for the locked SQUID 
+                              Aims to lock at this point, if the squid array
+                              signal was centered at zero.
+                              SQUID locked.
+        
+        aflux_offset (float): Desired DC offset from 0 for the SQUID 
+                              characteristic used to find the desired lock
+                              point.  (Array locked).  Aims for 
+                              to lock at this point, if the characteristic
+                              was centered at zero.
+                             
+
+        conversion (float): Conversion in phi_0/V for the locked SQUID. 
+                            MED sensitivity
+                            IBM: 1/1.44; HYPRES: .565
+
+        testsignalconv (float): Conversion in uA/V for S_flux per test 
+                                signal voltage.
+                                Normal: 10; Dipping Probe: 30.3
+                                
+        debug (boolean): Print debug messages if True
         """
         super(ArrayTune, self).__init__(instruments=instruments)
 
         self.instruments = instruments
         self.squid_bias = squid_bias
-        #self.conversion = 5 # Conversion between mod current and voltage
         self.squid_tol = squid_tol
         self.aflux_tol = aflux_tol
         self.sflux_offset = sflux_offset
         self.aflux_offset = aflux_offset
         self.saaconversion = conversion # med
+        self.testsignalconv = testsignalconv
         self.debug = debug
 
     def acquire(self):
@@ -63,16 +100,24 @@ class ArrayTune(Measurement):
         data = {"test": 2*np.ones(2000)}
         # Record test
         ret = self.daq.send_receive(data, chan_in = ["saa", "test"],
-                                    sample_rate=100000)
+                                    sample_rate=256000)
         # Zero the DAQ output
         self.daq.outputs["test"].V = 0
-        return ret['t'], ret["test"], ret["saa"], 
+        out = np.zeros((3, len(ret['t'])))
+        out[0] = ret['t']
+        out[1] = ret['test']
+        out[2] = ret['saa']
+        
+        return out
 
     def tune_squid_setup(self):
-        """Configure SAA for SQUID tuning."""
+        """
+        Configure SAA for SQUID tuning.  Array locked, choose a place on 
+        the SQUID characteristic to lock.
+        """
         self.squidarray.lock("Array")
         #self.squidarray.S_flux_lim = 100
-        self.squidarray.S_flux = self.squidarray.S_flux_lim/2
+        #self.squidarray.S_flux = self.squidarray.S_flux_lim/2
         self.squidarray.testInput = "S_flux"
         self.squidarray.testSignal = "On"
         self.squidarray.S_bias = self.squid_bias
@@ -84,10 +129,13 @@ class ArrayTune(Measurement):
         return (np.max(data) + np.min(data))/2
 
     def tune_squid(self, attempts=5):
-        """Tune the SQUID and adjust the DC SAA flux."""
+        """
+        Tune the SQUID and adjust the DC SAA flux.  Array locked,
+        lock on a specific value of the SQUID characteristic.
+        """
         self.tune_squid_setup()
         self.char = self.acquire()
-        error = self._midpoint(self.char[-1]) - self.aflux_offset
+        error = self._midpoint(self.char[-1]) + self.aflux_offset
         
         if self.debug:
             print('Tune_squid error:', error)
@@ -101,12 +149,16 @@ class ArrayTune(Measurement):
             return self.tune_squid(attempts = attempts-1)
 
     def lock_squid(self, attempts=5):
-        """Lock the SQUID and adjust the DC SQUID flux."""
+        """
+        Lock the SQUID and adjust the DC SQUID flux.
+        Adjust the DC offset of the SQUID signal to be near
+        zero to avoid overloading the preamp.
+        """
         self.squidarray.lock("Squid")
         self.squidarray.testSignal = "Off"
         self.squidarray.reset()
-        ret = self.daq.monitor(["saa"], 0.01, sample_rate = 100000)
-        error = self._midpoint(ret["saa"]) - self.sflux_offset
+        ret = self.daq.monitor(["saa"], 0.01, sample_rate = 256000)
+        error = self._midpoint(ret["saa"]) + self.sflux_offset
 
         if self.debug:
             print('lock_squid error:', error)
@@ -122,8 +174,14 @@ class ArrayTune(Measurement):
             return self.lock_squid(attempts - 1)
 
     def adjust(self, attr, error):
-        """Adjust DC flux to center the trace @ 0 V.
+        """
+        Adjust DC flux to center the trace @ 0 V.
+        Called by lock_squid and tune_squid
+
+        Parameters:
+        -----------
         attr:   (string): parameter of squidarray to change
+
         error:  (float):  distance in V from desired point
         """
         value = getattr(self.squidarray, attr)
@@ -150,7 +208,18 @@ class ArrayTune(Measurement):
         return np.mean(received['saa']), np.std(received['saa'])
 
     def calibrate_adjust(self, attr, monitortime=.25, step=10):
-        """ create conversion factor for adjust in V/[attr]"""
+        """
+        Create conversion factor for adjust in V/[attr]
+        For a given step size, how much does the SAA signal change?
+
+        Parameters:
+        -----------
+        attr (string): parameter of squidarray to change
+
+        monitortime (float): time in seconds to monitor the saa signal
+
+        step (float): step size to change attr
+        """
         conversion = 0
         attr_state = getattr(self.squidarray,attr)  
 
@@ -177,25 +246,41 @@ class ArrayTune(Measurement):
         '''
         pass
 
-
     def plot(self):
+        '''
+        '''
         self.fig, self.ax = plt.subplots(1,3,figsize=(12,4))
         # Plot the charactaristic
-        self.ax[0].plot(self.char[1], self.char[2])
-        self.ax[0].set_xlabel("Test Signal (V)")
+        self.ax[0].plot(self.char[1]*self.testsignalconv, self.char[2])
+        self.ax[0].set_xlabel("Sflux (uA)")
         self.ax[0].set_ylabel("SAA Signal (V)", size="medium")
         self.ax[0].set_title(" {0:2.2e} phi_0/V".format(self.spectrum.conversion))
+        #self.ax[0].axhline(self.aflux_offset, linestyle=':', color='k')
 
         # Plot the spectrum
+        mean = self.noise_mean
+        std = self.noise_std
+        
         self.ax[2].loglog(self.spectrum.f,
                      self.spectrum.psdAve * self.spectrum.conversion)
         self.ax[2].set_xlabel("Frequency (Hz)")
-        self.ax[2].set_title("PSD ($\mathrm{%s/\sqrt{Hz}}$)" % self.spectrum.units,
-                        size="medium")
-        self.ax[2].annotate('Sbias = {0:2.2e} uA\nAflux = {1:2.2e} uA'.format(
+        self.ax[2].set_title(r"PSD (Noise = {1:2.2f} $\mu \rm {0}/\sqrt{{Hz\rm}}$".format(
+                        self.spectrum.units, mean*1e6 ), size="medium")
+#        self.ax[2].set_title(r"PSD ($\rm {0}/\sqrt{{Hz\rm}}$".format( self.spectrum.units),
+#                        size="medium")
+        self.ax[2].annotate('Sbias        = {0:2.2e} uA\nAflux_offset = {1:2.2e} uA'.format(
                             self.squid_bias, self.aflux_offset), 
                             xy=(.02, .2), xycoords='axes fraction',
                             fontsize=8, ha='left', va='top', family='monospace')
+        self.ax[2].loglog(self.spectrum.f, 
+                          np.ones(self.spectrum.f.shape)*mean, 
+                          color='red', linewidth = .5)
+        self.ax[2].loglog(self.spectrum.f, 
+                          np.ones(self.spectrum.f.shape)*(mean+std), 
+                          color='red', linestyle=':', linewidth=.5)
+        self.ax[2].loglog(self.spectrum.f, 
+                          np.ones(self.spectrum.f.shape)*(mean-std), 
+                          color='red', linestyle=':', linewidth=.5)
         
         # Plot the sweep
         self.sweep.ax = self.ax[1]
@@ -203,7 +288,13 @@ class ArrayTune(Measurement):
         self.ax[1].set_ylabel("")
         self.ax[1].set_title("DC SQUID Signal (V)",
                         size="medium")
+
+
+
     def run_spectrum(self, save_appendedpath=''):
+        '''
+        Run a squid spectrum
+        '''
         self.squidarray.sensitivity = "High" #Essential, for some reason
         self.preamp.gain = 1
         self.preamp.filter = (1, 100000)
@@ -221,6 +312,9 @@ class ArrayTune(Measurement):
         self.spectrum.run(welch=True, save_appendedpath = save_appendedpath)
 
     def run_mi(self, save_appendedpath=''):
+        '''
+        Run a mutual inductance
+        '''
         self.squidarray.sensitivity = "Medium"
         self.squidarray.reset()
         self.preamp.filter = (1, 300)
@@ -254,6 +348,12 @@ class ArrayTune(Measurement):
             self._DO_NOT_SAVE = True
             return False
 
+        [self.char_ave_grad, 
+         self.char_ave_mean, 
+         self.char_ave_err, 
+         self.char_ave_good, 
+        _] = self.analyze_char()
+
         self.islocked = self.lock_squid()
         if self.islocked == False:
             print('Array Tune Failed, will not save array_tune')
@@ -265,6 +365,18 @@ class ArrayTune(Measurement):
         plt.close()
         self.run_mi(self._save_appendedpath)
         plt.close()
+
+        # make some statistics
+        self.noise_mean, self.noise_std = self.spectrum.findmeanstd()
+        self.sweep_fcIsrc = np.array(self.sweep.Vsrc / 
+                                     self.sweep.Rbias).flatten()
+        self.sweep_sresp  = np.array(self.sweep.Vmeas * 
+                                     self.sweep.conversion).flatten()
+        
+        [self.sweep_p, self.sweep_v] = np.polyfit(self.sweep_fcIsrc, 
+                                                  self.sweep_sresp,1,
+                                                  cov=True)
+
         self.plot()
         plt.close()
         self.ax = list(self.ax.flatten())
@@ -278,9 +390,19 @@ class ArrayTune(Measurement):
 
     def findconversion(self, dur=.1, stepsize=1):
         '''
-        Returns false or 
-        [the phi_0/V to make phi_0 jump at med,
-         the flux bias point necessary to make the jump]
+        Find the squid phi_0/V using the saa reset
+
+        Parameters:
+        -----------
+        dur (float): duration to measure in seconds
+
+        stepsize (float): stepsize to take in S_flux
+
+        Returns:
+        --------
+        False or out
+            out = [the phi_0/V to make phi_0 jump at med,
+                   the flux bias point necessary to make the jump]
         '''
         istuned = self.tune_squid()
         if not istuned:
@@ -298,8 +420,21 @@ class ArrayTune(Measurement):
         and increment some parameter (s_flux, a_flux) until you see a 
         jump.
 
-        returns false or 
-        [phi_0/V at med, sflux to get the jump]
+        Parameters:
+        -----------
+        attrname (string): attribute of squidarray to increment
+
+        maxattrval (float): maximum value of attrname
+
+        stepsize (float) increment attrname in steps of stepsize
+
+        dur (float): measure duration
+
+        Returns:
+        --------
+        False or out
+            out = [the phi_0/V to make phi_0 jump at med,
+                   the flux bias point necessary to make the jump]
         '''
 
 
@@ -319,7 +454,419 @@ class ArrayTune(Measurement):
                 return [True, 1/abs(posmean - premean), attrval]
 
         return [False, self.saaconversion, -1]
+    
+    def analyze_char(self, saasig_range = .05):
+        '''
+        Analyze the characteristic
+        '''
+        # sort the characteristics by the test signal
+        order = np.argsort(self.char[1])
+        self.char_testsig = self.char[1][order]
+        self.char_saasig  = self.char[2][order]
 
+        # create mean, grad, err, absgradovererr for this characteristic
+        [self.char_mean, 
+         self.char_grad, 
+         self.char_err, 
+         self.char_absgradovererr
+        ] = BestLockPoint.savgolmeangrad_convstd(
+                self.char_testsig, 
+                self.char_saasig)
+
+        # Order the mean, grad, err, absgradovererr=good from closest
+        # to the lockpoint (0) to furthest from the lockpoint
+        order = np.argsort(np.abs(self.char_mean)) # always locks at zero
+        mean_s = self.char_mean[order]
+        grad_s = self.char_grad[order]
+        err_s  = self.char_err[order]
+        good_s = self.char_absgradovererr[order]
+
+        # find the index at which the mean is futher than saasig_range from 
+        # the lock point
+        index_f = np.argmin(np.abs(mean_s - saasig_range))
+
+        # average all the points near the lockpoint for mean, grad, etc
+        ave_grad = np.mean(np.abs(grad_s[0:index_f]))
+        ave_mean = np.mean(mean_s[0:index_f])
+        ave_err  = np.mean(err_s[0:index_f])
+        ave_good = np.mean(good_s[0:index_f])
+
+        return [ave_grad, ave_mean, ave_err, ave_good, order]
+
+
+        
+
+        
+
+
+class BestLockPoint(Measurement):
+    instrument_list = ["daq", "squidarray", "preamp"]
+    _daq_inputs = ["saa", "test"]
+    _daq_outputs = ["test"]
+
+    def __init__(self, 
+                instruments,
+                 monitortime=.01, 
+                 numsamples=200,
+                 samplerate=256000,
+                 testinputconv = 10 # uA/V
+                 ):
+        '''
+        BestLockPoint: Quickly find the region in the squid bias-squid flux 
+        parameter space where the squid will lock with low noise
+
+        Constructor Parameters:
+        -----------------------
+        instruments (dict): instruments for measurement
+
+        monitortime (float): time to measure a channel.  Should be at least
+                             greater than 1/freq = 1 period of triangle test
+                             signal
+
+        numsamples (int): number of sbias samples.  
+                          SbiasList = numpy.linspace(0,2000,numsamples)
+
+        samplerate (int): sample rate of daq, in samples/s
+
+        testinputconv (float): uA squid flux / V test signal.  Usually 10 uA/V
+                               but can be altered by changing the resistors in 
+                               the PFL-102
+
+        '''
+        
+        super(BestLockPoint, self).__init__(instruments=instruments)
+        self.monitortime = monitortime
+        self.numsamples = numsamples
+        self.samplerate = samplerate
+        self.testinputconv = testinputconv
+
+    def do(self):
+        '''
+        Find best lock points
+        '''
+        self.findbestlocpoints_record()
+        self.findbestlocpoints_analyze()
+        self.plot()
+
+    def setup_plots(self):
+        '''
+        Setup plots
+        '''
+        self.fig, self.ax = plt.subplots(2,2, figsize=(12,9))
+        self.ax = list(self.ax.flatten())
+
+    @staticmethod
+    def vmax_xsigma_p(data, sigmas):
+        '''
+        Calculate the highest value within sigmas sigmas.
+
+        Parameters:
+        -----------
+        data (numpy ndarray): array of floats (data)
+
+        sigmas (float): number of sigmas to keep
+
+
+        Returns:
+        --------
+        out (float): numpy.mean(data) + sigma*numpy.std(data)
+        '''
+        return np.nanmean(data) + sigmas*np.nanstd(data)
+
+    @staticmethod
+    def vmax_xsigma_n(data, sigmas):
+        '''
+        See vmax_xsigma_n but - instead of +
+
+        Returns:
+        --------
+        out (float): numpy.mean(data) - sigma*numpy.std(data)
+
+        '''
+        return np.nanmean(data) - sigmas*np.nanstd(data)
+
+    def plot(self):
+        extent = (self.testinputconv*self.bestloc_testsort_test[0][0], 
+                  self.testinputconv*self.bestloc_testsort_test[0][-1],
+                  self.sbiasList[0], self.sbiasList[-1])
+        mean = self.bestloc_mean - np.tile(np.mean(self.bestloc_mean, axis=1), 
+                                          (self.bestloc_mean.shape[1],1)).T
+        data = [mean, self.bestloc_grad, self.bestloc_err, 
+                self.bestloc_absgrad_over_err]
+        labels = ['mean', 'gradient', 'error', 'gradient/error']
+        vmax = [
+                self.vmax_xsigma_p(mean,4),
+                self.vmax_xsigma_p(self.bestloc_grad,4),
+                self.vmax_xsigma_p(self.bestloc_err,4),
+                self.vmax_xsigma_p(self.bestloc_absgrad_over_err,4)]
+        vmin = [
+                self.vmax_xsigma_n(mean,4),
+                self.vmax_xsigma_n(self.bestloc_grad,4),
+                0,
+                0]
+        cmaps = ['PRGn', 'coolwarm', 'plasma', 'inferno']
+        for d,a,l,vp,vn,cm in zip(data, self.ax, labels,vmax,vmin,cmaps):
+            self.plot_1(a, d, extent,l,vp, vn, cm)
+
+        self.fig.tight_layout()
+        self.ax[0].annotate(self.filename, xy=(.02,.98), xycoords='axes fraction',
+                       fontsize=8, ha='left', va='top', family='monospace')
+
+
+    def plot_1(self, ax, data, extent, label, vmax,vmin,cmap):
+        '''
+        Helper for plot. Plots a single imshow of the given data
+
+        '''
+        im = ax.imshow(data, extent=extent, aspect='auto', 
+                      origin='lower',vmax=vmax, vmin=vmin,
+                      cmap=cmap)
+        d = make_axes_locatable(ax)
+        cax = d.append_axes('right', size=.1, pad=.1)
+        cbar = plt.colorbar(im, cax=cax)
+        cbar.set_label(label)
+        ax.set_xlabel('Sflux (uA)')
+        ax.set_ylabel('Sbias (uA)')
+
+
+    def plot_goodness(self, vmax):
+        '''
+        Plot gradient/err with given vmax to enhance contrast
+        '''
+        fig,ax = plt.subplots()
+        extent = (self.bestloc_testsort_test[0][0], 
+                  self.bestloc_testsort_test[0][-1],
+                  self.sbiasList[0], 
+                  self.sbiasList[-1])
+        self.plot_1(ax,self.bestloc_absgrad_over_err,
+                    extent=extent, label='gradient/err',
+                    vmax=vmax)
+        
+
+    @staticmethod
+    def plotline(obj, index):
+        '''
+        Plots a single line (constant Sbias) for the given index
+
+        Parameters:
+        -----------
+        obj (BestPlotLines or equivalent)
+
+        index (int): which index number to plot
+        '''
+        xs = obj.testinputconv * obj.bestloc_testsort_test[index]
+
+        fig,ax = plt.subplots(4,1, sharex=True, figsize=(5,9))
+
+        ax[0].plot(xs, obj.bestloc_testsort_saa[index])
+        ax[0].plot(xs, obj.bestloc_mean[index])
+        ax[0].set_ylabel('signal = SAA signal (V)')
+
+        ax[1].plot(xs, obj.bestloc_grad[index])
+        ax[1].set_ylabel('grad = Gradient of signal')
+
+        ax[2].plot(xs, obj.bestloc_err[index])
+        ax[2].set_ylabel('err = Binned STD')
+
+        ax[3].plot(xs, obj.bestloc_absgrad_over_err[index])
+        ax[3].set_ylabel('abs(grad of saa)/err')
+
+        ax[3].set_xlabel('Sflux (uA)')
+
+        ax[0].annotate(obj.filename, xy=(.02,.98), xycoords='axes fraction',
+                       fontsize=8, ha='left', va='top', family='monospace')
+
+        ax[1].annotate('S_bias = {0:2.2f} uA'.format(obj.sbiasList[index]), 
+                       xy=(.02,.98), xycoords='axes fraction',
+                       fontsize=8, ha='left', va='top', family='monospace')
+
+        fig.subplots_adjust(wspace=0, hspace=0)
+
+        fig.tight_layout()
+        
+        return fig,ax
+
+    @staticmethod
+    def plotline_current(obj, current):
+        '''
+        plotline but you can choose a current (in uA) instead of an index
+        '''
+        return BestLockPoint.plotline(obj, np.argmin(np.abs(obj.sbiasList-current)))
+    
+
+    def findbestlocpoints_record(self):
+        '''
+        Record data to find the best lock point
+        Called by do.  You should not call this normally.
+        '''
+        monitortime = self.monitortime
+        numsamples = self.numsamples
+        samplerate = self.samplerate
+
+        self.squidarray.lock('Array')
+        self.squidarray.sensitivity = 'High'
+        self.squidarray.testSignal = 'On'
+        self.squidarray.testInput = 'S_flux'
+        self.sbiasList = np.linspace(0, self.squidarray.S_bias_lim, numsamples)
+
+        first = True
+        for sbias,x in zip(self.sbiasList, range(len(self.sbiasList))):
+            # take data
+            self.squidarray.S_bias = sbias
+            self.squidarray.reset()
+            received = self.daq.monitor(['saa', 'test'], monitortime, sample_rate=256000)
+
+            # store data
+            if first:
+                self.bestloc_raw_saa = np.zeros( (numsamples, len(received['saa'])))
+                self.bestloc_raw_test = np.zeros( self.bestloc_raw_saa.shape)
+                self.bestloc_raw_time = np.zeros( self.bestloc_raw_saa.shape)
+                self.bestloc_testsort_saa = np.zeros(  self.bestloc_raw_saa.shape)
+                self.bestloc_testsort_test = np.zeros( self.bestloc_raw_saa.shape)
+
+                first = False
+
+            self.bestloc_raw_saa[x] = received['saa']
+            self.bestloc_raw_test[x] = received['test']
+            self.bestloc_raw_time[x] = received['t']
+
+            # sort by the test signal
+            order = np.argsort(self.bestloc_raw_test[x])
+            self.bestloc_testsort_test[x] = self.bestloc_raw_test[x][order]
+            self.bestloc_testsort_saa[x]  = self.bestloc_raw_saa[x][order]
+
+
+    def findbestlocpoints_analyze(self, 
+                                  savgol_winlen_mean=201, 
+                                  savgol_polyorder_mean=5,
+                                  savgol_winlen_grad=201,
+                                  savgol_polyorder_grad=5,
+                                  std_winlen=16):
+        '''
+        Analyze the data taken.  Constructs gradients, means, error.
+
+        Parameters:
+        -----------
+        savgol_winlen_mean (int): window length for the sav_gol filter 
+                                  for the mean
+
+        savgol_polyorder_mean (int): polynomial order for the sav_gol filter 
+        
+        savgol_winlen_grad (int): window length for the sav_gol filter
+                                  for the gradient
+
+        savgol_polyorder_grad (int): polynomial order for hte sav_gol filter
+
+        std_winlen (int): window length (convolution) for the running 
+                          standard deviation for the error.
+
+        Returns:
+        --------
+        none
+
+        Creates bestloc_mean, bestloc_grad, bestloc_absgrad_over_err
+        '''
+        [self.bestloc_mean,
+         self.bestloc_grad,
+         self.bestloc_err,
+         self.bestloc_absgrad_over_err] = self.savgolmeangrad_convstd(
+                                            self.bestloc_testsort_test,
+                                            self.bestloc_testsort_saa,
+                                            savgol_winlen_mean,
+                                            savgol_polyorder_mean,
+                                            savgol_winlen_grad,
+                                            savgol_polyorder_grad,
+                                            std_winlen)
+# Old method, remove if code works
+#        delta = np.abs(self.bestloc_testsort_test[0][0]-
+#                       self.bestloc_testsort_test[0][-1]
+#                       )/self.bestloc_testsort_test[0].shape[0]
+#
+#        self.bestloc_mean = savgol_filter(self.bestloc_testsort_saa, 
+#                                          window_length=savgol_winlen_mean,
+#                                          polyorder=savgol_polyorder_mean,
+#                                          axis=1)
+#        self.bestloc_grad = savgol_filter(self.bestloc_testsort_saa,
+#                                          window_length=savgol_winlen_grad,
+#                                          polyorder=savgol_polyorder_grad,
+#                                          deriv=1, delta=delta,
+#                                          axis=1)
+#
+#        self.bestloc_err = np.apply_along_axis(running_std, 1, 
+#                                                  self.bestloc_testsort_saa-self.bestloc_mean, 
+#                                                  windowlen=16, mode='same')
+#        self.bestloc_absgrad_over_err = np.abs(self.bestloc_grad
+#                                              )/self.bestloc_err
+
+    @staticmethod
+    def savgolmeangrad_convstd(testsig, saasig, 
+                                  savgol_winlen_mean=201, 
+                                  savgol_polyorder_mean=5,
+                                  savgol_winlen_grad=201,
+                                  savgol_polyorder_grad=5,
+                                  std_winlen=16):
+        '''
+        Constructs gradients, means, error of saasig for applied testsig
+
+        Parameters:
+        -----------
+        testsig (numpy ndarray): 1d or 2d array of test signal voltages, 
+                                 sorted such that the lowest is first and
+                                 the highest is last.
+
+                                 If 2d, axis 0 (rows) are each squid bias
+                                 and axis 1 (column) is the squid flux, 
+                                 modulated by the test signal
+
+        saasig (numpy ndarray): 1d or 2d array of saa signal voltages,
+                                sorted in the same order as testsig
+                                 
+        savgol_winlen_mean (int): window length for the sav_gol filter 
+                                  for the mean
+
+        savgol_polyorder_mean (int): polynomial order for the sav_gol filter 
+        
+        savgol_winlen_grad (int): window length for the sav_gol filter
+                                  for the gradient
+
+        savgol_polyorder_grad (int): polynomial order for hte sav_gol filter
+
+        std_winlen (int): window length (convolution) for the running 
+                          standard deviation for the error.
+
+        Returns:
+        --------
+        out = [mean, gradient, error, abs(gradient) / error]
+
+        '''
+        if len(testsig.shape) > 2:
+            raise ValueError('testsig has dimension > 2')
+
+        if len(testsig.shape) == 2:
+            axis=1
+            delta = np.abs(testsig[0][0]- testsig[0][-1])/testsig[0].shape[0]
+        elif len(testsig.shape) == 1:
+            axis=-1
+            delta = np.abs(testsig[0]- testsig[-1])/testsig.shape[0]
+
+
+        mean = savgol_filter(saasig,
+                             window_length=savgol_winlen_mean,
+                             polyorder=savgol_polyorder_mean,
+                             axis=axis)
+        grad = savgol_filter(saasig,
+                             window_length=savgol_winlen_grad,
+                             polyorder=savgol_polyorder_grad,
+                             deriv=1, delta=delta,
+                             axis=axis)
+        err = np.apply_along_axis(running_std, 
+                                  axis, 
+                                  saasig-mean, 
+                                  windowlen=std_winlen, 
+                                  mode='same')
+        absgrad_over_err = np.abs(grad)/err
+
+        return [mean, grad, err, absgrad_over_err]
 
 
 
@@ -364,8 +911,273 @@ class ArrayTuneBatch(Measurement):
         self.leastlineari = -1 
         self.leastlinearval = 1e9
         self.debug = debug
+        
+        self._initialize()
 
+
+    def _initialize(self):       
+
+        self.spectrum_f = np.array([])
+
+        # X axis (0th axis) = array flux (where on the characteristic to lock)
+        # Y axis (1th axis) = squid bias 
+        # Z axis (2th axis) = squid flux (offset after SQUID is locked)
+        #        (3rd axis) = data
+
+        # stores [aflux, squid bias, sflux]
+        self.lockparams = np.zeros((len(self.sbias),
+                                    len(self.aflux),
+                                    len(self.sflux),
+                                    3))
+
+        # stores [whether squid locked or not]
+        self.success    = np.array(np.zeros((len(self.sbias), 
+                                             len(self.aflux), 
+                                             len(self.sflux),
+                                             1), dtype=bool)) # zero = false
+        # stores [filtered characteristic, gradient of characteristic,
+        #         error (spread) of characteristic, and gradient/error]
+        self.char_stats = np.full((len(self.sbias), 
+                                   len(self.aflux), 
+                                   len(self.sflux),
+                                   4), np.nan) 
+
+        self.filenameindex = np.full((len(self.sbias), 
+                                             len(self.aflux), 
+                                             len(self.sflux),
+                                             1), np.nan) 
+
+        self.savenames = ['spectrum_psd',  # psdave * conversion (phi_0)
+                          'sweep_fcIsrc',  # Vsrc / Rbias (amps)
+                          'sweep_sresp',   # Vmeas * conversion (phi_0)
+                          'char_testsig',  # squid char, test signal (V)
+                          'char_saasig',   # squid char, saa signal (V)
+                          'spectrum_mean', # mean of spectrum (phi_0)
+                          'spectrum_std',  # std of spectrum (phi_0)
+                          'sweep_p',       # polyfit p: linear fit of sweep
+                          'sweep_v',       # polyfit v: linear fit of sweep
+                          ]
+
+
+    def do(self, liveplot = True):
+
+        # try out a point that you know will work. 
+        # This determines how large the structures should be 
+        print('Test run')
+        self._tunesave(0, 0, 0, self.sbias_ex, self.aflux_ex, 0, first=True)
+        print('')
+
+        for sb in range(len(self.sbias)):
+            for af in range(len(self.aflux)):
+                for sf in range(len(self.sflux)):
+                    self._tunesave(sb, af, sf, self.sbias[sb],
+                                               self.aflux[af],
+                                               self.sflux[sf])
+            if self.debug:
+                print('End of Afluxes')
+                print(plottingindex)
+                sys.stdout.flush()
+
+        self.plot()
+        self.print_highlights()
+
+        
+
+    def _tunesave(self, index_sb, index_af, index_sf, 
+                  sbias, aflux, sflux, first=False):
+        '''
+        Create arraytune, run it, and save it if it is good
+        '''
+
+        at = ArrayTune(self.instruments, 
+                       squid_bias=sbias, 
+                       squid_tol=self.squid_tol,
+                       aflux_tol=self.aflux_tol,
+                       sflux_offset=sflux,
+                       aflux_offset=aflux,
+                       conversion=self.conversion, 
+                       debug=self.debug)
+        locked = at.run(save_appendedpath=self.save_appendedpath)
+
+        try:
+        # what to save
+            tosave = [np.array(at.spectrum.psdAve * 
+                               at.spectrum.conversion).flatten(),
+                      np.array(at.sweep.Vsrc /
+                               at.sweep.Rbias).flatten(),
+                      np.array(at.sweep.Vmeas *
+                               at.sweep.conversion).flatten(),
+                      np.array(at.char[1]).flatten(), 
+                      np.array(at.char[2]).flatten(),
+                      np.array([at.noise_mean]).flatten(),
+                      np.array([at.noise_std]).flatten(),
+                      np.array([at.sweep_p]).flatten(),
+                      np.array([at.sweep_v]).flatten()
+                     ]
+        except:
+            pass
+
+        if first: # create all data structures
+            ArrayTuneBatch._makestruct(self, 
+                                       tosave, 
+                                       self.savenames, 
+                                       self.success.shape[0:3])
+            self.spectrum_f = np.array(at.spectrum.f)
+            return
+
+        # did ArrayTune lock?
+        self.success[index_sb, index_af, index_sf, 0] = locked
+
+        # what parameters were set?
+        self.lockparams[index_sb, index_af, index_sf
+                       ] = np.array([aflux, sbias, sflux])
+
+        # details about the characteristic
+        print(at.istuned, locked)
+        if at.istuned or locked:
+            print('saving char', at.char_ave_grad)
+            self.char_stats[index_sb, index_af, index_sf
+                           ] = np.array([at.char_ave_mean,
+                                         at.char_ave_grad,
+                                         at.char_ave_err,
+                                         at.char_ave_good])
+
+        if not locked: # Squid is not locked, do not save
+            return 
+
+        # Save the filename in a roundabout way.  Save index in an ndarray
+        # of the correct shape and store the actual filename in a list
+        self.filenameindex[index_sb, index_af, index_sf
+                          ] = len(self.arraytunefilenames)
+        self.arraytunefilenames.append(at.filename)
+
+        # save the actual data
+        ArrayTuneBatch._savetostruct(self, tosave, 
+                                     self.savenames, 
+                                     (index_sb, index_af, index_sf))
+
+        return 
+
+    @staticmethod
+    def _makestruct(obj, tosave, savenames, shape):
+        for name, item in zip(savenames, tosave):
+            setattr(obj, name, np.full( (*shape, *item.shape), np.nan))
+            #print(shape, item.shape, getattr(obj, name).shape)
+
+    @staticmethod
+    def _savetostruct(obj, tosave, savenames, index):
+        for name, item in zip(savenames, tosave):
+            try:
+                #print(item.shape, getattr(obj,name).shape, index)
+                getattr(obj, name)[index] = item
+            except:
+                print('Cannot set {0} of len {1}'.format(item, len(item)),
+                       ' to {2} expecting len {3}'.format(name, 
+                           len(getattr(obj, name)[index]))
+                      )
+
+    def setup_plots(self):
+        self.fig, self.axes = plt.subplots(2,3, figsize=(16,8))
+        self.axes = list(self.axes.flatten())
+
+    def plot(self):
+
+        cbarlabels = [r'rms noise ($\mu\phi_0/\sqrt{Hz}$)', 
+                      r'linearity (covar of fit)',
+                      r'abs grad of squid char',
+                      r'error of squid char',
+                      r'grad/err',
+                      r'noise/(grad/err)'
+                     ]
+        data = [self.spectrum_mean[:,:,0,0]*1e6, 
+                self.sweep_v[:,:,0,0],
+                self.char_stats[:,:,0,1],
+                self.char_stats[:,:,0,2],
+                self.char_stats[:,:,0,3],
+                self.spectrum_mean[:,:,0,0]/self.char_stats[:,:,0,3]
+               ]
+        vmins = [None,
+                 None,
+                 0,
+                 0,
+                 0,
+                 0
+                ]
+        vmaxs = [ArrayTuneBatch.vmax_median_p(data[0],1),
+                 ArrayTuneBatch.vmax_median_p(data[1],1),
+                 BestLockPoint.vmax_xsigma_p(data[2],4),
+                 BestLockPoint.vmax_xsigma_p(data[3],4),
+                 BestLockPoint.vmax_xsigma_p(data[4],4),
+                 BestLockPoint.vmax_xsigma_p(data[5],4),
+                ]
+        cmaps = ['plasma',
+                 'inferno',
+                 'viridis',
+                 'viridis',
+                 'magma',
+                 'viridis'
+                ]
+        extent = [self.aflux.min(), self.aflux.max(), 
+                  self.sbias.min()*1e-3, self.sbias.max()*1e-3]
+
+        for ax, d, cbarlabel, vmin, vmax, cmap in zip(self.axes, data, 
+                   cbarlabels, vmins, vmaxs, cmaps):
+            print(d.shape)
+            masked_data = np.ma.array(d, mask=np.isnan(d))
+            image = ax.imshow(masked_data, cmap, origin='lower',
+                              extent=extent, aspect='auto',
+                              vmin=vmin, vmax=vmax)
+
+            d = make_axes_locatable(ax)
+            cax = d.append_axes('right', size=.1, pad=.1)
+            cbar = plt.colorbar(image, cax=cax)
+            cbar.set_label(cbarlabel, rotation=270, labelpad=12)
+            cbar.formatter.set_powerlimits( (-2,2))
+
+            ax.set_ylabel('S bias (mA)')
+            ax.set_xlabel('A flux offset (V)')
+
+            self.fig.tight_layout()
+            self.fig.canvas.draw()
+            plt.pause(.001)
+
+    def plot_hist(self):
+        fig,ax = plt.subplots()
+        order = np.argsort(self.spectrum_mean.flatten())
+        noise = self.spectrum_mean.flatten()[order]
+        ax.hist(noise[~np.isnan(noise)]*1e6, range=(0,10), bins=100)
+        ax.set_xlabel(r'Noise ($\mu\phi_0$)')
+        ax.set_ylabel('Occurances (#)')
+        return fig,ax
+
+
+    @staticmethod
+    def vmax_median_p(data, n):
+        return np.nanmedian(data) + n*np.abs(np.nanmedian(data) - np.nanmin(data))
+
+    def print_highlights(self):
+        index_minnoise = np.unravel_index(np.nanargmin(self.spectrum_mean),self.spectrum_mean.shape)
+        index_minlinear = np.unravel_index(np.nanargmin(self.sweep_v[:,:,:,0]),self.sweep_v[:,:,:,0].shape)
+        print(index_minnoise, index_minlinear)
+
+        print('min noise={0:2.2e}: sbias={1:2.2e}, aflux={2:2.2e}, filename={3}'.format(
+                self.spectrum_mean[index_minnoise],
+                self.lockparams[index_minnoise[0:3]][1],
+                self.lockparams[index_minnoise[0:3]][0],
+                self.arraytunefilenames[int(self.filenameindex[index_minnoise[0:3]][0])]))
+
+        print('max linear={0:2.2e}: sbias={1:2.2e}, aflux={2:2.2e}, filename={3}'.format(
+                self.sweep_v[index_minlinear][0],
+                self.lockparams[index_minlinear[0:3]][1],
+                self.lockparams[index_minlinear[0:3]][0],
+                self.arraytunefilenames[int(self.filenameindex[index_minlinear[0:3]][0])]))
+
+                    
     def findconversion(self, stepsize=5, dur=.001):
+        '''
+        Finds the conversion (phi_0/V) for all the points in
+        arraytunebatch.  Not very useful.
+        '''
         self.caltrue       = np.zeros((len(self.sbias), len(self.aflux)))
         self.saaconversion = np.full((len(self.sbias), len(self.aflux)), np.nan)
         self.conv_sflux    = np.full((len(self.sbias), len(self.aflux)), np.nan)
@@ -393,6 +1205,9 @@ class ArrayTuneBatch(Measurement):
                     self.conv_sflux[ix][iy]  = conv_sflux
 
     def plotconversion(self):
+        '''
+        Plots the conversions
+        '''
         fig, axs = plt.subplots(1,2)
         for data,cbarlabel,ax,cmap in zip(
                 [self.saaconversion, self.conv_sflux], 
@@ -409,317 +1224,5 @@ class ArrayTuneBatch(Measurement):
             cbar = plt.colorbar(image, cax=cax)
             cbar.set_label(cbarlabel, rotation=270, labelpad=12)
 
-                
-
-    def do(self, liveplot = True):
-
-        # Take 1 arraytune scan
-        # use that to create the entire structure
-        # That way, if it fails, it will fail at the beginning
-
-        # things to save:
-        # spectrum:
-        #   1 copy of f (Hz)
-        #   n copies of psdave * conversion (phi_0)
-        # mutalinductance2:
-        #   n copies of Vsrc / Rbias (Amps)
-        #   n copies of Vmeas * conversion (phi_0)
-        # array_tune:
-        #   n copies of char[1] (test signal, V)
-        #   n copies of char[2] (saa signal,  V)
-        # n copies of sbias, aflux, sflux
-
-
-        # name of nparrays to be saved in this object
-        # order follows all the "n copies" of stuff in the above
-        # comment
-        self.savenames = ['spectrum_psd', 'sweep_fcIsrc', 'sweep_sresp',
-                           'char_testsig', 'char_saasig']
-        first = True
-        maxlen = len(self.sbias)*len(self.aflux)*len(self.sflux)
-        self.spectrum_f = np.array([])
-        self.lockparams = np.zeros( (maxlen, 3))
-        self.success    = np.array(np.zeros(maxlen),dtype=bool) # zero = false
-
-        sbindex = 0
-
-        # try out a point that you know will work to tell the code 
-        # how large stuff should be
-        print('Test run')
-        [_, first] = self._tunesave(0, self.sbias_ex, self.aflux_ex, 0, 
-                                    first, save=False)
-        print('')
-
-        index = 0
-
-        for sb in self.sbias:
-            plottingindex = [] # for live plotting
-            for af in self.aflux:
-                plottingindex.append(index)
-                for sf in self.sflux:
-                    [index, first] = self._tunesave(index,sb,af,sf,first)
-            print('End of Afluxes')
-            print(plottingindex)
-
-            sys.stdout.flush()
-
-            if liveplot:
-                [noise_z, lin_z] = self.plot_makeline(plottingindex)
-                self.plotting_z[0][sbindex, :] = noise_z
-                self.plotting_z[1][sbindex, :] = lin_z
-                self.plot_live()
-
-            sbindex += 1 
-
-        print('Least linear: {0:2.2e} (index={1})'.format(
-                self.leastlinearval,
-                self.leastlineari))
-        print(self.currminstostr())
-        
-
-    def _tunesave(self, index, sb, af, sf, first, save=True):
-        '''
-        Create arraytune, run it, and save it if it is good
-        '''
-
-        self.lockparams[index] = np.array([sb, af, sf])
-
-        at = ArrayTune(self.instruments, squid_bias=sb, 
-                       squid_tol = self.squid_tol,
-                       aflux_tol = self.aflux_tol,
-                       sflux_offset = sf,
-                       aflux_offset = af,
-                       conversion=self.conversion, debug=self.debug)
-        locked = at.run(save_appendedpath=self.save_appendedpath)
-
-        if save:
-            self.arraytunefilenames.append(at.filename)
-
-
-        if not locked: # Squid is not locked, do not save
-            index += 1
-            return [index, first]
-
-        if not first:  # first scan populates arrays, it doesn't count
-            self.success[index] = True #index was incremented
-
-        # what to save
-        tosave = [np.array(at.spectrum.psdAve * at.spectrum.conversion),
-                  np.array(at.sweep.Vsrc / at.sweep.Rbias),
-                  np.array(at.sweep.Vmeas * at.sweep.conversion),
-                  np.array(at.char[1]), 
-                  np.array(at.char[2])
-                 ]
-
-        if first: # do not know size until you try
-            maxlen = len(self.sbias)*len(self.aflux)*len(self.sflux)
-            ArrayTuneBatch._makestruct(self, tosave, self.savenames, maxlen)
-            self.spectrum_f = np.array(at.spectrum.f)
-            first = False
-
-        if save:
-            ArrayTuneBatch._savetostruct(self, tosave, self.savenames, index)
-
-        index += 1
-
-
-        return [index, first]
-
-
-    def plot_makeline(self, indexes):
-        '''
-        make lines for liveplot
-        '''
-        n_l_z = np.full(len(self.aflux), np.nan)
-        l_l_z = np.full(len(self.aflux), np.nan)
-
-        index_fstart = np.argmin(abs(self.spectrum_f - 100))
-        index_fstop  = np.argmin(abs(self.spectrum_f - 1000))
-
-        for j,i in zip(range(len(n_l_z)), indexes):
-            print(i)
-            sys.stdout.flush()
-
-            if not self.success[i]:
-                continue
-
-            n_l_z[j] = np.sqrt(np.mean(np.square(
-                    (self.spectrum_psd[i])[index_fstart:index_fstop])))
-            
-            fcIsrchasnan = np.any(np.isnan(self.sweep_fcIsrc[i]))
-            sresphasnan  = np.any(np.isnan(self.sweep_sresp[i]))
-
-            if fcIsrchasnan or sresphasnan:  
-                print('Nans! THIS SHOULD NEVER HAPPEN')
-                sys.stdout.flush()
-                continue
-
-            [p,v] = np.polyfit(self.sweep_fcIsrc[i], self.sweep_sresp[i],1,
-                             cov=True)
-            l_l_z[j] = v[0][0]
-            
-            if l_l_z[j] < self.leastlinearval:
-                self.leastlinearval = l_l_z[j]
-                self.leastlineari = i
-        return [n_l_z, l_l_z]
-
-    def setup_plots(self):
-        # 2D live plot:
-        #   squid bias vs array flux vs noise
-        #   squid bias vs array flux vs measure of linearity
-        # 1D plot:
-        #   waterfall (offset by array flux) of squid characteristic
-
-        self.fig, self.axes = plt.subplots(1,2, figsize=(16,4))
-        self.axes = list(self.axes.flatten())
-
-        self.plotting_z = [
-                np.full((len(self.sbias), len(self.aflux)), np.nan),
-                np.full((len(self.sbias), len(self.aflux)), np.nan)
-                          ]
-        self.plotting_z_names = ['Noise', 'Linearity']
-        self.images = []
-        self.cbars  = []
-        for ax, data, cbarlabel in zip(
-                [self.axes[0], self.axes[1]], 
-                self.plotting_z,
-                [r'rms noise ($\phi_0/\sqrt{Hz}$)', 
-                 r'linearity (covar of fit)']
-                ):
-            masked_data = np.ma.array(data, mask=np.isnan(data))
-            image = ax.imshow(masked_data, self.cmap, origin='lower',
-                              extent=[self.aflux.min(), self.aflux.max(),
-                                      self.sbias.min()*1e-3,
-                                      self.sbias.max()*1e-3])
-
-            d = make_axes_locatable(ax)
-            cax = d.append_axes('right', size=.1, pad=.1)
-            cbar = plt.colorbar(image, cax=cax)
-            cbar.set_label(cbarlabel, rotation=270, labelpad=12)
-            cbar.formatter.set_powerlimits( (-2,2))
-
-            ax.set_ylabel('S bias (mA)')
-            ax.set_xlabel('A flux offset (V)')
-
-            self.cbars.append(cbar)
-            self.images.append(image)
-
-            self.fig.tight_layout()
-            self.fig.canvas.draw()
-            plt.pause(.001)
-
-
-    def plot_live(self):
-        for image,cbar,data in zip(self.images,self.cbars,self.plotting_z):
-            masked_data = np.ma.array(data, mask=np.isnan(data))
-            image.set_data(masked_data)
-            cbar.set_clim([masked_data.min(), masked_data.max()])
-            cbar.draw_all()
-        self.fig.canvas.draw()
-        plt.pause(.001)
-
-
-    def plot_characteristic(self):
-        fig,ax = plt.subplots(1,2)
-
-        # max/min
-        charmaxmin = np.array( [c.max - c.min() for c in self.char_saasig])
-        charmaxmin.reshape( self.plotting_z[0].shape)
-        masked_maxmin = np.ma.array(charmaxmin, mask=charmaxmin==0)
-
-        ax[0].imshow(masked_maxmin, self.cmap, origin='lower',
-                              extent=[self.aflux.min(), self.aflux.max(),
-                                      self.sbias.min()*1e-3,
-                                      self.sbias.max()*1e-3])
-        d = make_axes_locatable(ax[0])
-        cax = d.append_axes('right', size=.1, pad=.1)
-        cbar = plt.colorbar(image, cax=cax)
-        cbar.set_label('Vpp of characteristic (V)', 
-                        rotation=270, labelpad=12)
-        cbar.formatter.set_powerlimits( (-2,2))
-
-        ax[0].set_ylabel('S bias (mA)')
-        ax[0].set_xlabel('A flux offset (V)')
-
-        # slope
-        # work in progress
-        # argsort, sort the testsignal, return indicies
-        # order char by those indicies
-        # argmin(abs(char)), find sufficiently large gap in V around
-        # that point, that is the gradient
-
-    @staticmethod
-    def findmin(plotting_z, plotting_z_names):
-        mins = []
-        for data,name in zip(plotting_z, plotting_z_names):
-            minval = np.nanmin(data)
-            minind = np.nanargmin(data)
-            (miny,minx)  = np.unravel_index(minind, data.shape)
-            mins.append([name, minval, minind, miny, minx])
-        return mins
-
-    @staticmethod
-    def minstostr(mins, sbias_y, aflux_x, filenames):
-        st = ''
-        for m in mins:
-            st +="{0}: {1:3.3e} <- sbias={2:2.2f}, aflux={3:2.2f}: {4}".format(
-                    m[0], m[1], sbias_y[m[3]], aflux_x[m[4]], filenames[m[2]])
-            st += '\n'
-        return st
-
-    @staticmethod
-    def sorter(master, *args):
-        ks = np.argsort(master.flatten())
-        arrs = [master, *args]
-        for i in range(len(arrs)):
-            arrs[i] = arrs[i][ks]
-        return arrs
-
-    def currsort(self):
-        return self.sorter(self.plotting_z[0].flatten(), self.plotting_z[1].flatten(), 
-                      np.array(self.arraytunefilenames))
-
-    def printsort(self, num=10):
-        n, l, f = self.currsort()
-        print('Noise     Linearity  Filename')
-        for i in range(num):
-            print('{0:2.2e}  {1:2.2e}   {2}'.format(n[i], l[i], f[i]))
-            
-        
-    def currminstostr(self):
-        return self.minstostr(
-                    self.findmin(self.plotting_z, self.plotting_z_names),
-                    self.sbias, self.aflux, self.arraytunefilenames)
-
-
-
-
-
-
-
-
-
-
-    def plot(self):
-        pass
-
-
-    @staticmethod
-    def _makestruct(obj, tosave, savenames, maxlen):
-        for name, item in zip(savenames, tosave):
-            setattr(obj, name, np.full( (maxlen, len(item)), np.nan))
-
-    @staticmethod
-    def _savetostruct(obj, tosave, savenames, index):
-        for name, item in zip(savenames, tosave):
-            try:
-                getattr(obj, name)[index] = item
-            except:
-                print('Cannot set {0} of len {1}'.format(item, len(item)),
-                       ' to {2} expecting len {3}'.format(name, 
-                           len(getattr(obj, name)[index]))
-                      )
-
-                    
                                    
 

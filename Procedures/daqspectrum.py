@@ -8,6 +8,13 @@ from ..Instruments import nidaq, preamp
 from ..Utilities.save import Measurement
 from ..Utilities.utilities import AttrDict
 from ..Utilities import conversions
+
+from importlib import reload
+
+import Nowack_Lab.Utilities.utilities
+reload(Nowack_Lab.Utilities.utilities)
+from Nowack_Lab.Utilities.utilities import reject_outliers_spectrum
+from Nowack_Lab.Utilities.utilities import keeprange
 import time
 
 
@@ -243,6 +250,16 @@ class DaqSpectrum(Measurement):
             self.preamp.recover();
             if self.preamp_dccouple is False:
                 time.sleep(12) # >10, in case slow communication
+
+    def findmeanstd(self):
+        '''
+        returns mean and std in units after conversion
+        rejects outliers
+        '''
+        [f, psdAve] = keeprange(self.f, [self.psdAve*self.conversion], 
+                                m0=10, mend=1000)
+        [f, psdAve] = reject_outliers_spectrum(f, psdAve)
+        return [np.mean(psdAve), np.std(psdAve)]
 
 
 class TwoSpectrum(DaqSpectrum):
