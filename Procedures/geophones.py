@@ -221,7 +221,8 @@ class Geophone_calibrate_zurich(Geophone_calibrate_lockins):
                         inputfnct='N/A')
         self.freqs = 10**np.linspace(np.log10(minf), np.log10(maxf), numpts)
 
-
+    def do(self):
+        pass
     
 
 class Geophone_sr5113(Measurement):
