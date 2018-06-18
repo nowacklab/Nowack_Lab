@@ -1,10 +1,6 @@
 '''
 Instrument base classes.
 '''
-<<<<<<< HEAD
-=======
-
->>>>>>> 80b948f2ceb85d1e4e4d43de1fae5a8e742231dc
 import visa
 
 class Instrument:
@@ -24,10 +20,7 @@ class Instrument:
 
 class VISAInstrument(Instrument):
     _label = 'VISAinstrument'
-<<<<<<< HEAD
-=======
     _strip = '' # default character to strip from read commands
->>>>>>> 80b948f2ceb85d1e4e4d43de1fae5a8e742231dc
 
     def __del__(self):
         '''
@@ -43,11 +36,6 @@ class VISAInstrument(Instrument):
             GPIB::##::INSTR
         - TCPIP Socket
             TCPIP::host address::port::SOCKET
-<<<<<<< HEAD
-        - COM port
-            COM#
-=======
->>>>>>> 80b948f2ceb85d1e4e4d43de1fae5a8e742231dc
         - Or many others...
             See https://pyvisa.readthedocs.io/en/stable/names.html
         termination: e.g. \r\n: read termination.
@@ -55,17 +43,6 @@ class VISAInstrument(Instrument):
         self._visa_handle = visa.ResourceManager().open_resource(resource)
         self._visa_handle.read_termination = termination
 
-<<<<<<< HEAD
-    def ask(self, cmd, timeout=3000):
-        '''
-        Write and read combined operation.
-        Default timeout 3000 ms. None for infinite timeout
-        Strip terminating characters from the response.
-        '''
-        self._visa_handle.timeout = timeout
-        data = self._visa_handle.ask(cmd)
-        return data.rstrip()
-=======
     def ask(self, cmd, timeout=3000, strip=None):
         '''
         Write and read combined operation.
@@ -78,7 +55,6 @@ class VISAInstrument(Instrument):
         self._visa_handle.timeout = timeout
         data = self._visa_handle.ask(cmd)
         return data.rstrip(strip)
->>>>>>> 80b948f2ceb85d1e4e4d43de1fae5a8e742231dc
 
     def close(self):
         '''
@@ -88,15 +64,6 @@ class VISAInstrument(Instrument):
             self._visa_handle.close()
             del(self._visa_handle)
 
-<<<<<<< HEAD
-    def read(self):
-        '''
-        Read from VISA.
-        Strip terminating characters from the response.
-        '''
-        data = self._visa_handle.read()
-        return data.rstrip()
-=======
     def read(self, strip=''):
         '''
         Read from VISA.
@@ -104,10 +71,9 @@ class VISAInstrument(Instrument):
         '''
         if strip is None:
             strip = self._strip
-            
+
         data = self._visa_handle.read()
         return data.rstrip(strip)
->>>>>>> 80b948f2ceb85d1e4e4d43de1fae5a8e742231dc
 
     def write(self, cmd):
         '''

@@ -40,29 +40,16 @@ class Planefit(Measurement):
         instruments (dict): must contain the instruments required for
                             the touchdown.
         span (list): Specifices the size [X span, Y span] of the plane
-<<<<<<< HEAD
-        in voltage applied to the X and Y peizos.
-
-        center (list): Specifies the center of the plane
-        [X center, Y center] in voltage applied to the X and Y peizos.
-
-        numpts (list): The numper of touchdowns to take on each axis
-        [X number, Y number].
-
-        Vz_max (float):Maximum voltage that can be applied to the Zpiezo.
-        If None then the the max voltage for the piezo is used.
-=======
                      in voltage applied to the X and Y peizos.
-        center (list): Specifies the center of the plane 
-                       [X center, Y center] in voltage applied to the 
+        center (list): Specifies the center of the plane
+                       [X center, Y center] in voltage applied to the
                        X and Y peizos.
-        numpts (list): The numper of touchdowns to take on each axis 
-                        [X number, Y number]. 
+        numpts (list): The numper of touchdowns to take on each axis
+                        [X number, Y number].
         Vz_max (float): Maximum voltage that can be applied to the Zpiezo.
                         If None then the the max voltage for the piezo is used.
         runonce (bool): True if you only want the touchdowns to run once
                         Useful for scanning near the edge of a sample
->>>>>>> 80b948f2ceb85d1e4e4d43de1fae5a8e742231dc
 
         Required instruments:
         daq, lockin_cap, attocubes, piezos, montana
@@ -178,7 +165,7 @@ class Planefit(Measurement):
                 # Take touchdowns until the fitting algorithm gives a
                 # good result, up to 5 touchdowns
                 td = Touchdown(self.instruments,
-                               Vz_max=self.Vz_max, planescan=True, 
+                               Vz_max=self.Vz_max, planescan=True,
                                runonce=self.runonce)
                 td.title = '(%i, %i). TD# %i' % (i, j, counter)
                 td.run()
@@ -208,14 +195,14 @@ class Planefit(Measurement):
         self.piezos.V = 0
         self.calculate_plane()
 
-		
+
         # take the first slow touchdown as a more accurate center
         #c_fit = self.c
         #self.c = center_z_value - self.a * \
         #    self.center[0] - self.b * self.center[1]
         # c was lowered by the correction, so we lower the plane.
         #self.Z -= (c_fit - self.c)
-		
+
         self.plot()
         self.axes = list(self.axes.flatten())
 
@@ -278,17 +265,11 @@ class Planefit(Measurement):
         axes[0].set_yticklabels(['{:.0f}'.format(y) for y in self.Y[:,0]])
         axes[1].set_yticklabels([])
         axes[0].set_ylabel("Y Position (V)")
-        
-        plt.tight_layout()
-<<<<<<< HEAD
-        return fig, ax
 
-    def save(self, savefig=True):
-=======
+        plt.tight_layout()
         return fig, axes
-        
+
     def save(self, savefig=True, **kwargs):
->>>>>>> 80b948f2ceb85d1e4e4d43de1fae5a8e742231dc
         '''
         Saves the planefit object to json.
         Also saves the figure as a pdf, if wanted.
@@ -309,16 +290,12 @@ class Planefit(Measurement):
             axes.append(ax)
         self.fig.subplots_adjust(wspace=0, hspace=0)
         self.axes = np.reshape(axes, self.numpts)
-<<<<<<< HEAD
-
-=======
-        self.fig.suptitle(self.filename + 
+        self.fig.suptitle(self.filename +
                           '\n atto: X={0:2.2f}, Y={1:2.2f}, Z={2:2.2f}'.format(
                               self.atto.x.pos,
                               self.atto.y.pos,
                               self.atto.z.pos))
-    
->>>>>>> 80b948f2ceb85d1e4e4d43de1fae5a8e742231dc
+
     def surface(self, x, y):
         '''
         Does an interpolation on the surface to give an array of z values

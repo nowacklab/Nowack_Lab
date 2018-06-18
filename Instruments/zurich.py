@@ -14,27 +14,11 @@ import zhinst.utils
 
 class gateVoltageError( Exception ):
     pass
-<<<<<<< HEAD
 class zurichInstrument(Instrument):
     '''
     Creates a Zurich object, to control a zurich lock in amplifier. Do
     not call this class, call it's subclasses.
     '''
-=======
-
-#class CheckArray(object):
-#    def __init__(self, *args):
-#        """
-#        """
-#
-#    def check(self):
-
-class HF2LI(Instrument):
-    '''
-    Creates a Zurich HF2Li object, to control a zurich lock in amplifier
-    '''
-    _label = 'Zurich HF2LI'
->>>>>>> 80b948f2ceb85d1e4e4d43de1fae5a8e742231dc
 
     def __init__(self, server_address = 'localhost', server_port = 8005 ,
                 device_serial = ''):
@@ -66,11 +50,7 @@ class HF2LI(Instrument):
             # Sets class variable device_id to the serial number
             self.device_id = device_serial
             # Tells the user that the ZI they asked for was found
-<<<<<<< HEAD
             print('Using Zurich lock-in with serial %s' % self.device_id)
-=======
-            print('Using Zurich HF2LI with serial %s' % self.device_id)
->>>>>>> 80b948f2ceb85d1e4e4d43de1fae5a8e742231dc
 
         # Checks if you actually asked for a specific serial
         elif device_serial != '' :
@@ -81,7 +61,6 @@ class HF2LI(Instrument):
         else:
             # Sets device_id to the first avaliable. Prints SN.
             self.device_id = zhinst.utils.autoDetect(self.daq)
-<<<<<<< HEAD
         #Sets the default name of the zurich object. It can, of course,
         #be changed later.
         self.name = 'zurich ' + self.device_id
@@ -104,18 +83,6 @@ class HF2LI(Instrument):
                 #If it is a high speed streaming node, use getsample.
                 setattr(HF2LI, nameofattr, property(fget=eval(
                                 "lambda self: self.daq.getSample('%s')" %elem)))
-=======
-        self.name = 'zurich ' + self.device_id
-        allNodes = self.daq.listNodes(self.device_id, 0x07)
-        for elem in allNodes:
-            nameofattr = elem.replace('/','_')[9:]
-            if not 'SAMPLE' == elem[-6:]:
-                setattr(HF2LI, nameofattr, property(
-               fget=eval("lambda self: self.daq.getDouble('%s')" %elem),
-               fset=eval("lambda self, value: self.daq.setDouble('%s', value)" %elem)))
-            else:
-                setattr(HF2LI, nameofattr, property(fget=eval("lambda self: self.daq.getSample('%s')" %elem)))
->>>>>>> 80b948f2ceb85d1e4e4d43de1fae5a8e742231dc
 
     def setup(self, config):
             '''
@@ -234,10 +201,7 @@ class HF2LI(Instrument):
                     raise Exception('type not handled!')
             return config_as_set_changed
             #return zCONFIG
-<<<<<<< HEAD
 class HF2LI(zurichInstrument):
       pass
 class MFLI(zurichInstrument):
       pass
-=======
->>>>>>> 80b948f2ceb85d1e4e4d43de1fae5a8e742231dc
