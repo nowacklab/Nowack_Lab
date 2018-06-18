@@ -23,6 +23,7 @@ def set_experiment_data_path():
         save.set_experiment_data_dir(inp2)
 
 def check_remote_data_server_connection():
+    from Nowack_Lab.Utilities import save
     ## Check for remote data server connection
     if not os.path.exists(save.get_data_server_path()):
         print(
