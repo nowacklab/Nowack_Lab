@@ -51,7 +51,7 @@ class Piezos(Instrument):
                                 max_step_size=self._max_step_size))
                                 # makes benders x, y, and z
 
-        self.checkHVAStatus()
+        #self.checkHVAStatus()
 
         if zero:
             self.zero()

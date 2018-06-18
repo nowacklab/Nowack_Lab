@@ -136,6 +136,7 @@ class RvsSomething(Measurement):
 
         self.fig.tight_layout()
         self.fig.canvas.draw()
+        plt.pause(1e-6) # live plotting outside notebooks
 
 
     def run(self, plot=True, **kwargs):
@@ -241,6 +242,259 @@ class RvsT(RvsSomething):
         while self.ppms.temperature_status not in ('Near', 'Stable'):
             self.T = np.append(self.T, self.ppms.temperature) # Oe to T
             self.do_measurement(delay=self.delay, plot=plot)
+
+
+class BlueforsRvsT(RvsSomething):
+    instrument_list = ['lakeshore','lockin_V1', 'lockin_I']
+    something='T'
+    something_units = 'K'
+
+    def __init__(self, instruments = {}, duration=36000, interval=1,
+                channel = 8):
+        '''
+        Bluefors R vs T.  No PID (no control).
+
+        Parameters:
+        instruments:    (dict) dict of instruments
+        duration:       (int) time to measure in seconds
+        interval:       (int) time to wait between each measurement
+        '''
+        super().__init__(instruments=instruments)
+        self.duration = duration
+        self.interval = interval
+        self.channel  = channel
+        self.lakeshore.enable_only(self.channel)
+
+    def do(self, plot=True, auto_gain=False):
+        self.startTime = time.time() #seconds since epoch
+        self.lakeshoreR = [];
+        while time.time() < self.startTime + self.duration:
+            self.T = np.append(self.T, self.lakeshore.T[self.channel])
+            self.lakeshoreR.append(self.lakeshore.R[self.channel])
+            self.do_measurement(delay=0,plot=plot,auto_gain=auto_gain)
+            time.sleep(self.interval)
+        self.lakeshore.enable_all()
+
+
+    def setup_lockins(self):
+        '''
+        Overload setup_lockins and just pass to allow user to set 
+        lockins manually
+        '''
+        pass
+class SimpleRvsTime(Measurement):
+    def __init__(self, instruments={}, duration=100, delay=1):
+        super().__init__(instruments=instruments)
+        self.duration = duration
+        self.delay=delay
+        
+    def do(self):
+        self.starttime = time.time()
+        self.V1xs = np.zeros(int(self.duration/self.delay)+1)
+        self.V1ys = np.zeros(int(self.duration/self.delay)+1)
+        self.V2xs = np.zeros(int(self.duration/self.delay)+1)
+        self.V2ys = np.zeros(int(self.duration/self.delay)+1)
+        self.Ixs = np.zeros(int(self.duration/self.delay)+1)
+        self.Iys = np.zeros(int(self.duration/self.delay)+1)
+        self.time = np.zeros(int(self.duration/self.delay)+1)
+        i = 0
+        while (self.starttime + self.duration > time.time() ):
+            self.time[i] = time.time()
+            self.V1xs[i] = self.lockin_V1.X
+            self.V1ys[i] = self.lockin_V1.Y
+            self.V2xs[i] = self.lockin_V2.X
+            self.V2ys[i] = self.lockin_V2.Y
+            self.Ixs[i]  = self.lockin_I.X
+            self.Iys[i]  = self.lockin_I.Y
+            print(
+                    "{0}/{1}: [V1x,V1y,V2x,V2y,Ix,Iy] = [{2:2.2e},{3:2.2e},{4:2.2e},{5:2.2e},{6:2.2e},{7:2.2e}]".format(
+                i, int(self.duration/self.delay),
+                self.V1xs[i], self.V1ys[i], self.V2xs[i], self.V2ys[i],self.Ixs[i], self.Iys[i]
+                ))
+            print(
+                    "[R1x,R1y,R2x,R2y] = [{0:2.2e}, {1:2.2e}, {2:2.2e},{3:2.2e}]".format(
+                self.V1xs[i]/self.Ixs[i], self.V1ys[i]/self.Iys[i],
+                self.V2xs[i]/self.Ixs[i], self.V2ys[i]/self.Iys[i]
+                ))
+            time.sleep(self.delay)
+            i += 1
+
+        
+
+    def plot(self):
+        pass
+
+    def setup_plots(self):
+        pass
+
+
+class VvsF(Measurement):
+    instrument_list = ['lockin_V']
+
+    def __init__(self, instruments={}, freqs = [], dwelltime = 1):
+        '''
+        Measure voltage on lockin as a funtion of lockin frequency
+
+        parameters:
+        instruments:    (dict) dict of instruments, only 1 lockin
+        freqs:          (list) list of frequencies to scan with lockin
+        dwelltime       (float) time to wait between measurements (s)
+        '''
+        super().__init__(instruments=instruments)
+        self.freqs = freqs
+        self.dwelltime = dwelltime
+    
+    def do(self):
+        self.Vxs = []
+        self.Vys = []
+        i = 0
+        for f in self.freqs:
+            self.lockin_V.frequency = f
+            time.sleep(self.dwelltime)
+            self.Vxs.append(self.lockin_V.X)
+            self.Vys.append(self.lockin_V.Y)
+            print("{0}/{1}: [f, Vx, Vy] = [{2}, {3}, {4}]".format(
+                i, len(self.freqs), f, self.Vxs[-1], self.Vys[-1]))
+            i+=1
+
+    def setup_plots(self):
+        pass
+
+    def plot(self):
+        pass
+
+
+
+class VvsIdc(Measurement):
+    instrument_list = ['nidaq', 'keithley', 'preamp']
+
+    def __init__(self, daqchannel, instruments={}, iouts=[], dwelltime=.01):
+        '''
+        '''
+        super().__init__(instruments=instruments)
+        self.iouts=iouts
+        self.dwelltime=dwelltime
+        self.daqchannel = daqchannel
+
+    def __repr__(self):
+        return 'VvsIdc({0},instruments,{1},{2})'.format(
+                repr(self.daqchannel),
+                repr(self.iouts),
+                repr(self.dwelltime))
+
+    def do(self, slowsweeprate = 200e-6, slowsweeppts=50, 
+            plot=True, removeplot=True):
+        self.Vmea = np.zeros(len(self.iouts))
+        self.Isrc = np.zeros(len(self.iouts))
+        self.gain = self.preamp.gain
+
+        # slowly sweep to the starting voltage
+        self.slowsweep(self.iouts[0], numpts=slowsweeppts, ipers=slowsweeprate)
+
+        # Sweep keithley, wait dwelltime, and record voltage at each point
+        for i in range(len(self.iouts)):
+            starttime = time.time()
+            self.keithley.Iout = self.iouts[i] 
+            self.Isrc[i] = self.keithley.Iout
+            VvsIdc.wait(starttime, self.dwelltime)
+            self.Vmea[i] = self.daqchannel.V/self.gain
+
+        # fit the voltages / applied currents to a line to extract R and error
+        [p,covar] = np.polyfit(self.Isrc, self.Vmea, deg=1, cov=True)
+        self.Rfits = p
+        self.covar = covar
+        self.R = self.Rfits[0]
+
+        if plot:
+            self.plot()
+        if removeplot:
+            plt.close()
+
+    def slowsweep(self, itarget, ipers=100e-6, numpts = 10):
+        istart = self.keithley.Iout
+        iend = itarget
+        currents = np.linspace(istart, iend, numpts)
+        timesleep = abs(currents[1]-currents[0])/ipers
+        for c in currents:
+            self.keithley.Iout = c
+            VvsIdc.wait(time.time(), timesleep)
+            
+    @staticmethod           
+    def wait(starttime, dwelltime):
+        if (starttime + dwelltime > time.time()):
+            time.sleep(starttime + dwelltime - time.time())
+
+    def setup_plots(self):
+        self.fig = 0
+        self.ax = 0
+
+    def plot(self, **plot_kwargs):
+        self.fig, self.ax = plt.subplots()
+        self.ax.ticklabel_format(style='sci', axis='both', scilimits=(0,0), useMathText=True)
+        self.ax.plot(self.Isrc, self.Vmea, 
+                label='Data',
+                marker='o', linestyle='', markersize=5, **plot_kwargs)
+        extra = abs(self.Isrc.max() - self.Isrc.min())*.1
+        xs = np.linspace(self.Isrc.min() - extra, self.Isrc.max() + extra, 100) 
+        p = np.poly1d(self.Rfits)
+        err = np.diag(self.covar)**.5
+        self.ax.plot(xs, p(xs), linestyle='-', marker='', 
+        label=r'Fit: V = ({0:2.2e}$\pm${2:2.2e})I + ({1:2.2e}$\pm${3:2.2e})'.format( 
+                                                              self.Rfits[0], 
+                                                              self.Rfits[1],
+                                                              err[0], 
+                                                              err[1]))
+        self.ax.legend(fontsize=8)
+        self.ax.set_xlabel('I (A)')
+        self.ax.set_ylabel('V (V)')
+        return [self.fig,self.ax]
+
+
+class VvsIdc_daq(VvsIdc):
+
+    instrument_list = ['nidaq', 'preamp']
+    _daq_inputs = ['iv']
+    _daq_outputs= ['iv']
+
+    def __init__(self, instruments={}, iouts=[], 
+                 iv_Rbias = 3165, dwelltime=.01):
+        super().__init__(instruments=instruments)
+        self.iouts=np.array(iouts)
+        self.iv_Rbias = iv_Rbias
+        self.vouts= self.iouts * self.iv_Rbias
+        self.dwelltime=dwelltime
+        self.dwelltime = dwelltime
+        self.rate = 1/self.dwelltime
+
+    def do(self, plot=True, removeplot=True):
+
+        _,_ = self.nidaq.singlesweep(self._daq_outputs[0], 
+                                     self.vouts[0], 
+                                     numsteps = int(len(self.iouts)/2),
+                                     rate = self.rate*2)
+
+        vmeas = []
+        for v in self.vouts:
+            self.nidaq.outputs[self._daq_outputs[0]].V = v
+            time.sleep(self.dwelltime)
+            self.vmeas.append(self.nidaq.inputs[self._daq_inputs[0]].V)
+
+
+        _,_ = self.nidaq.singlesweep(self._daq_outputs[0], 
+                                     0,
+                                     numsteps = int(len(self.iouts)/2),
+                                     rate = self.rate*2)
+
+
+        # So I don't have to write another plotting routine
+        self.Vmea = np.array(vmeas)
+        self.Isrc = np.array(self.iouts)
+            
+        if plot:
+            self.plot()
+        if removeplot:
+            plt.close()
+
 
 
 class RvsVg(RvsSomething):

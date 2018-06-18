@@ -1,14 +1,20 @@
 import numpy as np
-from numpy.linalg import lstsq
-from .touchdown import Touchdown
 import time
 import os
 import glob
+from numpy.linalg import lstsq
+from importlib import reload
 from datetime import datetime
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from IPython import display
+
+#import Nowack_Lab.Procedures.touchdown
+#reload(Nowack_Lab.Procedures.touchdown)
+from Nowack_Lab.Procedures.touchdown import Touchdown
+
 from ..Utilities import logging
 from ..Instruments import piezos, montana
-from IPython import display
 from ..Utilities.utilities import reject_outliers_plane, fit_plane
 from ..Utilities.save import Measurement
 from ..Utilities.utilities import AttrDict
@@ -18,23 +24,23 @@ class Planefit(Measurement):
     '''
     Take touchdowns in a grid to define a plane.
     '''
-    instrument_list = ['piezos', 'montana']
+    instrument_list = ['piezos', 'montana', 'atto']
 
     a = np.nan
     b = np.nan
     c = np.nan
 
     def __init__(self, instruments={}, span=[400, 400], center=[0, 0],
-                 numpts=[4, 4], Vz_max=None):
+                 numpts=[4, 4], Vz_max=None, runonce=False):
         '''
         Take touchdowns in a grid to determine the slope of the sample
         surface.
 
         Args:
-        instruments (dict) -- must contain the instruments required for
-        the touchdown.
-
+        instruments (dict): must contain the instruments required for
+                            the touchdown.
         span (list): Specifices the size [X span, Y span] of the plane
+<<<<<<< HEAD
         in voltage applied to the X and Y peizos.
 
         center (list): Specifies the center of the plane
@@ -45,6 +51,18 @@ class Planefit(Measurement):
 
         Vz_max (float):Maximum voltage that can be applied to the Zpiezo.
         If None then the the max voltage for the piezo is used.
+=======
+                     in voltage applied to the X and Y peizos.
+        center (list): Specifies the center of the plane 
+                       [X center, Y center] in voltage applied to the 
+                       X and Y peizos.
+        numpts (list): The numper of touchdowns to take on each axis 
+                        [X number, Y number]. 
+        Vz_max (float): Maximum voltage that can be applied to the Zpiezo.
+                        If None then the the max voltage for the piezo is used.
+        runonce (bool): True if you only want the touchdowns to run once
+                        Useful for scanning near the edge of a sample
+>>>>>>> 80b948f2ceb85d1e4e4d43de1fae5a8e742231dc
 
         Required instruments:
         daq, lockin_cap, attocubes, piezos, montana
@@ -66,6 +84,7 @@ class Planefit(Measurement):
         self.span = span
         self.center = center
         self.numpts = numpts
+        self.runonce = runonce
 
         if Vz_max == None:
             try:
@@ -112,12 +131,14 @@ class Planefit(Measurement):
         # Initial touchdown at center of plane
         self.piezos.V = {'x': self.center[0],
                          'y': self.center[1], 'z': -self.Vz_max}
-        td = Touchdown(self.instruments, Vz_max=self.Vz_max, planescan=True)
+        td = Touchdown(self.instruments, Vz_max=self.Vz_max, planescan=True,
+                        runonce=self.runonce)
         td.run()
         # If the initial touchdown generates a poor fit, try again
         n = 0
         while td.flagged and n < 5:
-            td = Touchdown(self.instruments, Vz_max=self.Vz_max, planescan=True)
+            td = Touchdown(self.instruments, Vz_max=self.Vz_max, planescan=True,
+                            runonce=self.runonce)
             td.run()
             n = n + 1
 
@@ -157,7 +178,8 @@ class Planefit(Measurement):
                 # Take touchdowns until the fitting algorithm gives a
                 # good result, up to 5 touchdowns
                 td = Touchdown(self.instruments,
-                               Vz_max=self.Vz_max, planescan=True)
+                               Vz_max=self.Vz_max, planescan=True, 
+                               runonce=self.runonce)
                 td.title = '(%i, %i). TD# %i' % (i, j, counter)
                 td.run()
                 plt.close(td.fig)
@@ -165,7 +187,8 @@ class Planefit(Measurement):
                 while td.flagged is True and n < 5:
                     print("Redo")
                     td = Touchdown(self.instruments,
-                                   Vz_max = self.Vz_max, planescan=True)
+                                   Vz_max = self.Vz_max, planescan=True,
+                                   runonce=self.runonce)
                     td.title = '(%i, %i). TD# %i' % (i, j, counter)
                     td.run()
                     n = i + 1
@@ -185,23 +208,24 @@ class Planefit(Measurement):
         self.piezos.V = 0
         self.calculate_plane()
 
+		
         # take the first slow touchdown as a more accurate center
-        c_fit = self.c
-        self.c = center_z_value - self.a * \
-            self.center[0] - self.b * self.center[1]
+        #c_fit = self.c
+        #self.c = center_z_value - self.a * \
+        #    self.center[0] - self.b * self.center[1]
         # c was lowered by the correction, so we lower the plane.
-        self.Z -= (c_fit - self.c)
-
+        #self.Z -= (c_fit - self.c)
+		
         self.plot()
         self.axes = list(self.axes.flatten())
 
     @classmethod
     def load(cls, json_file=None, instruments={}, unwanted_keys=[]):
-        '''
+        """
         Plane load method.
         If no json_file specified, will load the last plane taken.
         Useful if you lose the object while scanning.
-        '''
+        """
         unwanted_keys.append('preamp')
         obj = super(Planefit, cls).load(json_file, instruments, unwanted_keys)
         obj.instruments = instruments
@@ -216,21 +240,55 @@ class Planefit(Measurement):
 
 
     def colorplot(self):
-        fig, ax = plt.subplots(figsize=(6,6))
-        im = ax.matshow(self.Z, origin="lower")
-        ax.xaxis.set_ticks_position("bottom")
-        # Label the axes in voltage applied to piezos
-        ax.set_xticks([0,1,2,3])
-        ax.set_yticks([0,1,2,3])
-        ax.set_xticklabels(['{:.0f}'.format(x) for x in self.X[0,:]])
-        ax.set_yticklabels(['{:.0f}'.format(y) for y in self.Y[:,0]])
-        ax.xaxis.set_ticks_position("both")
-        ax.set_xlabel("X Position (V)")
-        ax.set_ylabel("Y Position (V)")
+        """Visualize a plane and compare to touchdown voltages.
+
+        Generates two colorplots:
+        1. Plots the touchdown voltages in a grid.
+        2. Plots the difference between the measured touchdown voltage
+        and the fit plane.
+        """
+        # Compute the difference between the fit plane and the touchdowns
+        Z_diff = self.Z - self.plane(self.X, self.Y)
+
+        # Set up figure and plot Z and Z_diff
+        fig, axes = plt.subplots(1, 2, figsize=(6,3))
+        im0 = axes[0].matshow(self.Z, origin="lower")
+        im1 = axes[1].matshow(Z_diff, origin="lower", cmap="RdBu")
+        ims = [im0, im1]
+        axes[0].set_title("Touchdown Voltages", size="medium")
+        axes[1].set_title(r"$V_{td} - V_{fit}$", size="medium")
+
+        # Reformat the axes
+        for ax, im in zip(axes, ims):
+            ax.xaxis.set_ticks_position("bottom")
+            # Label the axes in voltage applied to piezos
+            ax.set_xticks([0,1,2,3])
+            ax.set_yticks([0,1,2,3])
+            ax.set_xticklabels(['{:.0f}'.format(x) for x in self.X[0,:]])
+            ax.xaxis.set_ticks_position("both")
+            ax.set_xlabel("X Position (V)")
+
+            # Add colorbars
+            d = make_axes_locatable(ax)
+            cax = d.append_axes("right", 0.1, 0.1)
+            print(type(im))
+            cbar = plt.colorbar(im, cax)
+
+        # Label the Y axis of only the left-most plot
+        axes[0].set_yticklabels(['{:.0f}'.format(y) for y in self.Y[:,0]])
+        axes[1].set_yticklabels([])
+        axes[0].set_ylabel("Y Position (V)")
+        
         plt.tight_layout()
+<<<<<<< HEAD
         return fig, ax
 
     def save(self, savefig=True):
+=======
+        return fig, axes
+        
+    def save(self, savefig=True, **kwargs):
+>>>>>>> 80b948f2ceb85d1e4e4d43de1fae5a8e742231dc
         '''
         Saves the planefit object to json.
         Also saves the figure as a pdf, if wanted.
@@ -238,7 +296,7 @@ class Planefit(Measurement):
         logging.log('Plane saved. a=%.4f, b=%.4f, c=%.4f' %
                     (self.a, self.b, self.c))
 
-        self._save(self.filename, savefig)
+        self._save(self.filename, savefig, **kwargs)
 
     def setup_plots(self):
         numX, numY = self.numpts
@@ -251,7 +309,16 @@ class Planefit(Measurement):
             axes.append(ax)
         self.fig.subplots_adjust(wspace=0, hspace=0)
         self.axes = np.reshape(axes, self.numpts)
+<<<<<<< HEAD
 
+=======
+        self.fig.suptitle(self.filename + 
+                          '\n atto: X={0:2.2f}, Y={1:2.2f}, Z={2:2.2f}'.format(
+                              self.atto.x.pos,
+                              self.atto.y.pos,
+                              self.atto.z.pos))
+    
+>>>>>>> 80b948f2ceb85d1e4e4d43de1fae5a8e742231dc
     def surface(self, x, y):
         '''
         Does an interpolation on the surface to give an array of z values

@@ -1,11 +1,18 @@
 from jsonpickle.ext import numpy as jspnp
-import json, os, pickle, bz2, jsonpickle as jsp, numpy as np, re
+import json
+import os
+import pickle
+import bz2 
+import jsonpickle as jsp 
+import numpy as np 
+import re
 from datetime import datetime
 jspnp.register_handlers()
 from copy import copy
 import h5py, glob, matplotlib, inspect, platform, hashlib, shutil, time
 import matplotlib.pyplot as plt
 from . import utilities
+
 
 '''
 How saving and loading works:
@@ -54,11 +61,16 @@ class Measurement:
                     if m == 'matplotlib':
                         d[var] = None
                 elif type(d[var]) is list: # check for lists of mpl objects
-                    if hasattr(d[var][0], '__module__'): # built-in types won't have __module__
-                        m = d[var][0].__module__
-                        m = m[:m.find('.')] # will strip out "matplotlib"
-                        if m == 'matplotlib':
-                            d[var] = None
+                    try:
+                        if hasattr(d[var][0], '__module__'): # built-in types won't have __module__
+                            m = d[var][0].__module__
+                            m = m[:m.find('.')] # will strip out "matplotlib"
+                            if m == 'matplotlib':
+                                d[var] = None
+                    except:
+                        print('Error saving ', var)
+                        print(str(self))
+                        d[var] = ['This list was empty.  Empty list do not save well']
 
                 ## Walk through dictionaries
                 if 'dict' in utilities.get_superclasses(d[var]):
@@ -88,11 +100,23 @@ class Measurement:
                         # check if it's a dictionary or object
                         if f.get(key, getclass=True) is h5py._hl.group.Group:
                             if key[0] == '!': # it's an object
-                                walk(d[key[1:]].__dict__, f[key])
-                                # [:1] strips the !; walks through the subobject
+                                # Current version of python on linux does not 
+                                # have a __dict__ of a dict object
+                                try:
+                                    walk(d[key[1:]].__dict__, f[key])
+                                    # [:1] strips the !; walks through the subobject
+                                except:
+                                    walk(d[key[1:]], f[key])
                             else: # it's a dictionary
                                 # walk through the subdictionary
-                                walk(d[key], f[key])
+
+                                # Current version of python on linux does not 
+                                # like to call fields that do not exist.  
+                                try:
+                                    walk(d[key], f.get(key))
+                                except:
+                                    d[key] = {};
+                                    walk(d[key], f.get(key))
                         else:
                             d[key] = f[key][:] # we've arrived at a dataset
 
@@ -126,6 +150,7 @@ class Measurement:
 
     @staticmethod
     def _load_json(json_file, unwanted_keys = []):
+        import Nowack_Lab.Procedures.planefit
         '''
         Loads an object from JSON.
         '''
@@ -137,6 +162,8 @@ class Measurement:
             Walk through dictionary to prune out Instruments
             '''
             for key in list(d.keys()): # convert to list because dictionary changes size
+                #print(key)
+                #print(key)
                 if key in unwanted_keys: # get rid of keys you don't want to load
                     d[key] = None
                 elif 'py/' in key:
@@ -151,14 +178,25 @@ class Measurement:
                     d[key] = walk(d[key])
             return d
 
-
         obj_dict = walk(obj_dict)
+
+        # If the class of the object is custom defined in __main__ or in a
+        # different branch, then just load it as a Measurement.
+        try:
+            exec(obj_dict['py/object']) # see if class is in the namespace
+        except:
+            print('Cannot find class definition {0}: '.format(
+                obj_dict['py/object']) + 'using measurement object')
+            obj_dict['py/object'] = 'Nowack_Lab.Utilities.save.Measurement'
+
+        # Decode with jsonpickle
         obj_string = json.dumps(obj_dict)
         obj = jsp.decode(obj_string)
 
         return obj
 
-    def _save(self, filename=None, savefig=True, ignored = []):
+    def _save(self, filename=None, savefig=True, ignored = [], appendedpath='',
+                localpath='', remotepath = '', savepath = False):
         '''
         Saves data. numpy arrays are saved to one file as hdf5, everything else
         is saved to JSON
@@ -194,15 +232,33 @@ class Measurement:
                 self.make_timestamp_and_filename()
             filename = self.filename
 
-        if os.path.dirname(filename) == '': # you specified a filename with no preceding path
-            local_path = os.path.join(get_local_data_path(), get_todays_data_dir(), filename)
-            remote_path = os.path.join(get_remote_data_path(), get_todays_data_dir(), filename)
-
-        # Saving to a custom path
-        else: # you specified some sort of path
+        # If you did not specify a filename with a path, generate a path
+        if os.path.dirname(filename) == '': 
+            # If you specified a local AND remote path, set them correctly
+            if localpath != '' and remotepath != '':
+                local_path  = os.path.join(localpath, filename)
+                remote_path = os.path.join(remotepath, filename)
+            else:
+                local_path = os.path.join(get_local_data_path(), 
+                                          get_todays_data_dir(), 
+                                          appendedpath, 
+                                          filename)
+                remote_path = os.path.join(get_remote_data_path(), 
+                                           get_todays_data_dir(), 
+                                           appendedpath, 
+                                           filename)
+        # Else, you specified some sort of path but no remote path (legacy)
+        else: 
             local_path = filename
-            remote_path = os.path.join(get_remote_data_path(), '..', 'other', *filename.replace('\\', '/').split('/')[1:]) # removes anything before the first slash. e.g. ~/data/stuff -> data/stuff
+            remote_path = os.path.join(get_remote_data_path(), 
+                                        '..', 'other', 
+                                        *filename.replace('\\', '/').split('/')[1:]) 
+            # removes anything before the first slash. e.g. ~/data/stuff -> data/stuff
             # All in all, remote_path should look something like: .../labshare/data/bluefors/other/
+
+        if savepath:
+            self._localpath = os.path.dirname(local_path)
+            self._remotepath = os.path.dirname(remote_path)
 
         # Save locally:
         local_dir = os.path.split(local_path)[0]
@@ -369,7 +425,7 @@ class Measurement:
             self.setup_plots()
 
 
-    def run(self, plot=True, **kwargs):
+    def run(self, plot=True, save_appendedpath='', **kwargs):
         '''
         Wrapper function for do() that catches keyboard interrrupts
         without leaving open DAQ tasks running. Allows scans to be
@@ -381,6 +437,7 @@ class Measurement:
         Check the do() function for additional available kwargs.
         '''
         self.interrupt = False
+        self._save_appendedpath = save_appendedpath
         done = None
 
         ## Before the do.
@@ -409,15 +466,17 @@ class Measurement:
             t_unit = 'hours'
         # Print elapsed time e.g. "Scanplane took 2.3 hours."
         print('%s took %.1f %s.' %(self.__class__.__name__, t, t_unit))
-        self.save()
+        #print(save_appendedpath)
+
+        self.save(appendedpath = save_appendedpath)
 
         return done
 
-    def save(self, filename=None, savefig=True):
+    def save(self, filename=None, savefig=True, **kwargs):
         '''
         Basic save method. Just calls _save. Overwrite this for each subclass.
         '''
-        self._save(filename, savefig=True)
+        self._save(filename, savefig=True, **kwargs)
 
 
     def setup_plots(self):

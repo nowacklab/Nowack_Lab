@@ -44,12 +44,12 @@ class ANC350(Instrument):
 
         self.anc = ANC350Pos()
 
-        V_lim = 45 # room temperature
+        V_lim = 70 # room temperature
         if montana:
             if montana.temperature['platform'] < 30:
                 V_lim = 60 # low temperature requires more voltage to step
         else:
-            print('Voltage limited to 45 V, no communication with Montana!')
+            print('Voltage limited to {0} V, no communication with Montana!'.format(V_lim))
 
         for (i,s) in enumerate(self._stages):
             setattr(self, s, Positioner(self.anc, i, V_lim=V_lim, pos_lim=self._pos_lims[i], label=s)) # makes positioners x, y, and z

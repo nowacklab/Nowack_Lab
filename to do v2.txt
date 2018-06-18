@@ -16,3 +16,17 @@ Or better:
 A bunch of drawing things can go into plot_draw, esp. flush_events for non-notebook plotting
 
 Reinstate _chan_labels as _daq_inputs and add _daq_outputs
+
+Figure out notebook shared secret to avoid "untrusted" notebooks.
+
+Add time estimates to procedures somehow
+
+Connect to data server remotely.
+
+**kwargs for everything - with warning for unused ones?
+
+RC params
+
+Load instruments with json. This would just load the saved private parameters for easy access.
+
+Bug where Keithley changes ranges upon sweep.

@@ -1,14 +1,38 @@
+<<<<<<< HEAD
 import visa, time, numpy as np, re
 from .instrument import Instrument, VISAInstrument
 
 # Parameters for the 6-1-1 vector magnet on the Bluefors system
+=======
+import visa
+import time
+import numpy as np
+import re
+from .instrument import Instrument, VISAInstrument
+
+>>>>>>> 80b948f2ceb85d1e4e4d43de1fae5a8e742231dc
 _BMAX = {'x': 1, 'y': 1, 'z': 6} # T
 _IMAX = {'x': 50.73, 'y': 50.63, 'z': 50.76} # A
 _COILCONST = {'x': 0.01971, 'y': 0.01975, 'z': 0.1182} # T/A
 _IRATEMAX = {'x': 0.067*60, 'y': 0.0579*60, 'z': 0.0357*60} # A/min
 _BRATEMAX = {i: _IRATEMAX[i]*_COILCONST[i] for i in ['x','y','z']} # T/min
 _VMAX = {var: 2.2 for var in ('x','y','z')} # V #FIXME?
+<<<<<<< HEAD
 
+=======
+_STATES = {
+    1: "RAMPING",
+    2: "HOLDING",
+    3: "PAUSED",
+    4: "Ramping in MANUAL UP",
+    5: "Ramping in MANUAL DOWN",
+    6: "ZEROING CURRENT in progress",
+    7: "QUENCH!!!",
+    8: "AT ZERO CURRENT",
+    9: "Heating Persistent Switch",
+    10: "Cooling Persistent Switch"
+}
+>>>>>>> 80b948f2ceb85d1e4e4d43de1fae5a8e742231dc
 
 class AMI430(VISAInstrument):
     '''
@@ -22,6 +46,7 @@ class AMI430(VISAInstrument):
     _label = 'ami430'
     _params = ['B', 'Bset', 'Brate', 'I', 'Iset', 'Irate', 'Isupply',
                     'p_switch']
+<<<<<<< HEAD
     _Bmax = 1  # T
     _Imax = 50.63  # A
     _coilconst = .1182  # T/A
@@ -32,6 +57,11 @@ class AMI430(VISAInstrument):
     def __init__(self, resource=None, axis = 'z'):
         if resource is None:
             resource = 'TCPIP::ami430_%saxis.nowacklab.edu::7180::SOCKET' %axis
+=======
+
+    def __init__(self, axis = 'z'):
+        resource = 'TCPIP::ami430_%saxis.nowacklab.edu::7180::SOCKET' %axis
+>>>>>>> 80b948f2ceb85d1e4e4d43de1fae5a8e742231dc
         self._resource = resource
         self._init_visa(resource)
 
@@ -39,6 +69,16 @@ class AMI430(VISAInstrument):
 
         self.axis = axis
 
+<<<<<<< HEAD
+=======
+        self._Bmax = _BMAX[axis]
+        self._Imax = _IMAX[axis]
+        self._coilconst = _COILCONST[axis]
+        self._Iratemax = _IRATEMAX[axis]
+        self._Bratemax = _BRATEMAX[axis]
+        self._Vmax = _VMAX[axis]
+
+>>>>>>> 80b948f2ceb85d1e4e4d43de1fae5a8e742231dc
     def __getstate__(self):
         '''
         Set up save dictionary.
@@ -155,7 +195,11 @@ class AMI430(VISAInstrument):
             print('Warning! %g A/s ramp rate too high! Rate set to %g A/s.'
                                                     %(value, self._Iratemax))
             value = self._Iratemax
+<<<<<<< HEAD
         self.write('CONF:RAMP:RATE:CURR 1,%g,%g' %(value, self._Imax))
+=======
+        self.write('CONF:RAMP:RATE:FIELD 1,%g,%g' %(value, _IMAX[self.axis]))
+>>>>>>> 80b948f2ceb85d1e4e4d43de1fae5a8e742231dc
 
     @property
     def Isupply(self):
@@ -185,6 +229,7 @@ class AMI430(VISAInstrument):
         '''
         Get the present status of the system.
         '''
+<<<<<<< HEAD
         states = {
             1: 'RAMPING',
             2: 'HOLDING',
@@ -200,6 +245,10 @@ class AMI430(VISAInstrument):
 
         state_num = int(self.ask('STATE?'))
         self._status = states[state_num]
+=======
+        state = int(self.ask('STATE?'))
+        self._status = _STATES[state]
+>>>>>>> 80b948f2ceb85d1e4e4d43de1fae5a8e742231dc
         return self._status
 
     def pause(self):
@@ -264,6 +313,7 @@ class AMI430(VISAInstrument):
 
 
 
+<<<<<<< HEAD
 class AMI420(VISAInstrument):
     '''
     Control for the American Magnetics AMI420 Power Supply.
@@ -438,6 +488,8 @@ class AMI420(VISAInstrument):
             self.wait()
 
 
+=======
+>>>>>>> 80b948f2ceb85d1e4e4d43de1fae5a8e742231dc
 class Magnet(AMI430):
     _attrs = ('x', 'y', 'z', '_attrs') # attributes to get/set normally
     _active_axis = None
@@ -450,6 +502,7 @@ class Magnet(AMI430):
         '''
         for i in ('x','y','z'):
             try:
+<<<<<<< HEAD
                 axis = setattr(self, i, AMI430(i))
 
                 axis._Bmax = _BMAX[axis]
@@ -459,6 +512,9 @@ class Magnet(AMI430):
                 axis._Bratemax = _BRATEMAX[axis]
                 axis._Vmax = _VMAX[axis]
 
+=======
+                setattr(self, i, AMI430(i))
+>>>>>>> 80b948f2ceb85d1e4e4d43de1fae5a8e742231dc
             except:
                 setattr(self, i, None)
                 print('%s axis magnet not connected!' %i)
