@@ -2,6 +2,8 @@ import visa
 import numpy as np
 import time
 from .instrument import Instrument
+import math
+import matplotlib.pyplot
 
 class VNA8722ES(Instrument):
     _label = 'VNA_ES'
@@ -239,15 +241,46 @@ class VNA8722ES(Instrument):
     def save(self):
         '''Save data as array'''
         self.write('FORM4')  # Prepare to output correct data format
-
+        self.write('SMIC')  # Use this format so can get both real and imaginary
         rm = visa.ResourceManager()
         secondary = rm.get_instrument('GPIB0::16')
         secondary.write('OUTPFORM')
         s = secondary.read(termination='~')
         s = s.split('\n')
+        n_ar = np.empty((self._numpoints, 2))
         for i in range(len(s)):
-            s[i] = s[i].split(',')[0]
-        return s
+            splot = s[i].split(',')
+            Re = float(splot[0])
+            Im = float(splot[1])
+            dB = 20*math.log10(math.sqrt(Re**2+Im**2))
+            try:
+                phase = math.atan(Im/Re)
+            except ZeroDivisionError:
+                phase = math.pi/2
+            n_ar[i][0] = dB
+            n_ar[i][1] = phase
+        self.write('LOGM')  # switch back to log magnitude format
+        return n_ar
+
+    def rfsquid_sweep(self, k_Istart, k_Istop, k_Isteps v_freqmin, v_freqmax):
+        import .keithley
+        k = Keithley2400(23)
+        v2 = VNA8722ES(16)
+
+        assert k_Istart < k_Istop, "stop current should be greater than start current"
+
+        # Set up current source
+        k.source = 'I'
+        k.Iout_range = 2e-6
+        k.Iout = 1e-6
+        k.V_compliance = 20
+        k.output= 'on'
+
+        for i in range(0, k_Isteps):
+
+
+
+
 
     def ask(self, msg, tryagain=True):
         try:
