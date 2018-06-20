@@ -23,7 +23,6 @@ class VNA8722ES(Instrument):
     _averaging_factor = None
 
     # TODO: stuff for marker positions? or might not need
-    # TODO: averaging factor (AVERFACT) and on/off AVERO and restart AVERREST
     # TODO: just keep one active channel for now
     # TODO: should not need to explicitly set power range other than init
 
@@ -227,6 +226,30 @@ class VNA8722ES(Instrument):
         '''Set averaging factor, in [0, 999]'''
         assert isinstance(value, int) and value >= 0 and value <= 999, "Averaging factor should be int in [0, 999]"
         self.write('AVERFACT%s' % value)
+
+    def averaging_restart(self):
+        '''Restart the measurement averaging'''
+        self.write('AVERREST')
+
+    @property
+    def networkparam(self):
+        '''Get which network parameter is being measured'''
+        if self.ask('S11') == '1':
+            return 'S11'
+        elif self.ask('S21') == '1':
+            return 'S21'
+        elif self.ask('S12') == '1':
+            return 'S12'
+        elif self.ask('S22') == '1':
+            return 'S22'
+
+    @networkparam.setter
+    def networkparam(self, value):
+        nplist = ['S11', 'S21', 'S12', 'S22']
+        assert value in nplist, "Network parameter should be one of " + str(nplist)
+        if value == 'S12' or value == 'S22':
+            raise Exception('Don\'t send current thru amplifer the backwards (just for cold amplifer testing, remove this in code if needed)')
+        self.write(value)
 
     def respond(self):
         print("response")
