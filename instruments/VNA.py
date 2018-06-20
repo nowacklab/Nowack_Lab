@@ -13,7 +13,7 @@ class VNA8722ES(Instrument):
     _power = None
 
     _networkparam = None  # which network parameter: 'S11' 'S21' 'S12' 'S22'
-    _savemode = None  # e.g. FORM5
+    _savemode = None  # e.g. FORM4
     _sweepmode = None
     _freqmin = None
     _freqmax = None
@@ -25,9 +25,6 @@ class VNA8722ES(Instrument):
     # TODO: stuff for marker positions? or might not need
     # TODO: just keep one active channel for now
     # TODO: should not need to explicitly set power range other than init
-
-    def checkup(self):
-        print("aaa")
 
     def __init__(self, gpib_address=16):
         # FIXME: is gpib_address always going to be 16?
@@ -58,8 +55,8 @@ class VNA8722ES(Instrument):
         self.write('S21')  # set to transmission forward
         self._networkparam = 'S21'
 
-        self.write('FORM5')
-        self._savemode = 'FORM5'
+        self.write('FORM4')
+        self._savemode = 'FORM4'
 
         print ("init: power off and at -75dB. all other settings factory preset")
 
@@ -78,17 +75,6 @@ class VNA8722ES(Instrument):
     def __setstate__(self, state):
         pass
 
-    # TODO: might want to figure out exactly what this does
-    def ask(self, msg, tryagain=True):
-        try:
-            return self._visa_handle.ask(msg)
-        except:
-            print('Communication error with VNA')
-            self.close()
-            self.__init__(self.gpib_address)
-            if tryagain:
-                self.ask(msg, False)
-
     @property
     def power(self):
         '''
@@ -98,9 +84,7 @@ class VNA8722ES(Instrument):
 
     @power.setter
     def power(self, value):
-        '''
-        Set the power (dBm)
-        '''
+        '''Set the power (dBm)'''
         assert type(value) is float or int
         if value > -10 or value < -80:
             raise Exception('Power should be between -10 and -80 dBm')
@@ -130,7 +114,8 @@ class VNA8722ES(Instrument):
         else:
             raise Exception('Driver can only handle linear, log, list sweeps')
         # TODO: Need to actually set this attribute
-    @sweep.setter
+
+    @sweepmode.setter
     def sweepmode(self, value):
         '''
         Set the sweep mode
@@ -251,7 +236,26 @@ class VNA8722ES(Instrument):
             raise Exception('Don\'t send current thru amplifer the backwards (just for cold amplifer testing, remove this in code if needed)')
         self.write(value)
 
-    def respond(self):
-        print("response")
+    def save(self):
+        '''Save data as array'''
+        self.write('FORM4')  # Prepare to output correct data format
+        self.ask('OUTPFORM')
+        return(self.ask('OUTPFORM'))
+
+    def ask(self, msg, tryagain=True):
+        try:
+            return self._visa_handle.query(msg)
+        except Exception as e:
+            print(e)
+            print('Communication error with VNA')
+            self.close()
+            self.__init__(self.gpib_address)
+            if tryagain:
+                self.ask(msg, False)
+
     def write(self, msg):
         self._visa_handle.write(msg)
+
+    def close(self):
+        self._visa_handle.close()
+        del(self._visa_handle)
