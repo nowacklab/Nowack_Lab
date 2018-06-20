@@ -239,8 +239,7 @@ class VNA8722ES(Instrument):
     def save(self):
         '''Save data as array'''
         self.write('FORM4')  # Prepare to output correct data format
-        self.ask('OUTPFORM')
-        return(self.ask('OUTPFORM'))
+        return(self._visa_handle.query_ascii_values('OUTPFORM'))
 
     def ask(self, msg, tryagain=True):
         try:
