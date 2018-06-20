@@ -32,7 +32,7 @@ class VNA8722ES(Instrument):
         if type(gpib_address) is int:
             gpib_address = 'GPIB::%02i::INSTR' %gpib_address
         self.gpib_address = gpib_address
-        self._visa_handle = visa.ResourceManager().open_resource(self.gpib_address)
+        self._visa_handle = visa.ResourceManager().open_resource(self.gpib_address, read_termination='a')
         self._visa_handle.read_termination = '\n'
 
         self.write('OPC?;PRES;')  # first, factory preset. Know what some attributes are:
@@ -239,7 +239,15 @@ class VNA8722ES(Instrument):
     def save(self):
         '''Save data as array'''
         self.write('FORM4')  # Prepare to output correct data format
-        return(self._visa_handle.query_ascii_values('OUTPFORM'))
+
+        rm = visa.ResourceManager()
+        secondary = rm.get_instrument('GPIB0::16')
+        secondary.write('OUTPFORM')
+        s = secondary.read(termination='~')
+        s = s.split('\n')
+        for i in range(len(s)):
+            s[i] = s[i].split(',')[0]
+        return s
 
     def ask(self, msg, tryagain=True):
         try:
