@@ -1,8 +1,9 @@
 import visa
 import numpy as np
 import time
-from .instrument import Instrument
 import math
+from .instrument import Instrument
+from .keithley import Keithley2400
 import matplotlib.pyplot
 
 class VNA8722ES(Instrument):
@@ -40,8 +41,8 @@ class VNA8722ES(Instrument):
         self.write('OPC?;PRES;')  # first, factory preset. Know what some attributes are:
         self._networkparam = 'S11'
         self._sweepmode = 'LINFREQ'
-        self._freqmin = .05
-        self._freqmax = 40.05
+        self._freqmin = .05e9
+        self._freqmax = 40.05e9
         self._numpoints = 201
         self._averaging_state = 0
         self._averaging_factor = 16
@@ -80,10 +81,20 @@ class VNA8722ES(Instrument):
         pass
 
     @property
+    def powerstate(self):
+        '''Get whether power is on/off 1/0'''
+        return self._power_state
+
+    @powerstate.setter
+    def powerstate(self, value):
+        '''Set power to on/off 1/0'''
+        val = int(value)
+        assert val in [1,0], "powerstate must be 1 or 0"
+        self._power_state = val
+
+    @property
     def power(self):
-        '''
-        Get the power (dBm)
-        '''
+        '''Get the power (dBm)'''
         return float(self.ask('POWE?'))
 
     @power.setter
@@ -92,7 +103,7 @@ class VNA8722ES(Instrument):
         assert type(value) is float or int
         if value > -10 or value < -80:
             raise Exception('Power should be between -10 and -80 dBm')
-        rangenum = min(floor((-value + 5)/5), 11)
+        rangenum = min(math.floor((-value + 5)/5), 11)
         self.write('POWR%d' %rangenum)  # first change power range
         self.write('POWE %f' % value)  # then can change power
         self._power = value
@@ -148,25 +159,21 @@ class VNA8722ES(Instrument):
         Set min frequency
         '''
         assert type(value) is float or int, "frequency must be float or int"
-        if value > maxfreq(self):
+        if value > self.maxfreq:
             raise Exception('Min frequency cannot be greater than stop frequency')
         self.write('STAR %f' % value)
         self._minfreq = value
 
     @property
     def maxfreq(self):
-        '''
-        Get the stop frequency
-        '''
+        '''Get the stop frequency'''
         return float(self.ask('STOP?'))
 
     @maxfreq.setter
     def maxfreq(self, value):
-        '''
-        Set max frequency
-        '''
+        '''Set max frequency'''
         assert type(value) is float or int, "frequency must be float or int"
-        if value < minfreq(self):
+        if value < self.minfreq:
             raise Exception('Max frequency cannot be smaller than min frequency')
         self._maxfreq = value
         self.write('STOP %f' % value)
@@ -207,7 +214,7 @@ class VNA8722ES(Instrument):
     @property
     def averaging_factor(self):
         '''Get averaging factor'''
-        return int(self.ask('AVERFACT?'))
+        return int(float(self.ask('AVERFACT?')))
 
     @averaging_factor.setter
     def averaging_factor(self, value):
@@ -263,26 +270,43 @@ class VNA8722ES(Instrument):
         self.write('LOGM')  # switch back to log magnitude format
         return n_ar
 
-    def rfsquid_sweep(self, k_Istart, k_Istop, k_Isteps, v_freqmin, v_freqmax, v_power):
-        import .keithley
-        k = Keithley2400(23)
+    def rfsquid_sweep(self, k_Vstart, k_Vstop, k_Vsteps, v_freqmin, v_freqmax, v_power):
+        k = Keithley2400(24)
         v2 = VNA8722ES(16)
 
-        assert k_Istart < k_Istop, "stop current should be greater than start current"
+        assert k_Vstart < k_Vstop, "stop voltage should be greater than start voltage"
 
         # Set up current source
-        k.source = 'I'
-        k.Iout_range = 2e-6
-        k.Iout = k_Istart  # was 1e-6
-        k.V_compliance = 20
-        k.output= 'on'
+
+        k.source = 'V'
+        k.Vout_range = 20  # 20 volt range
+        k.output = 'on'
+        k.Vout = k_Vstart  # was 1e-6 in keithley.py
+        k.I_compliance = 20e-3  # 20mA compli
+
 
         # Set up VNA
-        v2.networkparam('S21')  # Set to measure forward transmission
-        v2.write('POWE')
-        stepsize = (float(k_Istop-k_Istart))/k_Isteps
-        for i in range(0, k_Isteps):
-            k.Iout = k.Iout + i*stepsize  # increment current
+        v2.networkparam = 'S21'  # Set to measure forward transmission
+        v2.power = -70
+        v2.averaging_state = 1  # Turn averaging on
+        v2.averaging_factor = 3  # Set averaging factor
+        v2.minfreq = v_freqmin# set sweep range
+        v2.maxfreq = v_freqmax
+        v2.numpoints = 1601
+
+        Vstepsize = (float(k_Vstop-k_Vstart))/k_Vsteps
+        sleep_length = v2.ask('SWET?')*v2.averaging_factor
+
+        # TODO: this is a clumsy way of setting up the array
+        arr = np.zeros((int(v2.numpoints), 2, 1))  # array for values. depth d is d'th current step
+        for step in range(0, k_Vsteps):
+            k.Vout = k.Vout + step*Vstepsize  # increment current
+            v2.averaging_restart()  # restart averaging
+            time.sleep(float(v2.ask('SWET?'))*(v2.averaging_factor+4))  # wait extra 4 averaging cycles for safety
+            arr = np.dstack((arr, v2.save()))
+        k.output = 'off'  # turn off keithley output
+        v2.powerstate = 0  # turn off VNA source power
+        return np.delete(arr, (0), axis=1)  # get rid of first column (is just zeros)
 
     def ask(self, msg, tryagain=True):
         try:
