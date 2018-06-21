@@ -70,6 +70,8 @@ class VNA8722ES(Instrument):
         'min of frequency sweep': self._freqmin,
         'max of frequency sweep': self._freqmax,
         'number of frequency points': self._numpoints,
+        'averaging state': self._averaging_state,
+        'averaging factor': self._averaging_factor
         }
         return self._save_dict
 
@@ -115,7 +117,6 @@ class VNA8722ES(Instrument):
             return "LIST"
         else:
             raise Exception('Driver can only handle linear, log, list sweeps')
-        # TODO: Need to actually set this attribute
 
     @sweepmode.setter
     def sweepmode(self, value):
@@ -188,11 +189,11 @@ class VNA8722ES(Instrument):
         self._numpoints = value
 
     @property
-    def avgstate(self):
+    def averaging_state(self):
         '''Get averaging state (on/off 1/0)'''
         return int(self.ask('AVERO?'))
 
-    @avgstate.setter
+    @averaging_state.setter
     def averaging_state(self, value):
         '''Set averaging to on/off 1/0'''
         val = int(value)
@@ -262,7 +263,7 @@ class VNA8722ES(Instrument):
         self.write('LOGM')  # switch back to log magnitude format
         return n_ar
 
-    def rfsquid_sweep(self, k_Istart, k_Istop, k_Isteps v_freqmin, v_freqmax):
+    def rfsquid_sweep(self, k_Istart, k_Istop, k_Isteps, v_freqmin, v_freqmax, v_power):
         import .keithley
         k = Keithley2400(23)
         v2 = VNA8722ES(16)
@@ -272,22 +273,23 @@ class VNA8722ES(Instrument):
         # Set up current source
         k.source = 'I'
         k.Iout_range = 2e-6
-        k.Iout = 1e-6
+        k.Iout = k_Istart  # was 1e-6
         k.V_compliance = 20
         k.output= 'on'
 
+        # Set up VNA
+        v2.networkparam('S21')  # Set to measure forward transmission
+        v2.write('POWE')
+        stepsize = (float(k_Istop-k_Istart))/k_Isteps
         for i in range(0, k_Isteps):
-
-
-
-
+            k.Iout = k.Iout + i*stepsize  # increment current
 
     def ask(self, msg, tryagain=True):
         try:
-            return self._visa_handle.query(msg)
+            return self._visa_handle.query(msg)  # changed from .ask to .query
         except Exception as e:
+            print('Communication error with VNA: ')
             print(e)
-            print('Communication error with VNA')
             self.close()
             self.__init__(self.gpib_address)
             if tryagain:
