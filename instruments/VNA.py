@@ -308,9 +308,9 @@ class VNA8722ES(Instrument):
         return n_ar
 
     def savelog(self):
-        '''Save data as array'''
+        '''Save dB data in array'''
         self.write('FORM4')  # Prepare to output correct data format
-        self.write('LOGM')  # Use this format so can get both real and imaginary
+        self.write('LOGM')
         sleep_length = float(self.ask('SWET?'))*(self.averaging_factor+3)
         time.sleep(sleep_length)  # wait for averaging
 
@@ -322,22 +322,39 @@ class VNA8722ES(Instrument):
         n_ar = np.empty((self._numpoints, 2))
         for i in range(len(s)):
             splot = s[i].split(',')
-            Re = float(splot[0])
-            Im = float(splot[1])
-            dB = 20*math.log10(math.sqrt(Re**2+Im**2))
-            try:
-                phase = math.atan(Im/Re)
-            except ZeroDivisionError:
-                phase = math.pi/2
-            n_ar[i][0] = splot[0]
-            n_ar[i][1] = phase
-        self.write('LOGM')  # switch back to log magnitude format
+            dB = float(splot[0])
+            # _ = float(splot[1])  # don't actually know what this is, manual says units N/s^2
+
+            n_ar[i][0] = dB
+            n_ar[i][1] = 0  # just empty for now. May change later
         return n_ar
 
-    def rfsquid_sweep(self, k_Vstart, k_Vstop, k_Vsteps, v_freqmin, v_freqmax, v_power, v_averaging_factor):
+    def savephase(self):
+        '''Save phase data in array'''
+        self.write('FORM4')
+        self.write('PHASE')
+        sleep_length = float(self.ask('SWET?'))*(self.averaging_factor+3)
+        time.sleep(sleep_length)
+
+        rm = visa.ResourceManager()
+        secondary = rm.get_instrument('GPIB0::16')
+        secondary.write('OUTPFORM')
+        s = secondary.read(termination='~')
+        s = s.split('\n')
+        n_ar = np.empty((self._numpoints, 2))
+        for i in range(len(2)):
+            splot = s[i].split(',')
+            phase = float(splot[0])
+
+            n_ar[i][0] = phase
+            n_ar[i][1] = 0  # just empty for now. May change later
+        self.write('LOGM')  # switch back to log mag format for viewing
+
+
+    def rfsquid_sweep(self, k_Vstart, k_Vstop, k_Vsteps, v_freqmin, v_freqmax, v_power, v_averaging_factor, mode):
         k = Keithley2400(24)
         # v2 = VNA8722ES(16)
-
+        # mode 0: only dB. mode 1: only phase. mode 2: dB and phase.
         assert k_Vstart < k_Vstop, "stop voltage should be greater than start voltage"
 
         # Set up current source
@@ -370,16 +387,29 @@ class VNA8722ES(Instrument):
                 arr = np.delete(arr, (0), axis=2)
             k.Vout = k.Vout + Vstepsize  # increment voltage
             self.averaging_restart()  # restart averaging
-            arr = np.dstack((arr, self.savelog()))  # waiting occurs in save() function
+            if mode == 0:
+                # just save dB data
+                temp = self.savelog()
+            if mode == 1:
+                temp = self.savephase()
+                # just save phase data
+            if mode == 2:
+                temp = self.savelog() + numpy.flip(self.savephase(), axis=1)
+                # save both dB and phaes data
+            arr = np.dstack((arr, temp))  # waiting occurs in save() function
 
         k.Vout = 0
         k.output = 'off'  # turn off keithley output
         self.powerstate = 0  # turn off VNA source power
         # TODO: real-time plotting?
-        plt.subplot(111)
-        plt.imshow(arr[:, 0, :], aspect='auto')
-        plt.colorbar()
-        plt.show()
+        if m == 2:
+            print('not prepared to show this yet: just need to do subplot thing')
+        else:
+
+            plt.subplot(111)
+            plt.imshow(arr[:, 0, :], aspect='auto')
+            plt.colorbar()
+            plt.show()
         # fig.savefig('filename here')
         # colorbar stuff add later
         # cbar.ax.set_ylabel(cbarlabel='some cbarlabel', rotation=-90, va="bottom")
