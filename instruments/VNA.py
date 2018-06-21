@@ -95,6 +95,12 @@ class VNA8722ES(Instrument):
         '''Set power to on/off 1/0'''
         val = int(value)
         assert val in [1,0], "powerstate must be 1 or 0"
+        if val == 1:
+            self.write('SOUP1')
+            print('Powering on VNA')
+        else:
+            self.write('SOUP0')
+            print('Powering down VNA')
         self._power_state = val
 
     @property
@@ -278,6 +284,9 @@ class VNA8722ES(Instrument):
         '''Save data as array'''
         self.write('FORM4')  # Prepare to output correct data format
         self.write('SMIC')  # Use this format so can get both real and imaginary
+        sleep_length = float(self.ask('SWET?'))*(self.averaging_factor+3)
+        time.sleep(sleep_length)  # wait for averaging
+
         rm = visa.ResourceManager()
         secondary = rm.get_instrument('GPIB0::16')
         secondary.write('OUTPFORM')
@@ -298,9 +307,36 @@ class VNA8722ES(Instrument):
         self.write('LOGM')  # switch back to log magnitude format
         return n_ar
 
-    def rfsquid_sweep(self, k_Vstart, k_Vstop, k_Vsteps, v_freqmin, v_freqmax, v_power):
+    def savelog(self):
+        '''Save data as array'''
+        self.write('FORM4')  # Prepare to output correct data format
+        self.write('LOGM')  # Use this format so can get both real and imaginary
+        sleep_length = float(self.ask('SWET?'))*(self.averaging_factor+3)
+        time.sleep(sleep_length)  # wait for averaging
+
+        rm = visa.ResourceManager()
+        secondary = rm.get_instrument('GPIB0::16')
+        secondary.write('OUTPFORM')
+        s = secondary.read(termination='~')
+        s = s.split('\n')
+        n_ar = np.empty((self._numpoints, 2))
+        for i in range(len(s)):
+            splot = s[i].split(',')
+            Re = float(splot[0])
+            Im = float(splot[1])
+            dB = 20*math.log10(math.sqrt(Re**2+Im**2))
+            try:
+                phase = math.atan(Im/Re)
+            except ZeroDivisionError:
+                phase = math.pi/2
+            n_ar[i][0] = splot[0]
+            n_ar[i][1] = phase
+        self.write('LOGM')  # switch back to log magnitude format
+        return n_ar
+
+    def rfsquid_sweep(self, k_Vstart, k_Vstop, k_Vsteps, v_freqmin, v_freqmax, v_power, v_averaging_factor):
         k = Keithley2400(24)
-        v2 = VNA8722ES(16)
+        # v2 = VNA8722ES(16)
 
         assert k_Vstart < k_Vstop, "stop voltage should be greater than start voltage"
 
@@ -312,36 +348,36 @@ class VNA8722ES(Instrument):
         k.Vout = k_Vstart  # was 1e-6 in keithley.py
         k.I_compliance = 20e-3  # 20mA compli
 
-
         # Set up VNA
-        v2.networkparam = 'S21'  # Set to measure forward transmission
-        v2.power = -70
-        v2.averaging_state = 1  # Turn averaging on
-        v2.averaging_factor = 1  # Set averaging factor
-        v2.minfreq = v_freqmin# set sweep range
-        v2.maxfreq = v_freqmax
-        v2.numpoints = 1601
-        v2.smoothing_state = 1
-        v2.smoothing_factor = 3
+        self.networkparam = 'S21'  # Set to measure forward transmission
+        self.power = v_power
+        self.powerstate = 1  # turn vna source power on
+        self.averaging_state = 1  # Turn averaging on
+        self.averaging_factor = v_averaging_factor # Set averaging factor
+        self.minfreq = v_freqmin# set sweep range
+        self.maxfreq = v_freqmax
+        self.numpoints = 1601
+        self.smoothing_state = 1
+        self.smoothing_factor = 1.5
 
         Vstepsize = (float(k_Vstop-k_Vstart))/k_Vsteps
-        sleep_length = v2.ask('SWET?')*v2.averaging_factor
 
-        # TODO: this is a clumsy way of setting up the array
-        arr = np.zeros((int(v2.numpoints), 2, 1))  # array for values. depth d is d'th current step
-        for step in range(0, k_Vsteps):
-            k.Vout = k.Vout + step*Vstepsize  # increment current
-            v2.averaging_restart()  # restart averaging
-            time.sleep(float(v2.ask('SWET?'))*(v2.averaging_factor+1))  # wait extra 3 averaging cycles for safety
-            arr = np.dstack((arr, v2.save()))
+        arr = np.zeros((int(self.numpoints), 2, 1))  # array for values. depth d is d'th current step
+
+        for step in range(0, k_Vsteps): # TODO: delete first column after first iteration
+            print("Current/voltage step #" + str(step+1) + " out of " + str(k_Vsteps))
+            if step == 1:
+                arr = np.delete(arr, (0), axis=2)
+            k.Vout = k.Vout + Vstepsize  # increment voltage
+            self.averaging_restart()  # restart averaging
+            arr = np.dstack((arr, self.savelog()))  # waiting occurs in save() function
+
+        k.Vout = 0
         k.output = 'off'  # turn off keithley output
-        v2.powerstate = 0  # turn off VNA source power
-
-        arr = np.delete(arr, (0), axis=2)  # get rid of first column (is just zeros)
-
-        # plot the array
+        self.powerstate = 0  # turn off VNA source power
+        # TODO: real-time plotting?
         plt.subplot(111)
-        plt.imshow(arr[::-1, 0, :], aspect='auto')
+        plt.imshow(arr[:, 0, :], aspect='auto')
         plt.colorbar()
         plt.show()
         # fig.savefig('filename here')
@@ -349,8 +385,7 @@ class VNA8722ES(Instrument):
         # cbar.ax.set_ylabel(cbarlabel='some cbarlabel', rotation=-90, va="bottom")
 
         return arr
-
-
+# TODO: Also save phase. Make as a separate save function so that rfsquid_sweep can call one or both.
     def ask(self, msg, tryagain=True):
         try:
             return self._visa_handle.query(msg)  # changed from .ask to .query
