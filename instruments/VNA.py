@@ -4,7 +4,7 @@ import time
 import math
 from .instrument import Instrument
 from .keithley import Keithley2400
-import matplotlib.pyplot
+import matplotlib.pyplot as plt
 
 class VNA8722ES(Instrument):
     _label = 'VNA_ES'
@@ -25,10 +25,12 @@ class VNA8722ES(Instrument):
     _averaging_state = None
     _averaging_factor = None
 
+    _smoothing_state = None
+    _smoothing_factor = None
+
     # TODO: stuff for marker positions? or might not need
     # TODO: just keep one active channel for now
-    # TODO: should not need to explicitly set power range other than init
-
+    # TODO: fix all @property things: should query then set and return etc.
     def __init__(self, gpib_address=16):
         # FIXME: is gpib_address always going to be 16?
         # FIXME: need to initialize other attributes too
@@ -46,6 +48,9 @@ class VNA8722ES(Instrument):
         self._numpoints = 201
         self._averaging_state = 0
         self._averaging_factor = 16
+
+        self._smoothing_state = 1 # smoothing on
+        self._smoothing_factor = 3  # 3% smoothing aperture
 
         self.write('SOUP OFF;')  # immediately turn power off and set to -75
         self._power_state = 0
@@ -180,16 +185,12 @@ class VNA8722ES(Instrument):
 
     @property
     def numpoints(self):
-        '''
-        Get the number of points in sweep
-        '''
+        '''Get the number of points in sweep'''
         return float(self.ask('POIN?'))
 
     @numpoints.setter
     def numpoints(self, value):
-        '''
-        Set the number of points in sweep (and wait for clean sweep)
-        '''
+        '''Set the number of points in sweep (and wait for clean sweep)'''
         vals = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
         assert value in vals, "must be in " + str(vals)
         self.write('OPC?;POIN %f;' %value)
@@ -210,6 +211,7 @@ class VNA8722ES(Instrument):
             self.write('AVEROOFF')
         else:
             print('Must set to on/off 1/0')
+        self._averaging_state = value
 
     @property
     def averaging_factor(self):
@@ -225,6 +227,32 @@ class VNA8722ES(Instrument):
     def averaging_restart(self):
         '''Restart the measurement averaging'''
         self.write('AVERREST')
+
+    @property
+    def smoothing_state(self):
+        '''Get smoothing state'''
+        return self._smoothing_state
+
+    @smoothing_state.setter
+    def smoothing_state(self, value):
+        '''Set smoothing to on/off 1/0'''
+        val = int(value)
+        assert val in [1, 0], "smoothing state should be 1 or 0 on/off"
+        self.write('SMOOO%d' %val)
+        self._smoothing_state = val
+
+    @property
+    def smoothing_factor(self):
+        '''Get smoothing factor'''
+        self._smoothing_factor = float(self.ask('SMOOAPER?'))
+        return self._smoothing_factor
+
+    @smoothing_factor.setter
+    def smoothing_factor(self, value):
+        '''Set smoothing factor'''
+        assert value >=.05 and value <20, "value must be between .05 and 20 (%)"
+        self.write('SMOOAPER %f' %value)
+        self._smoothing_factor = value
 
     @property
     def networkparam(self):
@@ -289,10 +317,12 @@ class VNA8722ES(Instrument):
         v2.networkparam = 'S21'  # Set to measure forward transmission
         v2.power = -70
         v2.averaging_state = 1  # Turn averaging on
-        v2.averaging_factor = 3  # Set averaging factor
+        v2.averaging_factor = 1  # Set averaging factor
         v2.minfreq = v_freqmin# set sweep range
         v2.maxfreq = v_freqmax
         v2.numpoints = 1601
+        v2.smoothing_state = 1
+        v2.smoothing_factor = 3
 
         Vstepsize = (float(k_Vstop-k_Vstart))/k_Vsteps
         sleep_length = v2.ask('SWET?')*v2.averaging_factor
@@ -302,11 +332,24 @@ class VNA8722ES(Instrument):
         for step in range(0, k_Vsteps):
             k.Vout = k.Vout + step*Vstepsize  # increment current
             v2.averaging_restart()  # restart averaging
-            time.sleep(float(v2.ask('SWET?'))*(v2.averaging_factor+4))  # wait extra 4 averaging cycles for safety
+            time.sleep(float(v2.ask('SWET?'))*(v2.averaging_factor+1))  # wait extra 3 averaging cycles for safety
             arr = np.dstack((arr, v2.save()))
         k.output = 'off'  # turn off keithley output
         v2.powerstate = 0  # turn off VNA source power
-        return np.delete(arr, (0), axis=1)  # get rid of first column (is just zeros)
+
+        arr = np.delete(arr, (0), axis=2)  # get rid of first column (is just zeros)
+
+        # plot the array
+        plt.subplot(111)
+        plt.imshow(arr[::-1, 0, :], aspect='auto')
+        plt.colorbar()
+        plt.show()
+        # fig.savefig('filename here')
+        # colorbar stuff add later
+        # cbar.ax.set_ylabel(cbarlabel='some cbarlabel', rotation=-90, va="bottom")
+
+        return arr
+
 
     def ask(self, msg, tryagain=True):
         try:
