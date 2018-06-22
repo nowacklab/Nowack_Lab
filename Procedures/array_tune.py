@@ -33,7 +33,7 @@ from Nowack_Lab.Procedures.mutual_inductance import MutualInductance2
 class ArrayTune(Measurement):
     instrument_list = ["daq", "squidarray", "preamp"]
     _daq_inputs = ["saa", "test"]
-    _daq_outputs = ["test"]
+    _daq_outputs = []
 
     def __init__(self,
                  instruments,
@@ -96,13 +96,19 @@ class ArrayTune(Measurement):
 
     def acquire(self):
         """Ramp the modulation coil current and monitor the SAA response."""
-        # Send TTL pulse on "test"
-        data = {"test": 2*np.ones(2000)}
-        # Record test
-        ret = self.daq.send_receive(data, chan_in = ["saa", "test"],
+
+        usingtest = False #FIXME
+        if usingtest:
+            # Send TTL pulse on "test"
+            data = {"test": 2*np.ones(2000)}
+            # Record test
+            ret = self.daq.send_receive(data, chan_in = ["saa", "test"],
                                     sample_rate=256000)
-        # Zero the DAQ output
-        self.daq.outputs["test"].V = 0
+            # Zero the DAQ output
+            self.daq.outputs["test"].V = 0
+        else:
+            ret = self.daq.monitor(["saa","test"], 0.01, 
+                                    sample_rate = 256000)
         out = np.zeros((3, len(ret['t'])))
         out[0] = ret['t']
         out[1] = ret['test']
@@ -502,7 +508,7 @@ class ArrayTune(Measurement):
 class BestLockPoint(Measurement):
     instrument_list = ["daq", "squidarray", "preamp"]
     _daq_inputs = ["saa", "test"]
-    _daq_outputs = ["test"]
+    _daq_outputs = []
 
     def __init__(self, 
                 instruments,

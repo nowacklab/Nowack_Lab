@@ -52,26 +52,40 @@ class Sweep(Measurement):
         self.repeaters = []
         self.sweeps_data = []
         self.name = name
+        self.ns = []
 
     def __call__(self, n):
         '''
         Runs the sweep, appending the sweep data to self.sweeps_data and
         returning it.
         '''
+        if n in self.ns:
+            shoulduse = input('This n has already been used. If you want to use'
+                              +' it anyway, overwriting data, type OVERWRITE. '
+                              + 'Otherwise, type another n to use')
+            if shoulduse == 'OVERWRITE':
+                pass
+            else:
+                n = shoulduse
+        self.ns.append(n)
         sweep_data = {}
         if self.waiter:
             self.waiter.reset()
-        for point in range(self.points):
+
+        for point in  range(self.points):
             clear_output()
             print('On point ' + str(point) + ' out of ' + str(self.points))
             sweep_data[point] = {}
             for r in self.repeaters:
                 if(self.waiter and self.waiter.test(n)):
                     break
-                sweep_data[point][r.name] = r(point)
-
+                if hasattr(r,"name"):
+                    sweep_data[point][r.name] = r(point)
+                else:
+                    r(point)
         self.sweeps_data.append(sweep_data)
-        return sweep_data
+        self.save()
+
     def describe(self):
         '''
         Describes the sweep
@@ -89,8 +103,11 @@ class Sweep(Measurement):
                 description += ('waits ')
             elif isinstance(repeater, Wait):
                 description += ('waits for trip %s' % repeater.name)
+            elif isinstance(repeater, Delayer):
+                description += ('delays execution for %f seconds '
+                                % repeater.delay )
             description += ('then ')
-        description += ('ends.')
+        description += ('repeats.')
         print(description)
 
     def add_repeater(self, add_me):
@@ -123,13 +140,13 @@ class Sweep(Measurement):
         '''
         sweep = self.sweeps_data[sweepnum]
         data = []
-        for n in length(sweep):
+        for n in range(self.points):
             elem = sweep[n]
-            for key in listofkeys:
-                elem = elem[key]
-        data.append(elem)
+            processed = np.zeros(len(listofkeys))
+            for i in range(len(listofkeys)):
+                processed[i] = elem[listofkeys[i]]
+                data.append(processed)
         return data
-
 
 class Time(Measurement):
     '''
@@ -142,7 +159,7 @@ class Time(Measurement):
         self.hasbeencalled = False
         self.times = times
         self.name = 'time'
-    def restart(self):
+    def restart(self, n):
         '''
         Resets the zero of time to the next time seconds or waittime is called
         '''
@@ -163,9 +180,26 @@ class Time(Measurement):
         Holds execution until the measuretime passes the element of times given
         in the init at location n.
         '''
+        if not self.hasbeencalled:
+            self.hasbeencalled = True
+            self.start_time = time.time()
         while(self.seconds() < self.times[n]):
             pass
         return self.seconds()
+
+class Delayer(Measurement):
+    '''
+    Delays execution for a fixed amount of time
+    '''
+
+    def __init__(self, delay):
+        self.delay = delay
+
+    def __call__(self, n):
+        starttime = time.time()
+        while(time.time() - starttime<self.delay):
+            pass
+
 
 class Wait(Measurement):
 
@@ -216,8 +250,8 @@ class Wait(Measurement):
         if not self.insttest(n) or not self.start_time_in_range:
             self.start_time_in_range = time.time()
             return False
-        elif self.insttest(n) and (time.time() - self.start_time_in_range)
-                                                    >  self.timetoaccept:
+        elif self.insttest(n) and ((time.time() - self.start_time_in_range)
+                                                    >  self.timetoaccept):
             return True
         else:
             return False
@@ -230,6 +264,6 @@ class Wait(Measurement):
             if time.time()- tstart > self.timeout:
                 raise('Waiting timed out at value ' + str(self.values[n])
                         + ' of waiter ' + self.name)
-            if test(n)
+            if test(n):
                 break
         return currst
