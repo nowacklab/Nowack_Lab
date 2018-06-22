@@ -351,19 +351,28 @@ class VNA8722ES(Instrument):
         self.write('LOGM')  # switch back to log mag format for viewing
 
 
-    def rfsquid_sweep(self, k_Vstart, k_Vstop, k_Vsteps, v_freqmin, v_freqmax, v_power, v_averaging_factor, mode):
+    def rfsquid_sweep(self, k_Istart, k_Istop, k_Isteps, v_freqmin, v_freqmax, v_power, v_averaging_factor, mode):
         k = Keithley2400(24)
         # v2 = VNA8722ES(16)
         # mode 0: only dB. mode 1: only phase. mode 2: dB and phase.
-        assert k_Vstart < k_Vstop, "stop voltage should be greater than start voltage"
+        assert k_Istart < k_Istop, "stop voltage should be greater than start voltage"
 
         # Set up current source
 
-        k.source = 'V'
+
+        k3 = Keithley2400(24)
+        k3.output = 'on'
+        k3.source = 'I'
+        k3.Iout_range = 12e-3
+        k3.Iout = 0
+        k3.V_compliance = 21  # 21 volt compliance
+
+        # for voltage source if current source stuff doesn't work
+        '''k.source = 'V'
         k.Vout_range = 20  # 20 volt range
         k.output = 'on'
         k.Vout = k_Vstart  # was 1e-6 in keithley.py
-        k.I_compliance = 20e-3  # 20mA compli
+        k.I_compliance = 20e-3  # 20mA compli'''
 
         # Set up VNA
         self.networkparam = 'S21'  # Set to measure forward transmission
@@ -377,33 +386,37 @@ class VNA8722ES(Instrument):
         self.smoothing_state = 1
         self.smoothing_factor = 1.5
 
-        Vstepsize = (float(k_Vstop-k_Vstart))/k_Vsteps
-
+        Istepsize = (float(k_Istop-k_Istart))/k_Isteps
         arr = np.zeros((int(self.numpoints), 2, 1))  # array for values. depth d is d'th current step
 
-        for step in range(0, k_Vsteps): # TODO: delete first column after first iteration
-            print("Current/voltage step #" + str(step+1) + " out of " + str(k_Vsteps))
+        for step in range(0, k_Isteps): # TODO: delete first column after first iteration
+            print("Current source step #" + str(step+1) + " out of " + str(k_Isteps))
             if step == 1:
                 arr = np.delete(arr, (0), axis=2)
-            k.Vout = k.Vout + Vstepsize  # increment voltage
+            k3.Iout = k3.Iout + Istepsize  # increment voltage
             self.averaging_restart()  # restart averaging
             if mode == 0:
-                # just save dB data
-                temp = self.savelog()
+                temp = self.savelog()  # just save dB data
             if mode == 1:
-                temp = self.savephase()
-                # just save phase data
+                temp = self.savephase()  # just save phase data
             if mode == 2:
-                temp = self.savelog() + numpy.flip(self.savephase(), axis=1)
-                # save both dB and phaes data
+                # save both dB and phase data
+                temp = self.savelog() + np.flip(self.savephase(), axis=1)
             arr = np.dstack((arr, temp))  # waiting occurs in save() function
 
-        k.Vout = 0
-        k.output = 'off'  # turn off keithley output
+        k3.Iout = 0
+        k3.output = 'off'  # turn off keithley output
         self.powerstate = 0  # turn off VNA source power
         # TODO: real-time plotting?
-        if m == 2:
+        if mode == 2:
             print('not prepared to show this yet: just need to do subplot thing')
+            plt.subplot(211)
+            plt.imshow(arr[:, 0, :], aspect='auto')
+            plt.colorbar()
+            plt.subplot(212)
+            plt.imshow(arr[:, 1, :], aspect='auto')
+            plt.colorbar()
+            plt.show()
         else:
 
             plt.subplot(111)
