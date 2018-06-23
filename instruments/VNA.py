@@ -8,10 +8,8 @@ import matplotlib.pyplot as plt
 
 class VNA8722ES(Instrument):
     _label = 'VNA_ES'
-    '''
-    Instrument driver for HP 8722ES Vector Network Analyzer
-    '''
-
+    '''Instrument driver for HP 8722ES Vector Network Analyzer'''
+# TODO: more safety precautions re: VNA source power and amplifier/squid limitations
     _power_state = None
     _power = None
 
@@ -28,9 +26,8 @@ class VNA8722ES(Instrument):
     _smoothing_state = None
     _smoothing_factor = None
 
-    # TODO: stuff for marker positions? or might not need
-    # TODO: just keep one active channel for now
     # TODO: fix all @property things: should query then set and return etc.
+    # TODO: need to change preset: dangerous to have it jump to -10dB with source power with preset command
     def __init__(self, gpib_address=16):
         # FIXME: is gpib_address always going to be 16?
         # FIXME: need to initialize other attributes too
@@ -40,8 +37,15 @@ class VNA8722ES(Instrument):
         self._visa_handle = visa.ResourceManager().open_resource(self.gpib_address, read_termination='a')
         self._visa_handle.read_termination = '\n'
 
-        self.write('OPC?;PRES;')  # first, factory preset. Know what some attributes are:
-        self._networkparam = 'S11'
+        self.write('SOUP OFF;')  # immediately turn power off and set to -75
+        self._power_state = 0
+        self.write('PWRRPMAN')  # power range manual
+        self.write('POWR11')  # manually change to power range 11
+        self.write('POWE -75')
+        self._power = -75
+
+        self.write('S21')  # set to measure transmission forward
+        self._networkparam = 'S21'
         self._sweepmode = 'LINFREQ'
         self._freqmin = .05e9
         self._freqmax = 40.05e9
@@ -50,23 +54,18 @@ class VNA8722ES(Instrument):
         self._averaging_factor = 16
 
         self._smoothing_state = 1 # smoothing on
-        self._smoothing_factor = 3  # 3% smoothing aperture
-
-        self.write('SOUP OFF;')  # immediately turn power off and set to -75
-        self._power_state = 0
-
-        self.write('PWRRPMAN')  # power range manual
-        self.write('POWR11')  # manually change to power range 11
-        self.write('POWE -75')
-        self._power = -75
-
-        self.write('S21')  # set to transmission forward
-        self._networkparam = 'S21'
+        self._smoothing_factor = 3  # 3% smoothing '
 
         self.write('FORM4')
         self._savemode = 'FORM4'
 
-        print ("init: power off and at -75dB. all other settings factory preset")
+        print ("init: power off and at -75dB. Measuring S21. Most other settings factory preset.")
+
+
+    def factory_preset(self):
+        '''Set vna to factory preset. Dangerous because default is -10dBm with power on.'''
+        self.write('OPC?;PRES;')
+        print('Set to factory preset')
 
     def __getstate__(self):
         self._save_dict = {
@@ -97,7 +96,7 @@ class VNA8722ES(Instrument):
         assert val in [1,0], "powerstate must be 1 or 0"
         if val == 1:
             self.write('SOUP1')
-            print('Powering on VNA')
+            print('Turning on VNA source power')
         else:
             self.write('SOUP0')
             print('Powering down VNA')
@@ -315,6 +314,8 @@ class VNA8722ES(Instrument):
         time.sleep(sleep_length)  # wait for averaging
 
         rm = visa.ResourceManager()
+        '''Important: not actually initializing another instance of this class because that
+        would temporarily set power too high when goes to factory reset.'''
         secondary = rm.get_instrument('GPIB0::16')
         secondary.write('OUTPFORM')
         s = secondary.read(termination='~')
@@ -351,28 +352,23 @@ class VNA8722ES(Instrument):
         self.write('LOGM')  # switch back to log mag format for viewing
 
 
-    def rfsquid_sweep(self, k_Istart, k_Istop, k_Isteps, v_freqmin, v_freqmax, v_power, v_averaging_factor, mode):
-        k = Keithley2400(24)
-        # v2 = VNA8722ES(16)
+    def rfsquid_sweep_I(self, k_Istart, k_Istop, k_Isteps, v_freqmin, v_freqmax, v_power, v_averaging_factor, v_numpoints, mode):
+        '''Frequency and current sweep (i.e. keithley sources current, as opposed to sourcing voltage)'''
         # mode 0: only dB. mode 1: only phase. mode 2: dB and phase.
+
         assert k_Istart < k_Istop, "stop voltage should be greater than start voltage"
+        assert v_power < -65, "Don't send to much power to SQUID"
+        valid_numpoints = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
+        assert v_numpoints in valid_numpoints, "number of points must be in " + str(valid_numpoints)
 
         # Set up current source
-
-
         k3 = Keithley2400(24)
         k3.output = 'on'
         k3.source = 'I'
-        k3.Iout_range = 12e-3
+        time.sleep(1)  # FIXME this is clumsy way of making sure keithley has enough time to turn on
+        k3.Iout_range = 20e-3  # 20 mA range # TODO: figure out what exactly range is
         k3.Iout = 0
         k3.V_compliance = 21  # 21 volt compliance
-
-        # for voltage source if current source stuff doesn't work
-        '''k.source = 'V'
-        k.Vout_range = 20  # 20 volt range
-        k.output = 'on'
-        k.Vout = k_Vstart  # was 1e-6 in keithley.py
-        k.I_compliance = 20e-3  # 20mA compli'''
 
         # Set up VNA
         self.networkparam = 'S21'  # Set to measure forward transmission
@@ -380,20 +376,25 @@ class VNA8722ES(Instrument):
         self.powerstate = 1  # turn vna source power on
         self.averaging_state = 1  # Turn averaging on
         self.averaging_factor = v_averaging_factor # Set averaging factor
-        self.minfreq = v_freqmin# set sweep range
+        self.minfreq = v_freqmin  # set sweep range
         self.maxfreq = v_freqmax
-        self.numpoints = 1601
-        self.smoothing_state = 1
-        self.smoothing_factor = 1.5
+        self.numpoints = v_numpoints  # set number of points in frequency sweep
+        self.smoothing_state = 1  # turn smoothing on
+        self.smoothing_factor = 1.5  # set smoothing factor. # TODO: have this as parameter, not hardcoded
 
-        Istepsize = (float(k_Istop-k_Istart))/k_Isteps
+        sleep_length = float(self.ask('SWET?'))*(self.averaging_factor+3)
+        estimated_runtime = sleep_length*k_Isteps
+        print('Minimum estimated runtime: '+ str(int(estimated_runtime)) + ' seconds')
+
+        I_stepsize = (float(k_Istop-k_Istart))/k_Isteps
+        print('Incrementing current in step sizes of ', str(I_stepsize*1000) + ' milliamps')
         arr = np.zeros((int(self.numpoints), 2, 1))  # array for values. depth d is d'th current step
 
-        for step in range(0, k_Isteps): # TODO: delete first column after first iteration
+        for step in range(0, k_Isteps):
             print("Current source step #" + str(step+1) + " out of " + str(k_Isteps))
             if step == 1:
                 arr = np.delete(arr, (0), axis=2)
-            k3.Iout = k3.Iout + Istepsize  # increment voltage
+            k3.Iout = k3.Iout + I_stepsize  # increment voltage
             self.averaging_restart()  # restart averaging
             if mode == 0:
                 temp = self.savelog()  # just save dB data
@@ -428,7 +429,88 @@ class VNA8722ES(Instrument):
         # cbar.ax.set_ylabel(cbarlabel='some cbarlabel', rotation=-90, va="bottom")
 
         return arr
-# TODO: Also save phase. Make as a separate save function so that rfsquid_sweep can call one or both.
+
+    def rfsquid_sweep_V(self, k_Vstart, k_Vstop, k_Vsteps, v_freqmin, v_freqmax, v_power, v_averaging_factor, v_numpoints, mode):
+        # mode 0: only dB. mode 1: only phase. mode 2: dB and phase.
+
+
+        assert k_Vstart < k_Vstop, "stop voltage should be greater than start voltage"
+        assert v_power < -65, "Don't send to much power to SQUID"
+        valid_numpoints = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
+        assert v_numpoints in valid_numpoints, "number of points must be in " + str(valid_numpoints)
+        # Set up current source
+
+        # set up voltage source
+        k3 = Keithley2400(24)
+        k3.output = 'on'
+        k3.source = 'V'
+        k3.Vout_range = 20
+        k3.Vout = k_Vstart
+        k3.I_compliance = 20e-3  # current compliance
+
+        # Set up VNA
+        self.networkparam = 'S21'  # Set to measure forward transmission
+        self.power = v_power
+        self.powerstate = 1  # turn vna source power on
+        self.averaging_state = 1  # Turn averaging on
+        self.averaging_factor = v_averaging_factor # Set averaging factor
+        self.minfreq = v_freqmin# set sweep range
+        self.maxfreq = v_freqmax
+        self.numpoints = v_numpoints
+        self.smoothing_state = 1
+        self.smoothing_factor = 1.5
+
+        sleep_length = float(self.ask('SWET?'))*(self.averaging_factor+3)
+        estimated_runtime = sleep_length*k_Vsteps
+        print('Minimum estimated runtime: '+ str(estimated_runtime) + ' seconds')
+
+        V_stepsize = (float(k_Vstop-k_Vstart))/k_Vsteps
+        print('Incrementing voltage in step sizes of ', str(V_stepsize) + ' volts')
+        arr = np.zeros((int(self.numpoints), 2, 1))  # array for values. depth d is d'th current step
+
+        for step in range(0, k_Vsteps):
+            print("starting voltage source step #" + str(step+1) + " out of " + str(k_Vsteps) + ".")
+            print('source voltage:' + str(k3.Vout))
+            print('measured current:' + str(k3.I) + ' amps')
+            if step == 1:
+                arr = np.delete(arr, (0), axis=2)
+
+            self.averaging_restart()  # restart averaging
+            if mode == 0:
+                temp = self.savelog()  # just save dB data
+            if mode == 1:
+                temp = self.savephase()  # just save phase data
+            if mode == 2:
+                # save both dB and phase data
+                temp = self.savelog() + np.flip(self.savephase(), axis=1)
+            arr = np.dstack((arr, temp))  # waiting occurs in save() function
+            k3.Vout = k3.Vout + V_stepsize  # increment voltage
+
+        k3.Vout = 0
+        k3.output = 'off'  # turn off keithley output
+        self.powerstate = 0  # turn off VNA source power
+        # TODO: real-time plotting?
+        if mode == 2:
+            print('not prepared to show this yet: just need to do subplot thing')
+            plt.subplot(211)
+            plt.imshow(arr[:, 0, :], aspect='auto')
+            plt.colorbar()
+            plt.subplot(212)
+            plt.imshow(arr[:, 1, :], aspect='auto')
+            plt.colorbar()
+            plt.show()
+        else:
+
+            plt.subplot(111)
+            plt.imshow(arr[:, 0, :], aspect='auto')
+            plt.colorbar()
+            plt.show()
+        # fig.savefig('filename here')
+        # colorbar stuff add later
+        # cbar.ax.set_ylabel(cbarlabel='some cbarlabel', rotation=-90, va="bottom")
+
+        return arr
+
     def ask(self, msg, tryagain=True):
         try:
             return self._visa_handle.query(msg)  # changed from .ask to .query
