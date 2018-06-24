@@ -391,7 +391,8 @@ class VNA8722ES(Instrument):
         arr = np.zeros((int(self.numpoints), 2, 1))  # array for values. depth d is d'th current step
 
         for step in range(0, k_Isteps):
-            print("Current source step #" + str(step+1) + " out of " + str(k_Isteps))
+            if step % 10 == 0:
+                print("Current source step #" + str(step+1) + " out of " + str(k_Isteps))
             if step == 1:
                 arr = np.delete(arr, (0), axis=2)
             k3.Iout = k3.Iout + I_stepsize  # increment voltage
@@ -423,7 +424,11 @@ class VNA8722ES(Instrument):
             plt.subplot(111)
             plt.imshow(arr[:, 0, :], aspect='auto')
             plt.colorbar()
-            plt.show()
+            savestring = str(k_Istart) + "_" + str(k_Istop) + "_" + str(k_Isteps) + "_" + str(v_power) + ".png"
+            # start, stop, power
+            plt.savefig(savestring, bbox_inches="tight")
+            plt.show()  # TODO: figure out how to make it stay showing on notebook? if not, not a problem because can just save
+            plt.close()
         # fig.savefig('filename here')
         # colorbar stuff add later
         # cbar.ax.set_ylabel(cbarlabel='some cbarlabel', rotation=-90, va="bottom")
