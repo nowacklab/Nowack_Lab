@@ -2,7 +2,6 @@ from __future__ import print_function
 import time
 from ..Utilities.save import Measurement
 import numpy as np
-import zhinst.utils
 from IPython.display import clear_output
 import sys
 
