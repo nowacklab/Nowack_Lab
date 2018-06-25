@@ -383,7 +383,7 @@ class VNA8722ES(Instrument):
 
         sleep_length = float(self.ask('SWET?'))*(self.averaging_factor+3)
         estimated_runtime = sleep_length*k_Isteps
-        print('Minimum estimated runtime: '+ str(int(estimated_runtime)/60) + ' minutes')
+        print('Minimum estimated runtime: '+ str(int(estimated_runtime/60)) + ' minutes')
 
         I_stepsize = (float(k_Istop-k_Istart))/k_Isteps
         print('Incrementing current in step sizes of ', str(I_stepsize*1000) + ' milliamps')
@@ -498,8 +498,8 @@ class VNA8722ES(Instrument):
 
         sleep_length = float(self.ask('SWET?'))*(self.averaging_factor+3)
         estimated_runtime = sleep_length*k_Vsteps
-        print('Minimum estimated runtime: '+ str(int(estimated_runtime))/60 + ' minutes')
-
+        print('Minimum estimated runtime: '+ str(int(estimated_runtime/60)) + ' minutes')
+        print("Start time: " + time.strftime('%X %x %Z'))
         V_stepsize = (float(k_Vstop-k_Vstart))/k_Vsteps
         print('Incrementing voltage in step sizes of ', str(V_stepsize) + ' volts')
         arr = np.zeros((int(self.numpoints), 2, 1))  # array for values. depth d is d'th current step
