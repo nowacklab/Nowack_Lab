@@ -61,7 +61,6 @@ class VNA8722ES(Instrument):
 
         print ("init: power off and at -75dB. Measuring S21. Most other settings factory preset.")
 
-
     def factory_preset(self):
         '''Set vna to factory preset. Dangerous because default is -10dBm with power on.'''
         self.write('OPC?;PRES;')
@@ -324,8 +323,7 @@ class VNA8722ES(Instrument):
         for i in range(len(s)):
             splot = s[i].split(',')
             dB = float(splot[0])
-            # _ = float(splot[1])  # don't actually know what this is, manual says units N/s^2
-
+            # _ = float(splot[1])  # don't actually know what this is, manual says units N/s^2 ?
             n_ar[i][0] = dB
             n_ar[i][1] = 0  # just empty for now. May change later
         return n_ar
@@ -343,21 +341,22 @@ class VNA8722ES(Instrument):
         s = secondary.read(termination='~')
         s = s.split('\n')
         n_ar = np.empty((self._numpoints, 2))
-        for i in range(len(2)):
+        for i in range(len(s)):
             splot = s[i].split(',')
             phase = float(splot[0])
-
             n_ar[i][0] = phase
             n_ar[i][1] = 0  # just empty for now. May change later
         self.write('LOGM')  # switch back to log mag format for viewing
+        return n_ar
 
 
-    def rfsquid_sweep_I(self, k_Istart, k_Istop, k_Isteps, v_freqmin, v_freqmax, v_power, v_averaging_factor, v_numpoints, mode):
+    def rfsquid_sweep_I(self, k_Istart, k_Istop, k_Isteps, v_freqmin, v_freqmax, v_power, v_averaging_factor, v_numpoints, mode, v_smoothing_state=1,
+        v_smoothing_factor=1.5):
         '''Frequency and current sweep (i.e. keithley sources current, as opposed to sourcing voltage)'''
         # mode 0: only dB. mode 1: only phase. mode 2: dB and phase.
 
         assert k_Istart < k_Istop, "stop voltage should be greater than start voltage"
-        assert v_power < -65, "Don't send to much power to SQUID"
+        assert v_power <= -65, "Don't send to much power to SQUID"
         valid_numpoints = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
         assert v_numpoints in valid_numpoints, "number of points must be in " + str(valid_numpoints)
 
@@ -384,7 +383,7 @@ class VNA8722ES(Instrument):
 
         sleep_length = float(self.ask('SWET?'))*(self.averaging_factor+3)
         estimated_runtime = sleep_length*k_Isteps
-        print('Minimum estimated runtime: '+ str(int(estimated_runtime)) + ' seconds')
+        print('Minimum estimated runtime: '+ str(int(estimated_runtime)/60) + ' minutes')
 
         I_stepsize = (float(k_Istop-k_Istart))/k_Isteps
         print('Incrementing current in step sizes of ', str(I_stepsize*1000) + ' milliamps')
@@ -406,12 +405,30 @@ class VNA8722ES(Instrument):
                 temp = self.savelog() + np.flip(self.savephase(), axis=1)
             arr = np.dstack((arr, temp))  # waiting occurs in save() function
 
+
         k3.Iout = 0
         k3.output = 'off'  # turn off keithley output
         self.powerstate = 0  # turn off VNA source power
         # TODO: real-time plotting?
         if mode == 2:
             print('not prepared to show this yet: just need to do subplot thing')
+
+            fig, (mag_ax, phase_ax) = plt.subplots(2, sharey=True)
+
+            mag_ax.imshow(arr[:, 0, :], aspect='auto')
+            mag_ax.colorbar()
+
+            phase_ax.imshow(arr[:, 1, :], aspect='auto')
+            phase_ax.colorbar()
+
+            savestring = " magnitude_and_phase" + str(k_Istart)
+
+            plt.savefig
+            plt.show()
+
+
+
+
             plt.subplot(211)
             plt.imshow(arr[:, 0, :], aspect='auto')
             plt.colorbar()
@@ -419,28 +436,42 @@ class VNA8722ES(Instrument):
             plt.imshow(arr[:, 1, :], aspect='auto')
             plt.colorbar()
             plt.show()
-        else:
+        elif mode == 0:  # attenuation mode
 
             plt.subplot(111)
-            plt.imshow(arr[:, 0, :], aspect='auto')
-            plt.colorbar()
-            savestring = str(k_Istart) + "_" + str(k_Istop) + "_" + str(k_Isteps) + "_" + str(v_power) + ".png"
+            plt.imshow(arr[:, 0, :], aspect='auto', extent=[k_Istart, k_Istop, v_freqmin, v_freqmax])
+            cbar = plt.colorbar()
+            cbar.ax.set_title('Attenuation (dB)')
+            savestring = str(k_Istart) + "_" + str(k_Istop) + "_" + str(k_Isteps) + "_" + str(v_power) + "_" + str(int(time.time())) + ".png"
             # start, stop, power
             plt.savefig(savestring, bbox_inches="tight")
             plt.show()  # TODO: figure out how to make it stay showing on notebook? if not, not a problem because can just save
             plt.close()
+            print("Finished, saved png as " + savestring)
         # fig.savefig('filename here')
         # colorbar stuff add later
         # cbar.ax.set_ylabel(cbarlabel='some cbarlabel', rotation=-90, va="bottom")
+            return arr
 
-        return arr
+        elif mode == 1:
+            plt.subplot(111)
+            plt.imshow(arr[:, 0, :], aspect='auto', extent=[k_Istart, k_Istop, v_freqmin, v_freqmax])
+            cbar = plt.colorbar()
+            cbar.ax.set_title('phase shift (degrees)')
+            savestring = str(k_Istart) + "_" + str(k_Istop) + "_" + str(k_Isteps) + "_" + str(v_power) + "_" + str(int(time.time())) + ".png"
+            # start, stop, power
+            plt.savefig(savestring, bbox_inches="tight")
+            plt.show()  # TODO: figure out how to make it stay showing on notebook? if not, not a problem because can just save
+            plt.close()
+            print("Finished, saved png as " + savestring)
+            return arr
 
     def rfsquid_sweep_V(self, k_Vstart, k_Vstop, k_Vsteps, v_freqmin, v_freqmax, v_power, v_averaging_factor, v_numpoints, mode):
         # mode 0: only dB. mode 1: only phase. mode 2: dB and phase.
 
 
         assert k_Vstart < k_Vstop, "stop voltage should be greater than start voltage"
-        assert v_power < -65, "Don't send to much power to SQUID"
+        assert v_power <= -65, "Don't send to much power to SQUID"
         valid_numpoints = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
         assert v_numpoints in valid_numpoints, "number of points must be in " + str(valid_numpoints)
         # Set up current source
@@ -467,7 +498,7 @@ class VNA8722ES(Instrument):
 
         sleep_length = float(self.ask('SWET?'))*(self.averaging_factor+3)
         estimated_runtime = sleep_length*k_Vsteps
-        print('Minimum estimated runtime: '+ str(estimated_runtime) + ' seconds')
+        print('Minimum estimated runtime: '+ str(int(estimated_runtime))/60 + ' minutes')
 
         V_stepsize = (float(k_Vstop-k_Vstart))/k_Vsteps
         print('Incrementing voltage in step sizes of ', str(V_stepsize) + ' volts')
