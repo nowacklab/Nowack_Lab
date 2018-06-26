@@ -350,7 +350,8 @@ class VNA8722ES(Instrument):
         return n_ar
 
 
-    def rfsquid_sweep_I(self, k_Istart, k_Istop, k_Isteps, v_freqmin, v_freqmax, v_power, v_averaging_factor, v_numpoints, mode, v_smoothing_state=1,
+    def rfsquid_sweep_I(self, k_Istart, k_Istop, k_Isteps, v_freqmin, v_freqmax,
+        v_power, v_averaging_factor, v_numpoints, mode, v_smoothing_state=1,
         v_smoothing_factor=1.5):
         '''Frequency and current sweep (i.e. keithley sources current, as opposed to sourcing voltage)'''
         # mode 0: only dB. mode 1: only phase. mode 2: dB and phase.
@@ -426,9 +427,6 @@ class VNA8722ES(Instrument):
             plt.savefig
             plt.show()
 
-
-
-
             plt.subplot(211)
             plt.imshow(arr[:, 0, :], aspect='auto')
             plt.colorbar()
@@ -443,10 +441,12 @@ class VNA8722ES(Instrument):
             cbar = plt.colorbar()
             cbar.ax.set_title('Attenuation (dB)')
             savestring = str(k_Istart) + "_" + str(k_Istop) + "_" + str(k_Isteps) + "_" + str(v_power) + "_" + str(int(time.time())) + ".png"
+            plt.title(savestring)
             # start, stop, power
             plt.savefig(savestring, bbox_inches="tight")
             plt.show()  # TODO: figure out how to make it stay showing on notebook? if not, not a problem because can just save
             plt.close()
+            np.save(savestring, arr) #save data??????
             print("Finished, saved png as " + savestring)
         # fig.savefig('filename here')
         # colorbar stuff add later
@@ -469,12 +469,10 @@ class VNA8722ES(Instrument):
     def rfsquid_sweep_V(self, k_Vstart, k_Vstop, k_Vsteps, v_freqmin, v_freqmax, v_power, v_averaging_factor, v_numpoints, mode):
         # mode 0: only dB. mode 1: only phase. mode 2: dB and phase.
 
-
         assert k_Vstart < k_Vstop, "stop voltage should be greater than start voltage"
         assert v_power <= -65, "Don't send to much power to SQUID"
         valid_numpoints = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
         assert v_numpoints in valid_numpoints, "number of points must be in " + str(valid_numpoints)
-        # Set up current source
 
         # set up voltage source
         k3 = Keithley2400(24)
@@ -544,7 +542,6 @@ class VNA8722ES(Instrument):
         # fig.savefig('filename here')
         # colorbar stuff add later
         # cbar.ax.set_ylabel(cbarlabel='some cbarlabel', rotation=-90, va="bottom")
-
         return arr
 
     def ask(self, msg, tryagain=True):
