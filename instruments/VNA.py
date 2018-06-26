@@ -349,6 +349,10 @@ class VNA8722ES(Instrument):
         self.write('LOGM')  # switch back to log mag format for viewing
         return n_ar
 
+    def saveReIm(self):
+        '''Save real and imaginary components in array'''
+        # TODO: smith chart view may allow this to be done all at once
+        pass
 
     def rfsquid_sweep_I(self, k_Istart, k_Istop, k_Isteps, v_freqmin, v_freqmax,
         v_power, v_averaging_factor, v_numpoints, mode, v_smoothing_state=1,
@@ -406,7 +410,6 @@ class VNA8722ES(Instrument):
                 temp = self.savelog() + np.flip(self.savephase(), axis=1)
             arr = np.dstack((arr, temp))  # waiting occurs in save() function
 
-
         k3.Iout = 0
         k3.output = 'off'  # turn off keithley output
         self.powerstate = 0  # turn off VNA source power
@@ -415,15 +418,11 @@ class VNA8722ES(Instrument):
             print('not prepared to show this yet: just need to do subplot thing')
 
             fig, (mag_ax, phase_ax) = plt.subplots(2, sharey=True)
-
             mag_ax.imshow(arr[:, 0, :], aspect='auto')
             mag_ax.colorbar()
-
             phase_ax.imshow(arr[:, 1, :], aspect='auto')
             phase_ax.colorbar()
-
             savestring = " magnitude_and_phase" + str(k_Istart)
-
             plt.savefig
             plt.show()
 
