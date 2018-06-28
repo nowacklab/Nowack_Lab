@@ -383,8 +383,8 @@ class VNA8722ES(Instrument):
         self.minfreq = v_freqmin  # set sweep range
         self.maxfreq = v_freqmax
         self.numpoints = v_numpoints  # set number of points in frequency sweep
-        self.smoothing_state = 1  # turn smoothing on
-        self.smoothing_factor = 1.5  # set smoothing factor. # TODO: have this as parameter, not hardcoded
+        self.smoothing_state = v_smoothing_state  # turn smoothing on
+        self.smoothing_factor = v_smoothing_factor  # set smoothing factor
 
         sleep_length = float(self.ask('SWET?'))*(self.averaging_factor+3)
         estimated_runtime = sleep_length*k_Isteps
