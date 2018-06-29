@@ -28,13 +28,13 @@ class RF_sweep_current(Measurement):
         # mode 0: only dB. mode 1: only phase. mode 2: dB and phase.
         super().__init__(instruments=instruments)
 
-        assert k_Istart < k_Istop, "stop voltage should be greater than start voltage"
-        assert v_power <= -65, "Don't send to much power to SQUID"
+        assert self.k_Istart < k_Istop, "stop voltage should be greater than start voltage"
+        assert self.v_power <= -65, "Don't send too much power to SQUID"
         valid_numpoints = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
-        assert v_numpoints in valid_numpoints, "number of points must be in " + str(valid_numpoints)
+        assert self.v_numpoints in self.valid_numpoints, "number of points must be in " + str(valid_numpoints)
 
-        k3 = Keithley2400(24)  # initialize current source (Instrument object)
-        v1 = VNA8722ES(16)  # initialize VNA (Instrument object)
+        self.k3 = Keithley2400(24)  # initialize current source (Instrument object)
+        self.v1 = VNA8722ES(16)  # initialize VNA (Instrument object)
 
 
     def do(self, hysteresis=False, plot=False):
@@ -49,34 +49,34 @@ class RF_sweep_current(Measurement):
         assert not hysteresis, "Hysteretic measurement not implemented yet"
 
         # Set up current source settings
-        k3.output = 'on'
-        k3.source = 'I'
+        self.k3.output = 'on'
+        self.k3.source = 'I'
         time.sleep(1)  # FIXME this is clumsy way of making sure keithley has enough time to turn on
-        k3.Iout_range = 20e-3  # 20 mA range # TODO: figure out what exactly range is
-        k3.Iout = 0
-        k3.V_compliance = 21  # 21 volt compliance
+        self.k3.Iout_range = 20e-3  # 20 mA range # TODO: figure out what exactly range is
+        self.k3.Iout = 0
+        self.k3.V_compliance = 21  # 21 volt compliance
 
         # Set up VNA settings
-        v3.networkparam = 'S21'  # Set to measure forward transmission
-        v3.power = v_power
-        v3.powerstate = 1  # turn vna source power on
-        v3.averaging_state = 1  # Turn averaging on
-        v3.averaging_factor = v_averaging_factor # Set averaging factor
-        v3.minfreq = v_freqmin  # set sweep range
-        v3.maxfreq = v_freqmax
-        v3.numpoints = v_numpoints  # set number of points in frequency sweep
-        v3.smoothing_state = v_smoothing_state  # turn smoothing on
-        v3.smoothing_factor = v_smoothing_factor  # set smoothing factor
+        self.v1.networkparam = 'S21'  # Set to measure forward transmission
+        self.v1.power = v_power
+        self.v1.powerstate = 1  # turn vna source power on
+        self.v1.averaging_state = 1  # Turn averaging on
+        self.v1.averaging_factor = v_averaging_factor # Set averaging factor
+        self.v1.minfreq = v_freqmin  # set sweep range
+        self.v1.maxfreq = v_freqmax
+        self.v1.numpoints = v_numpoints  # set number of points in frequency sweep
+        self.v1.smoothing_state = v_smoothing_state  # turn smoothing on
+        self.v1.smoothing_factor = v_smoothing_factor  # set smoothing factor
 
         if hysteresis:
-            sleep_length = float(v3.ask('SWET?'))*(v3.averaging_factor+3)
+            sleep_length = float(self.v1.ask('SWET?'))*(self.v1.averaging_factor+3)
             estimated_runtime = sleep_length*k_Isteps*2
             print('Minimum estimated runtime: '+ str(int(estimated_runtime/60)) + ' minutes')
 
             I_stepsize = (float(k_Istop-k_Istart))/k_Isteps
             print('Incrementing current in step sizes of ', str(I_stepsize*1000) + ' milliamps')
 
-            arr = np.zeros((int(v3.numpoints), 2, 1))  # array for values. depth d is d'th current step
+            arr = np.zeros((int(self.v1.numpoints), 2, 1))  # array for values. depth d is d'th current step
 
             # step up
             for step in range(0, k_Isteps):
@@ -84,33 +84,33 @@ class RF_sweep_current(Measurement):
                     print("Current source step " + str(step+1) + " out of " + str(2*k_Isteps))
                 if step == 1:
                     arr = np.delete(arr, (0), axis=2)
-                k3.Iout = k3.Iout + I_stepsize  # increment current
-                v3.averaging_restart()  # restart VNA averaging
+                self.k3.Iout = self.k3.Iout + I_stepsize  # increment current
+                self.v1.averaging_restart()  # restart VNA averaging
                 if mode == 0:
-                    temp = v3.savelog()  # just save dB data
+                    temp = self.v1.savelog()  # just save dB data
                 if mode == 1:
-                    temp = v3.savephase()  # just save phase data
+                    temp = self.v1.savephase()  # just save phase data
                 if mode == 2:
                     # save both dB and phase data
-                    temp = v3.savelog() + np.flip(v3.savephase(), axis=1)
+                    temp = self.v1.savelog() + np.flip(self.v1.savephase(), axis=1)
                 arr = np.dstack((arr, temp))  # waiting occurs in save() function
             for step in range(0, k_Isteps):
                 if step % 10 == 0:
                     print("current source step " + str(step+1+k_Isteps) + " out of " + str(2*k_Isteps))
                 k3.Iout = k3.Iout - I_stepsize  # step down current
-                v3.averaging_restart()  # restart VNA averaging
+                self.v1.averaging_restart()  # restart VNA averaging
                 if mode == 0:
-                    temp = v3.savelog()
+                    temp = self.v1.savelog()
                 if mode == 1:
-                    temp = v3.svaephase()
+                    temp = self.v1.svaephase()
                 if mode == 2:
                     # wave both dB and phase data
-                    temp = v3.savelog() + np.flip(v3.savephase(), axis=1)
+                    temp = self.v1.savelog() + np.flip(self.v1.savephase(), axis=1)
                 arr = np.dstack((arr, temp))  # waiting occurs in save() function
-                
-            k3.Iout = 0
-            k3.output = 'off'  # turn off keithley output
-            v3.powerstate = 0  # turn off VNA source power
+
+            self.k3.Iout = 0
+            self.k3.output = 'off'  # turn off keithley output
+            self.v1.powerstate = 0  # turn off VNA source power
             # TODO: real-time plotting?
             if mode == 2:
                 print('not prepared to show this yet: just need to do subplot thing')
@@ -160,34 +160,37 @@ class RF_sweep_current(Measurement):
                 return arr
 
         else: # i.e. not hysteresis mode
-            sleep_length = float(v3.ask('SWET?'))*(v3.averaging_factor+3)
+            sleep_length = float(self.v1.ask('SWET?'))*(self.v1.averaging_factor+3)
             estimated_runtime = sleep_length*k_Isteps
             print('Minimum estimated runtime: '+ str(int(estimated_runtime/60)) + ' minutes')
 
             I_stepsize = (float(k_Istop-k_Istart))/k_Isteps
             print('Incrementing current in step sizes of ', str(I_stepsize*1000) + ' milliamps')
-            arr = np.zeros((int(v3.numpoints), 2, 1))  # array for values. depth d is d'th current step
+            arr = np.zeros((int(self.v1.numpoints), 2, 1))  # array for values. depth d is d'th current step
 
             for step in range(0, k_Isteps):
                 if step % 10 == 0:
                     print("Current source step #" + str(step+1) + " out of " + str(k_Isteps))
                 if step == 1:
                     arr = np.delete(arr, (0), axis=2)
-                k3.Iout = k3.Iout + I_stepsize  # increment voltage
-                v3.averaging_restart()  # restart averaging
+                self.k3.Iout = self.k3.Iout + I_stepsize  # increment voltage
+                self.v1.averaging_restart()  # restart averaging
                 if mode == 0:
-                    temp = v3.savelog()  # just save dB data
+                    temp = self.v1.savelog()  # just save dB data
                 if mode == 1:
-                    temp = v3.savephase()  # just save phase data
+                    temp = self.v1.savephase()  # just save phase data
                 if mode == 2:
                     # save both dB and phase data
-                    temp = v3.savelog() + np.flip(v3.savephase(), axis=1)
+                    temp = self.v1.savelog() + np.flip(self.v1.savephase(), axis=1)
                 arr = np.dstack((arr, temp))  # waiting occurs in save() function
 
-            k3.Iout = 0
-            k3.output = 'off'  # turn off keithley output
-            v3.powerstate = 0  # turn off VNA source power
-            # TODO: real-time plotting?
+            self.k3.Iout = 0
+            self.k3.output = 'off'  # turn off keithley output
+            self.v1.powerstate = 0  # turn off VNA source power
+
+            # TODO: real-time update plotting?
+
+            # Old plotting function, trying to change to better one
             if mode == 2:
                 print('not prepared to show this yet: just need to do subplot thing')
 
@@ -235,6 +238,27 @@ class RF_sweep_current(Measurement):
                 print("Finished, saved png as " + savestring)
                 return arr
 
-    def plot(self, hysteresis=True):
-        super().plot()
-        self.ax.plot()
+    def plot(self):
+        # TODO: change to make 2 subplots if hysteresis is true, 1 subplot if false (up and down)
+        # Plot 2 subplots: magnitude and phase
+        self.fig, self.ax = plt.subplots(1, 2, figsize=(16, 6))
+        self.ax = list(self.ax)
+
+        z_ar_log = v1.savelog()  # TODO: change when starting to use Re, Im from smith chart
+        z_ar_phase = v1.savephase()
+        self.ax[0], cbar = self.plot_color(self.ax[0], [k_Istart, k_Istop], [v_freqmin, v_freqmax]0, z_ar_log[:, 0, :])
+        self.ax[0].set_xlabel('field coil current (amps)')
+        self.ax[0].set_ylabel('frequency (Hz)')
+        # TODO: Unfinished here, looking at squidIV2.py as guide
+
+
+    @staticmethod
+    def plot_color(ax, xaxis, yaxis, z, cmap='viridis'):
+        im = ax.imshow(z, cmap, origin='lower',
+                        extent=(xaxis[0], xaxis[-1], yaxis[0], yaxis[-1]),
+                        aspect='auto')
+        d = make_axes_locatable(ax)
+        cax = d.append_axes('right', size=.1, pad=.1)
+        cbar = plt.colorbar(im, cax=cax)
+
+        return [ax, cbar]
