@@ -5,9 +5,23 @@ class AMI1700(VISAInstrument):
     '''
     AMI Model 1700 Helium level meter
     '''
+    _level = None
     def __init__(self, ip='128.84.231.191', port=7180):
+        '''
+        Arguments:
+        ip - IP address (static)
+        port - 7180 is specified by AMI
+        '''
         resource = 'TCPIP::%s::%s::SOCKET' %(ip, port)
         self._init_visa(resource, termination='\r\n')
+
+
+    def __getstate__(self):
+        self._save_dict = {
+            'level': self._level
+        }
+        return self._save_dict
+
 
     def continuous(self):
         '''
