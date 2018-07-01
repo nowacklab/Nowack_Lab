@@ -372,12 +372,12 @@ class Keithley2400(VISAInstrument):
         self.beep(base_frequency*6.0/4.0, duration)
 
 
-    def zero_V(self, sweep_rate=1):
+    def zero_V(self, Vstep=.1, sweep_rate=1):
         '''
         Ramp down voltage to zero. Sweep rate in volts/second
         '''
         print('Zeroing Keithley voltage...')
-        self.sweep_V(self.Vout, 0, .1, sweep_rate)
+        self.sweep_V(self.Vout, 0, Vstep, sweep_rate)
         print('Done zeroing Keithley.')
 
 
@@ -626,12 +626,12 @@ class Keithley2600(Instrument):
     def write(self, msg):
         self._visa_handle.write(msg)
 
-    def zero_V(self, sweep_rate=0.1):
+    def zero_V(self, Vstep=.1, sweep_rate=1):
         '''
         Ramp down voltage to zero. Sweep rate in volts/second
         '''
         print('Zeroing Keithley voltage...')
-        self.sweep_V(self.Vout, 0, .1, sweep_rate)
+        self.sweep_V(self.Vout, 0, Vstep, sweep_rate)
         print('Done zeroing Keithley.')
 
 

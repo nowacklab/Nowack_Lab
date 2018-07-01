@@ -369,11 +369,11 @@ class RvsVg(RvsSomething):
     def do(self, num_avg = 1, delay_avg = 0, zero=False, plot=True, auto_gain=False):
 #         self.keithley.output = 'on' #NO! will cause a spike!
 
-        ## Sweep to Vstart
+        # Sweep to Vstart
         self.keithley.sweep_V(self.keithley.V, self.Vstart, self.Vstep, self.sweep)
         time.sleep(self.delay*3)
 
-        ## Do the measurement sweep
+        # Do the measurement sweep
         for i, Vg in enumerate(self.Vg_values):
             self.Vg = np.append(self.Vg, Vg)
             self.keithley.Vout = Vg
@@ -385,9 +385,9 @@ class RvsVg(RvsSomething):
 
             self.do_measurement(self.delay, num_avg, delay_avg, plot=plot, auto_gain=auto_gain)
 
-        ## Sweep back to zero at 1V/s
+        # Sweep back to zero at same sweep rate as before
         if zero:
-            self.keithley.zero_V(1)
+            self.keithley.zero_V(self.Vstep, self.sweep)
 
 
     def plot(self):
