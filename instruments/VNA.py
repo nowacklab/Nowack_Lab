@@ -347,7 +347,7 @@ class VNA8722ES(Instrument):
             n_ar[i][0] = phase
             n_ar[i][1] = 0  # just empty for now. May change later
         self.write('LOGM')  # switch back to log mag format for viewing
-        return n_ar
+        return n_ar  # dimensions:
 
     def saveReIm(self):
         '''Save real and imaginary components in array'''
