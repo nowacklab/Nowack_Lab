@@ -2,7 +2,7 @@ from jsonpickle.ext import numpy as jspnp
 import json, os, jsonpickle as jsp, numpy as np, subprocess
 from datetime import datetime as dt
 jspnp.register_handlers() # what is purpose of this line?
-import h5py, glob, matplotlib, platform, hashlib, shutil, time
+import h5py, glob, matplotlib, platform, hashlib, shutil, time, traceback
 import matplotlib.pyplot as plt
 from . import utilities
 import Nowack_Lab # Necessary for saving as Nowack_Lab-defined types
@@ -442,6 +442,9 @@ class Measurement(Plotter):
         except KeyboardInterrupt:
             print('interrupting kernel, please wait...\n')
             self.interrupt = True
+            self._exception_info = traceback.format_exc()
+        except:
+            self._exception_info = traceback.format_exc()
 
         # After the do.
         time_end = time.time()
