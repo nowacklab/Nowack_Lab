@@ -74,7 +74,7 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
     def __init__(self, instruments = [],
                 k_Istart, k_Istop, k_Isteps,
                 v_freqmin, v_freqmax, v_power, v_avg_factor, v_numpoints, filepath,
-                v_smoothing_state=0, v_smoothing_factor=1):
+                v_smoothing_state=0, v_smoothing_factor=1, notes = "No notes"):
         # mode 0: only dB. mode 1: only phase. mode 2: dB and phase.
         super().__init__(instruments=instruments)  # no daq stuff
 
@@ -137,9 +137,6 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
         for step in range(0, k_Isteps):
             if step % 10 == 0:
                 print("Current source step #" + str(step+1) + " out of " + str(k_Isteps))
-            if step == 1:
-                attenuation = np.delete(arr, (0), axis=2)
-                phase = np.delete(arr, (0), axis=2)
             self.k3.Iout = self.k3.Iout + I_stepsize  # increment current
             self.v1.averaging_restart()  # restart averaging
             # save both dB and phase data
@@ -210,10 +207,27 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
     def save_data(self, attenuation, phase, attenuation_rev = None, phase_rev = None):
         now = datetime.now()
         timestamp = now.strftime('%Y-%m-%d_%H%M%S')
-        timestamp = timestamp + '_rf_sweep.hdf5'
-        path = os.path.join(filepath, timestamp)
-        data = dataset(path)
-        
+        timestamp = timestamp + '_rf_sweep'
+        path = os.path.join(filepath, timestamp + '.hdf5')
+        info = dataset(path)
+        info.append(path + '/Istart', k_Istart)
+        info.append(path + '/Istop', k_Istop)
+        info.append(path + '/Isteps', k_Isteps)
+        info.append(path + '/freqmin', v_freqmin)
+        info.append(path + '/freqmax', v_freqmax)
+        info.append(path + '/freqmax', v_freqmax)
+        info.append(path + '/power', v_power)
+        info.append(path + '/avg_factor', v_avg_factor)
+        info.append(path + '/numpoints', v_numpoints)
+        info.append(path + '/smoothing_state', v_smoothing_state)
+        info.append(path + '/smoothing_factor', v_smoothing_factor)
+        info.append(path + '/attenuation/data', attenuation)
+        info.append(path + '/attenuation_rev/data', attenuation_rev)
+        info.append(path + '/phase/data', phase)
+        info.append(path + '/phase_rev/data', phase_rev)
+        info.append(path + '/notes', notes)
+
+
 
 
     @staticmethod
