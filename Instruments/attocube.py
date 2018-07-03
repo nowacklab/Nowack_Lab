@@ -67,22 +67,11 @@ class ANC350(Instrument):
 
     def __getstate__(self):
         self._save_dict = {
-            'x attocube': self.x,
-            'y attocube': self.y,
-            'z attocube': self.z
+            'x': self.x,
+            'y': self.y,
+            'z': self.z
         }
         return self._save_dict
-
-
-    def __setstate__(self, state):
-        state['x'] = state.pop('x attocube')
-        state['y'] = state.pop('y attocube')
-        state['z'] = state.pop('z attocube')
-        self.__dict__.update(state)
-        # self.anc = ANC350Pos()
-        # for (i,s) in enumerate(self._stages):
-        #     s = getattr(self,s)
-        #     setattr(s, 'anc', self.anc) # give each positioner the ANC object
 
 
 class Positioner(Instrument):
@@ -113,7 +102,7 @@ class Positioner(Instrument):
     def __getstate__(self):
         self._save_dict = {
             'capacitance': self._C,
-            'position tolerance': self._pos_tolerance,
+            'position_tolerance': self._pos_tolerance,
             'V_lim': self.V_lim,
             'pos_lim': self.pos_lim,
             'num': self.num,
@@ -121,26 +110,26 @@ class Positioner(Instrument):
         }
         try:
             self._save_dict.update({
-                    'stepping voltage': self.V,
-                    'stepping frequency': self.freq,
+                    'stepping_voltage': self.V,
+                    'stepping_frequency': self.freq,
                     'position': self.pos,
                     })
         except Exception as e: # If ANC disconnected, e.g.
             print(e)
             self._save_dict.update({
-                    'stepping voltage': self._V,
-                    'stepping frequency': self._freq,
+                    'stepping_voltage': self._V,
+                    'stepping_frequency': self._freq,
                     'position': self._pos,
                     })
         return self._save_dict
 
 
     def __setstate__(self, state):
-        state['_V'] = state.pop('stepping voltage')
-        state['_freq'] = state.pop('stepping frequency')
+        state['_V'] = state.pop('stepping_voltage')
+        state['_freq'] = state.pop('stepping_frequency')
         state['_C'] = state.pop('capacitance')
         state['_pos'] = state.pop('position')
-        state['_pos_tolerance'] = state.pop('position tolerance')
+        state['_pos_tolerance'] = state.pop('position_tolerance')
 
         self.__dict__.update(state)
 

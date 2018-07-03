@@ -16,6 +16,7 @@ class Keithley2400(VISAInstrument):
     _Vout = None
     _Vout_range = None
     _V_compliance = None
+    _rel = None
 
     def __init__(self, gpib_address=''):
         if type(gpib_address) is int:
@@ -29,17 +30,20 @@ class Keithley2400(VISAInstrument):
 
     def __getstate__(self):
         self._save_dict = {
-            'output current': self._Iout,
-            'output current range': self._Iout_range,
-            'current compliance': self._I_compliance,
-            'output voltage': self._Vout,
-            'output voltage range': self._Vout_range,
-            'voltage compliance': self._V_compliance
+            'output_current': self._Iout,
+            'output_current_range': self._Iout_range,
+            'current_compliance': self._I_compliance,
+            'output_voltage': self._Vout,
+            'output_voltage_range': self._Vout_range,
+            'voltage_compliance': self._V_compliance,
         }
+        try:
+            self._save_dict['input_current'] = self.I
+            self._save_dict['input_voltage'] = self.V
+        except:
+            pass
         return self._save_dict
 
-    def __setstate__(self, state):
-        pass
 
     @property
     def source(self):
@@ -273,6 +277,29 @@ class Keithley2400(VISAInstrument):
         self.write(':SENS:FUNC \"CURR\"') # set up to sense voltage and current
 
 
+    @property
+    def rel(self):
+        '''
+        Check whether REL is enabled.
+        '''
+        self._rel = bool(int(self.ask(':CALC2:NULL:STAT?')))
+        return self._rel
+
+    @rel.setter
+    def rel(self, value):
+        '''
+        Set value to True to take an offset measurement and enable REL mode.
+        Set value to False to disable REL mode.
+        '''
+        if value == True:
+            self.write(':CALC2:NULL:ACQ')
+            self.write(':CALC2:NULL:STAT ON')
+            self._rel = True
+        else:
+            self.write(':CALC2:NULL:STAT OFF')
+            self._rel = False
+
+
     def reset(self):
         '''
         Reset GPIB comms.
@@ -293,7 +320,7 @@ class Keithley2400(VISAInstrument):
     #         time.sleep(delay)
 
 
-    def sweep_V(self, Vstart, Vend, Vstep=.1, sweep_rate=.1):
+    def sweep_V(self, Vstart, Vend, Vstep=.1, sweep_rate=1):
         '''
         Uses the Keithley's internal sweep function to sweep from Vstart to Vend with a step size of Vstep and sweep rate of sweep_rate volts/second.
         '''
@@ -301,6 +328,8 @@ class Keithley2400(VISAInstrument):
             self.Vout = Vend
             return
         self.Vout = Vstart
+
+        print('Sweeping Keithley! %s V to %s V at %s V/s' %(Vstart, Vend, sweep_rate))
 
         self.write(':SENS:FUNC:CONC OFF') # turn off concurrent functions - so you can't measure both voltage and current simultaneously??
         self.write(':SOUR:VOLT:START %s' %Vstart)
@@ -326,6 +355,8 @@ class Keithley2400(VISAInstrument):
         self.Vout = Vend # make sure the last voltage is explicit
 
         self._visa_handle.timeout = old_timeout
+
+        print('Keithley sweep completed.')
         return [float(i) for i in a.split(',')] # not sure what this data represents
 
 
@@ -341,12 +372,12 @@ class Keithley2400(VISAInstrument):
         self.beep(base_frequency*6.0/4.0, duration)
 
 
-    def zero_V(self, sweep_rate=1):
+    def zero_V(self, Vstep=.1, sweep_rate=1):
         '''
         Ramp down voltage to zero. Sweep rate in volts/second
         '''
         print('Zeroing Keithley voltage...')
-        self.sweep_V(self.Vout, 0, .1, sweep_rate)
+        self.sweep_V(self.Vout, 0, Vstep, sweep_rate)
         print('Done zeroing Keithley.')
 
 
@@ -595,12 +626,12 @@ class Keithley2600(Instrument):
     def write(self, msg):
         self._visa_handle.write(msg)
 
-    def zero_V(self, sweep_rate=0.1):
+    def zero_V(self, Vstep=.1, sweep_rate=1):
         '''
         Ramp down voltage to zero. Sweep rate in volts/second
         '''
         print('Zeroing Keithley voltage...')
-        self.sweep_V(self.Vout, 0, .1, sweep_rate)
+        self.sweep_V(self.Vout, 0, Vstep, sweep_rate)
         print('Done zeroing Keithley.')
 
 
@@ -766,9 +797,6 @@ class Keithley2400Old(Instrument):
         return self._save_dict
 
 
-    def __setstate__(self, state):
-        pass
-
     def ask(self, msg, tryagain=True):
         try:
             return self._visa_handle.ask(msg)
@@ -804,10 +832,6 @@ class Keithley2400Old(Instrument):
                           'voltage_range': self.voltage_range
                           }
         return self._save_dict
-
-
-    def __setstate__(self, state):
-        pass
 
 
     @property

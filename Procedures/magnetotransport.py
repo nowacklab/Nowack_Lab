@@ -13,19 +13,20 @@ class RvsB(RvsSomething):
     something='B'
     something_units = 'T'
 
-    def __init__(self, instruments = {}, Bstart = 0, Bend = 1, delay=1, sweep_rate=.1):
+    def __init__(self, instruments = {}, Bend = 1, delay=1, sweep_rate=.1):
         '''
         Sweep rate and field in T. Delay is in seconds. Rate is T/min
         '''
         super().__init__(instruments=instruments)
 
-        self.Bstart = Bstart
+        # self.Bstart = Bstart
         self.Bend = Bend
         self.delay = delay
         self.sweep_rate = sweep_rate
 
     def do(self, plot=True, auto_gain=False):
-        ## Set initial field if not already there
+        raise Exception('Got rid of Bstart. Check out code.')
+        # Set initial field if not already there
         if abs(self.ppms.field - self.Bstart*10000) > 0.1: # different by more than 0.1 Oersted = 10 uT.
             self.ppms.field = self.Bstart*10000 # T to Oe
             time.sleep(5) # let the field start ramping to Bstart
@@ -38,7 +39,7 @@ class RvsB(RvsSomething):
 
         print('Starting field sweep...')
 
-        ## Set sweep to final field
+        # Set sweep to final field
         self.ppms.field_rate = self.sweep_rate/60*10000# T/min to Oe/s
         self.ppms.field_mode = 'Persistent'
         self.ppms.field_approach = 'Linear'
@@ -47,7 +48,7 @@ class RvsB(RvsSomething):
         while self.ppms.field_status not in ('Iterating', 'Charging'):
             time.sleep(2) # wait until the field is changing
 
-        ## Measure while sweeping
+        # Measure while sweeping
         while self.ppms.field_status in ('Iterating', 'Charging'):
             self.do_measurement(delay=self.delay, plot=plot, auto_gain=auto_gain)
 
@@ -85,11 +86,13 @@ class RvsB(RvsSomething):
         add_text_to_legend('Rate = %.2f T/min' %self.sweep_rate)
         add_text_to_legend('delay = %.1f s' %self.delay)
 
+
 class RvsB_BlueFors(RvsB):
     instrument_list = ['magnet', 'lockin_V1', 'lockin_I']
 
     def do(self, plot=True, auto_gain=False):
-        ## Set initial field if not already there
+        raise Exception('MAGNET DRIVER WAS CHANGED. Also got rid of Bstart')
+        # Set initial field if not already there
         if abs((self.magnet.B - self.Bstart)/self.magnet.B) > 0.01: # different by more than 1%
             self.magnet.ramp_to_field(self.Bstart, self.sweep_rate)
             time.sleep(5) # let the field start ramping to Bstart
@@ -112,6 +115,29 @@ class RvsB_BlueFors(RvsB):
             self.do_measurement(delay=self.delay, plot=plot, auto_gain=auto_gain)
 
         self.magnet.p_switch = False
+
+
+class RvsB_Phil(RvsB):
+    instrument_list = ['magnet', 'lockin_V1', 'lockin_I']
+
+    def do(self, plot=True, auto_gain=False):
+
+        if abs(self.magnet.Bmagnet-self.Bend) < 10e-6:
+            return # sweeping between the same two fields, no point in doing the measurement
+
+        print('Starting field sweep...')
+
+        # Set sweep to final field
+        self.magnet.ramp_to_field(self.Bend, Brate=self.sweep_rate, wait=False)
+
+        # Measure while sweeping
+        while self.magnet.status == 'RAMPING':
+            self.do_measurement(delay=self.delay, plot=plot, auto_gain=auto_gain)
+
+        while abs(self.magnet.Vmag-0.02) > 0.01:
+            self.do_measurement(delay=self.delay, plot=plot, auto_gain=auto_gain)
+
+        self.magnet.enter_persistent_mode()
 
 
 class RvsVg_B(RvsVg):
@@ -172,9 +198,9 @@ class RvsVg_B(RvsVg):
             elif self.raster: # otherwise we will go as quickly as possible and reverse every other gatesweep
                 self.Vstart, self.Vend = self.Vend, self.Vstart
 
-            ## reset field sweep
+            # reset field sweep
             self.fs = self.field_sweep_class(self.instruments,
-                                        self.get_field(), B, 1, self.sweep_rate)
+                                        B, 1, self.sweep_rate)
             self.fs.run(plot=False)
 
             # Wait for cooling/stabilization
@@ -232,7 +258,7 @@ class RvsVg_B(RvsVg):
         num_squares: aspect ratio used to convert Rxx to resistivity
         Rxx_channel: Rxx channel number
         Rxy_channel: Rxy channel number
-        QH_type: 'MLG' or 'BLG' for monolayer/bilayer graphene
+        QH_type: 'MLG' or 'BLG' for monolayer/bilayer graphene. None for no plot
 
         Returns:
         fig - the figure
@@ -252,6 +278,8 @@ class RvsVg_B(RvsVg):
             plateaus = (np.array(range(9))-4+1/2)*4
         elif QH_type == 'BLG':
             plateaus = (np.array(range(9))-4)*4
+        elif QH_type == None:
+            plateaus = []
         else:
             plateaus = (np.array(range(9))-4)
         for i in plateaus:
@@ -349,6 +377,7 @@ class RvsVg_B(RvsVg):
                 plot_mpl.aspect(ax[j], 1)
                 ax[j].set_title(self.filename)
 
+
 class RvsVg_B_BlueFors(RvsVg_B):
     field_sweep_class = RvsB_BlueFors
     instrument_list = list(set(RvsB_BlueFors.instrument_list)
@@ -359,3 +388,15 @@ class RvsVg_B_BlueFors(RvsVg_B):
         Get current field from BlueFors magnet instead of PPMS.
         '''
         return self.magnet.B
+
+
+class RvsVg_B_Phil(RvsVg_B):
+    field_sweep_class = RvsB_Phil
+    instrument_list = list(set(RvsB_Phil.instrument_list)
+                                                | set(RvsVg.instrument_list))
+
+    def get_field(self):
+        '''
+        Get current field from BlueFors magnet instead of PPMS.
+        '''
+        return self.magnet.Bmagnet

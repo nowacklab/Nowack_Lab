@@ -143,6 +143,8 @@ def reject_outliers(data, radius=[None,None], m=2):
     `m` is the number of standard deviations we have to stay close to the mean.
     Higher `m` means less stringent.
     This takes a long time... might just want to do this occasionally.
+
+    TODO: use chauvenet's criterion for "justified" rejection of data
     '''
     new_data = np.copy(data)
 
@@ -192,6 +194,31 @@ def reject_outliers_quick(data, m=2):
     new_data = np.ma.masked_where(abs(data - mean) > m*std, data)
     return new_data
 
+def keeprange(master, slaves, m0, mend):
+    '''
+    WHAT DOES THIS DO?
+    '''
+    raise Exception('ADD DOCSTRING')
+    index0 = np.argmin(np.abs(master-m0))
+    indexe = np.argmin(np.abs(master-mend))
+
+    ret = [master[index0:indexe]]
+
+    for s in slaves:
+        ret.append(s[index0:indexe])
+
+    return ret
+
+def reject_outliers_spectrum(f, specden, m=2):
+    '''
+    WHAT DOES THIS DO?
+    '''
+    raise Exception('ADD DOCSTRING')
+    d = np.abs(specden - np.median(specden))
+    mdev = np.median(d)
+    s = d/mdev if mdev else 0.
+    return f[s<m], specden[s<m]
+
 
 def hide_code_button():
     '''
@@ -212,3 +239,41 @@ def hide_code_button():
     $( document ).ready(code_toggle);
     </script>
     <form action="javascript:code_toggle()"><input type="submit" value="Click here to toggle on/off the raw code."></form>''')
+
+def running_std(array1d, windowlen=16, mode='same'):
+    '''
+    calculate runing standard deviation
+
+    parameters
+    ----------
+    array1d : numpy.ndarray
+        array of numbers to compute running standard deviation on
+    windowlen : int
+        window length
+    mode : string ["full", "same", "valid"]
+        see numpy convolution
+
+    returns
+    -------
+    out : numpy.ndarray
+        running standard deviation for the given array1d
+
+    adapted from project spikefuel, author duguyue100
+    found https://www.programcreek.com/python/example/11429/numpy.convolve
+    '''
+
+    # computing shifted data, avoid catastrophic cancellation
+    # https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+    array1d = array1d - np.mean(array1d)
+
+    # calculate sum of squares within the window for each point
+    q = np.convolve(array1d**2, np.ones(windowlen), mode=mode)
+
+    # calculate the sum within the window for each point
+    s = np.convolve(array1d,    np.ones(windowlen), mode=mode)
+
+    # std^2 = (sum_i^n x_i^2 - (sum_j^n x_j)^2/n)/(n-1)
+    # std^2 = (sum of squares - average)/(n-1) # bessel's correction
+    out = np.sqrt((q-s**2/windowlen)/(windowlen-1))
+
+    return out

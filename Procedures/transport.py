@@ -294,6 +294,27 @@ class RvsT_Bluefors(RvsSomething):
             self.do_measurement(delay=self.delay, plot=plot)
 
 
+class RvsT_Montana(RvsSomething):
+    instrument_list = ['montana', 'lockin_V1', 'lockin_I']
+    something = 'T'
+    something_units = 'K'
+
+    def __init__(self, instruments = {}, Tend = 5, delay=1):
+        '''
+        Tend: target temperature (when to stop taking data)
+        delay: time between measurements (seconds)
+        '''
+        super().__init__(instruments=instruments)
+
+        self.Tend = Tend
+        self.delay = delay
+
+    def do(self, plot=True):
+        while self.montana.temperature['platform'] > self.Tend:
+            self.T = np.append(self.T, self.montana.temperature['platform'])
+            self.do_measurement(delay=self.delay, plot=plot)
+
+
 class RvsVg(RvsSomething):
     '''
     Monitor R = lockin_V.X/lockin_I.Y from two different lockins.
@@ -305,11 +326,17 @@ class RvsVg(RvsSomething):
     something_units = 'V'
     Igwarning = None
 
-    def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1, delay=1, fine_range=None):
+    def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1, delay=1, sweep=1, fine_range=None):
         '''
-        fine_range - [Vmin, Vmax], a list of two voltages that define a range
+        Vstart: starting voltage (V)
+        Vend: ending voltage (V)
+        Vstep: voltage step size (V)
+        delay: time delay between measurements (sec)
+        sweep: sweep rate to Vstart (V/s)
+        fine_range: [Vmin, Vmax], a list of two voltages that define a range
         in which we will take N times as many data points. N=5.
-        Note that Vmin is closer to Vstart and Vmax is closer to Vend.
+        Note that Vmin is closer to Vstart and Vmax is closer to Vend,
+        regardless of sweep direction.
         '''
         super().__init__(instruments=instruments)
 
@@ -317,6 +344,7 @@ class RvsVg(RvsSomething):
         self.Vend = Vend
         self.Vstep = Vstep
         self.delay = delay
+        self.sweep = sweep
 
         if fine_range is None:
             self.Vg_values = np.linspace(Vstart, Vend, round(abs(Vend-Vstart)/Vstep)+1)
@@ -341,11 +369,11 @@ class RvsVg(RvsSomething):
     def do(self, num_avg = 1, delay_avg = 0, zero=False, plot=True, auto_gain=False):
 #         self.keithley.output = 'on' #NO! will cause a spike!
 
-        ## Sweep to Vstart
-        self.keithley.sweep_V(self.keithley.V, self.Vstart, .1, 1)
+        # Sweep to Vstart
+        self.keithley.sweep_V(self.keithley.V, self.Vstart, self.Vstep, self.sweep)
         time.sleep(self.delay*3)
 
-        ## Do the measurement sweep
+        # Do the measurement sweep
         for i, Vg in enumerate(self.Vg_values):
             self.Vg = np.append(self.Vg, Vg)
             self.keithley.Vout = Vg
@@ -357,21 +385,21 @@ class RvsVg(RvsSomething):
 
             self.do_measurement(self.delay, num_avg, delay_avg, plot=plot, auto_gain=auto_gain)
 
-        ## Sweep back to zero at 1V/s
+        # Sweep back to zero at same sweep rate as before
         if zero:
-            self.keithley.zero_V(1)
+            self.keithley.zero_V(self.Vstep, self.sweep)
 
 
     def plot(self):
         '''
-        Plots using superclass function and adds warning for Ig > 0.5 nA
+        Plots using superclass function and adds warning for Ig > 1 nA
         '''
         super().plot()
         if self.Igwarning is None: # if no warning
             if len(self.Ig)>0: # if have data
-                if abs(self.Ig).max() >= 0.5e-9: # if should be warning
+                if abs(self.Ig).max() >= 1e-9: # if should be warning
                     self.Igwarning = self.ax.text(.02,.95,
-                                        r'$|I_g| \geq 0.5$ nA!',
+                                        r'$|I_g| \geq 1$ nA!',
                                         transform=self.ax.transAxes,
                                         color = 'C3'
                                     ) # warning
