@@ -11,6 +11,8 @@ from scipy.signal import savgol_filter
 import Nowack_Lab.Utilities.save
 reload(Nowack_Lab.Utilities.save)
 from Nowack_Lab.Utilities.save import Measurement
+import Nowack_Lab.Utilities.dataset
+from Nowack_Lab.Utilities.dataset import Dataset
 from Nowack_Lab.Instruments import VNA8722ES
 from Nowack_Lab.Instruments import Keithley2400
 
@@ -100,7 +102,8 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
         assert not hysteresis, "Hysteretic measurement not implemented yet"
 
         # Set up current source settings
-        self.k3.output = 'on'
+        if(self.k3.output == 'off'):
+            self.k3.output = 'on'
         self.k3.source = 'I'
         time.sleep(3)  # FIXME this is clumsy way of making sure keithley has enough time to turn on
         self.k3.Iout_range = 20e-3  # 20 mA range # TODO: figure out what exactly range is
@@ -327,7 +330,7 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
                                             )
         pass
 
-    def plot2(self):
+        def plot2(self):
         # TODO: change to make 2 subplots if hysteresis is true, 1 subplot if false (up and down)
         # Change name
         # Plot 2 subplots: magnitude and phase
@@ -345,6 +348,10 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
     def setup_plots(self):
         self.fig, self.ax = plt.subplots()
         plt.pause(.01)
+
+    def save_data(self):
+        data = dataset(self)
+
 
     @staticmethod
     def plot_color(ax, xaxis, yaxis, z, cmap='viridis'):
