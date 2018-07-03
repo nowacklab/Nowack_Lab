@@ -74,8 +74,9 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
     def __init__(self, instruments = [],
                 k_Istart, k_Istop, k_Isteps,
                 v_freqmin, v_freqmax, v_power, v_avg_factor, v_numpoints,
-                filepath, plot= False, v_smoothing_state=0,
-                v_smoothing_factor=1, notes = "No notes"):
+                filepath, v_smoothing_state=0,
+                v_smoothing_factor=1, notes = "No notes",hysteresis=False, 
+                plot=False):
         # mode 0: only dB. mode 1: only phase. mode 2: dB and phase.
         super().__init__(instruments=instruments)  # no daq stuff
 
@@ -90,7 +91,7 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
         self.arr_1 = None  # store an array to plot
         self.arr_2 = None  # store an array to plot
 
-    def do(self, hysteresis=False, plot=False):
+    def do(self):
         '''
         Run measurement
         Arguments:
@@ -173,7 +174,11 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
         ''''
         if plot == True:
 
-    def setup_plots(self):
+
+
+
+
+'''    def setup_plots(self):
         self.fig, self.ax = plt.subplots(1,2, figsize=(16,6))
         self.ax = list(self.ax)
 
@@ -194,7 +199,7 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
 
     def setup_plots(self):
         self.fig, self.ax = plt.subplots()
-        plt.pause(.01)
+        plt.pause(.01) '''
 
     def save_data(self, timestamp, attenuation, phase, attenuation_rev = None, phase_rev = None):
         now = datetime.now()
@@ -217,6 +222,7 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
         info.append(path + '/phase/data', phase)
         info.append(path + '/phase_rev/data', phase_rev)
         info.append(path + '/notes', notes)
+        info.append(path + '/hysteresis', hysteresis)
 
 
 
