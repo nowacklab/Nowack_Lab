@@ -177,21 +177,7 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
         self.fig, self.ax = plt.subplots(1,2, figsize=(16,6))
         self.ax = list(self.ax)
 
-    def plot(self):
-        raise NotImplementedError('"plot" function in other programs uses daq; VNA does not have analog output--> not using daq. Use plot2() instead')
-        assert self.arr_1 not None and self.arr_2 not None, "both arr_1 and arr_2 should have arrays"
-        self.ax[0], cbar = RF_sweep_current.plot_color(
-                                            self.ax[0],
-                                            [],
-                                            [],
-                                            self.arr_up[:,0,:]
-
-
-                                            cmap='viridis'
-                                            )
-        pass
-
-        def plot2(self):
+    def plot2(self):
         # TODO: change to make 2 subplots if hysteresis is true, 1 subplot if false (up and down)
         # Change name
         # Plot 2 subplots: magnitude and phase
