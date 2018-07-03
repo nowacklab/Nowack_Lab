@@ -73,8 +73,9 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
 
     def __init__(self, instruments = [],
                 k_Istart, k_Istop, k_Isteps,
-                v_freqmin, v_freqmax, v_power, v_avg_factor, v_numpoints, filepath,
-                v_smoothing_state=0, v_smoothing_factor=1, notes = "No notes"):
+                v_freqmin, v_freqmax, v_power, v_avg_factor, v_numpoints,
+                filepath, plot= False, v_smoothing_state=0,
+                v_smoothing_factor=1, notes = "No notes"):
         # mode 0: only dB. mode 1: only phase. mode 2: dB and phase.
         super().__init__(instruments=instruments)  # no daq stuff
 
@@ -130,6 +131,8 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
         attenuation = np.zeros((int(self.v1.numpoints), 2, 1))  # array for values. depth d is d'th current step
         phase = np.zeros((int(self.v1.numpoints), 2, 1))
 
+        timestamp = now.strftime('%Y-%m-%d_%H%M%S')
+
         if hysteresis == True:
             attenuation_rev = np.zeros((int(self.v1.numpoints), 2, 1))  # array for values. depth d is d'th current step
             phase_rev = np.zeros((int(self.v1.numpoints), 2, 1))
@@ -145,7 +148,7 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
             attenuation = np.dstack((attenuation, temp_attenuation))  # waiting occurs in save() function
             phase = np.dstack((phase, temp_phase))
 
-        if(hysteresis = True):
+        if(hysteresis == True):
             for step in range(0, k_Isteps):
                 if step % 10 == 0:
                     print("Current source step #" + str(step+1) + " out of " + str(k_Isteps))
@@ -156,16 +159,19 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
                 temp_phase =  np.flip(self.v1.savephase(), axis=1)
                 attenuation_rev = np.dstack((attenuation, temp_attenuation))  # waiting occurs in save() function
                 phase_rev = np.dstack((phase, temp_phase))
-
-            save_data(attenuation, phase, attenuation_rev = attenuation_rev, phase_rev = phase_rev)
+            save_data(timestamp, attenuation, phase, attenuation_rev = attenuation_rev, phase_rev = phase_rev)
         else:
-            save_data(attenuation, phase)
-
+            save_data(timestamp, attenuation, phase)
 
         self.k3.Iout = 0
         self.k3.output = 'off'  # turn off keithley output
         self.v1.powerstate = 0  # turn off VNA source power
 
+        '''
+        now call code to plot from file with path
+        filepath + timestamp + _rf_sweep.hdf5
+        ''''
+        if plot == True:
 
     def setup_plots(self):
         self.fig, self.ax = plt.subplots(1,2, figsize=(16,6))
@@ -204,11 +210,10 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
         self.fig, self.ax = plt.subplots()
         plt.pause(.01)
 
-    def save_data(self, attenuation, phase, attenuation_rev = None, phase_rev = None):
+    def save_data(self, timestamp, attenuation, phase, attenuation_rev = None, phase_rev = None):
         now = datetime.now()
-        timestamp = now.strftime('%Y-%m-%d_%H%M%S')
-        timestamp = timestamp + '_rf_sweep'
-        path = os.path.join(filepath, timestamp + '.hdf5')
+        name = timestamp + '_rf_sweep'
+        path = os.path.join(filepath, name + '.hdf5')
         info = dataset(path)
         info.append(path + '/Istart', k_Istart)
         info.append(path + '/Istop', k_Istop)
