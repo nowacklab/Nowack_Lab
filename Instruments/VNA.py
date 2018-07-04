@@ -365,7 +365,8 @@ class VNA8722ES(Instrument):
 
     @staticmethod
     def Re_Im_to_phase(Re_Im_array):
-        """Return 1xn np array of phase shift data (units are degrees) from 2xn array of Re, Im data"""
+        """Return 1xn np array of phase shift data (units are degrees) from 2xn array of Re, Im data
+        (use degrees because VNA phase output uses degrees)"""
         input_shape = np.shape(Re_Im_array)
         assert len(input_shape) == 2 and input_shape[0] == 2, "input should be 2xn array of Re, Im data"
         assert abs(np.amax(Re_Im_array)) <= 1, "This does not look like Re, Im data (entries should be between -1, 1)"
@@ -376,7 +377,7 @@ class VNA8722ES(Instrument):
             Re = Re_Im_array[0, i]
             Im = Re_Im_array[1, i]
             try:
-                phase_radians = math.atan(Re/Im)
+                phase_radians = math.atan(Im/Re)
             except ZeroDivisionError:
                 phase_radians = math.pi/2
             phase_array[0, i] = phase_radians * (180/math.pi)
