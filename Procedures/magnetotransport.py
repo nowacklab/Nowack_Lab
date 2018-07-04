@@ -145,17 +145,18 @@ class RvsVg_B(RvsVg):
     field_sweep_class = RvsB
 
     def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1,
-                delay=1, Bstart = 0, Bend = 14, Bstep=1, Bdelay=1,sweep_rate=.1,
+                delay=1, sweep=1, Bstart = 0, Bend = 14, Bstep=1, Bdelay=1,sweep_rate=.1,
                 Vg_sweep=None, raster=False):
         '''
         Does gatesweeps at a series of magnetic fields.
         Stores the full gatesweeps at each field, as well as a RvsB curve done
         at a particular gate voltage between gatesweeps.
 
-        Vstart: start of gatesweep
-        Vend: end of gatesweep
-        Vstep: gatesweep voltage step size
-        delay: gatesweep delay time
+        Vstart: start of gatesweep (V)
+        Vend: end of gatesweep (V)
+        Vstep: gatesweep voltage step size (V)
+        delay: gatesweep delay time (s)
+        sweep: gatesweep sweep rate to Vstart (V/s)
         Bstart: starting field (Tesla)
         Bend: end field (Tesla)
         Bstep: field step between gatesweeps (Tesla)
@@ -169,7 +170,7 @@ class RvsVg_B(RvsVg):
         del self.self # but includes self, get rid of this!
 
         self.B = np.linspace(Bstart, Bend, round(abs(Bstart-Bend)/Bstep)+1)
-        self.gs = RvsVg(self.instruments, self.Vstart, self.Vend, self.Vstep, self.delay)
+        self.gs = RvsVg(self.instruments, self.Vstart, self.Vend, self.Vstep, self.delay, self.sweep)
 
         self.Vg = self.gs.Vg_values
 

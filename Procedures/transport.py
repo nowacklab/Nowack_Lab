@@ -101,7 +101,11 @@ class RvsSomething(Measurement):
         if hasattr(self, 'ppms'):
             self.B = np.append(self.B, self.ppms.field/10000) # Oe to T
         elif hasattr(self, 'magnet'):
-            self.B = np.append(self.B, self.magnet.B)
+            if self.magnet.p_switch:  # in driven mode
+                B = self.magnet.Bsupply
+            else:  # in persistent mode
+                B = self.magnet.Bmagnet
+            self.B = np.append(self.B, B)
         for j in range(self.num_lockins):
             if auto_gain:
                 getattr(self, 'lockin_V%i' %(j+1)).fix_sensitivity() # make sure we aren't overloading or underloading.
@@ -176,7 +180,7 @@ class RvsSomething(Measurement):
         if hasattr(self, 'magnet'):
             if self.magnet is not None:
                 if self.something != 'B':
-                    add_text_to_legend('B = %.2f T' %self.magnet.B)
+                    add_text_to_legend('B = %.2f T' %self.magnet.Bmagnet)
 
         if hasattr(self, 'keithley'):
             if self.keithley is not None:

@@ -194,15 +194,20 @@ class AMI430(VISAInstrument):
         '''
         if self._interrupted:
             raise Exception('Ramping was interrupted. Verify Bmagnet.')
-        self.write('PSwitch %i' %value)
-        if value == True:
+
+        if self.p_switch == False and value == True:
+            self.write('PSwitch %i' %value)
+
             print('Waiting for persistent switch to heat...')
             time.sleep(0.5)
             while self.status == 'Heating Persistent Switch':
                 time.sleep(0.1)
-        if value == False:
+        if self.p_switch == True and value == False:
+            self.write('PSwitch %i' %value)
+
             print('Waiting for persistent switch to cool...')
             time.sleep(10)  # WAITING IS VERY IMPORTANT. A few seconds should be fine, but 10 seconds for safety.
+
 
     @property
     def status(self):
@@ -236,8 +241,14 @@ class AMI430(VISAInstrument):
 
     def ramp(self):
         '''
-        Start ramping to the target field.
+        Check that it is safe to ramp and start ramping to the target field.
         '''
+        if self.p_switch:  # in driven mode
+            if self.Brate > self._Bratemax*1.001:  # 1.001 for rounding issues
+                raise Exception('Ramp rate %.2f A/min too high for driven mode! Will not start ramp.'  %self.Brate)
+        else:
+            if self.Brate > self._Bratemax_persistent*1.001:
+                raise Exception('Ramp rate %.2f A/min too high for persistent mode! Will not start ramp.' %self.Brate)
         self.write('RAMP')
 
 
@@ -284,10 +295,14 @@ class AMI430(VISAInstrument):
                 raise Exception('Timed out waiting for holding.')
         print('Done waiting.')
 
+
     def zero(self):
         '''
-        Ramp field to zero at the ramp rate presently set.
+        Ramp field to zero at the programmed ramp rate if in driven mode, or
+        as fast as possible if in persistent mode.
         '''
+        if not self.p_switch:
+            self.Brate = self._Bratemax_persistent
         self.write('ZERO')
 
 
@@ -306,6 +321,10 @@ class AMI420(AMI430):
     _coilconst = .1331  # T/A
     _Iratemax = .0751*60  # A/min
     _Bratemax = _coilconst*_Iratemax
+    # Rates for persistent mode. AMI420 manual suggests for max current of 10 A,
+    # use max ramp rate of 1 A/s
+    _Iratemax_persistent = 1.00175307*60  # A/s * 60 s / 1 min # weird number to round to 8 T/min
+    _Bratemax_persistent = _coilconst*_Iratemax_persistent
     _Vmax = 1
 
     interrupted = False  # used to monitor KeyboardInterrupts during ramping
@@ -335,10 +354,14 @@ class AMI420(AMI430):
         '''
         Set the field ramp rate (T/min)
         '''
-        if value > self._Bratemax:
+        if self.p_switch:
+            Bratemax = self._Bratemax
+        else:
+            Bratemax = self._Bratemax_persistent
+        if value > Bratemax:
             print('Warning! %g T/min ramp rate too high! Rate set to %g T/min.'
-                                                    %(value, self._Bratemax))
-            value = self._Bratemax
+                                                    %(value, Bratemax))
+            value = Bratemax
         self.write('CONF:RAMP:RATE:FIELD %g' %value)
 
 
@@ -411,6 +434,18 @@ class AMI420(AMI430):
         return self._Isupply
 
 
+    def ask(self, cmd, timeout=3000):
+        '''
+        Modified from base class to try asking twice.
+        Was getting weird random timeout issues:
+        VI_ERROR_TMO (-1073807339): Timeout expired before operation completed.
+        '''
+        try:
+            return super().ask(cmd, timeout)
+        except:
+            return super().ask(cmd, timeout)
+
+
     @property
     def status(self):
         '''
@@ -464,6 +499,8 @@ class AMI420(AMI430):
         Does nothing if already in persistent mode.
         '''
         if self.p_switch == True:
+            print('Waiting for magnet voltage to stabilize...')
+            time.sleep(5)
             if abs(self.Vmag-0.02) > 0.04:
                 raise Exception('Cannot enter persistent mode with nonzero magnet voltage')
             self.Bmagnet = self.Bset  # record the actual field in the magnet
@@ -471,10 +508,10 @@ class AMI420(AMI430):
             self.zero()  # Zero the supply without erasing Bset. Does not wait.
 
 
-    def ramp_to_field(self, Bset, Brate=None, wait=True):
+    def ramp_to_field(self, Bset, Brate, wait=True):
         '''
         Ramp the magnet to a given field setpoint at a given rate.
-        Only run this command if you are sure that _Bmagnet is correct.
+        Only run this command if you are sure that Bmagnet is correct.
 
         Does the following procedure:
             - If persistent switch heater is off (magnet is out of the circuit):
@@ -483,8 +520,8 @@ class AMI420(AMI430):
                 -- Turn on persistent switch heater to connect the magnet to the supply (built-in wait time).
             - Set the desired field setpoint (T) and rate (T/min).
             - Start ramping the field.
-            - Check that the magnet voltage exceeds 0.05 V (relative to the 0.02 Vm offset).
-            May not pass this check if you use a ramp rate < 0.05 T/min. Edit the code if this is the case.
+            # -  Check that the magnet voltage exceeds 0.05 V (relative to the 0.02 Vm offset).
+            # May not pass this check if you use a ramp rate < 0.05 T/min. Edit the code if this is the case.
             - If wait parameter is True:
                 -- Wait until ramp is finished and check that magnet voltage has returned to zero.
                 -- Enter persistent mode and zero the power supply.
@@ -498,12 +535,9 @@ class AMI420(AMI430):
         Be sure to manually enter persistent mode and ramp down the power supply if desired.
         '''
 
-        if Brate is None:
-            Brate = self.Brate  # use the programmed rate
-
         if self.p_switch == False:  # magnet is out of the circuit
             # ramp power supply quickly to match magnet field
-            self.Brate = self._Bratemax
+            self.Brate = self._Bratemax_persistent
             self.Bset = self.Bmagnet
             self.ramp()
             time.sleep(0.5)
@@ -521,10 +555,10 @@ class AMI420(AMI430):
         self.Brate = Brate
         self.Bset = Bset
         self.ramp()
-        time.sleep(1)
-        if abs(self.Vmag-0.02) < 0.05:
-            self.pause()
-            raise Exception('Magnet voltage too low (or you are using a slow ramp rate <0.05 T/min). Pausing ramp.')
+        # time.sleep(1)
+        # if abs(self.Vmag-0.02) < 0.05:
+        #     self.pause()
+        #     raise Exception('Magnet voltage too low (or you are using a slow ramp rate <0.05 T/min). Pausing ramp.')
 
 
         if wait:
