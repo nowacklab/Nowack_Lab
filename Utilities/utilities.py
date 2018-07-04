@@ -116,13 +116,6 @@ def get_nb_kernel():
     return k_dict['key']
 
 
-def get_superclasses(obj):
-    '''
-    Get a tuple of names of all superclasses of an object.
-    '''
-    return [c.__name__ for c in obj.__class__.__mro__]
-
-
 def nanmin(data):
     result = np.nanmin(data)
     return result if not np.isnan(result) else 0

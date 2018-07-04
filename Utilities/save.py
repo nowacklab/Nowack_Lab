@@ -45,11 +45,11 @@ class Measurement(Plotter):
             variables = list(d.keys()) # list of all the variables in the dictionary
 
             for var in variables: # copy so we don't change size of array during iteration
-                ## Don't save numpy arrays to JSON
+                # Don't save numpy arrays to JSON
                 if type(d[var]) is np.ndarray:
                     d[var] = None
 
-                ## Don't save matplotlib objects to JSON
+                # Don't save matplotlib objects to JSON
                 if hasattr(d[var], '__module__'): # built-in types won't have __module__
                     m = d[var].__module__
                     m = m[:m.find('.')] # will strip out "matplotlib", if there
@@ -67,8 +67,8 @@ class Measurement(Plotter):
                         print(str(self))
                         d[var] = ['This list was empty.  Empty lists do not save well']
 
-                ## Walk through dictionaries
-                if 'dict' in utilities.get_superclasses(d[var]):
+                # Walk through dictionaries
+                if isinstance(d[var], dict):
                     d[var] = walk(d[var]) # This unfortunately erases the dictionary...
 
             return d # only return ones that are the right type.
@@ -165,7 +165,7 @@ class Measurement(Plotter):
                     elif 'py/id' in d: # Probably another Instrument instance
                         d = None # Don't load it.
                         break
-                if 'dict' in utilities.get_superclasses(d[key]):
+                if isinstance(d[key], dict):
                     d[key] = walk(d[key])
             return d
 
@@ -324,12 +324,12 @@ class Measurement(Plotter):
                         # Fill the dataset with the corresponding value
                         d[...] = value
                     # If a dictionary is found
-                    elif 'dict' in utilities.get_superclasses(value):
+                    elif isinstance(value, dict):
                         new_group = group.create_group(key) # make a group with the dictionary name
                         walk(value, new_group) # walk through the dictionary
                     # If the there is some other object
                     elif hasattr(value, '__dict__'):
-                        if 'Measurement' in utilities.get_superclasses(value): # restrict saving Measurements.
+                        if isinstance(value, Measurement): # restrict saving Measurements.
                             new_group = group.create_group('!'+key) # make a group with !(object name)
                             walk(value.__dict__, new_group) # walk through the object dictionary
 
