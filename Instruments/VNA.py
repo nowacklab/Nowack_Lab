@@ -60,11 +60,11 @@ class VNA8722ES(Instrument):
         self.write('FORM4')
         self._savemode = 'FORM4'
 
-        print ("init: power off and at -75dB. Measuring S21. Most other settings factory preset.")
+        print("init: power off and at -75dB. Measuring S21. Most other settings factory preset.")
 
     def factory_preset(self):
         """
-        Set vna to factory preset. Dangerous because default is -10dBm with power on.
+        Set vna to factory preset. Dangerous because default is -10dBm with power on; do not call unnecessarily
         """
         self.write('OPC?;PRES;')
         print('Set to factory preset')
@@ -88,12 +88,12 @@ class VNA8722ES(Instrument):
 
     @property
     def powerstate(self):
-        '''Get whether power is on/off 1/0'''
+        """Get whether power is on/off 1/0"""
         return self._power_state
 
     @powerstate.setter
     def powerstate(self, value):
-        '''Set power to on/off 1/0'''
+        """Set power to on/off 1/0"""
         val = int(value)
         assert val in [1,0], "powerstate must be 1 or 0"
         if val == 1:
@@ -178,12 +178,12 @@ class VNA8722ES(Instrument):
 
     @property
     def maxfreq(self):
-        '''Get the stop frequency'''
+        """Get the stop frequency"""
         return float(self.ask('STOP?'))
 
     @maxfreq.setter
     def maxfreq(self, value):
-        '''Set max frequency'''
+        """Set max frequency"""
         assert type(value) is float or int, "frequency must be float or int"
         if value < self.minfreq:
             raise Exception('Max frequency cannot be smaller than min frequency')
@@ -192,7 +192,7 @@ class VNA8722ES(Instrument):
 
     @property
     def numpoints(self):
-        '''Get the number of points in sweep'''
+        """Get the number of points in sweep"""
         return float(self.ask('POIN?'))
 
     @numpoints.setter
@@ -278,13 +278,13 @@ class VNA8722ES(Instrument):
         nplist = ['S11', 'S21', 'S12', 'S22']
         assert value in nplist, "Network parameter should be one of " + str(nplist)
         if value == 'S12' or value == 'S22':
-            raise Exception('Don\'t send current thru amplifer the backwards (just for cold amplifer testing, remove this in code if needed)')
+            raise Exception('Don\'t send current thru amplifer backwards (just for cold amplifer testing, remove this in code if situation changes)')
         self.write(value)
 
     def save_dB(self):
-        """Return dB (attenuation) data in np array.
-        Axis 1: current steps.
-        Axis 2: points of frequency sweep."""
+        """Return attenuation data (units are dB) in 1D np array by querying VNA through GPIB commands
+        shape of array: 1x(number of frequency sweep points)
+        """
 
         self.write('FORM4')  # Prepare to output correct data format TODO description from programming guide
         self.write('LOGM')  # Temporarily set VNA to log magnitude display to enable saving log magnitude
@@ -306,9 +306,9 @@ class VNA8722ES(Instrument):
         return dB_array
 
     def save_phase(self):
-        """Return phase data in np array.
-        Axis 1: current steps.
-        Axis 2: points of frequency sweep."""
+        """Return phase data (units are degrees) in 1D np array by querying VNA through GPIB commands
+        shape of array: 1x(number of frequency sweep points)
+        """
         self.write('FORM4')
         self.write('PHASE')
 
@@ -327,10 +327,11 @@ class VNA8722ES(Instrument):
         return phase_array
 
     def save_Re_Im(self):
-        """Return real and imaginary data in np array.
-        Axis 1: current steps.
-        Axis 2: points of frequency sweep.
-        Axis 3: real (index 0 along axis 3) and imaginary (index 1 along axis 3)"""
+        """Return real and imaginary parts of VNA response in (2D) np array by querying VNA through GPIB commands
+        shape of array: 2x(number of frequency sweep points)
+        first row: real parts
+        second row: imaginary parts
+        """
         self.write('FORM4')
         self.write('SMIC')
 
@@ -348,6 +349,37 @@ class VNA8722ES(Instrument):
             Re_Im_array[0, :] = float(split_line[0])  # Real part (first row)
             Re_Im_array[1, :] = float(split_line[1])  # Imaginary part (second row)
         return Re_Im_array
+
+    @staticmethod
+    def Re_Im_to_dB(Re_Im_array):
+        """Return 1xn np array of attenuation data (units are dB) from 2xn array of Re, Im data"""
+        input_shape = np.shape(Re_Im_array)
+        assert len(input_shape) == 2 and input_shape[0] == 2, "input should be 2xn array of Re, Im data"
+        assert abs(np.amax(Re_Im_array)) <= 1, "This does not look like Re, Im data (entries should be between -1, 1)"
+
+        dB_array = np.empty((1, input_shape[1]))
+
+        for i in range(input_shape[1]):  # for each frequency point
+            dB_array[0, i] = 20 * math.log(math.sqrt(Re_Im_array[0]**2 + Re_Im_array[1]**2), 10)  # calculate dB from Re,Im
+        return dB_array
+
+    @staticmethod
+    def Re_Im_to_phase(Re_Im_array):
+        """Return 1xn np array of phase shift data (units are degrees) from 2xn array of Re, Im data"""
+        input_shape = np.shape(Re_Im_array)
+        assert len(input_shape) == 2 and input_shape[0] == 2, "input should be 2xn array of Re, Im data"
+        assert abs(np.amax(Re_Im_array)) <= 1, "This does not look like Re, Im data (entries should be between -1, 1)"
+
+        phase_array = np.empty((1, input_shape[1]))
+
+        for i in range(input_shape[1]):  # for each frequency point
+            Re = Re_Im_array[0, i]
+            Im = Re_Im_array[1, i]
+            try:
+                phase_radians = math.atan(Re/Im)
+            except ZeroDivisionError:
+                phase_radians = math.pi/2
+            phase_array[0, i] = phase_radians * (180/math.pi)
 
     def sleep_until_finish_averaging(self):
         """Sleeps for number of seconds <VNA sweep time>*<averaging factor+2>
