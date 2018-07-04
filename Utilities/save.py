@@ -43,37 +43,25 @@ class Measurement(Plotter):
         This excludes numpy arrays which are saved to HDF5.
         '''
         def walk(d):
-            d = d.copy() # make sure we don't modify original dictionary
-            variables = list(d.keys()) # list of all the variables in the dictionary
+            '''
+            Walk through dictionary and remove numpy arrays and matplotlib objs.
+            '''
+            d = d.copy()  # make sure we don't modify original dictionary
+            keys = list(d.keys())  # make list to avoid dictionary changing size
 
-            for var in variables: # copy so we don't change size of array during iteration
+            for k in keys:
                 # Don't save numpy arrays to JSON
-                if type(d[var]) is np.ndarray:
-                    d[var] = None
+                if type(d[k]) is np.ndarray:
+                    d[k] = None
 
                 # Don't save matplotlib objects to JSON
-                if hasattr(d[var], '__module__'): # built-in types won't have __module__
-                    m = d[var].__module__
-                    m = m[:m.find('.')] # will strip out "matplotlib", if there
-                    if m == 'matplotlib':
-                        d[var] = None
-                elif type(d[var]) is list: # check for lists of mpl objects
-                    try:
-                        if hasattr(d[var][0], '__module__'): # built-in types won't have __module__
-                            m = d[var][0].__module__
-                            m = m[:m.find('.')] # will strip out "matplotlib"
-                            if m == 'matplotlib':
-                                d[var] = None
-                    except:
-                        print('Error saving ', var)
-                        print(str(self))
-                        d[var] = ['This list was empty.  Empty lists do not save well']
+                d[k] = _remove_mpl(d[k])
 
                 # Walk through dictionaries
-                if isinstance(d[var], dict):
-                    d[var] = walk(d[var]) # This unfortunately erases the dictionary...
+                if isinstance(d[k], dict):
+                    d[k] = walk(d[k])
 
-            return d # only return ones that are the right type.
+            return d
 
         return walk(self.__dict__)
 
@@ -96,16 +84,11 @@ class Measurement(Plotter):
                 # Loop over filetypes
                 for ext in ['.h5','.json','.pdf']:
                     if os.path.isfile(localpath + ext):
-                        # First make a checksum
                         local_checksum = _md5(localpath + ext)
-
-                        # Copy the files
                         shutil.copyfile(localpath + ext, remotepath + ext)
-
-                        # Make comparison checksums
                         remote_checksum = _md5(remotepath + ext)
 
-                        # Check checksums
+                        # Compare checksums
                         if local_checksum != remote_checksum:
                             print('%s checksum failed! \
                             Cannot trust remote file %s' %(ext, remotepath + ext))
@@ -114,7 +97,7 @@ class Measurement(Plotter):
                 print('Saving to data server failed!\n\n\
                 Exception details: %s\n\n\
                 remote path: %s\n\
-                local path:%s' %(e, remotepath, localpath)
+                local path: %s' %(e, remotepath, localpath)
                 )
         else:
             print('Not connected to %s, data not saved remotely!'\
@@ -338,25 +321,26 @@ class Measurement(Plotter):
                     # If the key is in ignored then skip over it
                     if key in ignored:
                         continue
-                    if type(key) is int:
-                        key = str(key) # convert int keys to string. Will be converted back when loading
-                    # If a numpy array is found
+                    key = str(key)  # Some may be ints; convert to str
+
                     if type(value) is np.ndarray:
                         # Save the numpy array as a dataset
                         d = group.create_dataset(key, value.shape,
                             compression = 'gzip', compression_opts=9)
                         d.set_fill_value = np.nan
-                        # Fill the dataset with the corresponding value
                         d[...] = value
+
                     # If a dictionary is found
                     elif isinstance(value, dict):
                         new_group = group.create_group(key) # make a group with the dictionary name
                         walk(value, new_group) # walk through the dictionary
+
                     # If the there is some other object
                     elif hasattr(value, '__dict__'):
-                        if isinstance(value, Measurement): # restrict saving Measurements.
-                            new_group = group.create_group('!'+key) # make a group with !(object name)
-                            walk(value.__dict__, new_group) # walk through the object dictionary
+                        if isinstance(value, Measurement):  # only Measurements
+                            # mark object by "!" and make a new group
+                            new_group = group.create_group('!'+key)
+                            walk(value.__dict__, new_group)  # walk through obj
 
             walk(self.__dict__, f)
 
@@ -691,3 +675,20 @@ def _md5(filename):
         for chunk in iter(lambda: f.read(4096), b''):
             hash_md5.update(chunk)
     return hash_md5.hexdigest()
+
+def _remove_mpl(obj):
+    def _is_mpl_object(obj):
+        if hasattr(obj, '__module__'):  # Check if NOT a built-in type
+            if 'matplotlib' in obj.__module__:
+                return True
+
+    if _is_mpl_object(obj):
+        obj = None
+
+    # check for lists of mpl objects
+    elif type(obj) is list:
+        if len(obj) > 0:
+            if _is_mpl_object(obj[0]):
+                obj = None
+
+    return obj
