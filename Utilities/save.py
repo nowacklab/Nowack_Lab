@@ -252,7 +252,7 @@ class Measurement(Plotter):
         return local_path, remote_path
 
 
-    def _save(self, filename=None, ignored = []):
+    def _save(self, filename=None):
         '''
         Saves data in different formats:
         - JSON: contains the full dictionary structure of the saved object,
@@ -269,9 +269,6 @@ class Measurement(Plotter):
         directory under the specified subdirectory (e.g. testing)
         - full path (e.g. C:/Documents/testing/myfile): saved to the specified full path
 
-        ignored -- Array of objects to be ignored during saving. Passed to
-        _save_hdf5 and _save_json.
-
         Default location of experiments directory:
         - Local: ~/data/
         - Remote: /labshare/data/
@@ -283,7 +280,7 @@ class Measurement(Plotter):
         localpath, remotepath = self._make_paths(filename)
 
         # Save locally
-        self._save_hdf5(localpath, ignored=ignored)  # must save h5 first
+        self._save_hdf5(localpath)  # must save h5 first
         self._save_json(localpath)
         if self.fig is not None:
             self.fig.savefig(localpath+'.pdf', bbox_inches='tight')
@@ -297,7 +294,7 @@ class Measurement(Plotter):
             raise Exception('Reloading failed, but object was saved!')
 
 
-    def _save_hdf5(self, filename, ignored = []):
+    def _save_hdf5(self, filename):
         '''
         Save numpy arrays to h5py. Walks through the object's dictionary
         and any subdictionaries and subobjects, picks out numpy arrays,
@@ -310,9 +307,6 @@ class Measurement(Plotter):
             # Walk through the dictionary
             def walk(d, group):
                 for key, value in d.items():
-                    # If the key is in ignored then skip over it
-                    if key in ignored:
-                        continue
                     key = str(key)  # Some may be ints; convert to str
 
                     if type(value) is np.ndarray:
