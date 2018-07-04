@@ -115,32 +115,23 @@ class Measurement(Plotter):
                 Walk through dictionary and populate with h5 data.
                 '''
                 for key in f.keys():
-                    # check if it's a dictionary or object
+                    # Dictionary or object
                     if f.get(key, getclass=True) is h5py._hl.group.Group:
                         if key[0] == '!': # it's an object
-                            # try/except in case it is somehow a dict
-                            try:
-                                walk(d[key[1:]].__dict__, f[key])
-                                # [:1] strips the !; walks through the subobject
-                            except:
-                                walk(d[key[1:]], f[key])
-                        else: # it's a dictionary
-                            # walk through the subdictionary
+                            # [1:] strips the !; walk through the subobject
+                            walk(d[key[1:]].__dict__, f[key])
+                        else:  # it's a dictionary
+                            walk(d[key], f.get(key))
 
-                            # try/except if somehow the key does not exist
-                            try:
-                                walk(d[key], f.get(key))
-                            except:
-                                d[key] = {};
-                                walk(d[key], f.get(key))
+                    # Dataset
                     else:
-                        d[key] = f[key][:] # we've arrived at a dataset
+                        d[key] = f[key][:]
 
                     # If a dictionary key was an int, convert it back
                     try:
-                        newkey = int(key) # test if can convert to an integer
-                        value = d.pop(key) # replace the key with integer version
-                        d[newkey] = value # do this all stepwise in case of error
+                        newkey = int(key)  # test if can convert to an integer
+                        value = d.pop(key)  # grab the value
+                        d[newkey] = value  # new key that is integer
                     except:
                         pass
 
@@ -292,7 +283,7 @@ class Measurement(Plotter):
         localpath, remotepath = self._make_paths(filename)
 
         # Save locally
-        self._save_hdf5(localpath, ignored = ignored)  # must save h5 first
+        self._save_hdf5(localpath, ignored=ignored)  # must save h5 first
         self._save_json(localpath)
         if self.fig is not None:
             self.fig.savefig(localpath+'.pdf', bbox_inches='tight')
@@ -331,12 +322,12 @@ class Measurement(Plotter):
                         d.set_fill_value = np.nan
                         d[...] = value
 
-                    # If a dictionary is found
+                    # If a dictionary
                     elif isinstance(value, dict):
                         new_group = group.create_group(key) # make a group with the dictionary name
                         walk(value, new_group) # walk through the dictionary
 
-                    # If the there is some other object
+                    # If some other object
                     elif hasattr(value, '__dict__'):
                         if isinstance(value, Measurement):  # only Measurements
                             # mark object by "!" and make a new group
