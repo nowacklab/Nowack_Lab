@@ -384,11 +384,11 @@ class ArrayTune(Measurement):
         self.ax = list(self.ax.flatten())
         return True
 
-    def save(self, filename=None, savefig=True, **kwargs):
+    def save(self, filename=None, **kwargs):
         if hasattr(self, '_DO_NOT_SAVE') and self._DO_NOT_SAVE == True:
             return
 
-        self._save(filename, savefig=True, **kwargs)
+        self._save(filename, **kwargs)
 
     def findconversion(self, dur=.1, stepsize=1):
         '''

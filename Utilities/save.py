@@ -186,7 +186,7 @@ class Measurement(Plotter):
 
         return obj
 
-    def _save(self, filename=None, savefig=True, ignored = [], appendedpath=''):
+    def _save(self, filename=None, ignored = [], appendedpath=''):
         '''
         Saves data. numpy arrays are saved to one file as hdf5, everything else
         is saved to JSON
@@ -195,9 +195,6 @@ class Measurement(Plotter):
         filename -- The path where the datafile will be saved. One hdf5 file and
         one JSON file with the specified filename will be saved. If no filename
         is supplied then the filename is generated from the timestamp
-
-        savefig -- If "True" figures are saved. If "False" only data and config
-        are saved
 
         ignored -- Array of objects to be ignored during saving. Passed to
         _save_hdf5 and _save_json.
@@ -253,7 +250,7 @@ class Measurement(Plotter):
         self._save_json(local_path)
 
         nopdf = True
-        if savefig and self.fig is not None:
+        if self.fig is not None:
             self.fig.savefig(local_path+'.pdf', bbox_inches='tight')
             nopdf = False
 
@@ -474,11 +471,11 @@ class Measurement(Plotter):
 
         return done
 
-    def save(self, filename=None, savefig=True, **kwargs):
+    def save(self, filename=None, **kwargs):
         '''
         Basic save method. Just calls _save. Overwrite this for each subclass.
         '''
-        self._save(filename, savefig=savefig, **kwargs)
+        self._save(filename, **kwargs)
 
 
 class FakeMeasurement(Measurement):

@@ -488,12 +488,11 @@ n: Sweep z piezo down and redo without moving z attocube.\n \
         self.plot()
 
 
-    def save(self, savefig=True, appendedpath='touchdowns'):
+    def save(self, appendedpath='touchdowns'):
         '''
         Saves the touchdown object.
-        Also saves the figure as a pdf, if wanted.
         '''
-        self._save(savefig=savefig, appendedpath=appendedpath)
+        self._save(appendedpath=appendedpath)
 
 
     def setup_plots(self):

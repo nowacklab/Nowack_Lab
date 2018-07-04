@@ -291,14 +291,13 @@ class Planefit(Measurement):
 
         return fig, ax
 
-    def save(self, savefig=True, **kwargs):
+    def save(self, **kwargs):
         '''
         Saves the planefit object to json.
-        Also saves the figure as a pdf, if wanted.
         '''
         self.ax = None
         self.ax_grid = None #FIXME change to dict to enable auto ignore in save
-        self._save(self.filename, savefig, **kwargs)
+        self._save(self.filename, **kwargs)
 
 
     def setup_plots(self):
@@ -380,4 +379,4 @@ class Planefit(Measurement):
                         'Move the attocubes and try again.')
         # Subtract old c, add new c
         self.Z -= (old_c - self.c)
-        self.save(savefig=False)
+        self.save()
