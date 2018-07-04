@@ -2,7 +2,7 @@ import visa
 import numpy as np
 import time
 import math
-from .instrument import Instrument
+from .instrument import Instrument, VISAInstrument
 from .keithley import Keithley2400
 import matplotlib.pyplot as plt
 
@@ -281,33 +281,6 @@ class VNA8722ES(Instrument):
             raise Exception('Don\'t send current thru amplifer the backwards (just for cold amplifer testing, remove this in code if needed)')
         self.write(value)
 
-    def save(self):
-        '''Save data as array'''
-        self.write('FORM4')  # Prepare to output correct data format
-        self.write('SMIC')  # Use this format so can get both real and imaginary
-        sleep_length = float(self.ask('SWET?'))*(self.averaging_factor+3)
-        time.sleep(sleep_length)  # wait for averaging
-
-        rm = visa.ResourceManager()
-        secondary = rm.get_instrument('GPIB0::16')
-        secondary.write('OUTPFORM')
-        s = secondary.read(termination='~')
-        s = s.split('\n')
-        n_ar = np.empty((self._numpoints, 2))
-        for i in range(len(s)):
-            splot = s[i].split(',')
-            Re = float(splot[0])
-            Im = float(splot[1])
-            dB = 20*math.log10(math.sqrt(Re**2+Im**2))
-            try:
-                phase = math.atan(Im/Re)
-            except ZeroDivisionError:
-                phase = math.pi/2
-            n_ar[i][0] = dB
-            n_ar[i][1] = phase
-        self.write('LOGM')  # switch back to log magnitude format
-        return n_ar
-
     def save_dB(self):
         """Return dB (attenuation) data in np array.
         Axis 1: current steps.
@@ -324,12 +297,12 @@ class VNA8722ES(Instrument):
         instrument_for_saving = rm.get_instrument('GPIB0::16')
         instrument_for_saving.write('OUTPFORM')  # todo description from programming guide
         rawdata = instrument_for_saving.read(termination='~')  # i.e. character that will never be found in the raw data
-        split_rawdata = rawdata.split('\n')  # split into lines, with two values each \
-                                             # programming guide shows which display format allows which data type read
-        dB_array = np.empty((self._numpoints, 1))  # nx1 array (column vector) of empty
+        split_rawdata = rawdata.split('\n')     # split into lines, with two values each
+                                                # programming guide shows which display format allows which data type read
+        dB_array = np.empty((1, self._numpoints))  # 1xn empty array (row vector)
         for i in range(len(split_rawdata)):
             split_line = split_rawdata[i].split(',')
-            dB_array[i] = float(split_line[0])  # split_line[1] not used in dB case
+            dB_array[0, i] = float(split_line[0])  # split_line[1] not used in dB case
         return dB_array
 
     def save_phase(self):
@@ -347,10 +320,10 @@ class VNA8722ES(Instrument):
         rawdata = instrument_for_saving.read('OUTPFORM')
         split_rawdata = rawdata.split('\n')
 
-        phase_array = np.empty((self._numpoints, 1))
+        phase_array = np.empty((1, self._numpoints))  # 1xn empty array (row vector)
         for i in range(len(split_rawdata)):
             split_line = split_rawdata[i].split(',')
-            phase_array[i] = float(split_line[0])
+            phase_array[0, i] = float(split_line[0])  # split_line[1] not used in phase case
         return phase_array
 
     def save_Re_Im(self):
@@ -359,7 +332,7 @@ class VNA8722ES(Instrument):
         Axis 2: points of frequency sweep.
         Axis 3: real (index 0 along axis 3) and imaginary (index 1 along axis 3)"""
         self.write('FORM4')
-        self.write('SMITH')
+        self.write('SMIC')
 
         self.sleep_until_finish_averaging()
 
@@ -369,14 +342,12 @@ class VNA8722ES(Instrument):
         rawdata = instrument_for_saving.read('OUTPFORM')
         split_rawdata = rawdata.split('\n')
 
-        Re_Im_array = np.empty((self._numpoints, 2))
+        Re_Im_array = np.empty((2, self._numpoints))
         for i in range(len(split_rawdata)):
             split_line = split_rawdata[i].split(',')
-            Re_Im_array[i, :, 0] = float(split_line[0])  # Real part
-            Re_Im_array[i, :, 1] = float(split_line[1])  # Imaginary part
+            Re_Im_array[0, :] = float(split_line[0])  # Real part (first row)
+            Re_Im_array[1, :] = float(split_line[1])  # Imaginary part (second row)
         return Re_Im_array
-
-
 
     def sleep_until_finish_averaging(self):
         """Sleeps for number of seconds <VNA sweep time>*<averaging factor+2>
@@ -384,7 +355,7 @@ class VNA8722ES(Instrument):
         sleep_length = float(self.ask('SWET?'))*(self.averaging_factor + 2)
         time.sleep(sleep_length)
 
- 
+
     def ask(self, msg, tryagain=True):
         try:
             return self._visa_handle.query(msg)  # changed from .ask to .query
