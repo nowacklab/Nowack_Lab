@@ -16,7 +16,7 @@ from Nowack_Lab.Utilities.dataset import Dataset
 from Nowack_Lab.Instruments import VNA8722ES
 from Nowack_Lab.Instruments import Keithley2400
 
-class WithoutDAQ_ThreeParam_Sweep):
+class WithoutDAQ_ThreeParam_Sweep:
     '''Sweep field coil current and measured frequency using VNA and keithley2400'''
     def __init__(self):
         pass

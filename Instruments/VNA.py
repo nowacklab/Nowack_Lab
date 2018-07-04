@@ -360,12 +360,12 @@ class VNA8722ES(Instrument):
         dB_array = np.empty((1, input_shape[1]))
 
         for i in range(input_shape[1]):  # for each frequency point
-            dB_array[0, i] = 20 * math.log(math.sqrt(Re_Im_array[0]**2 + Re_Im_array[1]**2), 10)  # calculate dB from Re,Im
+            dB_array[0, i] = 20 * math.log(math.sqrt(Re_Im_array[0,i]**2 + Re_Im_array[1,i]**2), 10)  # calculate dB from Re,Im
         return dB_array
 
     @staticmethod
     def Re_Im_to_phase(Re_Im_array):
-        """Return 1xn np array of phase shift data (units are degrees) from 2xn array of Re, Im data
+        """Return 1sxn np array of phase shift data (units are degrees) from 2xn array of Re, Im data
         (use degrees because VNA phase output uses degrees)"""
         input_shape = np.shape(Re_Im_array)
         assert len(input_shape) == 2 and input_shape[0] == 2, "input should be 2xn array of Re, Im data"
