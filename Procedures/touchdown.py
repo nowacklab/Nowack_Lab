@@ -49,6 +49,8 @@ class Touchdown(Measurement):
 
     baseline = 0
 
+    subdirectory = 'touchdowns'
+
     def __init__(self, instruments={}, disable_atto=False, Vz_max=None):
         '''
         Approach the sample to the SQUID while recording the capacitance
@@ -486,13 +488,6 @@ n: Sweep z piezo down and redo without moving z attocube.\n \
         # Plot the touchdown voltage with the 1 standard deviation error
         self._set_title('touchdown: %.2f V, error: %.2f' % (self.Vtd, self.err[0]))
         self.plot()
-
-
-    def save(self, appendedpath='touchdowns'):
-        '''
-        Saves the touchdown object.
-        '''
-        self._save(appendedpath=appendedpath)
 
 
     def setup_plots(self):

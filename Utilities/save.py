@@ -29,6 +29,8 @@ class Measurement(Plotter):
     _daq_outputs = [] # DAQ output labels expected by this class
     instrument_list = []
     interrupt = False # boolean variable used to interrupt loops in the do.
+    subdirectory = ''  # Formerly "appendedpath".
+        # Name of subdirectory off the main data directory where data is saved.
 
     def __init__(self, instruments = {}):
         super().__init__()
@@ -37,8 +39,8 @@ class Measurement(Plotter):
 
     def __getstate__(self):
         '''
-        Returns a dictionary of everything we want to save to JSON.
-        This excludes numpy arrays which are saved to HDF5
+        Returns a dictionary of everything that will save to JSON.
+        This excludes numpy arrays which are saved to HDF5.
         '''
         def walk(d):
             d = d.copy() # make sure we don't modify original dictionary
@@ -82,6 +84,42 @@ class Measurement(Plotter):
         `state` is a dictionary.
         '''
         self.__dict__.update(state)
+
+
+    def _copy_to_remote(self, localpath, remotepath):
+        '''
+        Copies h5, json, and pdf files at localpath.xxx to remotepath.xxx and
+        verifies the copy with a md5 checksum.
+        '''
+        if remotepath is not None:
+            try:
+                # Loop over filetypes
+                for ext in ['.h5','.json','.pdf']:
+                    if os.path.isfile(localpath + ext):
+                        # First make a checksum
+                        local_checksum = _md5(localpath + ext)
+
+                        # Copy the files
+                        shutil.copyfile(localpath + ext, remotepath + ext)
+
+                        # Make comparison checksums
+                        remote_checksum = _md5(remotepath + ext)
+
+                        # Check checksums
+                        if local_checksum != remote_checksum:
+                            print('%s checksum failed! \
+                            Cannot trust remote file %s' %(ext, remotepath + ext))
+
+            except Exception as e:
+                print('Saving to data server failed!\n\n\
+                Exception details: %s\n\n\
+                remote path: %s\n\
+                local path:%s' %(e, remotepath, localpath)
+                )
+        else:
+            print('Not connected to %s, data not saved remotely!'\
+                                %get_data_server_path())
+
 
     def _load_hdf5(self, filename, unwanted_keys = []):
         '''
@@ -186,37 +224,18 @@ class Measurement(Plotter):
 
         return obj
 
-    def _save(self, filename=None, ignored = [], appendedpath=''):
+
+    def _make_paths(self, filename):
         '''
-        Saves data. numpy arrays are saved to one file as hdf5, everything else
-        is saved to JSON
+        Generates paths for the local and remote save directories.
 
-        Keyword arguments:
-        filename -- The path where the datafile will be saved. One hdf5 file and
-        one JSON file with the specified filename will be saved. If no filename
-        is supplied then the filename is generated from the timestamp
+        Arguments:
+        filename (string): Desired filename or path. None: auto-generated
 
-        ignored -- Array of objects to be ignored during saving. Passed to
-        _save_hdf5 and _save_json.
-
-        appendedpath -- name of optional subdirectory in current save path. Use
-         this to store uninteresting measurements that add clutter
-         (e.g. Touchdowns)
-
-        Saved data stored locally but also copied to the data server.
-        If you specify no filename, one will be automatically generated.
-
-        Locally, saves to ~/data/; remotely, saves to /labshare/data/
-
-        If you specify a relative (partial) path, the data will still be saved
-        in the data directory, but in subdirectories specified in the filename.
-        For example, if the filename is 'custom/custom_filename', the data will
-        be saved in (today's data directory)/custom/custom_filename.
-
-        If you specify a full path, the object will save to that path locally
-        and to [get_data_server_path()]/[get_computer_name()]/other/[hirearchy past root directory]
+        Returns:
+        localpath, remotepath - paths to local and remote directories
+        remotepath is None if data server not accessible
         '''
-
         # Saving to the experiment-specified directory
         if filename is None:
             if not hasattr(self, 'filename'):  # if you did not make a filename
@@ -227,11 +246,11 @@ class Measurement(Plotter):
         if os.path.dirname(filename) == '':
                 local_path = os.path.join(get_local_data_path(),
                                           get_todays_data_dir(),
-                                          appendedpath,
+                                          self.subdirectory,
                                           filename)
                 remote_path = os.path.join(get_remote_data_path(),
                                            get_todays_data_dir(),
-                                           appendedpath,
+                                           self.subdirectory,
                                            filename)
         # Else, you specified some sort of path
         else:
@@ -242,54 +261,63 @@ class Measurement(Plotter):
             # removes anything before the first slash. e.g. ~/data/stuff -> data/stuff
             # All in all, remote_path should look something like: .../labshare/data/bluefors/other/
 
-        # Save locally:
-        local_dir = os.path.split(local_path)[0]
+        # Make local directory
+        local_dir = os.path.split(local_path)[0]  # split off the filename
         if not os.path.exists(local_dir):
             os.makedirs(local_dir)
-        self._save_hdf5(local_path, ignored = ignored)
-        self._save_json(local_path)
 
-        nopdf = True
-        if self.fig is not None:
-            self.fig.savefig(local_path+'.pdf', bbox_inches='tight')
-            nopdf = False
-
-        # Save remotely
+        # Make remote directory
         if os.path.exists(get_data_server_path()):
-            try:
-                # Make sure directories exist
-                remote_dir = os.path.split(remote_path)[0]
-                if not os.path.exists(remote_dir):
-                    os.makedirs(remote_dir)
-
-                # Loop over filetypes
-                for ext in ['.h5','.json','.pdf']:
-                    if ext == '.pdf' and nopdf:
-                        continue
-                    # First make a checksum
-                    local_checksum = _md5(local_path + ext)
-
-                    # Copy the files
-                    shutil.copyfile(local_path + ext, remote_path + ext)
-
-                    # Make comparison checksums
-                    remote_checksum = _md5(remote_path + ext)
-
-                    # Check checksums
-                    if local_checksum != remote_checksum:
-                        print('%s checksum failed! Cannot trust remote file %s' %(ext, remote_path + ext))
-
-            except Exception as e:
-                if not os.path.exists(get_data_server_path()):
-                    print('SAMBASHARE not connected. Could not find path %s. Object saved locally but not remotely.' %get_data_server_path())
-                else:
-                    print('Saving to data server failed!\n\nException details: %s\n\nremote path: %s\nlocal path:%s' %(e, remote_path, local_path))
+            remote_dir = os.path.split(remote_path)[0]
+            if not os.path.exists(remote_dir):
+                os.makedirs(remote_dir)
         else:
-            print('Not connected to %s, data not saved remotely!' %get_data_server_path())
+            remote_path = None
 
-        ## See if saving worked properly
+        return local_path, remote_path
+
+
+    def _save(self, filename=None, ignored = []):
+        '''
+        Saves data in different formats:
+        - JSON: contains the full dictionary structure of the saved object,
+            minus numpy arrays which are saved to h5 instead.
+        - h5: contains dictionary structure of variables involving numpy arrays,
+            as well as all the data contained in the numpy arrays
+        - pdf: quick PDF copy of the figure under self.fig
+
+        Keyword arguments:
+        filename -- Options:
+        - None (recommended): filename is generated automatically from the timestamp
+        - a filename: saved to default experiment directory with the given filename
+        - partial path (e.g. /testing/myfile): saved to default experiment
+        directory under the specified subdirectory (e.g. testing)
+        - full path (e.g. C:/Documents/testing/myfile): saved to the specified full path
+
+        ignored -- Array of objects to be ignored during saving. Passed to
+        _save_hdf5 and _save_json.
+
+        Default location of experiments directory:
+        - Local: ~/data/
+        - Remote: /labshare/data/
+
+        If custom paths are used, they will be saved remotely to the "other"
+        directory rather than the "experiments" directory.
+        '''
+
+        localpath, remotepath = self._make_paths(filename)
+
+        # Save locally
+        self._save_hdf5(localpath, ignored = ignored)  # must save h5 first
+        self._save_json(localpath)
+        if self.fig is not None:
+            self.fig.savefig(localpath+'.pdf', bbox_inches='tight')
+
+        self._copy_to_remote(localpath, remotepath)
+
+        # Test loading
         try:
-            self.load(local_path)
+            self.load(localpath)
         except:
             raise Exception('Reloading failed, but object was saved!')
 
@@ -300,7 +328,7 @@ class Measurement(Plotter):
         and any subdictionaries and subobjects, picks out numpy arrays,
         and saves them in the hierarchical HDF5 format.
 
-        A subobject is designated by a ! at the beginning of the varaible name.
+        A subobject is designated by a ! at the beginning of the variable name.
         '''
 
         with h5py.File(filename+'.h5', 'w') as f:
@@ -335,9 +363,8 @@ class Measurement(Plotter):
 
     def _save_json(self, filename):
         '''
-        Saves an object to JSON. Specify a custom filename,
-        or use the `filename` variable under that object.
-        Through __getstate__, ignores any numpy arrays when saving.
+        Saves the Measurement object to JSON with given filename.
+        __getstate__ determines what variables are saved.
         '''
         if not exists(filename+'.json'):
             obj_string = jsp.encode(self)
@@ -411,7 +438,7 @@ class Measurement(Plotter):
         self.filename = now.strftime('%Y-%m-%d_%H%M%S')
         self.filename += '_' + self.__class__.__name__
 
-    def run(self, plot=True, appendedpath='', **kwargs):
+    def run(self, plot=True, **kwargs):
         '''
         Wrapper function for do() that catches keyboard interrrupts
         without leaving open DAQ tasks running. Allows scans to be
@@ -419,7 +446,6 @@ class Measurement(Plotter):
 
         Keyword arguments:
             plot: boolean; to plot or not to plot?
-            appendedpath: name of appended directory
 
         Check the do() function for additional available kwargs.
         '''
@@ -458,11 +484,6 @@ class Measurement(Plotter):
             t_unit = 'hours'
         # Print elapsed time e.g. "Scanplane took 2.3 hours."
         print('%s took %.1f %s.' %(self.__class__.__name__, t, t_unit))
-
-        if appendedpath != '': # Overwrite the default
-            self.save(appendedpath=appendedpath)
-        else:
-            self.save() # Use the default
 
         # If this run is in a loop, then we want to raise the KeyboardInterrupt
         # to terminate the loop.
@@ -529,8 +550,8 @@ def get_computer_name():
 def get_data_paths(experiment='', measurement=''):
     '''
     Returns a list of the paths to every data file from a given experiment
-    directory, ignoring appendedpath. Returns all types of measurements unless
-    one is specified by the measurement kwarg.
+    directory. Returns all types of measurements unless one is specified by the
+    measurement kwarg.
 
     Keyword arguments:
     experiment (string): Full path of the experiment directory

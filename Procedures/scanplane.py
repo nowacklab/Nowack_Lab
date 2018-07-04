@@ -446,8 +446,4 @@ class Scanplane(Measurement):
 
 
 class Line(Measurement):
-    def __init__(self):
-        super().__init__()
-
-    def save(self, appendedpath='lines', **kwargs):
-        super().save(appendedpath=appendedpath, **kwargs)
+    subdirectory = 'lines'
