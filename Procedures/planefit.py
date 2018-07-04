@@ -196,17 +196,6 @@ class Planefit(Measurement):
         self.piezos.V = 0
         self.calculate_plane()
 
-    @classmethod
-    def load(cls, json_file=None, instruments={}, unwanted_keys=[]):
-        '''
-        Plane load method.
-        If no json_file specified, will load the last plane taken.
-        Useful if you lose the object while scanning.
-        '''
-        obj = super(Planefit, cls).load(json_file, instruments, unwanted_keys)
-        obj.instruments = instruments
-
-        return obj
 
     def move_and_update(self, x=0, y=0, z=0, ux=0, uy=0, disable_atto=True):
         '''

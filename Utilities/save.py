@@ -104,37 +104,39 @@ class Measurement(Plotter):
                                 %get_data_server_path())
 
 
-    def _load_hdf5(self, filename, unwanted_keys = []):
+    def _load_hdf5(self, filename):
         '''
         Loads data from HDF5 files. Will walk through the HDF5 file and populate
         the object's dictionary and subdictionaries (already loaded by JSON)
         '''
         with h5py.File(filename, 'r') as f:
             def walk(d, f):
+                '''
+                Walk through dictionary and populate with h5 data.
+                '''
                 for key in f.keys():
-                    if key not in unwanted_keys:
-                        # check if it's a dictionary or object
-                        if f.get(key, getclass=True) is h5py._hl.group.Group:
-                            if key[0] == '!': # it's an object
-                                # try/except in case it is somehow a dict
-                                try:
-                                    walk(d[key[1:]].__dict__, f[key])
-                                    # [:1] strips the !; walks through the subobject
-                                except:
-                                    walk(d[key[1:]], f[key])
-                            else: # it's a dictionary
-                                # walk through the subdictionary
+                    # check if it's a dictionary or object
+                    if f.get(key, getclass=True) is h5py._hl.group.Group:
+                        if key[0] == '!': # it's an object
+                            # try/except in case it is somehow a dict
+                            try:
+                                walk(d[key[1:]].__dict__, f[key])
+                                # [:1] strips the !; walks through the subobject
+                            except:
+                                walk(d[key[1:]], f[key])
+                        else: # it's a dictionary
+                            # walk through the subdictionary
 
-                                # try/except if somehow the key does not exist
-                                try:
-                                    walk(d[key], f.get(key))
-                                except:
-                                    d[key] = {};
-                                    walk(d[key], f.get(key))
-                        else:
-                            d[key] = f[key][:] # we've arrived at a dataset
+                            # try/except if somehow the key does not exist
+                            try:
+                                walk(d[key], f.get(key))
+                            except:
+                                d[key] = {};
+                                walk(d[key], f.get(key))
+                    else:
+                        d[key] = f[key][:] # we've arrived at a dataset
 
-                    ## If a dictionary key was an int, convert it back
+                    # If a dictionary key was an int, convert it back
                     try:
                         newkey = int(key) # test if can convert to an integer
                         value = d.pop(key) # replace the key with integer version
@@ -151,6 +153,7 @@ class Measurement(Plotter):
         '''
         Loads instruments from a dictionary.
         '''
+        self.instruments = instruments
         for instrument in instruments:
             setattr(self, instrument, instruments[instrument])
             if instrument == 'daq':
@@ -163,7 +166,7 @@ class Measurement(Plotter):
 
 
     @staticmethod
-    def _load_json(json_file, unwanted_keys = []):
+    def _load_json(json_file):
         '''
         Loads an object from JSON.
         '''
@@ -175,9 +178,7 @@ class Measurement(Plotter):
             Walk through dictionary to prune out Instruments
             '''
             for key in list(d.keys()): # convert to list because dictionary changes size
-                if key in unwanted_keys: # get rid of keys you don't want to load
-                    d[key] = None
-                elif 'py/' in key:
+                if 'py/' in key:
                     if 'py/object' in d:
                         if 'Instruments' in d['py/object']: # if this is an instrument
                             d['py/object'] = 'Nowack_Lab.Instruments.instrument.Instrument' # make it generic
@@ -377,7 +378,7 @@ class Measurement(Plotter):
 
 
     @classmethod
-    def load(cls, filename=None, instruments={}, unwanted_keys=[]):
+    def load(cls, filename=None, instruments={}):
         '''
         Basic load method. Calls _load_json, not loading instruments, then loads from HDF5, then loads instruments.
         Overwrite this for each subclass if necessary.
@@ -408,7 +409,7 @@ class Measurement(Plotter):
         # Remove file extensions
         filename = os.path.splitext(filename)[0]
 
-        obj = Measurement._load_json(filename+'.json', unwanted_keys)
+        obj = Measurement._load_json(filename+'.json')
         obj._load_hdf5(filename+'.h5')
         obj._load_instruments(instruments)
         return obj
