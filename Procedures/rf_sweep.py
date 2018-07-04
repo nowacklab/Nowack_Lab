@@ -75,7 +75,7 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
                 k_Istart, k_Istop, k_Isteps,
                 v_freqmin, v_freqmax, v_power, v_avg_factor, v_numpoints,
                 filepath, v_smoothing_state=0,
-                v_smoothing_factor=1, notes = "No notes",hysteresis=False, 
+                v_smoothing_factor=1, notes = "No notes",hysteresis=False,
                 plot=False):
         # mode 0: only dB. mode 1: only phase. mode 2: dB and phase.
         super().__init__(instruments=instruments)  # no daq stuff
@@ -98,9 +98,6 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
             hysteresis (boolean): sweep current up and down?
             plot (boolean): should I plot?
         '''
-        # TODO: implement hysteresis (back) sweep
-        # TODO: is this plotting stuff very different from just calling pyplot functions?
-        assert not hysteresis, "Hysteretic measurement not implemented yet"
 
         # Set up current source settings
         if(self.k3.output == 'off'):
