@@ -159,11 +159,9 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
         self.k3.output = 'off'  # turn off keithley output
         self.v1.powerstate = 0  # turn off VNA source power
 
-        '''
-        now call code to plot from file with path
-        filepath + timestamp + _rf_sweep.hdf5
-        ''''
+
         if plot == True:
+            rf_sweep.plot(filepath + "\\" + timestamp + "_rf_sweep.hdf5")
 
 
 
@@ -178,14 +176,35 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
         self.fig, self.ax = plt.subplots(2,2, figsize=(10,6))
         self.ax = list(self.ax)
 
-    def plot(self):
-        z_ar_log = v1.savelog()  # TODO: change when starting to use Re, Im from smith chart
-        z_ar_phase = v1.savephase()
-        self.ax[0], cbar = self.plot_color(self.ax[0], [k_Istart, k_Istop], [v_freqmin, v_freqmax]0, z_ar_log[:, 0, :])
-        self.ax[0].set_xlabel('field coil current (amps)')
-        self.ax[0].set_ylabel('frequency (Hz)')
-        cbar.set_label('')
-        # TODO: Unfinished here, looking at squidIV2.py as guide
+    @staticmethod
+    def plot(filename):
+        fig, ax = plt.subplots(1,1, figsize=(10,6))
+        data = dataset(filename)
+        current = np.linspace(data.get(filename + '/Istart'),
+                    data.get(filename + '/Istop'),
+                    data.get(filename + '/Isteps'))
+        freq = np.linspace(data.get(filename + '/freqmin'),
+                    data.get(filename + '/freqmax'),
+                    data.get(filename + '/numpoints'))
+        X,Y = np.meshgrid(freq, current)
+        dB = dB_data(filename)
+        im=ax.pcolor(X, Y, dB, cmap="inferno")
+        cbar = fig.colorbar(im)
+        ax.set_ylabel('field coil current (A)')
+        ax.set_xlabel('frequency (Hz)')
+        cbar.set_label('Attenuation [dB]')
+
+    @staticmethod
+    def dB_data(filename):
+        data = dataset(filename)
+        re_im_info = data.get(filename + '/re_im/data')
+        attenuation = np.empty((data.get(filename + '/Isteps'),
+                                int(data.get(filename + '/numpoints'))))
+        n = 0
+        for array in re_im_info:
+            attenuation[n] = Re_Im_to_dB(array)
+            n += 1
+        return attenuation
 
     def save_data(self, timestamp, re_im, re_im_rev = None):
         now = datetime.now()
