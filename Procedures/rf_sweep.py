@@ -126,40 +126,34 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
 
         I_stepsize = (float(k_Istop-k_Istart))/k_Isteps
         print('Incrementing current in step sizes of ', str(I_stepsize*1000) + ' milliamps')
-        attenuation = np.zeros((int(self.v1.numpoints), 2, 1))  # array for values. depth d is d'th current step
-        phase = np.zeros((int(self.v1.numpoints), 2, 1))
+        re_im = np.empty((k_Isteps, int(self.v1.numpoints), 2))
 
         timestamp = now.strftime('%Y-%m-%d_%H%M%S')
 
         if hysteresis == True:
-            attenuation_rev = np.zeros((int(self.v1.numpoints), 2, 1))  # array for values. depth d is d'th current step
-            phase_rev = np.zeros((int(self.v1.numpoints), 2, 1))
+            re_im_rev = np.empty((k_Isteps, int(self.v1.numpoints), 2))
 
+        index = 0
         for step in range(0, k_Isteps):
             if step % 10 == 0:
                 print("Current source step #" + str(step+1) + " out of " + str(k_Isteps))
             self.k3.Iout = self.k3.Iout + I_stepsize  # increment current
             self.v1.averaging_restart()  # restart averaging
-            # save both dB and phase data
-            temp_attenuation = self.v1.savelog()
-            temp_phase =  np.flip(self.v1.savephase(), axis=1)
-            attenuation = np.dstack((attenuation, temp_attenuation))  # waiting occurs in save() function
-            phase = np.dstack((phase, temp_phase))
+            re_im[index] = self.v1.save_Re_Im()
+            index += 1
 
+        index = 0
         if(hysteresis == True):
             for step in range(0, k_Isteps):
                 if step % 10 == 0:
                     print("Current source step #" + str(step+1) + " out of " + str(k_Isteps))
                 self.k3.Iout = self.k3.Iout - I_stepsize  # increment current
                 self.v1.averaging_restart()  # restart averaging
-                # save both dB and phase data
-                temp_attenuation = self.v1.savelog()
-                temp_phase =  np.flip(self.v1.savephase(), axis=1)
-                attenuation_rev = np.dstack((attenuation, temp_attenuation))  # waiting occurs in save() function
-                phase_rev = np.dstack((phase, temp_phase))
-            save_data(timestamp, attenuation, phase, attenuation_rev = attenuation_rev, phase_rev = phase_rev)
+                re_im_rev[index] = self.v1.save_Re_Im()
+                index += 1
+            save_data(timestamp, re_im, re_im_rev = attenuation_rev)
         else:
-            save_data(timestamp, attenuation, phase)
+            save_data(timestamp, re_im)
 
         self.k3.Iout = 0
         self.k3.output = 'off'  # turn off keithley output
@@ -173,19 +167,18 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
 
 
 
+    def setup_plots_1(self):
+        self.fig, self.ax = plt.subplots(1,1, figsize=(10,6))
 
-
-'''    def setup_plots(self):
-        self.fig, self.ax = plt.subplots(1,2, figsize=(16,6))
+    def setup_plots_2(self):
+        self.fig, self.ax = plt.subplots(2,1, figsize=(10,6))
         self.ax = list(self.ax)
 
-    def plot2(self):
-        # TODO: change to make 2 subplots if hysteresis is true, 1 subplot if false (up and down)
-        # Change name
-        # Plot 2 subplots: magnitude and phase
-        self.fig, self.ax = plt.subplots(1, 2, figsize=(16, 6))
+    def setup_plots_4(self):
+        self.fig, self.ax = plt.subplots(2,2, figsize=(10,6))
         self.ax = list(self.ax)
 
+    def plot(self):
         z_ar_log = v1.savelog()  # TODO: change when starting to use Re, Im from smith chart
         z_ar_phase = v1.savephase()
         self.ax[0], cbar = self.plot_color(self.ax[0], [k_Istart, k_Istop], [v_freqmin, v_freqmax]0, z_ar_log[:, 0, :])
@@ -194,11 +187,7 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
         cbar.set_label('')
         # TODO: Unfinished here, looking at squidIV2.py as guide
 
-    def setup_plots(self):
-        self.fig, self.ax = plt.subplots()
-        plt.pause(.01) '''
-
-    def save_data(self, timestamp, attenuation, phase, attenuation_rev = None, phase_rev = None):
+    def save_data(self, timestamp, re_im, re_im_rev = None):
         now = datetime.now()
         name = timestamp + '_rf_sweep'
         path = os.path.join(filepath, name + '.hdf5')
@@ -214,10 +203,10 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
         info.append(path + '/numpoints', v_numpoints)
         info.append(path + '/smoothing_state', v_smoothing_state)
         info.append(path + '/smoothing_factor', v_smoothing_factor)
-        info.append(path + '/attenuation/data', attenuation)
-        info.append(path + '/attenuation_rev/data', attenuation_rev)
-        info.append(path + '/phase/data', phase)
-        info.append(path + '/phase_rev/data', phase_rev)
+        info.append(path + '/re_im/data', re_im)
+        info.append(path + '/re_im/description', "shape [Current, Data, Re Im]")
+        info.append(path + '/re_im_rev/data', re_im_rev)
+        info.append(path + '/re_im_rev/description', "shape [Current, Data, Re Im]")
         info.append(path + '/notes', notes)
         info.append(path + '/hysteresis', hysteresis)
 
