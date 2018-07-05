@@ -132,6 +132,8 @@ class RF_sweep_current: # should this extend class Measurement?
         #plot TODO: only plots foward attenuation atm
         if self.plot == True:
             RF_sweep_current.plot(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5")
+            if self.hysteresis == True:
+                RF_sweep_current.plot(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5", rev=True)
 
 
 
