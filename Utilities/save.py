@@ -185,12 +185,17 @@ class Saver(object):
             keys = list(d.keys())  # static list; dictionary changes size
             for key in keys:
                 if 'py/object' in key:  # we found some sort of object
+                    classname = d['py/object']
                     try:
-                        exec(d['py/object']) # see if class is in the namespace
+                        exec(classname)  # see if class is in the namespace
                     except:
-                        print('Cannot find class definition {0}: '.format(
-                            d['py/object']) + 'using Saver object')
-                        d['py/object'] = 'Nowack_Lab.Utilities.save.Saver'
+                        if 'Procedures' in classname:
+                            d['py/object'] = classname.replace('Procedures',
+                                    'Measurements')  # for legacy loading
+                        else:
+                            print('Cannot find class definition {0}: '.format(
+                                classname) + 'using Saver object')
+                            d['py/object'] = 'Nowack_Lab.Utilities.save.Saver'
                 if isinstance(d[key], dict):
                     d[key] = walk(d[key])
             return d
