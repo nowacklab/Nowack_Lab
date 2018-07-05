@@ -17,13 +17,12 @@ from Nowack_Lab.Instruments.VNA import VNA8722ES
 from Nowack_Lab.Instruments.keithley import Keithley2400
 
 
-class RF_sweep_current:  # should this extend class Measurement?
+class RF_sweep_current: # should this extend class Measurement?
                         # also, there will be other sweeps in the future (e.g. power sweep),
                         # so may be worth having the class WithoutDAQ_ThreeParam_Sweep (esp. for plotting fxns)
                         # and having these RF_sweep_<some parameter> classes extend WithoutDAQ_ThreeParam_Sweep
 
-    ''' At different current steps, measure frequency response
-    Using class SQUID_Mod_FastIV(ThreeParam_Sweep) as example'''
+    ''' At different current steps, measure frequency response'''
 
     def __init__(self,
                 k_Istart, k_Istop, k_Isteps,
@@ -47,10 +46,13 @@ class RF_sweep_current:  # should this extend class Measurement?
         self.hysteresis = hysteresis
         self.plot = plot
 
-        assert self.k_Istart < k_Istop, "stop voltage should be greater than start voltage"
-        assert self.v_power <= -65, "Don't send too much power to SQUID"
-        valid_numpoints = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
-        #assert self.v_numpoints in self.valid_numpoints, "number of points must be in " + str(valid_numpoints)
+        assert self.k_Istart < k_Istop,
+                "stop voltage should be greater than start voltage"
+        assert self.v_power <= -65,
+                "Don't send too much power to SQUID"
+        self.valid_numpoints = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
+        assert self.v_numpoints in self.valid_numpoints,
+                "number of points must be in " + str(valid_numpoints)
 
         self.k3 = Keithley2400(24)  # initialize current source (Instrument object)
         self.v1 = VNA8722ES(16)  # initialize VNA (Instrument object)
@@ -58,16 +60,13 @@ class RF_sweep_current:  # should this extend class Measurement?
     def do(self):
         '''
         Run measurement
-        Arguments:
-            hysteresis (boolean): sweep current up and down?
-            plot (boolean): should I plot?
         '''
 
         # Set up current source settings
         if(self.k3.output == 'off'):
             self.k3.output = 'on'
         self.k3.source = 'I'
-        time.sleep(3)  # FIXME this is clumsy way of making sure keithley has enough time to turn on
+        time.sleep(3)
         self.k3.Iout_range = 20e-3  # 20 mA range # TODO: figure out what exactly range is
         self.k3.Iout = 0
         self.k3.V_compliance = 21  # 21 volt compliance
