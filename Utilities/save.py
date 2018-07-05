@@ -24,11 +24,12 @@ as necessary) and populate the numpy arrays.
 '''
 
 
-class Saver():
+class Saver(object):
     subdirectory = ''  # Formerly "appendedpath".
         # Name of subdirectory off the main data directory where data is saved.
 
     def __init__(self):
+        super().__init__()  # To deal with multiple inheritance mro
         self.make_timestamp_and_filename()
 
     def __getstate__(self):

@@ -2,7 +2,7 @@ import matplotlib, matplotlib.pyplot as plt, numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
-class Plotter():
+class Plotter(object):
     '''
     Class containing methods useful for plotting data using matplotlib.
     Supports live plotting in jupyter notebook or from the console.
@@ -10,6 +10,7 @@ class Plotter():
     fig = None
 
     def __init__(self):
+        super().__init__()  # To deal with multiple inheritance mro
         plt.ion()  # Enable interactive plots in command line
 
     def add_colorbar(self, ax, label=None, **kwargs):

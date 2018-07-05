@@ -1,4 +1,4 @@
-import numpy as np, matplotlib.pyplot as plt
+import numpy as np, matplotlib.pyplot as plt, time
 from ..Utilities.plotting.plotter import Plotter
 from ..Utilities.save import Saver
 
@@ -9,8 +9,7 @@ class Measurement(Saver, Plotter):
     interrupt = False # boolean variable used to interrupt loops in the do.
 
     def __init__(self, instruments = {}):
-        super(Plotter, self).__init__()
-        super(Saver, self).__init__()
+        super(Measurement, self).__init__()
         self._load_instruments(instruments)
 
 
