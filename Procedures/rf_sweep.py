@@ -50,13 +50,10 @@ class RF_sweep_current: # should this extend class Measurement?
         self.hysteresis = hysteresis
         self.plot = plot
 
-        assert self.k_Istart < k_Istop,
-                "stop voltage should be greater than start voltage"
-        assert self.v_power <= -65,
-                "Don't send too much power to SQUID"
+        assert self.k_Istart < k_Istop,"stop voltage should be greater than start voltage"
+        assert self.v_power <= -65,"Don't send too much power to SQUID"
         self.valid_numpoints = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
-        assert self.v_numpoints in self.valid_numpoints,
-                "number of points must be in " + str(valid_numpoints)
+        assert self.v_numpoints in self.valid_numpoints,"number of points must be in " + str(valid_numpoints)
 
         self.k3 = Keithley2400(24)  # initialize current source (Instrument object)
         self.v1 = VNA8722ES(16)  # initialize VNA (Instrument object)
@@ -72,7 +69,7 @@ class RF_sweep_current: # should this extend class Measurement?
         self.k3.source = 'I'
         time.sleep(3)
         self.k3.Iout_range = 20e-3  # 20 mA range # TODO: figure out what exactly range is
-        self.k3.Iout = 0
+        self.k3.Iout = self.k_Istart
         self.k3.V_compliance = 21  # 21 volt compliance
 
         # Set up VNA settings
@@ -124,7 +121,7 @@ class RF_sweep_current: # should this extend class Measurement?
                 self.v1.averaging_restart()  # restart averaging
                 re_im_rev[index] = self.v1.save_Re_Im()
                 index += 1
-            self.save_data(timestamp, re_im, re_im_rev = attenuation_rev)
+            self.save_data(timestamp, re_im, re_im_rev = re_im_rev)
         else:
             self.save_data(timestamp, re_im) #save data to h5
 
@@ -134,7 +131,7 @@ class RF_sweep_current: # should this extend class Measurement?
 
         #plot TODO: only plots foward attenuation atm
         if self.plot == True:
-            rf_sweep.plot(filepath + "\\" + timestamp + "_rf_sweep.hdf5")
+            RF_sweep_current.plot(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5")
 
 
 
