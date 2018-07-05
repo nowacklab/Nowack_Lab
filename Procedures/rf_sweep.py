@@ -1,4 +1,3 @@
-# Some of these imports may not be used (same imports as squidIV2)
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -16,14 +15,18 @@ from Nowack_Lab.Utilities.dataset import Dataset
 from Nowack_Lab.Instruments.VNA import VNA8722ES
 from Nowack_Lab.Instruments.keithley import Keithley2400
 
-
+'''Class for sweeping current with the Keithley2400 and recording
+data from the VNA8722ES at each current step.
+'''
 class RF_sweep_current: # should this extend class Measurement?
                         # also, there will be other sweeps in the future (e.g. power sweep),
                         # so may be worth having the class WithoutDAQ_ThreeParam_Sweep (esp. for plotting fxns)
                         # and having these RF_sweep_<some parameter> classes extend WithoutDAQ_ThreeParam_Sweep
 
-    ''' At different current steps, measure frequency response'''
 
+    '''
+    Initiates a RF_sweep_current object with parameters about the sweep.
+    '''
     def __init__(self,
                 k_Istart, k_Istop, k_Isteps,
                 v_freqmin, v_freqmax, v_power, v_avg_factor, v_numpoints,
@@ -31,6 +34,7 @@ class RF_sweep_current: # should this extend class Measurement?
                 v_smoothing_factor=1, notes = "No notes",hysteresis=False,
                 plot=False):
 
+        #Set object variables
         self.k_Istart = k_Istart
         self.k_Istop =k_Istop
         self.k_Isteps =k_Isteps
@@ -76,28 +80,31 @@ class RF_sweep_current: # should this extend class Measurement?
         self.v1.power = self.v_power
         self.v1.powerstate = 1  # turn vna source power on
         self.v1.averaging_state = 1  # Turn averaging on
-        self.v1.averaging_factor = self.v_avg_factor # Set averaging factor
-        self.v1.minfreq = self.v_freqmin  # set sweep range
-        print(self.v1.minfreq)
+        self.v1.averaging_factor = self.v_avg_factor
+        self.v1.minfreq = self.v_freqmin
         self.v1.maxfreq = self.v_freqmax
-        self.v1.numpoints = self.v_numpoints  # set number of points in frequency sweep
+        self.v1.numpoints = self.v_numpoints  # set num freq pnts for VNA
         self.v1.smoothing_state = self.v_smoothing_state  # turn smoothing on
-        self.v1.smoothing_factor = self.v_smoothing_factor  # set smoothing factor
+        self.v1.smoothing_factor = self.v_smoothing_factor
 
+        #print estimated_runtime
         sleep_length = float(self.v1.ask('SWET?'))*(self.v1.averaging_factor+3)
         estimated_runtime = sleep_length*self.k_Isteps
         print('Minimum estimated runtime: '+ str(int(estimated_runtime/60)) + ' minutes')
 
         I_stepsize = (float(self.k_Istop-self.k_Istart))/self.k_Isteps
         print('Incrementing current in step sizes of ', str(I_stepsize*1000) + ' milliamps')
-        re_im = np.empty((self.k_Isteps, 2, int(self.v1.numpoints)))
 
+        #creates a timestamp that will be in the h5 file name for this run
         now = datetime.now()
         timestamp = now.strftime('%Y-%m-%d_%H%M%S')
 
+        #initialize empty array to store data in TODO: change from empty to NAN?
+        re_im = np.empty((self.k_Isteps, 2, int(self.v1.numpoints)))
         if self.hysteresis == True:
             re_im_rev = np.empty((self.k_Isteps, 2, int(self.v1.numpoints)))
 
+        #sweep foward in current
         index = 0
         for step in range(0, self.k_Isteps):
             if step % 10 == 0:
@@ -107,6 +114,7 @@ class RF_sweep_current: # should this extend class Measurement?
             re_im[index] = self.v1.save_Re_Im()
             index += 1
 
+        #sweep backwars in current
         index = 0
         if(self.hysteresis == True):
             for step in range(0, self.k_Isteps):
@@ -118,13 +126,13 @@ class RF_sweep_current: # should this extend class Measurement?
                 index += 1
             self.save_data(timestamp, re_im, re_im_rev = attenuation_rev)
         else:
-            self.save_data(timestamp, re_im)
+            self.save_data(timestamp, re_im) #save data to h5
 
         self.k3.Iout = 0
         self.k3.output = 'off'  # turn off keithley output
         self.v1.powerstate = 0  # turn off VNA source power
 
-
+        #plot TODO: only plots foward attenuation atm
         if self.plot == True:
             rf_sweep.plot(filepath + "\\" + timestamp + "_rf_sweep.hdf5")
 
@@ -163,12 +171,17 @@ class RF_sweep_current: # should this extend class Measurement?
         info.append(path + '/hysteresis', self.hysteresis)
 
     @staticmethod
-    def plot(filename):
+    def plot(filename, rev = False):
         fig, ax = plt.subplots(1,1, figsize=(10,6))
         data = dataset.Dataset(filename)
-        current = np.linspace(data.get(filename + '/Istart'),
-                    data.get(filename + '/Istop'),
-                    data.get(filename + '/Isteps'))
+        if not rev:
+            current = np.linspace(data.get(filename + '/Istart'),
+                        data.get(filename + '/Istop'),
+                        data.get(filename + '/Isteps'))
+        else:
+            current = np.linspace(data.get(filename + '/Istop'),
+                        data.get(filename + '/Istart'),
+                        data.get(filename + '/Isteps'))
         freq = np.linspace(data.get(filename + '/freqmin'),
                     data.get(filename + '/freqmax'),
                     data.get(filename + '/numpoints'))
@@ -178,12 +191,24 @@ class RF_sweep_current: # should this extend class Measurement?
         cbar = fig.colorbar(im)
         ax.set_ylabel('field coil current (A)')
         ax.set_xlabel('frequency (Hz)')
+        if not rev:
+            ax.set_title(filename)
+        else:
+            ax.set_title(filename + "\nSweep back in current")
         cbar.set_label('Attenuation [dB]')
+        if not rev:
+            graph_path = filename.replace(".hdf5", "db.png")
+        else:
+            graph_path = filename.replace(".hdf5", "db_rev.png")
+        fig.savefig(graph_path)
 
     @staticmethod
-    def dB_data(filename):
+    def dB_data(filename, rev = False):
         data = dataset.Dataset(filename)
-        re_im_info = data.get(filename + '/re_im/data')
+        if not rev:
+            re_im_info = data.get(filename + '/re_im/data')
+        else:
+            re_im_info = data.get(filename + '/re_im_rev/data')
         attenuation = np.empty((data.get(filename + '/Isteps'),
                                 int(data.get(filename + '/numpoints'))))
         n = 0
@@ -191,14 +216,3 @@ class RF_sweep_current: # should this extend class Measurement?
             attenuation[n] = VNA8722ES.Re_Im_to_dB(array)
             n += 1
         return attenuation
-
-    @staticmethod
-    def plot_color(ax, xaxis, yaxis, z, cmap='viridis'):
-        im = ax.imshow(z, cmap, origin='lower',
-                        extent=(xaxis[0], xaxis[-1], yaxis[0], yaxis[-1]),
-                        aspect='auto')
-        d = make_axes_locatable(ax)
-        cax = d.append_axes('right', size=.1, pad=.1)
-        cbar = plt.colorbar(im, cax=cax)
-
-        return [ax, cbar]
