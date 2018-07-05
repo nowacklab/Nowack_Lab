@@ -1,8 +1,15 @@
 import time, numpy as np
 from tabulate import tabulate
-from .instrument import Instrument
+from importlib import reload
 
-import visa
+import Nowack_Lab.Instrument.instrument
+reload(Nowack_Lab.Instrument.instrument)
+from Nowack_Lab.Instrument.instrument import Instrument
+
+try:
+    import visa
+except:
+    print('[lockin] Warning! Cannot import visa' 
 
 # TODO add filter slope parameter
 

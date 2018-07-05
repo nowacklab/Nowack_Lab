@@ -1,6 +1,12 @@
-import time, numpy as np, matplotlib.pyplot as plt
-from ..Utilities.save import Measurement
+import time
+import numpy as np
+import matplotlib.pyplot as plt
+from importlib import reload
 from matplotlib import cm
+
+import Nowack_Lab.Utilities.save
+reload(Nowack_Lab.Utilities.save)
+from Nowack_Lab.Utilities.save import Measurement
 
 from ..Utilities.constants import e, h
 

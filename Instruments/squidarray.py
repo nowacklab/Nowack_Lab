@@ -4,11 +4,25 @@ Classes for controlling StarCryo electronics for the SQUID array: PCI100 (PC pci
 Possible to-do: make parameter values quantized to 12 bits to more accurately reflect actual parameter values
 """
 
-import visa, time, atexit, inspect, os, json, jsonpickle as jsp
+try:
+    import visa 
+except:
+    print('[squidarray] Warning! Cannot import visa')
+
+import time
+import atexit
+import inspect
+import os
+import json
+import jsonpickle as jsp
 import numpy as np
 from IPython.display import clear_output
-from .instrument import Instrument
 import random
+from importlib import reload
+
+import Nowack_Lab.Instrument.instrument
+reload(Nowack_Lab.Instrument.instrument)
+from Nowack_Lab.Instrument.instrument import Instrument
 
 class PCI100(Instrument):
     def __init__(self, visaResource='COM3'):

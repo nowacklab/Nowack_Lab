@@ -11,7 +11,10 @@ jspnp.register_handlers()
 from copy import copy
 import h5py, glob, matplotlib, inspect, platform, hashlib, shutil, time
 import matplotlib.pyplot as plt
-from . import utilities
+from importlib import reload
+
+import Nowack_Lab.Utilities.utilities as utilities
+reload(utilities)
 
 
 '''

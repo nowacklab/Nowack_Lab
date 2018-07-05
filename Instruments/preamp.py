@@ -1,5 +1,15 @@
-import visa, time, numpy as np
-from .instrument import Instrument
+try:
+    import visa
+except:
+    print('[preamp] Warning! Cannot import visa')
+
+import time
+import numpy as np
+from importlib import reload
+
+import Nowack_Lab.Instrument.instrument
+reload(Nowack_Lab.Instrument.instrument)
+from Nowack_Lab.Instrument.instrument import Instrument
 
 COARSE_GAIN = [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000]
 FINE_GAIN = [1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0]

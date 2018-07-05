@@ -1,8 +1,16 @@
 import numpy as np
 from scipy.interpolate import interp1d
-from ..Utilities.logging import log
-from .instrument import Instrument
+from importlib import reload
 import time
+
+import Nowack_Lab.Utilities.logging
+reload(Nowack_Lab.Utilities.logging)
+from Nowack_Lab.Utilities.logging import log
+
+import Nowack_Lab.Instrument.instrument
+reload(Nowack_Lab.Instrument.instrument)
+from Nowack_Lab.Instrument.instrument import Instrument
+
 try:
     import PyDAQmx as mx
 except:

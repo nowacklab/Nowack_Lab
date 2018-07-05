@@ -8,9 +8,13 @@ Needs: zhinst, numpy, .instrument, time and _future_
 
 from __future__ import print_function
 import time
-from .instrument import Instrument
 import numpy as np
 import zhinst.utils
+from importlib import reload
+
+import Nowack_Lab.Instrument.instrument
+reload(Nowack_Lab.Instrument.instrument)
+from Nowack_Lab.Instrument.instrument import Instrument
 
 class gateVoltageError( Exception ):
     pass

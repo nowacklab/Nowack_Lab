@@ -9,15 +9,22 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from IPython import display
 
-#import Nowack_Lab.Procedures.touchdown
-#reload(Nowack_Lab.Procedures.touchdown)
+import Nowack_Lab.Procedures.touchdown
+reload(Nowack_Lab.Procedures.touchdown)
 from Nowack_Lab.Procedures.touchdown import Touchdown
 
-from ..Utilities import logging
-from ..Instruments import piezos, montana
-from ..Utilities.utilities import reject_outliers_plane, fit_plane
-from ..Utilities.save import Measurement
-from ..Utilities.utilities import AttrDict
+import Nowack_Lab.Utilities.logging as logging
+reload(logging)
+
+import Nowack_Lab.Utilities.utilities
+reload(Nowack_Lab.Utilities.utilities)
+from Nowack_Lab.Utilities.utilities import reject_outliers_plane
+from Nowack_Lab.Utilities.utilities import fit_plane
+from Nowack_Lab.Utilities.utilities import AttrDict
+
+import Nowack_Lab.Utilities.save
+reload(Nowack_Lab.Utilities.save)
+from Nowack_Lab.Utilities.save import Measurement
 
 
 class Planefit(Measurement):

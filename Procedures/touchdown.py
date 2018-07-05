@@ -6,10 +6,26 @@ import time
 import os
 import matplotlib.pyplot as plt
 import numpy as np
-from ..Instruments import nidaq, preamp, montana
-from ..Utilities.save import Measurement, get_todays_data_dir, get_local_data_path
-from ..Utilities import conversions, logging
-from ..Utilities.utilities import AttrDict
+from importlib import reload
+
+import Nowack_Lab.Utilities.save
+reload(Nowack_Lab.Utilities.save)
+from Nowack_Lab.Utilities.save import Measurement
+from Nowack_Lab.Utilities.save import get_todays_data_dir
+from Nowack_Lab.Utilities.save import get_local_data_path
+
+import Nowack_Lab.Utilities.conversions as conversions
+reload(conversions)
+
+import Nowack_Lab.Utilities.conversions as logging
+reload(logging)
+
+import Nowack_Lab.Utilities.utilities
+reload(Nowack_Lab.Utilities.utilities)
+from Nowack_Lab.Utilities.utilities import AttrDict
+
+
+
 
 # TODO:
 #   - add timestamp to all saved plots

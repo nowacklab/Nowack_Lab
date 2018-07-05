@@ -5,12 +5,23 @@ from scipy import signal
 import time
 from scipy import signal
 
-from .daqspectrum import DaqSpectrum
-from .daqspectrum import TwoSpectrum
-from ..Utilities.save import Measurement
-from ..Utilities.geophones import Geophone
-from ..Utilities.geophones import Geophone_cal
-from ..Utilities.welch import Welch
+import Nowack_Lab.Procedures.daqspectrum
+reload(Nowack_Lab.Procedures.daqspectrum)
+from Nowack_Lab.Procedures.daqspectrum import DaqSpectrum
+from Nowack_Lab.Procedures.daqspectrum import TwoSpectrum
+
+import Nowack_Lab.Utilities.save
+reload(Nowack_Lab.Utilities.save)
+from Nowack_Lab.Utilities.save import Measurement
+
+import Nowack_Lab.Utilities.geophones
+reload(Nowack_Lab.Utilities.geophones)
+from Nowack_Lab.Utilities.geophones import Geophone
+from Nowack_Lab.Utilities.geophones import Geophone_cal
+
+import Nowack_Lab.Utilities.welch
+reload(Nowack_Lab.Utilities.welch)
+from Nowack_Lab.Utilities.welch import Welch
 
 class Geophone_calibrate(Measurement):
     _daq_inputs = ['inA', 'inB']

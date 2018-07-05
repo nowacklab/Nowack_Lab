@@ -2,10 +2,19 @@ import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime, timedelta
 import time
+from importlib import reload
 
-from ..Utilities.save import Measurement
-from ..Utilities.utilities import AttrDict
-from ..Procedures.daqspectrum import AnnotatedSpectrum
+import Nowack_Lab.Utilities.save
+reload(Nowack_Lab.Utilities.save)
+from Nowack_Lab.Utilities.save import Measurement
+
+import Nowack_Lab.Utilities.utilities
+reload(Nowack_Lab.Utilities.utilities)
+from Nowack_Lab.Utilities.utilities import AttrDict
+
+import Nowack_Lab.Procedures.daqspectrum
+reload(Nowack_Lab.Procedures.daqspectrum)
+from Nowack_Lab.Procedures.daqspectrum import AnnotatedSpectrum
 
 
 class Vibration(Measurement):

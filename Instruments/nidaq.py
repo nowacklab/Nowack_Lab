@@ -1,10 +1,15 @@
 import sys, os
+from importlib import reload
 
 home = os.path.expanduser("~")
 sys.path.append(os.path.join(home,'Documents','GitHub','Instrumental'))
 
-from instrumental.drivers.daq import ni
-from instrumental import u
+try:
+    from instrumental.drivers.daq import ni
+    from instrumental import u
+except:
+    print('[NIDAQ] Warning! Cannot import instrumental')
+
 import numpy as np
 try:
     import PyDAQmx as mx
@@ -12,8 +17,14 @@ except:
     print('PyDAQmx not imported in nidaq.py!')
 import time
 from copy import copy
-from ..Utilities import logging
-from .instrument import Instrument
+
+import Nowack_Lab.Utilities
+reload(Nowack_Lab.Utilities)
+from Nowack_Lab.Utilities import logging
+
+import Nowack_Lab.Instruments.instrument
+reload(Nowack_Lab.Instruments.instrument)
+from Nowack_Lab.Instruments.instrument import Instrument
 
 class NIDAQ(Instrument):
     '''

@@ -7,12 +7,23 @@ from scipy.interpolate import interp1d as interp
 import matplotlib.pyplot as plt
 from IPython import display
 from numpy import ma
-from ..Utilities.plotting import plot_mpl
-from ..Instruments import piezos, montana, squidarray
-from ..Utilities.save import Measurement
-from ..Utilities import conversions
-from ..Procedures.daqspectrum import SQUIDSpectrum
-from ..Utilities.utilities import AttrDict
+from importlib import reload
+
+import Nowack_Lab.Utilities.plotting
+reload(Nowack_Lab.Utilities.plotting)
+from Nowack_Lab.Utilities.plotting import plot_mpl
+
+import Nowack_Lab.Utilities.save
+reload(Nowack_Lab.Utilities.save)
+from Nowack_Lab.Utilities.save import Measurement
+
+import Nowack_Lab.Procedures.daqspectrum
+reload(Nowack_Lab.Procedures.daqspectrum)
+from Nowack_Lab.Procedures.daqspectrum import SQUIDSpectrum
+
+import Nowack_Lab.Utilities.utilities
+reload(Nowack_Lab.Utilities.utilities)
+from Nowack_Lab.Utilities.utilities import AttrDict
 
 class Scanspectra(Measurement):
     _daq_inputs = ['dc'] # DAQ channel labels expected by this class
