@@ -2,6 +2,8 @@ from Nowack_Lab import DisableInits
 import sys
 import os
 import time
+import json
+from Nowack_Lab.Utilities.datasaver import Saver
 
 def set_experiment_data_path():
     from Nowack_Lab.Utilities import save
@@ -9,6 +11,11 @@ def set_experiment_data_path():
     ## Set experiment data path
     try:
         print('Current experiment: %s' %save.get_experiment_data_dir())
+        paths = Saver.getsavepaths()
+        print('Current experimental save paths:')
+        for key in paths.keys():
+            print(paths[key]['exppath'])
+
     except:
         pass
     inp = input('New experiment? y/(n): ')
@@ -20,8 +27,10 @@ def set_experiment_data_path():
                       'Please don\'t use spaces!')
             else:
                 break
+        for key in paths.keys():
+            paths[key]["exppath"] = paths[key]["path"] + inp2
+        Saver.setsavepaths(paths)
         save.set_experiment_data_dir(inp2)
-
 def check_remote_data_server_connection():
     from Nowack_Lab.Utilities import save
     ## Check for remote data server connection

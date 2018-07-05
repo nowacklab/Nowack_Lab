@@ -4,6 +4,7 @@ from ..Utilities.save import Measurement
 import numpy as np
 from IPython.display import clear_output
 import sys
+from ..Utilities.dataset import Dataset
 
 class Recorder(Measurement):
     '''
@@ -47,16 +48,28 @@ class Sweep(Measurement):
     and actively swept parameters may be added as Repeaters
     '''
 
-    def __init__(self, name):
+    def __init__(self, name, filename = False, pathtosave = False,
+                                    saveasyougo = False, saveatend = True):
         self.repeaters = []
         self.sweeps_data = []
         self.name = name
         self.ns = []
+        self.saveasyougo = saveasyougo
+        self.filename = filenames
+        if pathtosave:
+            self.pathtosave = pathtosave
+        else:
+            self.pathtosave = '/'
+        if (saveasyougo or saveatend) and not filename:
+            raise Exception('Must specify filename for saving')
+        elif saveasyougo or saveatend :
+            self.savedata = Dataset(self.filename, adddatetime = True)
+        self.saveatend = saveatend
+
 
     def __call__(self, n):
         '''
-        Runs the sweep, appending the sweep data to self.sweeps_data and
-        returning it.
+        Runs the sweep, appending the sweep data to self.sweeps_data.
         '''
         if n in self.ns:
             shoulduse = input('This n has already been used. If you want to use'
@@ -70,7 +83,6 @@ class Sweep(Measurement):
         sweep_data = {}
         if self.waiter:
             self.waiter.reset()
-
         for point in  range(self.points):
             clear_output()
             print('On point ' + str(point) + ' out of ' + str(self.points))
@@ -80,10 +92,25 @@ class Sweep(Measurement):
                     break
                 if hasattr(r,"name"):
                     sweep_data[point][r.name] = r(point)
+                    if self.saveasyougo:
+                        self.savedata.append(self.pathtosave
+                                        + '\%i\%s' % (point, r.name), r(point))
                 else:
                     r(point)
-        self.sweeps_data.append(sweep_data)
-        self.save()
+        if self.saveatend:
+            self.savedata.append(self.pathtosave, sweep_data)
+            self.save()
+
+    def run(self):
+        '''
+        Runs the sweep. This is used only if the sweep is the outermost one.
+        If neither saveasyougo or saveatend is enabled, enables saveatend.
+        '''
+        if not (self.saveasyougo or self.saveatend):
+            self.saveatend = True
+        self.__call__(0)
+        stufftosave = input('Please enter any description you want to save: ')
+        self.savedata.append(self.pathtosave + '\description', stufftosave)
 
     def describe(self):
         '''
@@ -132,15 +159,17 @@ class Sweep(Measurement):
         self.points = points
         self.waiter = waiter
 
-    def process_data(self, sweepnum, listofkeys):
+    def process_data(self, sweepnum, listofkeys, sweepdata = False):
         '''
         Returns a one d array of the data at location list of keys from the
         sweepnum-th sweep
         '''
-        sweep = self.sweeps_data[sweepnum]
+        if not sweepdata:
+            sweepdata = self.sweeps_data[sweepnum]
+        sweep = sweepdata[sweepnum]
         data = []
-        for n in range(self.points):
-            elem = sweep[n]
+        for key in range(len(sweep.keys())):
+            elem =  sweep[str(key)]
             processed = np.zeros(len(listofkeys))
             for i in range(len(listofkeys)):
                 processed[i] = elem[listofkeys[i]]

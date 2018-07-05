@@ -1,21 +1,17 @@
-
-
-
-
-from . import utilities
-import os
 import h5py
 import numpy as np
 
-class Dataset:
-    _subsets = []
-    def __init__(self, filename=None):
+class Dataset():
+    allowedtypes = ['float', 'int','complex', 'uint']
+    allowednonnumpytypes = [str, float, int, list]
+
+    def __init__(self, filename):
         '''
         Creates the hdf5 file for saving.
         '''
         self.filename = filename
 
-    def get(self, path,slice = False):
+    def get(self, pathtoget,slice = False):
         '''
         Gets the element of the hdf5 at path. Path must be a string of
         keys seperated by '/'. If path does not descend to a dataset in the h5,
@@ -43,15 +39,15 @@ class Dataset:
                 #at the bottom, set the key value equal to the contents of the obj.
         f = h5py.File(self.filename,'r') #opens the h5 file
         loc = False
-        if isinstance(f[path],h5py._hl.dataset.Dataset):
+        if isinstance(f[pathtoget],h5py._hl.dataset.Dataset):
             #is the thing you asked for a dataset, or a group?
             if slice:
-                toreturn = f[path][slice]
+                toreturn = f[pathtoget][slice]
             else:
-                toreturn = f[path][...]
-        elif isinstance(f[path],h5py._hl.group.Group):
+                toreturn = f[pathtoget][...]
+        elif isinstance(f[pathtoget],h5py._hl.group.Group):
             datadict = {}
-            f.visititems(_loaddict)
+            f[pathtoget].visititems(_loaddict)
             #visititems recursively applies loaddict at every item of path.
             #datadict modified by reference.
             toreturn = datadict
@@ -67,6 +63,7 @@ class Dataset:
         array, or a nested dict. If a nested dict, leaves must be strings,
         numbers or numpy arrays. Data may not overwrite, however, dicts can be
         used that go through HDF5 groups that already exist.
+
         '''
         cleandatatowrite = self.sanitize(datatowrite)
         if isinstance(cleandatatowrite, dict):
@@ -146,36 +143,33 @@ class Dataset:
             shouldoverwrite = input('Data already written to ' + pathtowrite +
                                     ' at location ' + str(slice) +
                                     '. Type OVERWRITE to overwrite, else, code'
-                  ' creates a new array at path+_antioverwrite and saves data '
-                                                                   + 'there')
+                  ' creates a new array at antioverwrite_ + file and saves '
+                                                              +'data + there')
             if shouldoverwrite == 'OVERWRITE':
                 dataset[slice] = numpyarray
                 f.close()
             else:
                 fao = h5py.File('antioverwrite_' + filename,'a')
                 try:
-                    fao.create_dataset(pathtowrite, shape = np.shape(dataset))
-                    f[pathtowrite][slice] = numpyarray
+                    fao.create_dataset(pathtowrite, data = dataset)
+                    fao[pathtowrite][slice] = numpyarray
                     fao.close()
                     f.close()
-                    print('this')
                 except:
                     fao.close()
                     f.close()
-                    self._appenddatah5(filename + '_antioverwrite', numpyarray,
-                                            pathtowrite, slice)
+                    self._appenddatah5('antioverwrite_' + filename,
+                                        numpyarray, pathtowrite, slice)
 
     def sanitize(self,data):
         '''
         Sanitizes input before loading into an h5 file. If sanitization fails,
         prints a message and converts to a string.
         '''
-        allowedtypes = ['float', 'int','complex', 'uint']
-        allowednonnumpytypes = [str, float, int, list]
-        if type(data) in allowedtypes + allowednonnumpytypes:
+        if type(data) in self.allowedtypes + self.allowednonnumpytypes:
             cleandata = data
         elif type(data) == np.ndarray:
-            if data.dtype in [np.dtype(a) for a in allowedtypes]:
+            if data.dtype in [np.dtype(a) for a in self.allowedtypes]:
                 cleandata = data
             else:
                 try:
@@ -199,46 +193,3 @@ class Dataset:
                     raise Exception('TypeError: could not convert to h5')
                 cleandata = 'unconvertable'
         return cleandata
-
-    def get_computer_name():
-        computer_name = utilities.get_computer_name()
-        aliases = {'SPRUCE': 'bluefors', 'HEMLOCK': 'montana'} # different names we want to give the directories for each computer
-        if computer_name in aliases.keys():
-            computer_name = aliases[computer_name]
-        return computer_name
-
-    def get_data_server_path():
-        '''
-        Returns full path of the data server's main directory, formatted based on OS.
-        '''
-        if platform.system() == 'Windows':
-            return r'\\SAMBASHARE\labshare\data'
-        elif platform.system() == 'Darwin': # Mac
-            return '/Volumes/labshare/data/'
-        elif platform.system() == 'Linux':
-            return '/mnt/labshare/data/'
-        else:
-            raise Exception('What OS are you using?!? O_O')
-
-
-    def get_local_data_path():
-        '''
-        Returns full path of the local data directory.
-        '''
-        return os.path.join(
-                    os.path.expanduser('~'),
-                    'data',
-                    get_computer_name(),
-                    'experiments'
-                )
-
-
-    def get_remote_data_path():
-        '''
-        Returns full path of the remote data directory.
-        '''
-        return os.path.join(
-                    get_data_server_path(),
-                    get_computer_name(),
-                    'experiments'
-                )
