@@ -429,12 +429,16 @@ def get_data_paths(experiment='', kind=''):
 
 def get_experiment_data_dir():
     '''
-    Finds the most recently modified (current) experiment data directory. (Not the full path)
+    Returns the current experiment data directory. (Not the full path)
     '''
+    path = os.path.join(os.path.dirname(__file__),
+                                'setup',
+                                get_computer_name() + '.txt'
+                            )
+    with open(path, 'r') as f:
+        exp = f.read()
 
-    latest_subdir = max(glob.glob(os.path.join(get_local_data_path(), '*/')), key=os.path.getmtime)
-
-    return os.path.relpath(latest_subdir, get_local_data_path()) # strip just the directory name
+    return exp
 
 
 def get_data_server_path():
@@ -526,6 +530,13 @@ def set_experiment_data_dir(description=''):
                 os.makedirs(filename)
         except:
             print('Error making directory %s' %d)
+
+    path = os.path.join(os.path.dirname(__file__),
+                                'setup',
+                                get_computer_name() + '.txt'
+                            )
+    with open(path, 'w') as f:
+        f.write(now_fmt + '_' + description)
 
 
 def _md5(filename):
