@@ -103,24 +103,27 @@ class Saver():
         '''
         Basic load method. Loads from JSON, then HDF5.
 
-        Filename may be None (load last Saver), a filename, a path, or an
-        index (will search all Savers of this type for this experiment)
+        Options for filename:
+        - None: Load last saved object of this class
+        - An index: Select from a list of objects of this class and select
+        an object to load with the index (e.g. -2 gives the second-to-last)
+        - a filename: Attempt to load file from current experiment directory.
+        - a full path: Load file from given path
         '''
-        # raise Exception('Clean load')
-        if filename is None: # tries to find the last saved object; not guaranteed to work
+
+        if filename is None: # tries to find the last saved object
             filename = -1
+
         if type(filename) is int:
-            folders = list(glob.iglob(os.path.join(get_local_data_path(), get_todays_data_dir(),'..','*')))
-            # Collect a list of all Savers of this type for this experiment
-            l = []
-            for i in range(len(folders)):
-                l = l + list(glob.iglob(os.path.join(folders[i],'*_%s.json' %cls.__name__)))
+            experiment = os.path.join(get_local_data_path(),
+                        get_todays_data_dir(), '..')
+            paths = get_data_paths(experiment, cls.__name__)
+
             try:
-                filename = l[filename] # filename was an int
+                filename = paths[filename] # filename was an int originally
             except:
-                pass
-            if type(filename) is int:  # still
                 raise Exception('could not find %s to load.' %cls.__name__)
+
         elif os.path.dirname(filename) == '': # if no path specified
             os.path.join(get_local_data_path(), get_todays_data_dir(), filename)
 

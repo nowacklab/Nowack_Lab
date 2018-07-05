@@ -57,7 +57,10 @@ class Measurement(Saver, Plotter):
         Call Saver's load method and then load instruments from a dictionary.
         '''
         obj = Measurement._load(filename)
-        obj._load_instruments(instruments)
+        try:
+            obj._load_instruments(instruments)
+        except:  # in case we loaded as a Saver
+            pass
         return obj
 
 
