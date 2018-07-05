@@ -2,7 +2,7 @@ import numpy as np
 import time, os
 import matplotlib.pyplot as plt
 from ..Utilities import conversions
-from ..Utilities.save import Measurement
+from .measurement import Measurement
 from ..Utilities.utilities import AttrDict
 
 

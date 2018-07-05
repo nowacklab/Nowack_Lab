@@ -24,18 +24,12 @@ as necessary) and populate the numpy arrays.
 '''
 
 
-class Measurement(Plotter):
-    _daq_inputs = [] # DAQ input labels expected by this class
-    _daq_outputs = [] # DAQ output labels expected by this class
-    instrument_list = []
-    interrupt = False # boolean variable used to interrupt loops in the do.
+class Saver():
     subdirectory = ''  # Formerly "appendedpath".
         # Name of subdirectory off the main data directory where data is saved.
 
-    def __init__(self, instruments = {}):
-        super().__init__()
+    def __init__(self):
         self.make_timestamp_and_filename()
-        self._load_instruments(instruments)
 
     def __getstate__(self):
         '''
@@ -104,6 +98,40 @@ class Measurement(Plotter):
                                 %get_data_server_path())
 
 
+    @classmethod
+    def _load(cls, filename=None):
+        '''
+        Basic load method. Loads from JSON, then HDF5.
+
+        Filename may be None (load last Saver), a filename, a path, or an
+        index (will search all Savers of this type for this experiment)
+        '''
+        # raise Exception('Clean load')
+        if filename is None: # tries to find the last saved object; not guaranteed to work
+            filename = -1
+        if type(filename) is int:
+            folders = list(glob.iglob(os.path.join(get_local_data_path(), get_todays_data_dir(),'..','*')))
+            # Collect a list of all Savers of this type for this experiment
+            l = []
+            for i in range(len(folders)):
+                l = l + list(glob.iglob(os.path.join(folders[i],'*_%s.json' %cls.__name__)))
+            try:
+                filename = l[filename] # filename was an int
+            except:
+                pass
+            if type(filename) is int:  # still
+                raise Exception('could not find %s to load.' %cls.__name__)
+        elif os.path.dirname(filename) == '': # if no path specified
+            os.path.join(get_local_data_path(), get_todays_data_dir(), filename)
+
+        # Remove file extensions
+        filename = os.path.splitext(filename)[0]
+
+        obj = Saver._load_json(filename+'.json')
+        obj._load_hdf5(filename+'.h5')
+        return obj
+
+
     def _load_hdf5(self, filename):
         '''
         Loads data from HDF5 files. Will walk through the HDF5 file and populate
@@ -140,22 +168,6 @@ class Measurement(Plotter):
             walk(self.__dict__, f) # start walkin'
 
 
-    def _load_instruments(self, instruments={}):
-        '''
-        Loads instruments from a dictionary.
-        '''
-        self.instruments = instruments
-        for instrument in instruments:
-            setattr(self, instrument, instruments[instrument])
-            if instrument == 'daq':
-                for ch in self._daq_inputs:
-                    if ch not in self.daq.inputs:
-                        raise Exception('Need to set daq input labels! Need a %s' %ch)
-                for ch in self._daq_outputs:
-                    if ch not in self.daq.outputs:
-                        raise Exception('Need to set daq output labels! Need a %s' %ch)
-
-
     @staticmethod
     def _load_json(json_file):
         '''
@@ -164,21 +176,17 @@ class Measurement(Plotter):
         def walk(d):
             '''
             Walk through dictionary to check for classes not in the namespace.
-            These will all be loaded as Measurements.
+            These will all be loaded as Savers.
             '''
             keys = list(d.keys())  # static list; dictionary changes size
-            print(keys)
             for key in keys:
                 if 'py/object' in key:  # we found some sort of object
                     try:
                         exec(d['py/object']) # see if class is in the namespace
                     except:
                         print('Cannot find class definition {0}: '.format(
-                            d['py/object']) + 'using measurement object')
-                        d['py/object'] = 'Nowack_Lab.Utilities.save.Measurement'
-                        # N.B. Even instruments are saved as measurements
-                        # if the class cannot be found. Maybe write a Saver
-                        # class and a Measurement class.
+                            d['py/object']) + 'using Saver object')
+                        d['py/object'] = 'Nowack_Lab.Utilities.save.Saver'
                 if isinstance(d[key], dict):
                     d[key] = walk(d[key])
             return d
@@ -277,8 +285,9 @@ class Measurement(Plotter):
         # Save locally
         self._save_hdf5(localpath)  # must save h5 first
         self._save_json(localpath)
-        if self.fig is not None:
-            self.fig.savefig(localpath+'.pdf', bbox_inches='tight')
+        if hasattr(self, 'fig'):
+            if self.fig is not None:
+                self.fig.savefig(localpath+'.pdf', bbox_inches='tight')
 
         self._copy_to_remote(localpath, remotepath)
 
@@ -318,7 +327,7 @@ class Measurement(Plotter):
 
                     # If some other object
                     elif hasattr(value, '__dict__'):
-                        if isinstance(value, Measurement):  # only Measurements
+                        if isinstance(value, Saver):  # only Savers
                             # mark object by "!" and make a new group
                             new_group = group.create_group('!'+key)
                             walk(value.__dict__, new_group)  # walk through obj
@@ -328,7 +337,7 @@ class Measurement(Plotter):
 
     def _save_json(self, filename):
         '''
-        Saves the Measurement object to JSON with given filename.
+        Saves the Saver object to JSON with given filename.
         __getstate__ determines what variables are saved.
         '''
         if not exists(filename+'.json'):
@@ -338,61 +347,15 @@ class Measurement(Plotter):
                 json.dump(obj_dict, f, sort_keys=True, indent=4)
 
 
-    def check_instruments(self):
-        '''
-        Check to make sure all required instruments (specified in instrument
-        list) are loaded.
-        '''
-        for i in self.instrument_list:
-            if not hasattr(self, i):
-                raise Exception('Instrument %s not loaded. Cannot run Measurement!' %i)
-
-
-    def do(self):
-        '''
-        Do the main part of the measurement. Write this function for subclasses.
-        run() wraps this function to enable keyboard interrupts.
-        run() also includes saving and elapsed time logging.
-        '''
-        pass
-
-
     @classmethod
-    def load(cls, filename=None, instruments={}):
+    def load(cls, filename=None):
         '''
-        Basic load method. Calls _load_json, not loading instruments, then loads from HDF5, then loads instruments.
-        Overwrite this for each subclass if necessary.
-        Pass in an array of the names of things you don't want to load.
-        By default, we won't load any instruments, but you can pass in an instruments dictionary to load them.
-
-        Filename may be None (load last measurement), a filename, a path, or an
-        index (will search all Measurements of this type for this experiment)
+        Basic load method. Just calls _load. May overwrite this for subclasses.
+        Be sure to use subclass._load method, not Saver._load
         '''
-
-        if filename is None: # tries to find the last saved object; not guaranteed to work
-            filename = -1
-        if type(filename) is int:
-            folders = list(glob.iglob(os.path.join(get_local_data_path(), get_todays_data_dir(),'..','*')))
-            # Collect a list of all Measurements of this type for this experiment
-            l = []
-            for i in range(len(folders)):
-                l = l + list(glob.iglob(os.path.join(folders[i],'*_%s.json' %cls.__name__)))
-            try:
-                filename = l[filename] # filename was an int
-            except:
-                pass
-            if type(filename) is int:  # still
-                raise Exception('could not find %s to load.' %cls.__name__)
-        elif os.path.dirname(filename) == '': # if no path specified
-            os.path.join(get_local_data_path(), get_todays_data_dir(), filename)
-
-        # Remove file extensions
-        filename = os.path.splitext(filename)[0]
-
-        obj = Measurement._load_json(filename+'.json')
-        obj._load_hdf5(filename+'.h5')
-        obj._load_instruments(instruments)
+        obj = Saver._load(filename)
         return obj
+
 
     def make_timestamp_and_filename(self):
         '''
@@ -403,96 +366,12 @@ class Measurement(Plotter):
         self.filename = now.strftime('%Y-%m-%d_%H%M%S')
         self.filename += '_' + self.__class__.__name__
 
-    def run(self, plot=True, **kwargs):
-        '''
-        Wrapper function for do() that catches keyboard interrrupts
-        without leaving open DAQ tasks running. Allows scans to be
-        interrupted without restarting the python instance afterwards
-
-        Keyword arguments:
-            plot: boolean; to plot or not to plot?
-
-        Check the do() function for additional available kwargs.
-        '''
-        self.interrupt = False
-        done = None
-
-        # Before the do.
-        if plot:
-            self.setup_plots()
-        time_start = time.time()
-
-        self.check_instruments()
-
-        # The do.
-        try:
-            done = self.do(**kwargs)
-        except KeyboardInterrupt:
-            print('interrupting kernel, please wait...\n')
-            self.interrupt = True
-            self._exception_info = traceback.format_exc()
-        except:
-            self._exception_info = traceback.format_exc()
-
-        # After the do.
-        time_end = time.time()
-        self.time_elapsed_s = time_end-time_start
-
-        if self.time_elapsed_s < 60: # less than a minute
-            t = self.time_elapsed_s
-            t_unit = 'seconds'
-        elif self.time_elapsed_s < 3600: # less than an hour
-            t = self.time_elapsed_s/60
-            t_unit = 'minutes'
-        else:
-            t = self.time_elapsed_s/3600
-            t_unit = 'hours'
-        # Print elapsed time e.g. "Scanplane took 2.3 hours."
-        print('%s took %.1f %s.' %(self.__class__.__name__, t, t_unit))
-
-        # If this run is in a loop, then we want to raise the KeyboardInterrupt
-        # to terminate the loop.
-        if self.interrupt:
-            raise KeyboardInterrupt
-
-        return done
 
     def save(self, filename=None, **kwargs):
         '''
-        Basic save method. Just calls _save. Overwrite this for each subclass.
+        Basic save method. Just calls _save. May overwrite this for subclasses.
         '''
         self._save(filename, **kwargs)
-
-
-class FakeMeasurement(Measurement):
-    '''
-    Fake measurement to test methods a real measurement would have.
-    '''
-    def __init__(self):
-        self.x = np.linspace(-10,10,20)
-        self.y = np.full(self.x.shape, np.nan)
-
-    def do(self):
-        for i in range(len(self.x)):
-            time.sleep(.1)
-            self.y[i] = self.x[i]**2
-            self.plot()
-
-    def plot(self):
-        super().plot()
-        self.line.set_data(self.x, self.y)
-        self.fig.tight_layout()
-
-        self.ax.relim()
-        self.ax.autoscale_view(True,True,True)
-
-        self.plot_draw()
-
-    def setup_plots(self):
-        self.fig, self.ax = plt.subplots()
-        self.line = self.ax.plot(self.x, self.y)[0]
-        self.ax.set_xlabel('x')
-        self.ax.set_ylabel('y')
 
 
 def exists(filename):
@@ -504,6 +383,7 @@ def exists(filename):
         return True
     return False
 
+
 def get_computer_name():
     computer_name = utilities.get_computer_name()
     aliases = {'SPRUCE': 'bluefors', 'HEMLOCK': 'montana'} # different names we want to give the directories for each computer
@@ -512,15 +392,15 @@ def get_computer_name():
     return computer_name
 
 
-def get_data_paths(experiment='', measurement=''):
+def get_data_paths(experiment='', kind=''):
     '''
     Returns a list of the paths to every data file from a given experiment
-    directory. Returns all types of measurements unless one is specified by the
-    measurement kwarg.
+    directory. Returns all kinds of saved objects unless one is specified by the
+    kind kwarg.
 
     Keyword arguments:
     experiment (string): Full path of the experiment directory
-    measurement (string): name of the Measurement class
+    kinder (string): name of the Saver subclass
     '''
     # Get a list of all the date directories
     p = os.path.join(experiment, '*')
@@ -528,14 +408,15 @@ def get_data_paths(experiment='', measurement=''):
     g.sort()
 
     paths = []
-    # Iterate over dates and add all paths to given Measurement data files
+    # Iterate over dates and add all paths to given data files
     for dir in g:
-        p = os.path.join(dir, '*%s.json' %measurement)
+        p = os.path.join(dir, '*%s.json' %kind)
         g2 = list(glob.iglob(p))
         g2.sort()
         paths += g2
 
     return paths
+
 
 def get_experiment_data_dir():
     '''
@@ -545,17 +426,6 @@ def get_experiment_data_dir():
     latest_subdir = max(glob.glob(os.path.join(get_local_data_path(), '*/')), key=os.path.getmtime)
 
     return os.path.relpath(latest_subdir, get_local_data_path()) # strip just the directory name
-
-    ## If we're sure that there will only be one directory per date. Bad assumption.
-    # exp_dirs = []
-    # for name in os.listdir(get_local_data_path()): # all experiment directories
-    #     if re.match(r'\d{4}-', name[:5]): # make sure directory starts with "20XX-"
-    #         exp_dirs.append(name)
-
-    # exp_dirs.sort(key=lambda x: dt.strptime(x[:10], '%Y-%m-%d')) # sort by date
-    #
-
-    # return exp_dirs[-1] # this is the most recent
 
 
 def get_data_server_path():
@@ -617,6 +487,7 @@ def get_todays_data_dir():
 
     return todays_data_path
 
+
 def open_experiment_data_dir():
     filename = get_local_data_path()
     if platform.system() == "Windows":
@@ -624,6 +495,7 @@ def open_experiment_data_dir():
     else:
         opener ="open" if platform.system() == "Darwin" else "xdg-open"
         subprocess.call([opener, filename])
+
 
 def set_experiment_data_dir(description=''):
     '''

@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt, os, re, numpy as np
 from scipy import signal
-from ..Utilities.save import Measurement
+from .measurement import Measurement
 from ..Utilities.utilities import AttrDict
 from ..Utilities import conversions
 

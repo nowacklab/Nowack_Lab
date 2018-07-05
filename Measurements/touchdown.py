@@ -1,6 +1,6 @@
 from scipy.optimize import curve_fit
 import time, os, matplotlib, matplotlib.pyplot as plt, numpy as np
-from ..Utilities.save import Measurement
+from .measurement import Measurement
 from ..Utilities import conversions
 from ..Utilities.utilities import AttrDict
 

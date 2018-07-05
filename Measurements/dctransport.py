@@ -1,5 +1,5 @@
 import re, time, numpy as np, matplotlib.pyplot as plt
-from ..Utilities.save import Measurement
+from .measurement import Measurement
 
 class DAQ_IV(Measurement):
     _daq_inputs = ['V1'] # e.g. V1, V2, ... provide an arbitrary number

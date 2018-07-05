@@ -1,5 +1,5 @@
 import time, numpy as np, matplotlib.pyplot as plt
-from ..Utilities.save import Measurement
+from .measurement import Measurement
 from ..Utilities.plotting import plot_mpl
 from matplotlib import cm
 

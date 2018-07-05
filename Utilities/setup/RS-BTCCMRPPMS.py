@@ -18,11 +18,12 @@ ip.magic('run \"%s\"' %path)
 # Comment out undesired import commands below
 from Nowack_Lab.Utilities import utilities, save, logging, conversions, anim, constants
 from Nowack_Lab.Utilities.plotting import plot_mpl
-from Nowack_Lab.Utilities.save import Measurement
 from Nowack_Lab.Utilities.say import say
+from Nowack_Lab.Utilities.save import Saver
 from Nowack_Lab.Measurements.daqspectrum import DaqSpectrum, SQUIDSpectrum
 from Nowack_Lab.Measurements.dctransport import DAQ_IV
 from Nowack_Lab.Measurements.heightsweep import Heightsweep
+from Nowack_Lab.Measurements.measurement import Measurement
 from Nowack_Lab.Measurements.mod2D import Mod2D
 from Nowack_Lab.Measurements.mutual_inductance import MutualInductance
 from Nowack_Lab.Measurements.navigation import move

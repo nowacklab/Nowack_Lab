@@ -1,5 +1,5 @@
 import time, numpy as np, matplotlib.pyplot as plt
-from ..Utilities.save import Measurement
+from .measurement import Measurement
 from .transport import RvsSomething, RvsVg
 from ..Utilities.plotting import plot_mpl
 import peakutils

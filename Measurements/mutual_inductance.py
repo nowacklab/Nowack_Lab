@@ -1,6 +1,6 @@
 import time, os, numpy as np, matplotlib.pyplot as plt
 from ..Utilities import conversions
-from ..Utilities.save import Measurement
+from .measurement import Measurement
 from ..Utilities.plotting import plot_mpl
 from ..Utilities.utilities import AttrDict
 

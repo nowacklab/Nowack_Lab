@@ -4,7 +4,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from .touchdown import Touchdown
 from ..Utilities.utilities import reject_outliers_plane, fit_plane
-from ..Utilities.save import Measurement
+from .measurement import Measurement
 from ..Utilities.plotting.plot_mpl import extents
 from ..Utilities.plotting.plotter import using_notebook_backend
 

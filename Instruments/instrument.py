@@ -2,8 +2,9 @@
 Instrument base classes.
 '''
 import visa
+from ..Utilities.save import Saver
 
-class Instrument:
+class Instrument(Saver):
     _label = 'instrument'
 
     def __getstate__(self):

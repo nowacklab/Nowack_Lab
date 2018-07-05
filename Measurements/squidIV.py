@@ -14,7 +14,7 @@ import time, os
 from datetime import datetime
 from ..Utilities import dummy
 from ..Instruments import nidaq, preamp
-from ..Utilities.save import Measurement
+from .measurement import Measurement
 from ..Utilities.utilities import AttrDict
 
 
