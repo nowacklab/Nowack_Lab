@@ -50,7 +50,7 @@ class VNA8722ES(Instrument):
         self._sweepmode = 'LINFREQ'
         self._freqmin = .05e9
         self._freqmax = 40.05e9
-        self._numpoints = 201
+        self._numpoints = int(float(self.ask('POIN?')))  # necessary because number of points doesn't reset
         self._averaging_state = 0
         self._averaging_factor = 16
 
@@ -61,6 +61,7 @@ class VNA8722ES(Instrument):
         self._savemode = 'FORM4'
 
         print("init: power off and at -75dB. Measuring S21. Most other settings factory preset.")
+        time.sleep(3)
 
     def factory_preset(self):
         """
@@ -289,6 +290,7 @@ class VNA8722ES(Instrument):
         self.write('FORM4')  # Prepare to output correct data format TODO description from programming guide
         self.write('LOGM')  # Temporarily set VNA to log magnitude display to enable saving log magnitude
 
+        self.averaging_restart()
         self.sleep_until_finish_averaging()
 
         rm = visa.ResourceManager()
@@ -299,7 +301,10 @@ class VNA8722ES(Instrument):
         rawdata = instrument_for_saving.read(termination='~')  # i.e. character that will never be found in the raw data
         split_rawdata = rawdata.split('\n')     # split into lines, with two values each
                                                 # programming guide shows which display format allows which data type read
+
+
         dB_array = np.empty((1, self._numpoints))  # 1xn empty array (row vector)
+
         for i in range(len(split_rawdata)):
             split_line = split_rawdata[i].split(',')
             dB_array[0, i] = float(split_line[0])  # split_line[1] not used in dB case
@@ -312,6 +317,7 @@ class VNA8722ES(Instrument):
         self.write('FORM4')
         self.write('PHASE')
 
+        self.averaging_restart()
         self.sleep_until_finish_averaging()
 
         rm = visa.ResourceManager()
@@ -335,6 +341,7 @@ class VNA8722ES(Instrument):
         self.write('FORM4')
         self.write('SMIC')
 
+        self.averaging_restart()
         self.sleep_until_finish_averaging()
 
         rm = visa.ResourceManager()
@@ -344,10 +351,11 @@ class VNA8722ES(Instrument):
         split_rawdata = rawdata.split('\n')
 
         Re_Im_array = np.empty((2, self._numpoints))
+
         for i in range(len(split_rawdata)):
             split_line = split_rawdata[i].split(',')
-            Re_Im_array[0, :] = float(split_line[0])  # Real part (first row)
-            Re_Im_array[1, :] = float(split_line[1])  # Imaginary part (second row)
+            Re_Im_array[0, i] = float(split_line[0])  # Real part (first row)
+            Re_Im_array[1, i] = float(split_line[1])  # Imaginary part (second row)
         return Re_Im_array
 
     @staticmethod
@@ -355,7 +363,7 @@ class VNA8722ES(Instrument):
         """Return 1xn np array of attenuation data (units are dB) from 2xn array of Re, Im data"""
         input_shape = np.shape(Re_Im_array)
         assert len(input_shape) == 2 and input_shape[0] == 2, "input should be 2xn array of Re, Im data"
-        assert abs(np.amax(Re_Im_array)) <= 1, "This does not look like Re, Im data (entries should be between -1, 1)"
+        # assert abs(np.amax(Re_Im_array)) <= 1, "This does not look like Re, Im data (entries should be between -1, 1)"
 
         dB_array = np.empty((1, input_shape[1]))
 
@@ -365,7 +373,7 @@ class VNA8722ES(Instrument):
 
     @staticmethod
     def Re_Im_to_phase(Re_Im_array):
-        """Return 1sxn np array of phase shift data (units are degrees) from 2xn array of Re, Im data
+        """Return 1xn np array of phase shift data (units are degrees) from 2xn array of Re, Im data
         (use degrees because VNA phase output uses degrees)"""
         input_shape = np.shape(Re_Im_array)
         assert len(input_shape) == 2 and input_shape[0] == 2, "input should be 2xn array of Re, Im data"

@@ -17,10 +17,13 @@ from Nowack_Lab.Instruments.VNA import VNA8722ES
 from Nowack_Lab.Instruments.keithley import Keithley2400
 
 
-class RF_sweep_current:
+class RF_sweep_current:  # should this extend class Measurement?
+                        # also, there will be other sweeps in the future (e.g. power sweep),
+                        # so may be worth having the class WithoutDAQ_ThreeParam_Sweep (esp. for plotting fxns)
+                        # and having these RF_sweep_<some parameter> classes extend WithoutDAQ_ThreeParam_Sweep
+
     ''' At different current steps, measure frequency response
     Using class SQUID_Mod_FastIV(ThreeParam_Sweep) as example'''
-
 
     def __init__(self,
                 k_Istart, k_Istop, k_Isteps,
@@ -102,7 +105,7 @@ class RF_sweep_current:
                 print("Current source step #" + str(step+1) + " out of " + str(self.k_Isteps))
             self.k3.Iout = self.k3.Iout + I_stepsize  # increment current
             self.v1.averaging_restart()  # restart averaging
-            re_im[index] = self.v1.save_Re_Im()s
+            re_im[index] = self.v1.save_Re_Im()
             index += 1
 
         index = 0
