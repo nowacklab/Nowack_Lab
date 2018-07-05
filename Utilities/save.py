@@ -161,37 +161,32 @@ class Measurement(Plotter):
         '''
         Loads an object from JSON.
         '''
-        with open(json_file, encoding='utf-8') as f:
-            obj_dict = json.load(f)
-
         def walk(d):
             '''
-            Walk through dictionary to prune out Instruments
+            Walk through dictionary to check for classes not in the namespace.
+            These will all be loaded as Measurements.
             '''
-            for key in list(d.keys()): # convert to list because dictionary changes size
-                if 'py/' in key:
-                    if 'py/object' in d:
-                        if 'Instruments' in d['py/object']: # if this is an instrument
-                            d['py/object'] = 'Nowack_Lab.Instruments.instrument.Instrument' # make it generic
-                            d['py/state'] = walk(d['py/state'])
-                            break
-                    elif 'py/id' in d: # Probably another Instrument instance
-                        d = None # Don't load it.
-                        break
+            keys = list(d.keys())  # static list; dictionary changes size
+            print(keys)
+            for key in keys:
+                if 'py/object' in key:  # we found some sort of object
+                    try:
+                        exec(d['py/object']) # see if class is in the namespace
+                    except:
+                        print('Cannot find class definition {0}: '.format(
+                            d['py/object']) + 'using measurement object')
+                        d['py/object'] = 'Nowack_Lab.Utilities.save.Measurement'
+                        # N.B. Even instruments are saved as measurements
+                        # if the class cannot be found. Maybe write a Saver
+                        # class and a Measurement class.
                 if isinstance(d[key], dict):
                     d[key] = walk(d[key])
             return d
 
-        obj_dict = walk(obj_dict)
+        with open(json_file, encoding='utf-8') as f:
+            obj_dict = json.load(f)
 
-        # If the class of the object is custom defined in __main__ or in a
-        # different branch, then just load it as a Measurement.
-        try:
-            exec(obj_dict['py/object']) # see if class is in the namespace
-        except:
-            print('Cannot find class definition {0}: '.format(
-                obj_dict['py/object']) + 'using measurement object')
-            obj_dict['py/object'] = 'Nowack_Lab.Utilities.save.Measurement'
+        obj_dict = walk(obj_dict)
 
         # Decode with jsonpickle.
         obj_string = json.dumps(obj_dict)
