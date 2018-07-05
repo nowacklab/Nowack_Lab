@@ -1,8 +1,8 @@
 from jsonpickle.ext import numpy as jspnp
-import json, os, jsonpickle as jsp, numpy as np, subprocess
+import json, os, jsonpickle as jsp, numpy as np, subprocess, numpy
 from datetime import datetime as dt
 jspnp.register_handlers() # what is purpose of this line?
-import h5py, glob, matplotlib, platform, hashlib, shutil, time, traceback
+import h5py, glob, matplotlib, platform, hashlib, shutil
 import matplotlib.pyplot as plt
 from . import utilities
 import Nowack_Lab # Necessary for saving as Nowack_Lab-defined types

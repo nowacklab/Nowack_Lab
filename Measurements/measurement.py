@@ -1,4 +1,4 @@
-import numpy as np, matplotlib.pyplot as plt, time
+import numpy as np, matplotlib.pyplot as plt, time, traceback
 from ..Utilities.plotting.plotter import Plotter
 from ..Utilities.save import Saver
 
@@ -55,7 +55,7 @@ class Measurement(Saver, Plotter):
         '''
         Call Saver's load method and then load instruments from a dictionary.
         '''
-        obj = Measurement._load(filename)
+        obj = cls._load(filename)
         try:
             obj._load_instruments(instruments)
         except:  # in case we loaded as a Saver
@@ -109,6 +109,8 @@ class Measurement(Saver, Plotter):
             t_unit = 'hours'
         # Print elapsed time e.g. "Scanplane took 2.3 hours."
         print('%s took %.1f %s.' %(self.__class__.__name__, t, t_unit))
+
+        self.save()
 
         # If this run is in a loop, then we want to raise the KeyboardInterrupt
         # to terminate the loop.
