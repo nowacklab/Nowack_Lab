@@ -9,7 +9,7 @@ def scan_gif(scan_list):
     This will (hopefully) ensure that we can see features on all scans.
     scan_list = A list of files to load
     '''
-    from ..Procedures.scanplane import Scanplane
+    from ..Measurements.scanplane import Scanplane
 
     scans = []
     signals = ['V', 'Vac_x', 'Vac_y', 'C']

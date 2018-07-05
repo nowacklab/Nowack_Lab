@@ -21,7 +21,7 @@ Figure out notebook shared secret to avoid "untrusted" notebooks.
 
 More accurate time delay in transport measurements. Check elapsed time for reading from lockins/ppms/whatever and don't sleep if the delay time is already met. Record a more accurate time delay when saving.
 
-Add time estimates to procedures somehow
+Add time estimates to Measurements somehow
 
 Connect to data server remotely.
 

@@ -21,13 +21,13 @@ import Nowack_Lab.Utilities.utilities
 reload(Nowack_Lab.Utilities.utilities)
 from Nowack_Lab.Utilities.utilities import running_std
 
-import Nowack_Lab.Procedures.daqspectrum
-reload(Nowack_Lab.Procedures.daqspectrum)
-from Nowack_Lab.Procedures.daqspectrum import SQUIDSpectrum
+import Nowack_Lab.Measurements.daqspectrum
+reload(Nowack_Lab.Measurements.daqspectrum)
+from Nowack_Lab.Measurements.daqspectrum import SQUIDSpectrum
 
-import Nowack_Lab.Procedures.mutual_inductance
-reload(Nowack_Lab.Procedures.mutual_inductance)
-from Nowack_Lab.Procedures.mutual_inductance import MutualInductance2
+import Nowack_Lab.Measurements.mutual_inductance
+reload(Nowack_Lab.Measurements.mutual_inductance)
+from Nowack_Lab.Measurements.mutual_inductance import MutualInductance2
 
 
 class ArrayTune(Measurement):

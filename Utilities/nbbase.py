@@ -131,7 +131,7 @@ def new_notebook(**kwargs):
     md1 = new_markdown_cell('## Import everything and set up notebook for plotting')
     cc1 = new_code_cell('\
 from Nowack_Lab.Instruments import *\n\
-from Nowack_Lab.Procedures import *\n\
+from Nowack_Lab.Measurements import *\n\
 from Nowack_Lab.Utilities import *\n\
 %matplotlib notebook\
 ')
