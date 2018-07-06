@@ -2,9 +2,9 @@ from jsonpickle.ext import numpy as jspnp
 import json
 import os
 import pickle
-import bz2
-import jsonpickle as jsp
-import numpy as np
+import bz2 
+import jsonpickle as jsp 
+import numpy as np 
 import re
 from datetime import datetime
 jspnp.register_handlers()
@@ -100,7 +100,7 @@ class Measurement:
                         # check if it's a dictionary or object
                         if f.get(key, getclass=True) is h5py._hl.group.Group:
                             if key[0] == '!': # it's an object
-                                # Current version of python on linux does not
+                                # Current version of python on linux does not 
                                 # have a __dict__ of a dict object
                                 try:
                                     walk(d[key[1:]].__dict__, f[key])
@@ -110,8 +110,8 @@ class Measurement:
                             else: # it's a dictionary
                                 # walk through the subdictionary
 
-                                # Current version of python on linux does not
-                                # like to call fields that do not exist.
+                                # Current version of python on linux does not 
+                                # like to call fields that do not exist.  
                                 try:
                                     walk(d[key], f.get(key))
                                 except:
@@ -233,26 +233,26 @@ class Measurement:
             filename = self.filename
 
         # If you did not specify a filename with a path, generate a path
-        if os.path.dirname(filename) == '':
+        if os.path.dirname(filename) == '': 
             # If you specified a local AND remote path, set them correctly
             if localpath != '' and remotepath != '':
                 local_path  = os.path.join(localpath, filename)
                 remote_path = os.path.join(remotepath, filename)
             else:
-                local_path = os.path.join(get_local_data_path(),
-                                          get_todays_data_dir(),
-                                          appendedpath,
+                local_path = os.path.join(get_local_data_path(), 
+                                          get_todays_data_dir(), 
+                                          appendedpath, 
                                           filename)
-                remote_path = os.path.join(get_remote_data_path(),
-                                           get_todays_data_dir(),
-                                           appendedpath,
+                remote_path = os.path.join(get_remote_data_path(), 
+                                           get_todays_data_dir(), 
+                                           appendedpath, 
                                            filename)
         # Else, you specified some sort of path but no remote path (legacy)
-        else:
+        else: 
             local_path = filename
-            remote_path = os.path.join(get_remote_data_path(),
-                                        '..', 'other',
-                                        *filename.replace('\\', '/').split('/')[1:])
+            remote_path = os.path.join(get_remote_data_path(), 
+                                        '..', 'other', 
+                                        *filename.replace('\\', '/').split('/')[1:]) 
             # removes anything before the first slash. e.g. ~/data/stuff -> data/stuff
             # All in all, remote_path should look something like: .../labshare/data/bluefors/other/
 

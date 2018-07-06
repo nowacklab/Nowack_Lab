@@ -1,7 +1,14 @@
 import h5py
+print('test')
 import numpy as np
 
 class Dataset():
+    '''
+    This code manages saving to and loading from an HDF5 file. It includes
+    functionality to allow reading and writing of nested dictionaries with
+    leaves including numpy arrays. It further allows iterative saving to those
+    numpy arrays with overwrite protection
+    '''
     allowedtypes = ['float', 'int','complex', 'uint']
     allowednonnumpytypes = [str, float, int, list]
 
@@ -10,6 +17,7 @@ class Dataset():
         Creates the hdf5 file for saving.
         '''
         self.filename = filename
+        print(self.filename)
 
     def get(self, pathtoget,slice = False):
         '''

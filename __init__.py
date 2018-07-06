@@ -28,9 +28,11 @@ def set_experiment_data_path():
             else:
                 break
         for key in paths.keys():
-            paths[key]["exppath"] = paths[key]["path"] + inp2
+            paths[key]["exppath"] = (paths[key]["path"]
+                                + Saver.make_timestamp(subday = False) +inp2)
         Saver.setsavepaths(paths)
         save.set_experiment_data_dir(inp2)
+
 def check_remote_data_server_connection():
     from Nowack_Lab.Utilities import save
     ## Check for remote data server connection

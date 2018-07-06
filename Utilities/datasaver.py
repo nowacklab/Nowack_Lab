@@ -2,6 +2,7 @@ import h5py
 import numpy as np
 from datetime import datetime
 import json
+import os
 from Nowack_Lab.Utilities.dataset import Dataset
 
 class Saver():
@@ -25,23 +26,39 @@ class Saver():
         '''
         Sets current dictionary of save paths
         '''
+        for path in paths.keys():
+            if not os.path.exists(paths[path]['exppath']):
+                os.makedirs(paths[path]['exppath'])
         with open(Saver._savelocationinstructionfile,'w') as outfile:
             json.dump(paths, outfile)
             outfile.truncate()
 
-    def __init__(self,name):
+    @staticmethod
+    def make_timestamp(subday = True):
+        '''
+        Makes a timestamp and filename from the current time. Subday
+        determines whether hours, minutes and seconds are included.
+        '''
+        now = datetime.now()
+        if subday:
+            timestamp = now.strftime('%Y-%m-%d_%H%M%S_')
+        else:
+            timestamp =  now.strftime('%Y-%m-%d_')
+        return timestamp
+
+
+
+    def __init__(self,name = ''):
         filestowrite = self.generatefullfilenameandpath(name = name)
         self.datasets = {}
         for key in filestowrite.keys():
-            self.datasets[key] = Dataset(filename)
+            self.datasets[key] = Dataset(filestowrite[key])
 
-    def make_timestamp(self):
-        '''
-        Makes a timestamp and filename from the current time.
-        '''
-        now = datetime.now()
-        return now.strftime('%Y-%m-%d_%H%M%S')
-
+    def savefigure(self, figure, name):
+        paths = getsavepaths
+        for key in paths.keys():
+            figure.savefig(paths[key]['exppath'] + '\\' + make_timestamp +
+                                                            'figure_' + name)
     def generatefullfilenameandpath(self, name = ''):
         '''
         Returns a dict of filenames with full paths, generated from the
@@ -50,13 +67,15 @@ class Saver():
         kwargs:
         name = '' (str): placed after timestamp in filename.
         '''
-        paths=getsavepaths()
+        paths = self.__class__.getsavepaths()
         filenames = {}
         for key in paths.keys():
-            filenames[key] = (paths[key]['exppath'] + make_timestamp() + name)
+            filenames[key] = (paths[key]['exppath']
+                                    +  '\\' + self.__class__.make_timestamp()
+                                    + name + '.hdf5')
         return filenames
 
-    def append(*args, **kwargs):
+    def append(self,*args, **kwargs):
         '''
         append(self, pathtowrite, datatowrite, slice = False)
         Adds new data to dataset at path. Data may be a string, number, numpy
@@ -64,10 +83,10 @@ class Saver():
         numbers or numpy arrays. Data may not overwrite, however, dicts can be
         used that go through HDF5 groups that already exist.
         '''
-        for one_dataset in self.datasets:
-            one_dataset.append(*args, **kwargs)
+        for dataset_name in self.datasets.keys():
+            self.datasets[dataset_name].append(*args, **kwargs)
 
-    def get(*args, filetouse = 'localdir', **kwargs):
+    def get(self,*args, filetouse = 'localdir', **kwargs):
         '''
         get(self, pathtoget, filetouse = 'localdir', slice = False)
         Takes the path to an object in an h5 file and the object itself.
@@ -76,4 +95,4 @@ class Saver():
         dics if needed), and puts the contents of obj there. Uses the file
         specified by filetouse keyword in the save config file.
         '''
-        return self.datasets(filetouse).get(*args,**kwargs)
+        return self.datasets[filetouse].get(*args,**kwargs)
