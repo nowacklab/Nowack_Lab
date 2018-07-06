@@ -185,7 +185,7 @@ class RF_sweep_current: # should this extend class Measurement?
                     data.get(filename + '/freqmax'),
                     data.get(filename + '/numpoints'))
         X,Y = np.meshgrid(freq, current)
-        dB = RF_sweep_current.dB_data(filename)
+        dB = RF_sweep_current.dB_data(filename, rev = rev)
         im=ax.pcolor(X, Y, dB, cmap="inferno")
         cbar = fig.colorbar(im)
         ax.set_ylabel('field coil current (A)')
