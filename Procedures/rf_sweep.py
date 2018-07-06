@@ -191,9 +191,12 @@ class RF_sweep_current: # should this extend class Measurement?
         ax.set_ylabel('field coil current (A)')
         ax.set_xlabel('frequency (Hz)')
         if not rev:
-            ax.set_title(filename)
+            ax.set_title(filename + "\nPower from VNA = " +
+                str(data.get(filename + '/power')) + " dBm")
         else:
-            ax.set_title(filename + "\nSweep back in current")
+            ax.set_title(filename + "\nSweep back in current" +
+                "\nPower from VNA = " + str(data.get(filename + '/power'))
+                 + " dBm")
         cbar.set_label('Attenuation [dB]')
         if not rev:
             graph_path = filename.replace(".hdf5", "db.png")
