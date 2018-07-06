@@ -131,9 +131,9 @@ class RF_sweep_current: # should this extend class Measurement?
 
         #plot TODO: only plots foward attenuation atm
         if self.plot == True:
-            RF_sweep_current.plot(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5")
+            RF_sweep_current.plotdB(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5")
             if self.hysteresis == True:
-                RF_sweep_current.plot(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5", rev=True)
+                RF_sweep_current.plotdB(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5", rev=True)
 
 
 
@@ -170,26 +170,26 @@ class RF_sweep_current: # should this extend class Measurement?
         info.append(path + '/hysteresis', self.hysteresis)
 
     @staticmethod
-    def plot(filename, rev = False):
+    def plotdB(filename, rev = False):
         fig, ax = plt.subplots(1,1, figsize=(10,6))
         data = dataset.Dataset(filename)
         if not rev:
-            current = np.linspace(data.get(filename + '/Istart'),
-                        data.get(filename + '/Istop'),
+            current = np.linspace(data.get(filename + '/Istart')*100,
+                        data.get(filename + '/Istop')*100,
                         data.get(filename + '/Isteps'))
         else:
-            current = np.linspace(data.get(filename + '/Istop'),
-                        data.get(filename + '/Istart'),
+            current = np.linspace(data.get(filename + '/Istop')*100,
+                        data.get(filename + '/Istart')*100,
                         data.get(filename + '/Isteps'))
-        freq = np.linspace(data.get(filename + '/freqmin'),
-                    data.get(filename + '/freqmax'),
+        freq = np.linspace(data.get(filename + '/freqmin')/1e9,
+                    data.get(filename + '/freqmax')/1e9,
                     data.get(filename + '/numpoints'))
-        X,Y = np.meshgrid(freq, current)
+        Y,X = np.meshgrid(freq, current)
         dB = RF_sweep_current.dB_data(filename, rev = rev)
         im=ax.pcolor(X, Y, dB, cmap="inferno")
         cbar = fig.colorbar(im)
-        ax.set_ylabel('field coil current (A)')
-        ax.set_xlabel('frequency (Hz)')
+        ax.set_xlabel('field coil current (mA)')
+        ax.set_ylabel('frequency (GHz)')
         if not rev:
             ax.set_title(filename + "\nPower from VNA = " +
                 str(data.get(filename + '/power')) + " dBm")
