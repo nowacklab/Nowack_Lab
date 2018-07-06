@@ -36,7 +36,7 @@ class MDO3024(VISAInstrument):
         '''
         Gets the portion of the waveform to be acquired
         '''
-        return [self.ask('DATA:START?'), self.ask('DATA:STOP?')]
+        return [int(self.ask('DATA:START?')), int(self.ask('DATA:STOP?'))]
 
     @tracerange.setter
     def tracerange(self,value):
@@ -57,7 +57,7 @@ class MDO3024(VISAInstrument):
         '''
         Sets the byte depth
         '''
-        self.write('BYT_NR ' + int(value))
+        self.write('BYT_NR ' + str(value))
     @property
     def encoding(self):
         '''
