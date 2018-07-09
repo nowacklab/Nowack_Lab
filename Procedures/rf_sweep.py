@@ -15,6 +15,76 @@ from Nowack_Lab.Utilities.dataset import Dataset
 from Nowack_Lab.Instruments.VNA import VNA8722ES
 from Nowack_Lab.Instruments.keithley import Keithley2400
 
+class RF_take_spectra:
+    def __init__(self,v_freqmin, v_freqmax, v_power, v_avg_factor, v_numpoints,
+                filepath, v_smoothing_state=0,v_smoothing_factor=1,
+                notes = "No notes",plot=False):
+
+        #Set object variables
+        self.v_freqmin =v_freqmin
+        self.v_freqmax =v_freqmax
+        self.v_power =v_power
+        self.v_avg_factor =v_avg_factor
+        self.v_numpoints =v_numpoints
+        self.filepath = filepath
+        self.v_smoothing_state = v_smoothing_state
+        self.v_smoothing_factor = v_smoothing_factor
+        self.notes = notes
+        self.plot = plot
+
+        self.valid_numpoints = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
+        assert self.v_numpoints in self.valid_numpoints,"number of points must be in " + str(valid_numpoints)
+
+        self.v1 = VNA8722ES(16)  # initialize VNA (Instrument object)
+    def do(self):
+        '''
+        Run measurement
+        '''
+        # Set up VNA settings
+        self.v1.networkparam = 'S21'  # Set to measure forward transmission
+        self.v1.power = self.v_power
+        self.v1.powerstate = 1  # turn vna source power on
+        self.v1.averaging_state = 1  # Turn averaging on
+        self.v1.averaging_factor = self.v_avg_factor
+        self.v1.minfreq = self.v_freqmin
+        self.v1.maxfreq = self.v_freqmax
+        self.v1.numpoints = self.v_numpoints  # set num freq pnts for VNA
+        self.v1.smoothing_state = self.v_smoothing_state  # turn smoothing on
+        self.v1.smoothing_factor = self.v_smoothing_factor
+
+        #creates a timestamp that will be in the h5 file name for this run
+        now = datetime.now()
+        timestamp = now.strftime('%Y-%m-%d_%H%M%S')
+
+        #initialize empty array to store data in TODO: change from empty to NAN?
+        re_im = np.empty((2, int(self.v1.numpoints)))
+
+        self.v1.averaging_restart()  # restart averaging
+        re_im = self.v1.save_Re_Im()
+        self.save_data(timestamp, re_im) #save data to h5
+
+        self.v1.powerstate = 0  # turn off VNA source power
+
+        #plot TODO: only plots foward attenuation atm
+        if self.plot == True:
+            RF_sweep_current.plotdB1D(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5")
+
+    def save_data(self, timestamp, re_im):
+        name = timestamp + '_rf_sweep'
+        path = os.path.join(self.filepath, name + '.hdf5')
+        info = dataset.Dataset(path)
+        info.append(path + '/freqmin', self.v_freqmin)
+        info.append(path + '/freqmax', self.v_freqmax)
+        info.append(path + '/power', self.v_power)
+        info.append(path + '/avg_factor', self.v_avg_factor)
+        info.append(path + '/numpoints', self.v_numpoints)
+        info.append(path + '/smoothing_state', self.v_smoothing_state)
+        info.append(path + '/smoothing_factor', self.v_smoothing_factor)
+        info.append(path + '/re_im/data', re_im)
+        info.append(path + '/re_im/description', "shape [Data, Re Im]")
+        info.append(path + '/notes', self.notes)
+
+
 '''Class for sweeping current with the Keithley2400 and recording
 data from the VNA8722ES at each current step.
 '''
@@ -217,3 +287,19 @@ class RF_sweep_current: # should this extend class Measurement?
             attenuation[n] = VNA8722ES.Re_Im_to_dB(array)
             n += 1
         return attenuation
+
+    @staticmethod
+    def plotdB1D(filename):
+        fig, ax = plt.subplots(1,1, figsize=(10,6))
+        data = dataset.Dataset(filename)
+        freq = np.linspace(data.get(filename + '/freqmin')/1e9,
+                    data.get(filename + '/freqmax')/1e9,
+                    data.get(filename + '/numpoints'))
+        dB = VNA8722ES.Re_Im_to_dB(data.get(filename + '/re_im/data'))
+        im=ax.plot(freq, dB[0])
+        ax.set_ylabel('attenuation (dB)')
+        ax.set_xlabel('frequency (GHz)')
+        ax.set_title(filename + "\nPower from VNA = " +
+            str(data.get(filename + '/power')) + " dBm")
+        graph_path = filename.replace(".hdf5", "db.png")
+        fig.savefig(graph_path)
