@@ -51,7 +51,6 @@ class RF_sweep_current: # should this extend class Measurement?
         self.plot = plot
 
         assert self.k_Istart < k_Istop,"stop voltage should be greater than start voltage"
-        assert self.v_power <= -65,"Don't send too much power to SQUID"
         self.valid_numpoints = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
         assert self.v_numpoints in self.valid_numpoints,"number of points must be in " + str(valid_numpoints)
 
