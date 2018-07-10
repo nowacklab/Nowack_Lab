@@ -48,7 +48,7 @@ class Saver():
 
 
 
-    def __init__(self,name = ''):
+    def __init__(self, name = ''):
         filestowrite = self.generatefullfilenameandpath(name = name)
         self.datasets = {}
         for key in filestowrite.keys():

@@ -194,6 +194,7 @@ class Dataset():
             print('Could not recognize type. Attempting to convert to string.')
             try:
                 cleandata = str(data)
+                print('Success!')
             except:
                 shouldcontinue = input('COULD NOT CONVERT TO STRING. '
                 + 'DATA WILL NOT BE SAVED. Continue y/(n)')
