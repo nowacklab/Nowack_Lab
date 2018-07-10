@@ -283,10 +283,11 @@ class ArrayTune(Measurement):
                           color='red', linestyle=':', linewidth=.5)
         
         # Plot the sweep
-        self.sweep.ax = self.ax[1]
-        self.sweep.plot()
-        self.ax[1].set_ylabel("")
-        self.ax[1].set_title("DC SQUID Signal (V)",
+        if False: #FIXME
+            self.sweep.ax = self.ax[1]
+            self.sweep.plot()
+            self.ax[1].set_ylabel("")
+            self.ax[1].set_title("DC SQUID Signal (V)",
                         size="medium")
 
 
@@ -363,19 +364,25 @@ class ArrayTune(Measurement):
 
         self.run_spectrum(self._save_appendedpath)
         plt.close()
-        self.run_mi(self._save_appendedpath)
-        plt.close()
+
+        if False: #FIXME
+            self.run_mi(self._save_appendedpath)
+            plt.close()
 
         # make some statistics
         self.noise_mean, self.noise_std = self.spectrum.findmeanstd()
-        self.sweep_fcIsrc = np.array(self.sweep.Vsrc / 
+
+
+        if False: #FIXME
+            self.sweep_fcIsrc = np.array(self.sweep.Vsrc / 
                                      self.sweep.Rbias).flatten()
-        self.sweep_sresp  = np.array(self.sweep.Vmeas * 
-                                     self.sweep.conversion).flatten()
+            self.sweep_sresp  = np.array(self.sweep.Vmeas * 
+                                         self.sweep.conversion).flatten()
         
-        [self.sweep_p, self.sweep_v] = np.polyfit(self.sweep_fcIsrc, 
+            [self.sweep_p, self.sweep_v] = np.polyfit(self.sweep_fcIsrc, 
                                                   self.sweep_sresp,1,
                                                   cov=True)
+
 
         self.plot()
         plt.close()
@@ -948,14 +955,16 @@ class ArrayTuneBatch(Measurement):
                                              1), np.nan) 
 
         self.savenames = ['spectrum_psd',  # psdave * conversion (phi_0)
-                          'sweep_fcIsrc',  # Vsrc / Rbias (amps)
-                          'sweep_sresp',   # Vmeas * conversion (phi_0)
+# FIXME
+#                          'sweep_fcIsrc',  # Vsrc / Rbias (amps)
+#                          'sweep_sresp',   # Vmeas * conversion (phi_0)
                           'char_testsig',  # squid char, test signal (V)
                           'char_saasig',   # squid char, saa signal (V)
                           'spectrum_mean', # mean of spectrum (phi_0)
                           'spectrum_std',  # std of spectrum (phi_0)
-                          'sweep_p',       # polyfit p: linear fit of sweep
-                          'sweep_v',       # polyfit v: linear fit of sweep
+# FIXME
+#                          'sweep_p',       # polyfit p: linear fit of sweep
+#                          'sweep_v',       # polyfit v: linear fit of sweep
                           ]
 
 
@@ -978,8 +987,12 @@ class ArrayTuneBatch(Measurement):
                 print(plottingindex)
                 sys.stdout.flush()
 
-        self.plot()
-        self.print_highlights()
+        #FIXME  add messages
+        try:
+            self.plot()
+            self.print_highlights()
+        except:
+            print('Plot or print failed')
 
         
 
@@ -1003,16 +1016,18 @@ class ArrayTuneBatch(Measurement):
         # what to save
             tosave = [np.array(at.spectrum.psdAve * 
                                at.spectrum.conversion).flatten(),
-                      np.array(at.sweep.Vsrc /
-                               at.sweep.Rbias).flatten(),
-                      np.array(at.sweep.Vmeas *
-                               at.sweep.conversion).flatten(),
+# FIXME
+#                      np.array(at.sweep.Vsrc /
+#                               at.sweep.Rbias).flatten(),
+#                      np.array(at.sweep.Vmeas *
+#                               at.sweep.conversion).flatten(),
                       np.array(at.char[1]).flatten(), 
                       np.array(at.char[2]).flatten(),
                       np.array([at.noise_mean]).flatten(),
                       np.array([at.noise_std]).flatten(),
-                      np.array([at.sweep_p]).flatten(),
-                      np.array([at.sweep_v]).flatten()
+# FIXME
+#                      np.array([at.sweep_p]).flatten(),
+#                      np.array([at.sweep_v]).flatten()
                      ]
         except:
             pass
@@ -1083,14 +1098,18 @@ class ArrayTuneBatch(Measurement):
     def plot(self):
 
         cbarlabels = [r'rms noise ($\mu\phi_0/\sqrt{Hz}$)', 
-                      r'linearity (covar of fit)',
+# FIXME remove line below
+#                      r'linearity (covar of fit)',
+                      r'garbage (did not measure)',
                       r'abs grad of squid char',
                       r'error of squid char',
                       r'grad/err',
                       r'noise/(grad/err)'
                      ]
         data = [self.spectrum_mean[:,:,0,0]*1e6, 
-                self.sweep_v[:,:,0,0],
+# FIXME remove line below
+#                self.sweep_v[:,:,0,0],
+                np.zeros(self.char_stats[:,:,0,1].shape),
                 self.char_stats[:,:,0,1],
                 self.char_stats[:,:,0,2],
                 self.char_stats[:,:,0,3],
@@ -1157,8 +1176,9 @@ class ArrayTuneBatch(Measurement):
 
     def print_highlights(self):
         index_minnoise = np.unravel_index(np.nanargmin(self.spectrum_mean),self.spectrum_mean.shape)
-        index_minlinear = np.unravel_index(np.nanargmin(self.sweep_v[:,:,:,0]),self.sweep_v[:,:,:,0].shape)
-        print(index_minnoise, index_minlinear)
+# FIXME
+#        index_minlinear = np.unravel_index(np.nanargmin(self.sweep_v[:,:,:,0]),self.sweep_v[:,:,:,0].shape)
+#        print(index_minnoise, index_minlinear)
 
         print('min noise={0:2.2e}: sbias={1:2.2e}, aflux={2:2.2e}, filename={3}'.format(
                 self.spectrum_mean[index_minnoise],
@@ -1166,11 +1186,12 @@ class ArrayTuneBatch(Measurement):
                 self.lockparams[index_minnoise[0:3]][0],
                 self.arraytunefilenames[int(self.filenameindex[index_minnoise[0:3]][0])]))
 
-        print('max linear={0:2.2e}: sbias={1:2.2e}, aflux={2:2.2e}, filename={3}'.format(
-                self.sweep_v[index_minlinear][0],
-                self.lockparams[index_minlinear[0:3]][1],
-                self.lockparams[index_minlinear[0:3]][0],
-                self.arraytunefilenames[int(self.filenameindex[index_minlinear[0:3]][0])]))
+# FIXME
+#        print('max linear={0:2.2e}: sbias={1:2.2e}, aflux={2:2.2e}, filename={3}'.format(
+#                self.sweep_v[index_minlinear][0],
+#                self.lockparams[index_minlinear[0:3]][1],
+#                self.lockparams[index_minlinear[0:3]][0],
+#                self.arraytunefilenames[int(self.filenameindex[index_minlinear[0:3]][0])]))
 
                     
     def findconversion(self, stepsize=5, dur=.001):
