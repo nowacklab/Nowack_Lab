@@ -338,12 +338,13 @@ class VNA8722ES(Instrument):
         first row: real parts
         second row: imaginary parts
         """
-        self.write('FORM4')
+        self.write('FORM4')  # Prepare the instrument for saving
         self.write('SMIC')
 
-        self.averaging_restart()
-        self.sleep_until_finish_averaging()
+        self.averaging_restart()  # restart the measurement averaging
+        self.sleep_until_finish_averaging()  # wait until measurement averaging finished
 
+        # temporary VNA object only for saving
         rm = visa.ResourceManager()
         instrument_for_saving = rm.get_instrument('GPIB0::16')
         instrument_for_saving.write('OUTPFORM')

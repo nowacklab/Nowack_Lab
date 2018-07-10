@@ -16,6 +16,9 @@ from Nowack_Lab.Instruments.VNA import VNA8722ES
 from Nowack_Lab.Instruments.keithley import Keithley2400
 
 class RF_take_spectra:
+    '''
+    Take a single spectrum (attenuation as function of frequency)
+    '''
     def __init__(self,v_freqmin, v_freqmax, v_power, v_avg_factor, v_numpoints,
                 filepath, v_smoothing_state=0,v_smoothing_factor=1,
                 notes = "No notes",plot=False):
@@ -36,6 +39,7 @@ class RF_take_spectra:
         assert self.v_numpoints in self.valid_numpoints,"number of points must be in " + str(valid_numpoints)
 
         self.v1 = VNA8722ES(16)  # initialize VNA (Instrument object)
+
     def do(self):
         '''
         Run measurement
@@ -59,8 +63,7 @@ class RF_take_spectra:
         #initialize empty array to store data in TODO: change from empty to NAN?
         re_im = np.empty((2, int(self.v1.numpoints)))
 
-        self.v1.averaging_restart()  # restart averaging
-        re_im = self.v1.save_Re_Im()
+        re_im = self.v1.save_Re_Im()  # get real and imaginary parts
         self.save_data(timestamp, re_im) #save data to h5
 
         self.v1.powerstate = 0  # turn off VNA source power
@@ -92,7 +95,6 @@ class RF_sweep_current: # should this extend class Measurement?
                         # also, there will be other sweeps in the future (e.g. power sweep),
                         # so may be worth having the class WithoutDAQ_ThreeParam_Sweep (esp. for plotting fxns)
                         # and having these RF_sweep_<some parameter> classes extend WithoutDAQ_ThreeParam_Sweep
-
 
     '''
     Initiates a RF_sweep_current object with parameters about the sweep.
@@ -300,6 +302,6 @@ class RF_sweep_current: # should this extend class Measurement?
         ax.set_ylabel('attenuation (dB)')
         ax.set_xlabel('frequency (GHz)')
         ax.set_title(filename + "\nPower from VNA = " +
-            str(data.get(filename + '/power')) + " dBm")
+            str(data.get(filename + '/power')) + " dBm" + "\n" + data.get(filename + '/notes'))
         graph_path = filename.replace(".hdf5", "db.png")
         fig.savefig(graph_path)
