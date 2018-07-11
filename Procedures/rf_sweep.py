@@ -338,7 +338,7 @@ class RF_sweep_current: # should this extend class Measurement?
                     data.get(filename + '/numpoints'))
         Y,X = np.meshgrid(freq, current)
         phase = RF_sweep_current.phase_data(filename, rev = rev)
-        im=ax.pcolor(X, Y, dB, cmap="inferno")
+        im=ax.pcolor(X, Y, phase, cmap="inferno")
         cbar = fig.colorbar(im)
         ax.set_xlabel('field coil current (mA)')
         ax.set_ylabel('frequency (GHz)')
