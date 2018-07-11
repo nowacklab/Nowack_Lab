@@ -291,6 +291,21 @@ class RF_sweep_current: # should this extend class Measurement?
         return attenuation
 
     @staticmethod
+    def phase_data(filename, rev = False):
+        data = dataset.Dataset(filename)
+        if not rev:
+            re_im_info = data.get(filename + '/re_im/data')
+        else:
+            re_im_info = data.get(filename + '/re_im_rev/data')
+        phase = np.empty((data.get(filename + '/Isteps'),
+                                int(data.get(filename + '/numpoints'))))
+        n = 0
+        for array in re_im_info:
+            phase[n] = VNA8722ES.Re_Im_to_phase(array)
+            n += 1
+        return phase
+
+    @staticmethod
     def plotdB1D(filename):
         fig, ax = plt.subplots(1,1, figsize=(10,6))
         data = dataset.Dataset(filename)
@@ -304,4 +319,39 @@ class RF_sweep_current: # should this extend class Measurement?
         ax.set_title(filename + "\nPower from VNA = " +
             str(data.get(filename + '/power')) + " dBm" + "\n" + data.get(filename + '/notes'))
         graph_path = filename.replace(".hdf5", "db.png")
+        fig.savefig(graph_path)
+
+    @staticmethod
+    def plotPhase(filename, rev = False):
+        fig, ax = plt.subplots(1,1, figsize=(10,6))
+        data = dataset.Dataset(filename)
+        if not rev:
+            current = np.linspace(data.get(filename + '/Istart')*100,
+                        data.get(filename + '/Istop')*100,
+                        data.get(filename + '/Isteps'))
+        else:
+            current = np.linspace(data.get(filename + '/Istop')*100,
+                        data.get(filename + '/Istart')*100,
+                        data.get(filename + '/Isteps'))
+        freq = np.linspace(data.get(filename + '/freqmin')/1e9,
+                    data.get(filename + '/freqmax')/1e9,
+                    data.get(filename + '/numpoints'))
+        Y,X = np.meshgrid(freq, current)
+        phase = RF_sweep_current.phase_data(filename, rev = rev)
+        im=ax.pcolor(X, Y, dB, cmap="inferno")
+        cbar = fig.colorbar(im)
+        ax.set_xlabel('field coil current (mA)')
+        ax.set_ylabel('frequency (GHz)')
+        if not rev:
+            ax.set_title(filename + "\nPower from VNA = " +
+                str(data.get(filename + '/power')) + " dBm")
+        else:
+            ax.set_title(filename + "\nSweep back in current" +
+                "\nPower from VNA = " + str(data.get(filename + '/power'))
+                 + " dBm")
+        cbar.set_label('Phase [derees]')
+        if not rev:
+            graph_path = filename.replace(".hdf5", "phase.png")
+        else:
+            graph_path = filename.replace(".hdf5", "phase_rev.png")
         fig.savefig(graph_path)
