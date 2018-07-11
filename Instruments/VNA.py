@@ -390,6 +390,7 @@ class VNA8722ES(Instrument):
             except ZeroDivisionError:
                 phase_radians = math.pi/2
             phase_array[0, i] = phase_radians * (180/math.pi)
+        return phase_array
 
     def sleep_until_finish_averaging(self):
         """Sleeps for number of seconds <VNA sweep time>*<averaging factor+2>
