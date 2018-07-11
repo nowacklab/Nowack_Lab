@@ -153,6 +153,8 @@ class Saver(object):
                             # [1:] strips the !; walk through the subobject
                             walk(d[key[1:]].__dict__, f[key])
                         else:  # it's a dictionary
+                            if key not in d:  # Needed for Zurich _save_dict
+                                d[key] = dict()  # Empty dict to accept data
                             walk(d[key], f.get(key))
 
                     # Dataset
@@ -169,7 +171,7 @@ class Saver(object):
 
                 return d
 
-            walk(self.__dict__, f) # start walkin'
+            walk(self.__dict__, f)  # start walkin'
 
 
     @staticmethod
@@ -321,6 +323,7 @@ class Saver(object):
             def walk(d, group):
                 for key, value in d.items():
                     key = str(key)  # Some may be ints; convert to str
+                    key = key.replace('/','-')  ## HACK: Zurich dict keys have / and will create unwanted groups in the base of the tree
 
                     if type(value) is np.ndarray:
                         # Save the numpy array as a dataset
