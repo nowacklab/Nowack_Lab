@@ -378,7 +378,6 @@ class VNA8722ES(Instrument):
         (use degrees because VNA phase output uses degrees)"""
         input_shape = np.shape(Re_Im_array)
         assert len(input_shape) == 2 and input_shape[0] == 2, "input should be 2xn array of Re, Im data"
-        assert abs(np.amax(Re_Im_array)) <= 1, "This does not look like Re, Im data (entries should be between -1, 1)"
 
         phase_array = np.empty((1, input_shape[1]))
 
