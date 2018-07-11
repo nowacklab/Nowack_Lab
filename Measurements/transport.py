@@ -352,12 +352,12 @@ class RvsVg(RvsSomething):
 
         if fine_range is None:
             self.Vg_values = np.linspace(Vstart, Vend, round(abs(Vend-Vstart)/Vstep)+1)
-        else: # Use more points if a fine range specified
+        else:  # Use more points if a fine range specified
             Vmin = fine_range[0]
             Vmax = fine_range[1]
-            numpts_sm = round(abs(Vmin-Vstart)/Vstep)+1 # sm = "start min"
-            numpts_mm = round(abs(Vmin-Vmax)/Vstep*10)+1 # mm = "min max"
-            numpts_me = round(abs(Vmax-Vend)/Vstep)+1 # me = "max end"
+            numpts_sm = round(abs(Vmin-Vstart)/Vstep)+1  # sm = "start min"
+            numpts_mm = round(abs(Vmin-Vmax)/Vstep*10)+1  # mm = "min max"
+            numpts_me = round(abs(Vmax-Vend)/Vstep)+1  # me = "max end"
             self.Vg_values = np.concatenate((
                     np.linspace(Vstart, Vmin, numpts_sm, endpoint=False),
                     np.linspace(Vmin, Vmax, numpts_mm, endpoint=False),
@@ -368,14 +368,13 @@ class RvsVg(RvsSomething):
         self.Ig = np.array([])
         self.T = np.array([])
 
-        self.setup_keithley()
 
     def do(self, num_avg = 1, delay_avg = 0, zero=False, plot=True, auto_gain=False):
-#         self.keithley.output = 'on' #NO! will cause a spike!
-
         # Sweep to Vstart
         self.keithley.sweep_V(self.keithley.V, self.Vstart, self.Vstep, self.sweep)
+        self.keithley.Vout_range = abs(self.Vg_values).max()
         time.sleep(self.delay*3)
+
 
         # Do the measurement sweep
         for i, Vg in enumerate(self.Vg_values):
@@ -399,21 +398,14 @@ class RvsVg(RvsSomething):
         Plots using superclass function and adds warning for Ig > 1 nA
         '''
         super().plot()
-        if self.Igwarning is None: # if no warning
-            if len(self.Ig)>0: # if have data
-                if abs(self.Ig).max() >= 1e-9: # if should be warning
+        if self.Igwarning is None:  # if no warning
+            if len(self.Ig)>0:  # if have data
+                if abs(self.Ig).max() >= 1e-9:  # if should be warning
                     self.Igwarning = self.ax.text(.02,.95,
                                         r'$|I_g| \geq 1$ nA!',
                                         transform=self.ax.transAxes,
                                         color = 'C3'
-                                    ) # warning
-
-    def setup_keithley(self):
-        pass
-        # self.keithley.zero_V(1) # 1V/s
-        # self.keithley.source = 'V'
-        # self.keithley.I_compliance = 1e-6
-        # self.keithley.Vout_range = max(abs(self.Vstart), abs(self.Vend))
+                                    )  # warning
 
 
     def setup_label(self):
@@ -486,13 +478,15 @@ class RvsVg_Vtg(RvsVg):
 
             for j in range(self.num_lockins):
                 if self.Vstart > self.Vend:
-                    self.R2D[j][i, :] = self.gs.R[j][::-1] # reverse if we did the sweep backwards
-                    self.Vx2D[j][i, :] = self.gs.Vx[j][::-1] # reverse if we did the sweep backwards
-                    self.Vy2D[j][i, :] = self.gs.Vy[j][::-1] # reverse if we did the sweep backwards
-                    self.Ix2D[i, :] = self.gs.Ix[::-1] # reverse if we did the sweep backwards
-                    self.Iy2D[i, :] = self.gs.Iy[::-1] # reverse if we did the sweep backwards
+                    #[::-1] reverses sweeps if we did them backwards
+                    self.R2D[j][i, :] = self.gs.R[j][::-1]
+                    self.Vx2D[j][i, :] = self.gs.Vx[j][::-1]
+                    self.Vy2D[j][i, :] = self.gs.Vy[j][::-1]
+                    self.Ix2D[i, :] = self.gs.Ix[::-1]
+                    self.Iy2D[i, :] = self.gs.Iy[::-1]
                 else:
-                    self.R2D[j][i, :] = self.gs.R[j] # first index is voltage channel, second is Vtg, third is Vg. Reve
+                    # first index is voltage channel, second is Vtg, third is Vg
+                    self.R2D[j][i, :] = self.gs.R[j]
                     self.Vx2D[j][i, :] = self.gs.Vx[j]
                     self.Vy2D[j][i, :] = self.gs.Vy[j]
                     self.Ix2D[i, :] = self.gs.Ix
@@ -501,9 +495,9 @@ class RvsVg_Vtg(RvsVg):
 
 
     def plot(self):
-        Measurement.plot(self) # don't want to do RvsVg plotting
+        Measurement.plot(self)  # don't want to do RvsVg plotting
 
-        for i in range(len(self.ax.keys())): # rows == different channels
+        for i in range(len(self.ax.keys())):  # rows == different channels
             plot_mpl.update2D(self.im[i][0], np.abs(self.R2D[i]), equal_aspect=False)
             plot_mpl.update2D(self.im[i][1], np.log(np.abs(self.R2D[i])), equal_aspect=False)
 
