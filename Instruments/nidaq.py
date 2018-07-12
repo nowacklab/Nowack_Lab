@@ -28,14 +28,8 @@ class NIDAQ(Instrument):
         self._input_range = input_range
         self._output_range = output_range
 
-        self._ins = self._daq.get_AI_channels()
-        self._outs = self._daq.get_AO_channels()
-
-        for chan in self._ins:
-            setattr(self, chan, InputChannel(self._daq, name=chan))
-
-        for chan in self._outs:
-            setattr(self, chan, OutputChannel(self._daq, name=chan))
+        self.setup_inputs()
+        self.setup_outputs()
 
         if zero:
             self.zero()
@@ -46,11 +40,11 @@ class NIDAQ(Instrument):
         # for chan in self._ins + self._outs:
         #     self._save_dict[chan] = getattr(self, chan).V
         self._save_dict.update({
-            'device_name': self._dev_name,
-            'input_range': self._input_range,
-            'output_range': self._output_range,
-            'inputs': self.inputs,
-            'outputs': self.outputs,
+            '_device_name': self._dev_name,
+            '_input_range': self._input_range,
+            '_output_range': self._output_range,
+            '_inputs': self.inputs,
+            '_outputs': self.outputs,
         })
 
         return self._save_dict
@@ -171,8 +165,7 @@ class NIDAQ(Instrument):
         # and tell the DAQ to output that value of ao0 for every data
         # point.
         numsteps = int(duration*sample_rate)
-        current_ao0 = self.ao0.V
-        data = {'ao0': np.array([current_ao0]*numsteps)}
+        data = {'t': np.array([0]*numsteps)}  ## HACK: This data is not used and just converted back to a duration in send_receive
 
         received = self.send_receive(data, chan_in=chan_in, sample_rate=sample_rate)
 
@@ -184,12 +177,20 @@ class NIDAQ(Instrument):
         Send data to daq outputs and receive data on input channels.
         Data should be a dictionary with keys that are output channel labels or names
         and values can be float, list, or np.ndarray.
+        Key can also be time, in which case the data will be converted to a
+        duration using len(data['t'])/sample_rate = num_seconds
         Arrays should be equally sized for all output channels.
         chan_in is a list of all input channel labels or names you wish to monitor.
         '''
 
         # Make everything a numpy array
         data = data.copy() # so we don't modify original data
+
+        no_output = False
+        if 't' in data:
+            no_output = True  # sending "t" suggests we do not want to write to output channels
+            len_data = len(data.pop('t'))
+
         for key, value in data.items():
             value = value.copy() # so we don't modify original data
             if np.isscalar(value):
@@ -236,8 +237,11 @@ class NIDAQ(Instrument):
         # prepare a NIDAQ Task
         taskargs = tuple([getattr(self._daq, ch) for ch in list(data.keys()) + chan_in])
         task = ni.Task(*taskargs)
-        some_data = next(iter(data.values())) # All data must be equal length, so just choose one.
-        task.set_timing(n_samples = len(some_data), fsamp='%fHz' %sample_rate)
+        if no_output:
+            task.set_timing(n_samples = len_data, fsamp='%fHz' %sample_rate)  ## HACK
+        else:
+            some_data = next(iter(data.values())) # All data must be equal length, so just choose one.  ## HACK
+            task.set_timing(n_samples = len(some_data), fsamp='%fHz' %sample_rate)  ## HACK:
 
         # run the task and remove units
         received = task.run(data)
@@ -265,6 +269,18 @@ class NIDAQ(Instrument):
                 received[getattr(self, chan).label] = received.pop(chan)  # change back to the given channel labels if different from the real channel names
 
         return received
+
+
+    def setup_inputs(self):
+        self._ins = self._daq.get_AI_channels()
+        for chan in self._ins:
+            setattr(self, chan, InputChannel(self._daq, name=chan))
+
+
+    def setup_outputs(self):
+        self._outs = self._daq.get_AO_channels()
+        for chan in self._outs:
+            setattr(self, chan, OutputChannel(self._daq, name=chan))
 
 
     def sweep(self, Vstart, Vend, chan_in=None, sample_rate=100, numsteps=1000):
@@ -313,9 +329,9 @@ class Channel():
     def __getstate__(self):
         self._save_dict = {}
         self._save_dict.update({
-            'V': self._V,
-            'label': self.label,
-            'name': self._name
+            '_V': self._V,
+            '_label': self.label,
+            '_name': self._name
         })
 
         return self._save_dict
