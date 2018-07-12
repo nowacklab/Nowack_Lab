@@ -36,7 +36,7 @@ class RF_take_spectra:
         self.plot = plot
 
         self.valid_numpoints = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
-        assert self.v_numpoints in self.valid_numpoints,"number of points must be in " + str(valid_numpoints)
+        assert self.v_numpoints in self.valid_numpoints,"number of points must be in " + str(self.valid_numpoints)
 
         self.v1 = VNA8722ES(16)  # initialize VNA (Instrument object)
 
@@ -91,6 +91,7 @@ class RF_take_spectra:
 '''Class for sweeping current with the Keithley2400 and recording
 data from the VNA8722ES at each current step.
 '''
+
 class RF_sweep_current: # should this extend class Measurement?
                         # also, there will be other sweeps in the future (e.g. power sweep),
                         # so may be worth having the class WithoutDAQ_ThreeParam_Sweep (esp. for plotting fxns)
@@ -124,7 +125,7 @@ class RF_sweep_current: # should this extend class Measurement?
 
         assert self.k_Istart < k_Istop,"stop voltage should be greater than start voltage"
         self.valid_numpoints = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
-        assert self.v_numpoints in self.valid_numpoints,"number of points must be in " + str(valid_numpoints)
+        assert self.v_numpoints in self.valid_numpoints,"number of points must be in " + str(self.valid_numpoints)
 
         self.k3 = Keithley2400(24)  # initialize current source (Instrument object)
         self.v1 = VNA8722ES(16)  # initialize VNA (Instrument object)
@@ -172,7 +173,7 @@ class RF_sweep_current: # should this extend class Measurement?
         if self.hysteresis == True:
             re_im_rev = np.empty((self.k_Isteps, 2, int(self.v1.numpoints)))
 
-        #sweep foward in current
+        # sweep foward in current
         index = 0
         for step in range(0, self.k_Isteps):
             if step % 10 == 0:
@@ -182,7 +183,7 @@ class RF_sweep_current: # should this extend class Measurement?
             re_im[index] = self.v1.save_Re_Im()
             index += 1
 
-        #sweep backwars in current
+        # sweep backwards in current
         index = 0
         if(self.hysteresis == True):
             for step in range(0, self.k_Isteps):
@@ -192,7 +193,7 @@ class RF_sweep_current: # should this extend class Measurement?
                 self.v1.averaging_restart()  # restart averaging
                 re_im_rev[index] = self.v1.save_Re_Im()
                 index += 1
-            self.save_data(timestamp, re_im, re_im_rev = re_im_rev)
+            self.save_data(timestamp, re_im, re_im_rev=re_im_rev)
         else:
             self.save_data(timestamp, re_im) #save data to h5
 
@@ -355,3 +356,120 @@ class RF_sweep_current: # should this extend class Measurement?
         else:
             graph_path = filename.replace(".hdf5", "phase_rev.png")
         fig.savefig(graph_path)
+
+
+class RF_sweep_power:
+
+    '''
+    Initiate a sweep through bias current (x-axis), VNA source power (y-axis), attenuation/phase? (z-axis)
+    '''
+    def __init__(self,
+                 k_Istart, k_Istop, k_Isteps,
+                 v_freqconst, v_powermin, v_powermax, v_powersteps, v_avg_factor, filepath, v_numpoints=1601,
+                 v_smoothing_state=0,
+                 v_smoothing_factor=1, notes="No notes", hysteresis=False,
+                 plot=False):
+
+        # Set object variables
+        self.k_Istart = k_Istart
+        self.k_Istop = k_Istop
+        self.k_Isteps = k_Isteps
+        self.v_freqconst = v_freqconst
+        self.v_powermin = v_powermin
+        self.v_powermax = v_powermax
+        self.v_powersteps = v_powersteps
+        self.v_avg_factor = v_avg_factor
+        self.v_numpoints = v_numpoints
+        self.filepath = filepath
+        self.v_smoothing_state = v_smoothing_state
+        self.v_smoothing_factor = v_smoothing_factor
+        self.notes = notes
+        self.hysteresis = hysteresis
+        self.plot = plot
+
+        assert self.k_Istart < k_Istop, "stop voltage should be greater than start voltage"
+        self.valid_numpoints = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
+        assert self.v_numpoints in self.valid_numpoints, "number of points must be in " + str(self.valid_numpoints)
+
+        self.k3 = Keithley2400(24)  # initialize current source (Instrument object)
+        self.v1 = VNA8722ES(16)  # initialize VNA (Instrument object)
+
+    def do(self):
+        '''
+        Run measurement
+        '''
+        # Set up current source settings
+        if (self.k3.output == 'off'):
+            self.k3.output = 'on'
+        self.k3.source = 'I'
+        time.sleep(3)
+        self.k3.Iout_range = 20e-3  # 20 mA range
+        self.k3.Iout = self.k_Istart
+        self.k3.V_compliance = 21   # 21 volt compliance
+
+        # Set up VNA settings
+        self.v1.networkparam = 'S21'    # Set to measure forward transmission
+        self.v1.power = self.v_powermin    # set to start power
+        self.v1.powerstate = 1          # turn vna source power on
+        self.v1.averaging_state = 1     # Turn averaging on
+        self.v1.averaging_factor = self.v_avg_factor
+        self.v1.minfreq = self.v_freqmin    # set min sweep frequency
+        self.v1.maxfreq = self.v_freqmax    # set max sweep frequency
+        self.v1.numpoints = self.v_numpoints                # set num freq pnts for VNA
+        self.v1.smoothing_state = self.v_smoothing_state    # turn smoothing on
+        self.v1.smoothing_factor = self.v_smoothing_factor  # set smoothing factor
+
+        # print estimated_runtime
+        sleep_length = float(self.v1.ask('SWET?')) * (self.v1.averaging_factor + 3)
+        estimated_runtime = sleep_length * self.k_Isteps
+        print('Minimum estimated runtime: ' + str(int(estimated_runtime / 60)) + ' minutes')
+
+        power_stepsize = (float(self.v_powermax - self.v_powermin)) / self.v_powersteps
+        print('Incrementing power in step sizes of ', str(power_stepsize) + ' dB')
+
+        I_stepsize = (float(self.k_Istop - self.k_Istart)) / self.k_Isteps
+        print('Incrementing current in step sizes of ', str(I_stepsize * 1000) + ' mA')
+
+        # creates a timestamp that will be in the h5 file name for this run
+        now = datetime.now()
+        timestamp = now.strftime('%Y-%m-%d_%H%M%S')
+
+        # initialize empty array to store data in TODO: change from empty to NAN?
+        re_im = np.empty((self.k_Isteps, 2, int(self.v_powersteps)))
+        if self.hysteresis:
+            print("Hysteretic sweep for current-power sweep not yet implemented; which param to sweep both ways, and what is physical interpretation")
+            re_im_rev = np.empty((self.k_Isteps, 2, int(self.v_powersteps)))
+
+
+        # sweep foward in power, then current
+        index = 0
+        for powerstep in range(0, self.v_powersteps):
+            if powerstep % 10 == 0:
+                print("something source step #" + str(powerstep + 1) + " out of " + str(self.k_powersteps))
+            self.v1.power = self.v1.power + power_stepsize  # increment power
+            self.v1.averaging_restart()  # restart averaging
+
+            for currentstep in range(self.k_Isteps):
+                self.k3.Iout = self.k3.Iout + I_stepsize    # increment source current
+
+                re_im_to_average = self.v1.save_Re_Im()
+                re_im[currentstep, 0, powerstep] = re_im_to_average[0]      # averaged real part
+                re_im[currentstep, 1, powerstep] = re_im_to_average[1]      # averaged imaginary part
+                index += 1
+
+
+        if self.hysteresis:
+            print("Saving empty reverse array (hysteretic sweep not yet implemented)")
+            self.save_data(timestamp, re_im, re_im_rev=re_im_rev)
+        else:
+            self.save_data(timestamp, re_im)    # save data to h5
+
+        self.k3.Iout = 0
+        self.k3.output = 'off'  # turn off keithley output
+        self.v1.powerstate = 0  # turn off VNA source power
+
+        # plot TODO: only plots foward attenuation atm
+        if self.plot == True:
+            RF_sweep_current.plotdB(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5")
+            if self.hysteresis == True:
+                RF_sweep_current.plotdB(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5", rev=True)
