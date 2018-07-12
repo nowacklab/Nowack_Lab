@@ -245,12 +245,12 @@ class RF_sweep_current: # should this extend class Measurement?
         fig, ax = plt.subplots(1,1, figsize=(10,6))
         data = dataset.Dataset(filename)
         if not rev:
-            current = np.linspace(data.get(filename + '/Istart')*100,
-                        data.get(filename + '/Istop')*100,
+            current = np.linspace(data.get(filename + '/Istart')*1000,
+                        data.get(filename + '/Istop')*1000,
                         data.get(filename + '/Isteps'))
         else:
-            current = np.linspace(data.get(filename + '/Istop')*100,
-                        data.get(filename + '/Istart')*100,
+            current = np.linspace(data.get(filename + '/Istop')*1000,
+                        data.get(filename + '/Istart')*1000,
                         data.get(filename + '/Isteps'))
         freq = np.linspace(data.get(filename + '/freqmin')/1e9,
                     data.get(filename + '/freqmax')/1e9,
