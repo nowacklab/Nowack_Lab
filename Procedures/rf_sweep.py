@@ -579,6 +579,15 @@ class RF_sweep_power:
         return phase
 
     @staticmethod
+    def removenoise_phase_data(filename, degree_limit=50, rev=False):
+        """Return phase arrays without "blips" i.e. no phase shift above/below some number of degrees"""
+
+        phase_data = RF_sweep_current.phase_data(filename, rev=rev)
+        outside_threshold_indices = np.abs(phase_data) > degree_limit
+        phase_data[outside_threshold_indices] = 0   # set all entries above/below degree_limit to 0
+        return phase_data
+
+    @staticmethod
     def plotPhase(filename, rev=False):
         fig, ax = plt.subplots(1,1, figsize=(10,6))
         data = dataset.Dataset(filename)
@@ -587,7 +596,7 @@ class RF_sweep_power:
                         data.get(filename + '/Istop')*100,
                         data.get(filename + '/Isteps'))
         else:
-            
+
             current = np.linspace(data.get(filename + '/Istop')*100,
                         data.get(filename + '/Istart')*100,
                         data.get(filename + '/Isteps'))
