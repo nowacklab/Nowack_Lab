@@ -59,8 +59,8 @@ class VNA8722ES(Instrument):
 
         self.write('FORM4')
         self._savemode = 'FORM4'
-
-        print("init: power off and at -75dB. Measuring S21. Most other settings factory preset.")
+        self.write('SWET 1')
+        print("init: power off and at -75dB. Measuring S21. Manual sweep time 1 second. Most other settings factory preset.")
         time.sleep(3)
 
     def factory_preset(self):
@@ -203,6 +203,8 @@ class VNA8722ES(Instrument):
         assert value in vals, "must be in " + str(vals)
         self.write('OPC?;POIN %f;' %value)
         self._numpoints = value
+        self.write('SWET 1')
+        print("Setting manual sweep time to 1 second")
 
     @property
     def averaging_state(self):
@@ -391,12 +393,16 @@ class VNA8722ES(Instrument):
             phase_array[0, i] = phase_radians * (180/math.pi)
         return phase_array
 
+    @staticmethod
+    def remove_phase_noise(phase_array):
+        "Return "
+
+        return None
     def sleep_until_finish_averaging(self):
         """Sleeps for number of seconds <VNA sweep time>*<averaging factor+2>
         (2 extra sweeps for safety)"""
         sleep_length = float(self.ask('SWET?'))*(self.averaging_factor + 2)
         time.sleep(sleep_length)
-
 
     def ask(self, msg, tryagain=True):
         try:
