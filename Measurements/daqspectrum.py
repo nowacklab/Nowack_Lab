@@ -59,7 +59,7 @@ class DaqSpectrum(Measurement):
         Returns:
         psdAve (np.ndarray): power spectral density
         '''
-        Nfft = int((self.measure_freq * self.measure_time / 2) + 1)
+        Nfft = int(self.measure_freq * self.measure_time / 2)  # 7/12/2018 daq changed forced remove +1
         psdAve = np.zeros(Nfft)
 
         for i in range(self.averages):
