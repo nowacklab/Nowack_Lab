@@ -195,7 +195,7 @@ class RvsVg_B(RvsVg):
         '''
         for i, B in enumerate(self.B):
             if self.Vg_sweep is not None:
-                self.keithley.sweep_V(self.keithley.V, self.Vg_sweep, .1, 1) # set desired gate voltage for the field sweep
+                self.keithley.sweep_V(self.keithley.V, self.Vg_sweep, self.Vstep, self.sweep) # set desired gate voltage for the field sweep
             elif self.raster: # otherwise we will go as quickly as possible and reverse every other gatesweep
                 self.Vstart, self.Vend = self.Vend, self.Vstart
 

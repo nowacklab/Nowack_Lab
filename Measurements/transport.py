@@ -212,6 +212,8 @@ class RvsSomething(Measurement):
 
         l = self.ax.legend(['R%i' %(i+1) for i in range(self.num_lockins)], loc='best', title=self.legendtitle)
         self.ax.set_title(self.filename)
+        self.fig.tight_layout()
+
 
 class RvsTime(RvsSomething):
     '''
