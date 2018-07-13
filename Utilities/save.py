@@ -412,8 +412,15 @@ def get_data_paths(experiment='', kind=''):
 
     Keyword arguments:
     experiment (string): Full path of the experiment directory
-    kinder (string): name of the Saver subclass
+        (uses current experiment if none given)
+    kind (string): name of the Saver subclass
     '''
+    # Use current experiment if none given
+    if experiment == '':
+        experiment = os.path.join(get_local_data_path(),
+                                get_experiment_data_dir()
+                            )
+
     # Get a list of all the date directories
     p = os.path.join(experiment, '*')
     g = list(glob.iglob(p))
