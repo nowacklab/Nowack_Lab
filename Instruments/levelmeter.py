@@ -27,8 +27,8 @@ class AMI1700(VISAInstrument):
         '''
         Continuously measure the helium level.
         '''
-        self.ask('MEAS:HE:CONT')
-        time_limit = float(self.ask('HE:TIME?'))
+        self.query('MEAS:HE:CONT')
+        time_limit = float(self.query('HE:TIME?'))
         print('Continously measuring helium level for the next %i minutes.' %time_limit)
 
     def continuous_time_limit(self, time_lim_minutes):
@@ -36,13 +36,13 @@ class AMI1700(VISAInstrument):
         Set the continuous sampling time limit (minutes)
         '''
         raise Exception('Command does not work.')
-        self.ask('CONF:HE:TIME %i' %time_lim_minutes)
+        self.query('CONF:HE:TIME %i' %time_lim_minutes)
 
     def level(self):
         '''
         Returns the last measured Helium level (%)
         '''
-        self._level = float(self.ask('MEAS:HE:LEV?'))
+        self._level = float(self.query('MEAS:HE:LEV?'))
         return self._level
 
     def sample(self):
@@ -50,7 +50,7 @@ class AMI1700(VISAInstrument):
         Sample the current helium level and hold.
         Can be used to update the current measurement or to abort continous sampling.
         '''
-        self.ask('MEAS:HE:SAMP')
+        self.query('MEAS:HE:SAMP')
         print('Measuring helium level...')
         time.sleep(5)
         return self.level()

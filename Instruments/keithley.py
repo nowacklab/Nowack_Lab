@@ -55,7 +55,7 @@ class Keithley2400(VISAInstrument):
             "CURR": "I",
             "MEM": "memory"
         }
-        return options[self.ask(':SOUR:FUNC:MODE?')]
+        return options[self.query(':SOUR:FUNC:MODE?')]
 
     @source.setter
     def source(self, value):
@@ -90,7 +90,7 @@ class Keithley2400(VISAInstrument):
         if self.output == 'off':
             raise Exception('Need to turn output on to read current!')
         self.write(':FORM:ELEM CURR') # get current reading
-        return float(self.ask(':READ?'))
+        return float(self.query(':READ?'))
 
     @property
     def Iout(self):
@@ -99,7 +99,7 @@ class Keithley2400(VISAInstrument):
         '''
         if self.source != 'I':
             raise Exception('Cannot read source current if sourcing voltage!')
-        self._Iout = float(self.ask(':SOUR:CURR:LEV:AMPL?'))
+        self._Iout = float(self.query(':SOUR:CURR:LEV:AMPL?'))
 
         return self._Iout
 
@@ -127,7 +127,7 @@ class Keithley2400(VISAInstrument):
         '''
         if self.source != 'I':
             raise Exception('Cannot get source current range if sourcing voltage!')
-        self._Iout_range = float(self.ask(':SOUR:CURR:RANGE?'))
+        self._Iout_range = float(self.query(':SOUR:CURR:RANGE?'))
         return self._Iout_range
 
     @Iout_range.setter
@@ -151,7 +151,7 @@ class Keithley2400(VISAInstrument):
         '''
         if self.source != 'V':
             raise Exception('Cannot get current compliance if sourcing current!')
-        self._I_compliance = float(self.ask(':SENS:CURR:PROT?'))
+        self._I_compliance = float(self.query(':SENS:CURR:PROT?'))
         return self._I_compliance
 
     @I_compliance.setter
@@ -172,7 +172,7 @@ class Keithley2400(VISAInstrument):
         if self.output == 'off':
             raise Exception('Need to turn output on to read voltage!')
         self.write(':FORM:ELEM VOLT') # get voltage reading
-        return float(self.ask(':READ?'))
+        return float(self.query(':READ?'))
 
     @property
     def Vout(self):
@@ -181,7 +181,7 @@ class Keithley2400(VISAInstrument):
         '''
         if self.source != 'V':
             raise Exception('Cannot read source voltage if sourcing current!')
-        self._Vout = float(self.ask(':SOUR:VOLT:LEV:AMPL?'))
+        self._Vout = float(self.query(':SOUR:VOLT:LEV:AMPL?'))
         return self._Vout
 
     @Vout.setter
@@ -207,7 +207,7 @@ class Keithley2400(VISAInstrument):
         '''
         if self.source != 'V':
             raise Exception('Cannot get source voltage range if sourcing current!')
-        self._Vout_range = float(self.ask(':SOUR:VOLT:RANGE?'))
+        self._Vout_range = float(self.query(':SOUR:VOLT:RANGE?'))
         return self._Vout_range
 
     @Vout_range.setter
@@ -233,7 +233,7 @@ class Keithley2400(VISAInstrument):
         '''
         if self.source != 'I':
             raise Exception('Cannot get voltage compliance if sourcing voltage!')
-        self._V_compliance = float(self.ask(':SENS:VOLT:PROT?'))
+        self._V_compliance = float(self.query(':SENS:VOLT:PROT?'))
         return self._V_compliance
 
     @V_compliance.setter
@@ -251,7 +251,7 @@ class Keithley2400(VISAInstrument):
         '''
         Check whether or not output is enabled
         '''
-        self._output = {0: 'off', 1:'on'}[int(self.ask('OUTP?'))]
+        self._output = {0: 'off', 1:'on'}[int(self.query('OUTP?'))]
         return self._output
 
     @output.setter
@@ -282,7 +282,7 @@ class Keithley2400(VISAInstrument):
         '''
         Check whether REL is enabled.
         '''
-        self._rel = bool(int(self.ask(':CALC2:NULL:STAT?')))
+        self._rel = bool(int(self.query(':CALC2:NULL:STAT?')))
         return self._rel
 
     @rel.setter
@@ -346,7 +346,7 @@ class Keithley2400(VISAInstrument):
         old_timeout = self._visa_handle.timeout
         self._visa_handle.timeout = None # infinite timeout
 
-        a = self.ask(':READ?', timeout=None) # starts the sweep
+        a = self.query(':READ?', timeout=None) # starts the sweep
         self.write(':SOUR:VOLT:MODE FIXED') # fixed voltage mode
         self.write(':SENS:FUNC:CONC ON') # turn concurrent functions back on
         self.write(':SENS:FUNC \"CURR\"')
@@ -401,7 +401,7 @@ class Keithley2450(Keithley2400):
         '''
         if self.output == 'off':
             raise Exception('Need to turn output on to read current!')
-        I = self.ask('MEAS:CURR?') # get current reading
+        I = self.query('MEAS:CURR?') # get current reading
         return float(I)
 
 
@@ -412,7 +412,7 @@ class Keithley2450(Keithley2400):
         '''
         if self.output == 'off':
             raise Exception('Need to turn output on to read voltage!')
-        V = self.ask('MEAS:VOLT?') # get voltage reading
+        V = self.query('MEAS:VOLT?') # get voltage reading
         return float(V)
 
 
@@ -599,7 +599,7 @@ class Keithley2600(Instrument):
         old_timeout = self._visa_handle.timeout
         self._visa_handle.timeout = None # infinite timeout
 
-        a = self.ask(':READ?') # starts the sweep
+        a = self.query(':READ?') # starts the sweep
         self.write(':SOUR:VOLT:MODE FIXED') # fixed voltage mode
         self.write(':SENS:FUNC:CONC ON') # turn concurrent functions back on
         self.write(':SENS:FUNC \"CURR\"')
@@ -797,23 +797,23 @@ class Keithley2400Old(Instrument):
         return self._save_dict
 
 
-    def ask(self, msg, tryagain=True):
+    def query(self, msg, tryagain=True):
         try:
-            return self._visa_handle.ask(msg)
+            return self._visa_handle.query(msg)
         except:
             print('Communication error with Keithley')
             self.reset()
             # self.close()
             # self.__init__(self.gpib_address)
             if tryagain:
-                self.ask(msg, False)
+                self.query(msg, False)
 
     @property
     def compliance_current(self):
         '''
         Get the compliance current
         '''
-        return float(self.ask(':SENS:CURR:PROT?'))
+        return float(self.query(':SENS:CURR:PROT?'))
 
     @compliance_current.setter
     def compliance_current(self, value):
@@ -839,7 +839,7 @@ class Keithley2400Old(Instrument):
         '''
         Get the compliance current
         '''
-        return float(self._visa_handle.ask(':SENS:CURR:PROT?'))
+        return float(self._visa_handle.query(':SENS:CURR:PROT?'))
 
     @compliance_current.setter
     def compliance_current(self, value):
@@ -855,17 +855,17 @@ class Keithley2400Old(Instrument):
         '''Get the current reading.'''
         if self.output == 'off':
             raise Exception('Need to turn output on to read current!')
-        return float(self.ask(':READ?').split(',')[1])
+        return float(self.query(':READ?').split(',')[1])
 
     @property
     def voltage_in(self):
         '''Get the current reading.'''
-        return float(self.ask(':READ?').split(',')[0])
+        return float(self.query(':READ?').split(',')[0])
 
     @property
     def voltage(self):
         '''Get the output voltage'''
-        return float(self.ask(':SOUR:VOLT:LEV:AMPL?'))
+        return float(self.query(':SOUR:VOLT:LEV:AMPL?'))
 
     @voltage.setter
     def voltage(self, value):
@@ -879,7 +879,7 @@ class Keithley2400Old(Instrument):
                 "VOLT": "voltage",
                 "CURR": "current",
                 "MEM": "memory"}
-        return options[self.ask(':SOUR:FUNC:MODE?')]
+        return options[self.query(':SOUR:FUNC:MODE?')]
 
     @mode.setter
     def mode(self, value):
@@ -892,7 +892,7 @@ class Keithley2400Old(Instrument):
 
     @property
     def output(self):
-        return {0: 'off', 1:'on'}[int(self.ask('OUTP?'))]
+        return {0: 'off', 1:'on'}[int(self.query('OUTP?'))]
 
     @output.setter
     def output(self, value):
@@ -901,7 +901,7 @@ class Keithley2400Old(Instrument):
 
     @property
     def voltage_range(self):
-        return float(self.ask(':SOUR:VOLT:RANGE?'))
+        return float(self.query(':SOUR:VOLT:RANGE?'))
 
     @voltage_range.setter
     def voltage_range(self, value):
@@ -915,7 +915,7 @@ class Keithley2400Old(Instrument):
 
     @property
     def voltage_range(self):
-        return float(self._visa_handle.ask(':SOUR:VOLT:RANGE?'))
+        return float(self._visa_handle.query(':SOUR:VOLT:RANGE?'))
 
     @voltage_range.setter
     def voltage_range(self, value):
@@ -967,7 +967,7 @@ class KeithleyPPMS(Keithley2400):
 
     @property
     def V(self):
-        return float(self.ask(':FETC?'))
+        return float(self.query(':FETC?'))
 
 
 if __name__ == '__main__':

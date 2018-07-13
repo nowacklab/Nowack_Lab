@@ -45,18 +45,18 @@ class VISAInstrument(Instrument):
         self._visa_handle = visa.ResourceManager().open_resource(resource)
         self._visa_handle.read_termination = termination
         if self._idn is not None:
-            idn = self.ask('*IDN?')
+            idn = self.query('*IDN?')
             if self._idn not in idn:
                 raise Exception('Instrument not recognized. Expected string %s in *IDN?: %s' %(self._idn, idn))
 
-    def ask(self, cmd, timeout=3000):
+    def query(self, cmd, timeout=3000):  # pyvisa 1.10 ask -> query
         '''
         Write and read combined operation.
         Default timeout 3000 ms. None for infinite timeout
         Strip terminating characters from the response.
         '''
         self._visa_handle.timeout = timeout
-        data = self._visa_handle.ask(cmd)
+        data = self._visa_handle.query(cmd)  # pyvisa 1.10 ask -> query
         return data.rstrip()
 
     def close(self):

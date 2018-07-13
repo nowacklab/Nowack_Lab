@@ -79,7 +79,7 @@ class AMI430(VISAInstrument):
         '''
         Read the field in Tesla.
         '''
-        self._B = float(self.ask('FIELD:MAG?'))
+        self._B = float(self.query('FIELD:MAG?'))
         return self._B
 
     @B.setter
@@ -94,7 +94,7 @@ class AMI430(VISAInstrument):
         '''
         Get the field ramp rate (T/min)
         '''
-        s = self.ask('RAMP:RATE:FIELD:1?') # returns 'Brate,Bmax'
+        s = self.query('RAMP:RATE:FIELD:1?') # returns 'Brate,Bmax'
         s = s.split(',') # now we have ['Brate','Bmax']
         self._Brate = float(s[0])
         return self._Brate
@@ -115,7 +115,7 @@ class AMI430(VISAInstrument):
         '''
         Get the field setpoint.
         '''
-        self._Bset = float(self.ask('FIELD:TARG?'))
+        self._Bset = float(self.query('FIELD:TARG?'))
         return self._Bset
 
     @Bset.setter
@@ -135,7 +135,7 @@ class AMI430(VISAInstrument):
         '''
         Get the current ramp rate (A/s)
         '''
-        s = self.ask('RAMP:RATE:CURR:1?') # returns 'Irate,Imax'
+        s = self.query('RAMP:RATE:CURR:1?') # returns 'Irate,Imax'
         s = s.split(',') # now we have ['Irate','Imax']
         self._Irate = float(s[0])
         return self._Irate
@@ -158,7 +158,7 @@ class AMI430(VISAInstrument):
         '''
         Read the current in Amperes.
         '''
-        self._I = float(self.ask('CURR:MAG?'))
+        self._I = float(self.query('CURR:MAG?'))
         return self._I
 
 
@@ -167,7 +167,7 @@ class AMI430(VISAInstrument):
         '''
         Get the current setpoint.
         '''
-        self._Iset = float(self.ask('CURR:TARG?'))
+        self._Iset = float(self.query('CURR:TARG?'))
         return self._Iset
 
 
@@ -176,7 +176,7 @@ class AMI430(VISAInstrument):
         '''
         Get the power supply current (A)
         '''
-        self._Isupply = self.ask('CURR:SUPP?')
+        self._Isupply = self.query('CURR:SUPP?')
         return self._Isupply
 
     @property
@@ -184,7 +184,7 @@ class AMI430(VISAInstrument):
         '''
         Is persistent switch enabled? True/False
         '''
-        self._p_switch = bool(float(self.ask('PSwitch?')))
+        self._p_switch = bool(float(self.query('PSwitch?')))
         return self._p_switch
 
     @p_switch.setter
@@ -227,7 +227,7 @@ class AMI430(VISAInstrument):
             10: 'Cooling Persistent Switch'
         }
 
-        state_num = int(self.ask('STATE?'))
+        state_num = int(self.query('STATE?'))
         self._status = states[state_num]
         return self._status
 
@@ -335,9 +335,13 @@ class AMI420(AMI430):
         Bmagnet - known field in the magnet (T). May be different from supply.
         gpib_address - GPIB address.
         '''
-        self.Bmagnet = Bmagnet
         self._resource = 'GPIB::%02i::INSTR' %gpib_address
         VISAInstrument._init_visa(self, self._resource)
+
+        self.Bmagnet = Bmagnet
+        if self.Bmagnet != self.Bset:
+            print('Warning! Power supply setpoint is different from reported \
+field in magnet!')
 
 
     @property
@@ -345,7 +349,7 @@ class AMI420(AMI430):
         '''
         Get the field ramp rate (T/min)
         '''
-        self._Brate = float(self.ask('RAMP:RATE:FIELD?') )
+        self._Brate = float(self.query('RAMP:RATE:FIELD?') )
         return self._Brate
 
 
@@ -370,7 +374,7 @@ class AMI420(AMI430):
         '''
         Get the field setpoint.
         '''
-        self._Bset = float(self.ask('FIELD:PROG?'))
+        self._Bset = float(self.query('FIELD:PROG?'))
         return self._Bset
 
 
@@ -391,7 +395,7 @@ class AMI420(AMI430):
         '''
         Get the field (T) insisted by the supply (NOT necessarily same as the magnet)
         '''
-        self._Bsupply = float(self.ask('FIELD:MAG?'))
+        self._Bsupply = float(self.query('FIELD:MAG?'))
         return self._Bsupply
 
 
@@ -400,7 +404,7 @@ class AMI420(AMI430):
         '''
         Get the current ramp rate (A/s)
         '''
-        self._Irate = float(self.ask('RAMP:RATE:CURR?') )
+        self._Irate = float(self.query('RAMP:RATE:CURR?') )
         return self._Irate
 
 
@@ -421,7 +425,7 @@ class AMI420(AMI430):
         '''
         Get the current setpoint.
         '''
-        self._Iset = float(self.ask('CURR:PROG?'))
+        self._Iset = float(self.query('CURR:PROG?'))
         return self._Iset
 
 
@@ -430,20 +434,20 @@ class AMI420(AMI430):
         '''
         Get the current insisted by the supply (NOT necessarily same as the magnet)
         '''
-        self._Isupply = float(self.ask('CURR:MAG?'))
+        self._Isupply = float(self.query('CURR:MAG?'))
         return self._Isupply
 
 
-    def ask(self, cmd, timeout=3000):
+    def query(self, cmd, timeout=3000):
         '''
         Modified from base class to try asking twice.
         Was getting weird random timeout issues:
         VI_ERROR_TMO (-1073807339): Timeout expired before operation completed.
         '''
         try:
-            return super().ask(cmd, timeout)
+            return super().query(cmd, timeout)
         except:
-            return super().ask(cmd, timeout)
+            return super().query(cmd, timeout)
 
 
     @property
@@ -463,7 +467,7 @@ class AMI420(AMI430):
             9: 'At zero current'
         }
 
-        state_num = int(self.ask('STATE?'))
+        state_num = int(self.query('STATE?'))
 
         # For some reason, never got status 9 when in zero mode.
         # Using criterion in the manual that Isupply < 0.1% * Imax
@@ -480,7 +484,7 @@ class AMI420(AMI430):
         '''
         Get the magnet voltage.
         '''
-        self._Vmag = float(self.ask('VOLT:MAG?'))
+        self._Vmag = float(self.query('VOLT:MAG?'))
         return self._Vmag
 
 
@@ -489,7 +493,7 @@ class AMI420(AMI430):
         '''
         Get the supply voltage.
         '''
-        self._Vsupply = float(self.ask('VOLT:SUPP?'))
+        self._Vsupply = float(self.query('VOLT:SUPP?'))
         return self._Vsupply
 
 

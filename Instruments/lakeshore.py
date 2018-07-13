@@ -74,7 +74,7 @@ class LakeshoreChannel(VISAInstrument):
         These are channel settings in an array:
             [enabled/disabled, dwell, pause, curve number, tempco]
         '''
-        inset = self.ask('INSET? %i' %self._num)
+        inset = self.query('INSET? %i' %self._num)
         inset = [int(x) for x in inset.split(',')]
         inset[0] = bool(inset[0]) # make enabled True/False
         for i, var in enumerate(self._insets):
@@ -113,7 +113,7 @@ class LakeshoreChannel(VISAInstrument):
         Get the power (W) of this input channel.
         '''
         if self.status == 'OK':
-            self._P = float(self.ask('RDGPWR? %i' %self._num))
+            self._P = float(self.query('RDGPWR? %i' %self._num))
         else:
             self._P = np.nan
         return self._P
@@ -124,7 +124,7 @@ class LakeshoreChannel(VISAInstrument):
         Get the resistance (R) of this input channel.
         '''
         if self.status == 'OK':
-            self._R = float(self.ask('RDGR? %i' %self._num))
+            self._R = float(self.query('RDGR? %i' %self._num))
         else:
             self._R = np.nan
         return self._R
@@ -136,7 +136,7 @@ class LakeshoreChannel(VISAInstrument):
         Returns True/False
         '''
         # SCAN? returns ##,#. The first number is channel being scanned
-        scan = self.ask('SCAN?')
+        scan = self.query('SCAN?')
         scan = int(scan.split(',')[0])
         self._scanned = (scan == self._num) # True or False
         return self._scanned
@@ -166,7 +166,7 @@ class LakeshoreChannel(VISAInstrument):
             'VCM OVL',
             'CS OVL'
         ]
-        b = int(self.ask('RDGST? %i' %self._num)) # "ReaDinG STatus"
+        b = int(self.query('RDGST? %i' %self._num)) # "ReaDinG STatus"
 
         status_message = ''
         binlist = [int(x) for x in '{:08b}'.format(b)] # to list of 1s and 0s
@@ -184,7 +184,7 @@ class LakeshoreChannel(VISAInstrument):
         Get the temperature (K) reading of input channels as a dictionary.
         '''
         if self.status == 'OK':
-            self._T = float(self.ask('RDGK? %i' %self._num))
+            self._T = float(self.query('RDGK? %i' %self._num))
         else:
             self._T = np.nan
         return self._T
