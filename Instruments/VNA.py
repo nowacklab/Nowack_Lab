@@ -399,11 +399,7 @@ class VNA8722ES(Instrument):
             phase_array[0, i] = phase_radians * (180/math.pi)
         return phase_array
 
-    @staticmethod
-    def remove_phase_noise(phase_array):
-        "Return "
 
-        return None
     def sleep_until_finish_averaging(self):
         """Sleeps for number of seconds <VNA sweep time>*<averaging factor+2>
         (2 extra sweeps for safety)"""
