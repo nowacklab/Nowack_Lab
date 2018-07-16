@@ -116,9 +116,14 @@ class VNA8722ES(Instrument):
         assert type(value) is float or int
         if value > -5 or value < -80:
             raise Exception('Power should be between -10 and -80 dBm')
-        rangenum = min(math.floor((-value + 5)/5), 11)
-        self.write('POWR%d' %rangenum)  # first change power range
-        self.write('POWE %f' % value)  # then can change power
+        rangenum = min(math.floor((-value + 5)/5)-1, 11)
+        print(self.ask('POWE?'))
+        print("float val", str(float(value)))
+        self.write('POWR%02d' %rangenum)  # first change power range
+        print("Setting power range to %d...", rangenum); time.sleep(8)
+        self.write('POWE%f' %value)  # then can change power
+        print("Setting power to ", value)
+        print(self.ask('POWE?'))
         self._power = value
 
     @property
@@ -203,7 +208,8 @@ class VNA8722ES(Instrument):
         assert value in vals, "must be in " + str(vals)
         self.write('OPC?;POIN %f;' %value)
         self._numpoints = value
-        self.write('SWET 1')
+        self.write('SWET 1')  # set sweep time to 1 second
+        time.sleep(2)
         print("Setting manual sweep time to 1 second")
 
     @property
@@ -405,6 +411,8 @@ class VNA8722ES(Instrument):
         time.sleep(sleep_length)
 
     def ask(self, msg, tryagain=True):
+        if msg == 'POWR?' or msg == 'PRAN?':
+            print("Note: POWR and PRAN do not have query response (i.e. will return 0)")
         try:
             return self._visa_handle.query(msg)  # changed from .ask to .query
         except Exception as e:
