@@ -62,7 +62,7 @@ class RF_take_spectra:
 
         #initialize empty array to store data in TODO: change from empty to NAN?
         re_im = np.empty((2, int(self.v1.numpoints)))
-
+        time.sleep(5)
         re_im = self.v1.save_Re_Im()  # get real and imaginary parts
         self.save_data(timestamp, re_im) #save data to h5
 
