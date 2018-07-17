@@ -45,6 +45,7 @@ from Nowack_Lab.Instruments.nidaq import NIDAQ
 from Nowack_Lab.Instruments.piezos import Piezos
 from Nowack_Lab.Instruments.preamp import SR5113
 from Nowack_Lab.Instruments.squidarray import SquidArray
+from Nowack_Lab.Instruments.sr760 import SR760
 from Nowack_Lab.Instruments.lockin import SR830
 from Nowack_Lab.Instruments.ppms import PPMS
 from Nowack_Lab.Instruments.magnet import Magnet, AMI420

@@ -48,12 +48,12 @@ class AMI430(VISAInstrument):
 
         self.axis = axis
 
-    def __getstate__(self):
-        '''
-        Set up save dictionary.
-        '''
-        self._save_dict = {param:getattr(self, param) for param in self._params}
-        return self._save_dict
+    # def __getstate__(self):
+    #     '''
+    #     Set up save dictionary.
+    #     '''
+    #     self._save_dict = {param:getattr(self, param) for param in self._params}
+    #     return self._save_dict
 
     def __setstate__(self, state):
         '''

@@ -28,6 +28,12 @@ class VISAInstrument(Instrument):
         '''
         self.close()
 
+    def __getstate__(self):
+        d = super().__getstate__()
+        if '_visa_handle' in d:
+            d.pop('_visa_handle')
+        return d
+
     def _init_visa(self, resource, termination='\n'):
         r'''
         Initialize the VISA connection.
