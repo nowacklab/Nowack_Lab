@@ -20,6 +20,7 @@ from Nowack_Lab.Utilities import utilities, save, logging, conversions, anim, co
 from Nowack_Lab.Utilities.plotting import plot_mpl
 from Nowack_Lab.Utilities.say import say
 from Nowack_Lab.Utilities.save import Saver
+from Nowack_Lab.Measurements.array_tune import BestLockPoint
 from Nowack_Lab.Measurements.daqspectrum import DaqSpectrum, SQUIDSpectrum
 from Nowack_Lab.Measurements.dctransport import DAQ_IV
 from Nowack_Lab.Measurements.heightsweep import Heightsweep
