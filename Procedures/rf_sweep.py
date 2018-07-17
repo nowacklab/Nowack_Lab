@@ -23,12 +23,18 @@ class RF_take_spectra:
                 filepath, v_smoothing_state=0,v_smoothing_factor=1,
                 notes = "No notes",plot=False):
 
+
+
+
+
+
+
         #Set object variables
         self.v_freqmin =v_freqmin
         self.v_freqmax =v_freqmax
         self.v_power =v_power
         self.v_avg_factor =v_avg_factor
-        self.v_numpoints =v_numpoints
+
         self.filepath = filepath
         self.v_smoothing_state = v_smoothing_state
         self.v_smoothing_factor = v_smoothing_factor
@@ -36,7 +42,15 @@ class RF_take_spectra:
         self.plot = plot
 
         self.valid_numpoints = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
-        assert self.v_numpoints in self.valid_numpoints,"number of points must be in " + str(self.valid_numpoints)
+        self.v_numpoints = v_numpoints
+
+        if v_numpoints not in self.valid_numpoints:
+            index = (np.abs(self.valid_numpoints - value)).argmin()
+            closest_valid_numpoint = self.valid_numpoints[index]
+            print("%f is not a valid point number. Setting to %d instead." %(v_numpoints, closest_valid_numpoint))
+            self.v_numpoints = closest_valid_numpoint
+        else:
+            self.v_numpoints = v_numpoints
 
         self.v1 = VNA8722ES(16)  # initialize VNA (Instrument object)
 
@@ -119,7 +133,7 @@ class RF_sweep_current: # should this extend class Measurement?
         self.v_freqmax =v_freqmax
         self.v_power =v_power
         self.v_avg_factor =v_avg_factor
-        self.v_numpoints =v_numpoints
+
         self.filepath = filepath
         self.v_smoothing_state = v_smoothing_state
         self.v_smoothing_factor = v_smoothing_factor
@@ -129,7 +143,14 @@ class RF_sweep_current: # should this extend class Measurement?
 
         assert self.k_Istart < k_Istop,"stop voltage should be greater than start voltage"
         self.valid_numpoints = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
-        assert self.v_numpoints in self.valid_numpoints,"number of points must be in " + str(self.valid_numpoints)
+
+        if v_numpoints not in self.valid_numpoints:
+            index = (np.abs(self.valid_numpoints - value)).argmin()
+            closest_valid_numpoint = self.valid_numpoints[index]
+            print("%f is not a valid point number. Setting to %d instead." %(v_numpoints, closest_valid_numpoint))
+            self.v_numpoints = closest_valid_numpoint
+        else:
+            self.v_numpoints = v_numpoints
 
         self.k3 = Keithley2400(24)  # initialize current source (Instrument object)
         self.v1 = VNA8722ES(16)  # initialize VNA (Instrument object)
@@ -541,6 +562,7 @@ class RF_sweep_power:
             ax.set_title(filename + "\nFrequency = " +
                          str(data.get(filename + '/freqmin') * .5 + data.get(filename + '/freqmax') * .5) + " Hz")
         else:
+
             raise NotImplementedError("Change title if have implemented reverse sweep in either param")
             ax.set_title(filename + "\nSweep back in current" +
                          "\nPower from VNA = " + str(data.get(filename + '/power'))
