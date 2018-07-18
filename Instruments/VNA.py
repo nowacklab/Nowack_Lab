@@ -163,16 +163,18 @@ class VNA8722ES(Instrument):
         '''
         if value == 'LIN':
             value = 'LINFREQ'
+            self.sweeptime = 1
         elif value == 'LOG':
             value = 'LOGFREQ'
+            self.sweeptime = 1
         elif value == 'LIST':
             value = 'LISTFREQ'
+            self.sweeptime = 1
         elif value == 'CW':
             value == 'CWTIME'
         else:
             print('Driver currently only handles linear, log, list, continuous wave (CW)')
         self._sweepmode = value
-        self.sweeptime = 1
 
         # Check stuff here
 
@@ -220,7 +222,7 @@ class VNA8722ES(Instrument):
     @sweeptime.setter
     def sweeptime(self, value):
         """Set sweep time"""
-        if self._sweepmode != "CW" and value > 1:
+        if self._sweepmode != "CW" and value < 1:
             print("Setting sweep time to 1")
             self.write('SWET 1')
             self._sweeptime = 1
