@@ -66,6 +66,7 @@ class RF_take_spectra:
         self.v1.averaging_factor = self.v_avg_factor
         self.v1.minfreq = self.v_freqmin
         self.v1.maxfreq = self.v_freqmax
+        self.v1.sweepmode = "LIN"
         self.v1.numpoints = self.v_numpoints  # set num freq pnts for VNA
         self.v1.smoothing_state = self.v_smoothing_state  # turn smoothing on
         self.v1.smoothing_factor = self.v_smoothing_factor
@@ -141,11 +142,10 @@ class RF_sweep_current: # should this extend class Measurement?
         self.hysteresis = hysteresis
         self.plot = plot
 
-        assert self.k_Istart < k_Istop,"stop voltage should be greater than start voltage"
         self.valid_numpoints = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
 
         if v_numpoints not in self.valid_numpoints:
-            index = (np.abs(self.valid_numpoints - value)).argmin()
+            index = (np.abs(self.valid_numpoints - v_numpoints)).argmin()
             closest_valid_numpoint = self.valid_numpoints[index]
             print("%f is not a valid point number. Setting to %d instead." %(v_numpoints, closest_valid_numpoint))
             self.v_numpoints = closest_valid_numpoint
@@ -177,6 +177,7 @@ class RF_sweep_current: # should this extend class Measurement?
         self.v1.averaging_factor = self.v_avg_factor
         self.v1.minfreq = self.v_freqmin
         self.v1.maxfreq = self.v_freqmax
+        self.v1.sweepmode = "LIN"
         self.v1.numpoints = self.v_numpoints  # set num freq pnts for VNA
         self.v1.smoothing_state = self.v_smoothing_state  # turn smoothing on
         self.v1.smoothing_factor = self.v_smoothing_factor
@@ -383,6 +384,43 @@ class RF_sweep_current: # should this extend class Measurement?
             graph_path = filename.replace(".hdf5", "phase_rev.png")
         fig.savefig(graph_path)
 
+class RF_CW():
+    """ """
+    def __init__(self, k_I, v_cw_freq, v_sweeptime, v_avg_factor, v_power, filepath, v_numpoints=1601,
+                 notes="No notes", plot=False):
+
+        # Set object variables
+        self.k_I = k_I
+        self.v_cw_freq = v_cw_freq      # this is the cw frequency you want to sweep at
+        self.v_sweeptime = v_sweeptime  # how long the time trace is
+        self.v_avg_factor = v_avg_factor
+        self.v_power = v_power
+        self.filepath = filepath
+        self.v_numpoints = v_numpoints
+        self.notes = notes
+        self.plot = plot
+
+
+        self.valid_numpoints = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
+        if v_numpoints not in self.valid_numpoints:
+            index = (np.abs(self.valid_numpoints - v_numpoints)).argmin()
+            closest_valid_numpoint = self.valid_numpoints[index]
+            print("%f is not a valid point number. Setting to %d instead." % (v_numpoints, closest_valid_numpoint))
+            self.v_numpoints = closest_valid_numpoint
+        else:
+            self.v_numpoints = v_numpoints
+
+        self.k3 = Keithley2400(24)
+        self.v1 = VNA8722ES(16)
+
+    def do(self):
+        # Set all the other k3 and v1 things as usual, e.g. self.k3.I, self.v1.numpoints etc
+        self.v1.sweepmode = "CW"    # Sets to continuous sweep mode
+
+        # Should use the usual v1.save_Re_Im() to get np array with shape (2, numpoints)
+        #   where first dimension is for real and imaginary parts, 2nd dimension is for point along time trace
+    def save_data(self):
+        pass
 
 class RF_sweep_power:
 
@@ -414,9 +452,15 @@ class RF_sweep_power:
         self.hysteresis = hysteresis
         self.plot = plot
 
-        assert self.k_Istart < k_Istop, "stop voltage should be greater than start voltage"
         self.valid_numpoints = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
-        assert self.v_numpoints in self.valid_numpoints, "number of points must be in " + str(self.valid_numpoints)
+
+        if v_numpoints not in self.valid_numpoints:
+            index = (np.abs(self.valid_numpoints - v_numpoints)).argmin()
+            closest_valid_numpoint = self.valid_numpoints[index]
+            print("%f is not a valid point number. Setting to %d instead." % (v_numpoints, closest_valid_numpoint))
+            self.v_numpoints = closest_valid_numpoint
+        else:
+            self.v_numpoints = v_numpoints
 
         self.k3 = Keithley2400(24)  # initialize current source (Instrument object)
         self.v1 = VNA8722ES(16)  # initialize VNA (Instrument object)
@@ -442,6 +486,7 @@ class RF_sweep_power:
         self.v1.averaging_factor = self.v_avg_factor
         self.v1.minfreq = self.v_freqmin    # set min sweep frequency
         self.v1.maxfreq = self.v_freqmax    # set max sweep frequency
+        self.v1.sweepmode = "LIN"
         self.v1.numpoints = self.v_numpoints                # set num freq pnts for VNA
         self.v1.smoothing_state = self.v_smoothing_state    # turn smoothing on
         self.v1.smoothing_factor = self.v_smoothing_factor  # set smoothing factor

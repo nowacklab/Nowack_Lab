@@ -21,6 +21,9 @@ class VNA8722ES(Instrument):
     _freqmax = None
     _numpoints = None
 
+    _cw_freq = None     # for continuous wave time trace
+    _cw_time = None
+
     _averaging_state = None
     _averaging_factor = None
 
@@ -54,13 +57,16 @@ class VNA8722ES(Instrument):
         self._averaging_state = 0
         self._averaging_factor = 16
 
+        self._cw_freq = 1e9
+        self._cw_time = 1
+
         self._smoothing_state = 1 # smoothing on
         self._smoothing_factor = 3  # 3% smoothing '
 
         self.write('FORM4')
         self._savemode = 'FORM4'
         self.write('SWET 1')
-        print("init: power off and at -75dB. Measuring S21. Manual sweep time 1 second. Most other settings factory preset.")
+        print("init: power off and at -75dB. Measuring S21. Manual sweep time 1s. Most other settings factory preset.")
         time.sleep(3)
 
     def factory_preset(self):
@@ -144,8 +150,10 @@ class VNA8722ES(Instrument):
             return "LOG"
         elif self.ask('LISFREQ?') == str(1):
             return "LIST"
+        elif self.ask('CWFREQ?') == str(1):
+            return "CW"
         else:
-            raise Exception('Driver can only handle linear, log, list sweeps')
+            print('Driver can only handle linear, log, list sweeps')
 
     @sweepmode.setter
     def sweepmode(self, value):
@@ -158,8 +166,10 @@ class VNA8722ES(Instrument):
             value = 'LOGFREQ'
         elif value == 'LIST':
             value = 'LISTFREQ'
+        elif value == 'CWFREQ':
+            value == 'CWFREQ'
         else:
-            raise Exception('Driver currently only handles linear, log, list')
+            print('Driver currently only handles linear, log, list, continuous wave')
         self.write(value)
         self._sweepmode = value
         # Check stuff here
@@ -190,11 +200,22 @@ class VNA8722ES(Instrument):
     @maxfreq.setter
     def maxfreq(self, value):
         """Set max frequency"""
-        assert type(value) is float or int, "frequency must be float or int"
+        assert type(value) is float or int, "frequency must be float or int"    # TODO replace assert
         if value < self.minfreq:
             raise Exception('Max frequency cannot be smaller than min frequency')
         self._maxfreq = value
         self.write('STOP %f' % value)
+
+    @property
+    def cw_freq(self):
+        """Get the CW mode frequency in Hz"""
+        return float(self.ask('CWFREQ?'))
+
+    @cw_freq.setter
+    def cw_freq(self, value):
+        """Set CW frequency"""
+        self.write('CWFREQ %f' % value)
+        self._cw_freq = value
 
     @property
     def numpoints(self):
@@ -208,7 +229,8 @@ class VNA8722ES(Instrument):
         assert value in vals, "must be in " + str(vals)
         self.write('OPC?;POIN %f;' %value)
         self._numpoints = value
-        self.write('SWET 1')  # set sweep time to 1 second
+        if self.sweepmode != "CW":
+            self.write('SWET 1')  # set sweep time to 1 second
         time.sleep(2)
         print("Setting manual sweep time to 1 second")
 
