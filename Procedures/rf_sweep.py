@@ -386,7 +386,7 @@ class RF_sweep_current: # should this extend class Measurement?
 
 class RF_CW_sweep():
     """ """
-    def __init__(self, k_I, v_cw_freq, v_sweeptime, v_avg_factor, v_power, filepath, v_numpoints=1601,
+    def __init__(self, k_I, v_cw_freq, v_avg_factor, v_power, filepath, v_sweeptime = 1, v_numpoints=1601,
                  notes="No notes", plot=False):
 
         # Set object variables
@@ -397,6 +397,7 @@ class RF_CW_sweep():
         self.v_power = v_power
         self.filepath = filepath
         self.v_numpoints = v_numpoints
+        self.v_sweeptime = v_sweeptime
         self.notes = notes
         self.plot = plot
 
@@ -416,6 +417,8 @@ class RF_CW_sweep():
     def do(self):
         # Set all the other k3 and v1 things as usual, e.g. self.k3.I, self.v1.numpoints etc
         self.v1.sweepmode = "CW"    # Sets to continuous sweep mode
+        self.v1.sweeptime = self.v_sweeptime
+
 
         # Should use the usual v1.save_Re_Im() to get np array with shape (2, numpoints)
         #   where first dimension is for real and imaginary parts, 2nd dimension is for point along time trace

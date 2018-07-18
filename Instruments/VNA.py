@@ -20,9 +20,9 @@ class VNA8722ES(Instrument):
     _freqmin = None
     _freqmax = None
     _numpoints = None
+    _sweeptime = None
 
     _cw_freq = None     # for continuous wave time trace
-    _cw_time = None
 
     _averaging_state = None
     _averaging_factor = None
@@ -54,11 +54,12 @@ class VNA8722ES(Instrument):
         self._freqmin = .05e9
         self._freqmax = 40.05e9
         self._numpoints = int(float(self.ask('POIN?')))  # necessary because number of points doesn't reset
+        self._sweeptime = 1 # sweep time to 1 second
+
         self._averaging_state = 0
         self._averaging_factor = 16
 
         self._cw_freq = 1e9
-        self._cw_time = 1
 
         self._smoothing_state = 1 # smoothing on
         self._smoothing_factor = 3  # 3% smoothing '
@@ -150,7 +151,7 @@ class VNA8722ES(Instrument):
             return "LOG"
         elif self.ask('LISFREQ?') == str(1):
             return "LIST"
-        elif self.ask('CWFREQ?') == str(1):
+        elif self.ask('CWTIME?') == str(1):
             return "CW"
         else:
             print('Driver can only handle linear, log, list sweeps')
@@ -166,12 +167,13 @@ class VNA8722ES(Instrument):
             value = 'LOGFREQ'
         elif value == 'LIST':
             value = 'LISTFREQ'
-        elif value == 'CWFREQ':
-            value == 'CWFREQ'
+        elif value == 'CW':
+            value == 'CWTIME'
         else:
-            print('Driver currently only handles linear, log, list, continuous wave')
-        self.write(value)
+            print('Driver currently only handles linear, log, list, continuous wave (CW)')
         self._sweepmode = value
+        self.sweeptime = 1
+
         # Check stuff here
 
     @property
@@ -207,20 +209,27 @@ class VNA8722ES(Instrument):
         self.write('STOP %f' % value)
 
     @property
-    def cw_freq(self):
-        """Get the CW mode frequency in Hz"""
-        return float(self.ask('CWFREQ?'))
-
-    @cw_freq.setter
-    def cw_freq(self, value):
-        """Set CW frequency"""
-        self.write('CWFREQ %f' % value)
-        self._cw_freq = value
-
-    @property
     def numpoints(self):
         """Get the number of points in sweep"""
         return float(self.ask('POIN?'))
+
+    @property
+    def sweeptime(self):
+        return float(self.ask('SWET?'))
+
+    @sweeptime.setter
+    def sweeptime(self, value):
+        """Set sweep time"""
+        if self._sweepmode != "CW" and value > 1:
+            print("Setting sweep time to 1")
+            self.write('SWET 1')
+            self._sweeptime = 1
+        else:
+            self.write('SWET %f' % value)
+            self._sweeptime = value
+        pass
+
+
 
     @numpoints.setter
     def numpoints(self, value):
@@ -229,7 +238,7 @@ class VNA8722ES(Instrument):
         assert value in vals, "must be in " + str(vals)
         self.write('OPC?;POIN %f;' %value)
         self._numpoints = value
-        if self.sweepmode != "CW":
+        if self._sweepmode != "CW":
             self.write('SWET 1')  # set sweep time to 1 second
         time.sleep(2)
         print("Setting manual sweep time to 1 second")
