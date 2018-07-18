@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import os
-import time
+import os, time, math
+
 from importlib import reload
 from scipy.interpolate import UnivariateSpline
 from ..Utilities.plotting import plot_mpl
@@ -195,7 +195,7 @@ class RF_sweep_current: # should this extend class Measurement?
 
         #initialize empty array to store data in TODO: change from empty to NAN?
         re_im = np.empty((self.k_Isteps, 2, int(self.v1.numpoints)))
-        if self.hysteresis == True:
+        if self.hysteresis:
             re_im_rev = np.empty((self.k_Isteps, 2, int(self.v1.numpoints)))
 
         # sweep foward in current
@@ -203,14 +203,14 @@ class RF_sweep_current: # should this extend class Measurement?
         for step in range(0, self.k_Isteps):
             if step % 10 == 0:
                 print("Current source step #" + str(step+1) + " out of " + str(self.k_Isteps))
-            self.k3.Iout = self.k3.Iout + I_stepsize  # increment current
+            self.k3.Iout += I_stepsize    # increment current
             self.v1.averaging_restart()  # restart averaging
             re_im[index] = self.v1.save_Re_Im()
             index += 1
 
         # sweep backwards in current
         index = 0
-        if(self.hysteresis == True):
+        if self.hysteresis:
             for step in range(0, self.k_Isteps):
                 if step % 10 == 0:
                     print("Current source step #" + str(step+1) + " out of " + str(self.k_Isteps))
@@ -220,19 +220,17 @@ class RF_sweep_current: # should this extend class Measurement?
                 index += 1
             self.save_data(timestamp, re_im, re_im_rev=re_im_rev)
         else:
-            self.save_data(timestamp, re_im) #save data to h5
+            self.save_data(timestamp, re_im)    # save data to h5
 
         self.k3.Iout = 0
         self.k3.output = 'off'  # turn off keithley output
         self.v1.powerstate = 0  # turn off VNA source power
 
-        #plot TODO: only plots forward attenuation atm
-        if self.plot == True:
+        # plot TODO: only plots forward attenuation atm
+        if self.plot:
             RF_sweep_current.plotdB(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5")
-            if self.hysteresis == True:
+            if self.hysteresis:
                 RF_sweep_current.plotdB(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5", rev=False)
-
-
 
     def setup_plots_1(self):
         self.fig, self.ax = plt.subplots(1,1, figsize=(10,6))
@@ -378,7 +376,7 @@ class RF_sweep_current: # should this extend class Measurement?
             ax.set_title(filename + "\nSweep back in current" +
                 "\nPower from VNA = " + str(data.get(filename + '/power'))
                  + " dBm")
-        cbar.set_label('Phase [derees]')
+        cbar.set_label('Phase [degrees]')
         if not rev:
             graph_path = filename.replace(".hdf5", "phase.png")
         else:
@@ -498,7 +496,7 @@ class RF_sweep_power:
         # plot TODO: only plots forward attenuation atm
         if self.plot:
             RF_sweep_power.plotdB(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5")
-            RF_sweep_power.plotPh
+            # RF_sweep_power.plotPh
             if self.hysteresis:
                 print("power current sweep hysteresis not yet implemented")
                 RF_sweep_power.plotdB(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5", rev=False)
@@ -639,13 +637,104 @@ class RF_sweep_power:
             ax.set_title(filename + "\nFrequency = " +
                 str(data.get(filename + '/freqmin')*.5+data.get(filename + '/freqmax')*.5) + " Hz")
         else:
-            raise NotImplementedError("Change title if have implemented reverse sweep in either param")
-            ax.set_title(filename + "\nSweep back in current" +
-                "\nPower from VNA = " + str(data.get(filename + '/power'))
-                 + " dBm")
+            # raise NotImplementedError("Change title if have implemented reverse sweep in either param")
+            print("Reverse power sweep not implemented")
+            pass
+            #ax.set_title(filename + "\nSweep back in current" + "\nPower from VNA = " + str(data.get(filename + '/power')) + " dBm")
         cbar.set_label('Phase [derees]')
         if not rev:
             graph_path = filename.replace(".hdf5", "phase.png")
         else:
             graph_path = filename.replace(".hdf5", "phase_rev.png")
         fig.savefig(graph_path)
+
+class graph_plot():
+    """Additional static methods for graphing from filename"""
+
+    @staticmethod
+    def current_power_dB(filename_list, selected_freq, rev=False):
+        """Input list of filenames that correspond to current-frequency sweeps (same currents and frequencies) at different powers.
+        Take line cuts at selected_frequency for every filename. Graph these into current-power "sweeps".
+        """
+
+        # Get information from first filename
+        first_filename = filename_list[0]
+        data = dataset.Dataset(first_filename)
+        data_Istart = data.get(first_filename + '/Istart')
+        data_Istop = data.get(first_filename + '/Istop')
+        data_Isteps = data.get(first_filename + '/Isteps')
+        data_freqmin = data.get(first_filename + '/freqmin')
+        data_freqmax = data.get(first_filename + '/freqmax')
+        data_freqsteps = data.get(first_filename + '/freqsteps')
+
+        num_powersteps = len(filename_list)
+
+        # initialize np array for recording slices of re, im data
+        slices_arr = np.empty((data_Isteps, num_powersteps, 2))     # shape is (current steps, power steps, 2 (for re im) )
+
+        # record current range (will be x-axis)
+        if not rev:
+            currents_list = np.linspace(data_Istart*1000, data_Istop*1000, data_Isteps)
+        else:
+            currents_list = np.linspace(data_Istop*1000, data_Istart*1000, data_Isteps)
+
+        # initialize np array for recording list of powers to plot (will be y-axis)
+        powers_list = np.empty((1, len(filename_list)))
+        list_index = 0
+        # for each filename, extract a line cut at the frequency and record the power
+        # TODO should check file similarity in better way
+        for single_filename in filename_list:
+            data = dataset.Dataset(single_filename)
+            data_Istart = data.get(single_filename + '/Istart')
+            data_Istop = data.get(single_filename + '/Istop')
+            data_Isteps = data.get(single_filename + '/Isteps')
+            data_power = data.get(single_filename + '/power/')
+            data_re_im = data.get(single_filename + 're_im/data')
+            data_re_im_rev = data.get(single_filename + 're_im_rev/data')
+
+            # get list of currents for x-axis, ensure that is same as currents for first filename
+            if not rev:     # if forward current sweep
+                new_currents_list = np.linspace(data_Istart*1000, data_Istop*1000, data_Isteps)
+            else:           # reverse current sweep
+                new_currents_list = np.linspace(data_Istop*1000, data_Istart*1000, data_Isteps)
+
+            # if detect (unusable) difference between data files, break
+            if currents_list != new_currents_list:
+                print("Currents do not match up, not plotting anything")
+                print("mismatch at file: ", single_filename)
+                break
+
+            # record power (powers_list will be y-axis)
+            powers_list[list_index] = data_power
+
+
+            # record line cut at desired frequency from re_im_data or re_im_rev data
+            selected_freq_index = math.floor((selected_freq - data_freqmin)/(data_freqmax - data_freqmin) * data_freqsteps)
+
+            # save both re_im, all bias current, just one frequency (shape of data_re_im?) data_re_im[]
+            if not rev:
+                slices_arr[list_index, :, :] = data_re_im[:, selected_freq_index, :]
+            if rev:
+                slices_arr[list_index, :, :] = data_re_im_rev[:, selected_freq_index, :]
+            list_index += 1
+        # Now have everything needed to plot. Gain more important for now, but also do phase
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+
+        X_arr, Y_arr = np.meshgrid(currents_list, powers_list)
+
+        slices_arr_dB = np.empty((num_powersteps, data_Isteps))
+        for power_step in range(len(filename_list)):
+            for current_step in range(data_Isteps):
+                re = slices_arr[power_step, current_step, 0]
+                im = slices_arr[power_step, current_step, 1]
+                slices_arr_dB[power_step, current_step] = 20*math.log(math.sqrt(re**2 + im**2), 10)
+
+        im = ax.pcolor(X_arr, np.flip(Y_arr, 1), np.flip(slices_arr, 1), cmap="viridis")
+        cbar = fig.colorbar(im)
+        ax.set_xlabel('field coil current (mA)')
+        ax.set_ylabel('power (dBm)')
+        cbar.set_label('Gain (dB)')
+
+
+
+        pass
