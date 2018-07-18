@@ -384,7 +384,7 @@ class RF_sweep_current: # should this extend class Measurement?
             graph_path = filename.replace(".hdf5", "phase_rev.png")
         fig.savefig(graph_path)
 
-class RF_CW():
+class RF_CW_sweep():
     """ """
     def __init__(self, k_I, v_cw_freq, v_sweeptime, v_avg_factor, v_power, filepath, v_numpoints=1601,
                  notes="No notes", plot=False):
