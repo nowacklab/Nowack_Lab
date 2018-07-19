@@ -189,9 +189,9 @@ class RF_sweep_current: # should this extend class Measurement?
         timestamp = now.strftime('%Y-%m-%d_%H%M%S')
 
         #initialize empty array to store data in TODO: change from empty to NAN?
-        re_im = np.empty((self.k_Isteps, 2, int(self.v1.numpoints)))
+        re_im = np.empty((self.k_Isteps, 2,self.v_numpoints))
         if self.hysteresis:
-            re_im_rev = np.empty((self.k_Isteps, 2, int(self.v1.numpoints)))
+            re_im_rev = np.empty((self.k_Isteps, 2, self.v_numpoints))
 
         # sweep foward in current
         index = 0
