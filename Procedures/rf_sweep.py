@@ -24,8 +24,8 @@ class RF_take_spectra:
                 notes = "No notes",plot=False):
 
         #Set object variables
-        self.v_freqmin =v_freqmin
         self.v_freqmax =v_freqmax
+        self.v_freqmin =v_freqmin
         self.v_power =v_power
         self.v_avg_factor =v_avg_factor
 
@@ -58,8 +58,8 @@ class RF_take_spectra:
         self.v1.powerstate = 1  # turn vna source power on
         self.v1.averaging_state = 1  # Turn averaging on
         self.v1.averaging_factor = self.v_avg_factor
-        self.v1.minfreq = self.v_freqmin
         self.v1.maxfreq = self.v_freqmax
+        self.v1.minfreq = self.v_freqmin
         self.v1.sweepmode = "LIN"
         self.v1.numpoints = self.v_numpoints  # set num freq pnts for VNA
         self.v1.smoothing_state = self.v_smoothing_state  # turn smoothing on
@@ -169,8 +169,8 @@ class RF_sweep_current: # should this extend class Measurement?
         self.v1.powerstate = 1  # turn vna source power on
         self.v1.averaging_state = 1  # Turn averaging on
         self.v1.averaging_factor = self.v_avg_factor
-        self.v1.minfreq = self.v_freqmin
         self.v1.maxfreq = self.v_freqmax
+        self.v1.minfreq = self.v_freqmin
         self.v1.sweepmode = "LIN"
         self.v1.numpoints = self.v_numpoints  # set num freq pnts for VNA
         self.v1.smoothing_state = self.v_smoothing_state  # turn smoothing on
@@ -420,13 +420,14 @@ class RF_CW_sweep_power():
         # Set up VNA settings
         self.v1.sweepmode = "CW"    # Sets to continuous sweep mode
         self.v1.sweeptime = self.v_sweeptime
+        self.v1.cw_freq = self.v_cw_freq    
         self.v1.networkparam = 'S21'  # Set to measure forward transmission
         self.v1.power = self.v_power_start
         self.v1.powerstate = 1  # turn vna source power on
         self.v1.averaging_state = 1  # Turn averaging on
         self.v1.averaging_factor = self.v_avg_factor
-        self.v1.minfreq = self.v_freqmin
         self.v1.maxfreq = self.v_freqmax
+        self.v1.minfreq = self.v_freqmin
         self.v1.numpoints = self.v_numpoints  # set num freq pnts for VNA
 
         #creates a timestamp that will be in the h5 file name for this run

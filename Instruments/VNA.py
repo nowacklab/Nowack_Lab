@@ -191,8 +191,6 @@ class VNA8722ES(Instrument):
         Set min frequency
         '''
         assert type(value) is float or int, "frequency must be float or int"
-        if value > self.maxfreq:
-            raise Exception('Min frequency cannot be greater than stop frequency')
         self.write('STAR %f' % value)
         self._minfreq = value
 
@@ -229,7 +227,17 @@ class VNA8722ES(Instrument):
         else:
             self.write('SWET %f' % value)
             self._sweeptime = value
-        pass
+
+    @property
+    def cw_freq(self):
+        """Get the frequency used for cw mode"""
+        return float(self.ask('CWFREQ?'))
+
+    @cw_freq.setter
+    def cw_freq(self, value):
+        """Set cw frequency"""
+        self.write('CWFREQ %f' % value)
+        self._cw_freq = value
 
 
 
