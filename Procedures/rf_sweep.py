@@ -159,7 +159,7 @@ class RF_sweep_current: # should this extend class Measurement?
             self.k3.output = 'on'
         self.k3.source = 'I'
         time.sleep(3)
-        self.k3.Iout_range = 2e-3  # 2 mA range # TODO: figure out what exactly range is
+        self.k3.Iout_range = 1e-3  # 2 mA range # TODO: figure out what exactly range is
         self.k3.Iout = self.k_Istart
         self.k3.V_compliance = 21  # 21 volt compliance
 

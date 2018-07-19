@@ -50,8 +50,8 @@ class VNA8722ES(Instrument):
 
         self.write('S21')  # set to measure transmission forward
         self._networkparam = 'S21'
-        self._sweepmode = 'LINFREQ'
-        self._freqmin = .05e9
+        self._sweepmode = 'LINFREQ' # mode is linear frequency sweep
+        self._freqmin = .05e9   # set to max range
         self._freqmax = 40.05e9
         self._numpoints = int(float(self.ask('POIN?')))  # necessary because number of points doesn't reset
         self._sweeptime = 1 # sweep time to 1 second
@@ -97,6 +97,7 @@ class VNA8722ES(Instrument):
     @property
     def powerstate(self):
         """Get whether power is on/off 1/0"""
+        # TODO ask then return
         return self._power_state
 
     @powerstate.setter
@@ -115,7 +116,8 @@ class VNA8722ES(Instrument):
     @property
     def power(self):
         '''Get the power (dBm)'''
-        return float(self.ask('POWE?'))
+        self._power = float(self.ask('POWE?'))
+        return self._power
 
     @power.setter
     def power(self, value):
@@ -127,7 +129,7 @@ class VNA8722ES(Instrument):
         print(self.ask('POWE?'))
         print("float val", str(float(value)))
         self.write('POWR%02d' %rangenum)  # first change power range
-        print("Setting power range to %d...", rangenum); time.sleep(8)
+        print("Setting power range to %d..." % rangenum); time.sleep(8)
         self.write('POWE%f' %value)  # then can change power
         print("Setting power to ", value)
         print(self.ask('POWE?'))
@@ -155,6 +157,7 @@ class VNA8722ES(Instrument):
             return "CW"
         else:
             print('Driver can only handle linear, log, list sweeps')
+        # TODO ask then return
 
     @sweepmode.setter
     def sweepmode(self, value):
@@ -183,6 +186,7 @@ class VNA8722ES(Instrument):
         '''
         Get the min frequency
         '''
+        # TODO ask then return
         return float(self.ask('STAR?'))
 
     @minfreq.setter
@@ -197,6 +201,7 @@ class VNA8722ES(Instrument):
     @property
     def maxfreq(self):
         """Get the stop frequency"""
+        # TODO ask then return
         return float(self.ask('STOP?'))
 
     @maxfreq.setter
@@ -211,10 +216,12 @@ class VNA8722ES(Instrument):
     @property
     def numpoints(self):
         """Get the number of points in sweep"""
+        # TODO ask then return
         return float(self.ask('POIN?'))
 
     @property
     def sweeptime(self):
+        # TODO ask then return
         return float(self.ask('SWET?'))
 
     @sweeptime.setter
@@ -232,6 +239,7 @@ class VNA8722ES(Instrument):
     def cw_freq(self):
         """Get the frequency used for cw mode"""
         return float(self.ask('CWFREQ?'))
+        # TODO ask then return
 
     @cw_freq.setter
     def cw_freq(self, value):
@@ -256,7 +264,8 @@ class VNA8722ES(Instrument):
     @property
     def averaging_state(self):
         '''Get averaging state (on/off 1/0)'''
-        return int(self.ask('AVERO?'))
+        self._averaging_state = int(self.ask('AVERO?'))
+        return self._averaging_state
 
     @averaging_state.setter
     def averaging_state(self, value):
