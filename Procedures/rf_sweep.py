@@ -420,6 +420,7 @@ class RF_CW_sweep_power():
         # Set up VNA settings
         self.v1.sweepmode = "CW"    # Sets to continuous sweep mode
         self.v1.sweeptime = self.v_sweeptime
+        self.v1.cw_freq = self.v_cw_freq    
         self.v1.networkparam = 'S21'  # Set to measure forward transmission
         self.v1.power = self.v_power_start
         self.v1.powerstate = 1  # turn vna source power on
