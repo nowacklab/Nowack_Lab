@@ -27,7 +27,7 @@ class VNA8722ES(Instrument):
     _averaging_state = None
     _averaging_factor = None
 
-    _smoothing_state = Nonegit
+    _smoothing_state = None
     _smoothing_factor = None
 
     # TODO: fix all @property things: should query then set and return etc.
