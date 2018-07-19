@@ -27,7 +27,7 @@ class VNA8722ES(Instrument):
     _averaging_state = None
     _averaging_factor = None
 
-    _smoothing_state = None
+    _smoothing_state = Nonegit
     _smoothing_factor = None
 
     # TODO: fix all @property things: should query then set and return etc.
@@ -208,8 +208,6 @@ class VNA8722ES(Instrument):
     def maxfreq(self, value):
         """Set max frequency"""
         assert type(value) is float or int, "frequency must be float or int"    # TODO replace assert
-        if value < self.minfreq:
-            raise Exception('Max frequency cannot be smaller than min frequency')
         self._maxfreq = value
         self.write('STOP %f' % value)
 
