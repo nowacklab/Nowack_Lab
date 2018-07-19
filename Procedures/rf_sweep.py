@@ -435,20 +435,22 @@ class RF_CW_sweep_power():
 
 
 
-        def save_data(self, timestamp, re_im):
-            name = timestamp + 'RF_CW_sweep_power'
-            path = os.path.join(self.filepath, name + '.hdf5')
-            info = dataset.Dataset(path)
-            info.append(path + '/freqmin', self.v_freqmin)
-            info.append(path + '/freqmax', self.v_freqmax)
-            info.append(path + '/power', self.v_power)
-            info.append(path + '/avg_factor', self.v_avg_factor)
-            info.append(path + '/numpoints', self.v_numpoints)
-            info.append(path + '/smoothing_state', self.v_smoothing_state)
-            info.append(path + '/smoothing_factor', self.v_smoothing_factor)
-            info.append(path + '/re_im/data', re_im)
-            info.append(path + '/re_im/description', "shape [Data, Re Im]")
-            info.append(path + '/notes', self.notes)
+    def save_data(self, timestamp, re_im):
+        name = timestamp + 'RF_CW_sweep_power'
+        path = os.path.join(self.filepath, name + '.hdf5')
+        info = dataset.Dataset(path)
+        info.append(path + '/Istart', self.k_Istart)
+        info.append(path + '/Istop', self.k_Istop)
+        info.append(path + '/Isteps', self.k_Isteps)
+        info.append(path + '/v_cw_freq',  self.v_cw_freq)
+        info.append(path + '/v_power_stop', self.v_power_stop)
+        info.append(path + '/v_power_start', self.v_power_start)
+        info.append(path + '/v_power_step', self.v_power_step)
+        info.append(path + '/avg_factor', self.v_avg_factor)
+        info.append(path + '/numpoints', self.v_numpoints)
+        info.append(path + '/re_im/data', re_im)
+        info.append(path + '/re_im/description', "shape [Data, Re Im]")
+        info.append(path + '/notes', self.notes)
 
         # Should use the usual v1.save_Re_Im() to get np array with shape (2, numpoints)
         #   where first dimension is for real and imaginary parts, 2nd dimension is for point along time trace
