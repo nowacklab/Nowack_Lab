@@ -214,7 +214,7 @@ class VNA8722ES(Instrument):
     @property
     def numpoints(self):
         """Get the number of points in sweep"""
-        self._numpoints = float(self.ask('POIN?'))
+        self._numpoints = int(self.ask('POIN?'))
         return self._numpoints
 
     @numpoints.setter
