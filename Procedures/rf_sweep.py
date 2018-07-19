@@ -378,6 +378,7 @@ class RF_sweep_current: # should this extend class Measurement?
             graph_path = filename.replace(".hdf5", "phase_rev.png")
         fig.savefig(graph_path)
 
+
 class RF_CW_sweep_power():
     """ """
     def __init__(self, k_Istart, k_Istop, k_Isteps, v_cw_freq, v_avg_factor,
@@ -387,8 +388,8 @@ class RF_CW_sweep_power():
 
         # Set object variables
         self.k_Istart = k_Istart
-        self.k_Istop =k_Istop
-        self.k_Isteps =k_Isteps
+        self.k_Istop = k_Istop
+        self.k_Isteps = k_Isteps
         self.v_cw_freq = v_cw_freq      # this is the cw frequency you want to sweep at
         self.v_sweeptime = v_sweeptime  # how long the time trace is
         self.v_avg_factor = v_avg_factor
@@ -420,20 +421,17 @@ class RF_CW_sweep_power():
         # Set up VNA settings
         self.v1.sweepmode = "CW"    # Sets to continuous sweep mode
         self.v1.sweeptime = self.v_sweeptime
-        self.v1.cw_freq = self.v_cw_freq    
+        self.v1.cw_freq = self.v_cw_freq
         self.v1.networkparam = 'S21'  # Set to measure forward transmission
         self.v1.power = self.v_power_start
         self.v1.powerstate = 1  # turn vna source power on
         self.v1.averaging_state = 1  # Turn averaging on
         self.v1.averaging_factor = self.v_avg_factor
-        self.v1.maxfreq = self.v_freqmax
-        self.v1.minfreq = self.v_freqmin
         self.v1.numpoints = self.v_numpoints  # set num freq pnts for VNA
 
-        #creates a timestamp that will be in the h5 file name for this run
+        # creates a timestamp that will be in the h5 file name for this run
         now = datetime.now()
         timestamp = now.strftime('%Y-%m-%d_%H%M%S')
-
 
 
         def save_data(self, timestamp, re_im):
