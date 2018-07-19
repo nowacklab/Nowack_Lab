@@ -453,3 +453,93 @@ class RF_CW_sweep_power():
         #   where first dimension is for real and imaginary parts, 2nd dimension is for point along time trace
     def save_data(self):
         pass
+
+class graph_plot():
+    """Additional static methods for graphing from filename"""
+
+    @staticmethod
+    def current_power_dB(filename_list, selected_freq, rev=False):
+        """Input list of filenames that correspond to current-frequency sweeps (same currents and frequencies) at different powers.
+        Take line cuts at selected_frequency for every filename. Graph these into current-power "sweeps".
+        """
+
+        # Get information from first filename
+        first_filename = filename_list[0]
+        data = dataset.Dataset(first_filename)
+        data_Istart = data.get(first_filename + '/Istart')
+        data_Istop = data.get(first_filename + '/Istop')
+        data_Isteps = data.get(first_filename + '/Isteps')
+        data_freqmin = data.get(first_filename + '/freqmin')
+        data_freqmax = data.get(first_filename + '/freqmax')
+        data_freqsteps = data.get(first_filename + '/freqsteps')
+
+        num_powersteps = len(filename_list)
+
+        # initialize np array for recording slices of re, im data
+        slices_arr = np.empty((data_Isteps, num_powersteps, 2))     # shape is (current steps, power steps, 2 (for re im) )
+
+        # record current range (will be x-axis)
+        if not rev:
+            currents_list = np.linspace(data_Istart*1000, data_Istop*1000, data_Isteps)
+        else:
+            currents_list = np.linspace(data_Istop*1000, data_Istart*1000, data_Isteps)
+
+        # initialize np array for recording list of powers to plot (will be y-axis)
+        powers_list = np.empty((1, len(filename_list)))
+        list_index = 0
+        # for each filename, extract a line cut at the frequency and record the power
+        # TODO should check file similarity in better way
+        for single_filename in filename_list:
+            data = dataset.Dataset(single_filename)
+            data_Istart = data.get(single_filename + '/Istart')
+            data_Istop = data.get(single_filename + '/Istop')
+            data_Isteps = data.get(single_filename + '/Isteps')
+            data_power = data.get(single_filename + '/power/')
+            data_re_im = data.get(single_filename + 're_im/data')
+            data_re_im_rev = data.get(single_filename + 're_im_rev/data')
+
+            # get list of currents for x-axis, ensure that is same as currents for first filename
+            if not rev:     # if forward current sweep
+                new_currents_list = np.linspace(data_Istart*1000, data_Istop*1000, data_Isteps)
+            else:           # reverse current sweep
+                new_currents_list = np.linspace(data_Istop*1000, data_Istart*1000, data_Isteps)
+
+            # if detect (unusable) difference between data files, break
+            if currents_list != new_currents_list:
+                print("Currents do not match up, not plotting anything")
+                print("mismatch at file: ", single_filename)
+                break
+
+            # record power (powers_list will be y-axis)
+            powers_list[list_index] = data_power
+
+
+            # record line cut at desired frequency from re_im_data or re_im_rev data
+            selected_freq_index = math.floor((selected_freq - data_freqmin)/(data_freqmax - data_freqmin) * data_freqsteps)
+
+            # save both re_im, all bias current, just one frequency (shape of data_re_im?) data_re_im[]
+            if not rev:
+                slices_arr[list_index, :, :] = data_re_im[:, selected_freq_index, :]
+            if rev:
+                slices_arr[list_index, :, :] = data_re_im_rev[:, selected_freq_index, :]
+            list_index += 1
+        # Now have everything needed to plot. Gain more important for now, but also do phase
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+
+        X_arr, Y_arr = np.meshgrid(currents_list, powers_list)
+
+        slices_arr_dB = np.empty((num_powersteps, data_Isteps))
+        for power_step in range(len(filename_list)):
+            for current_step in range(data_Isteps):
+                re = slices_arr[power_step, current_step, 0]
+                im = slices_arr[power_step, current_step, 1]
+                slices_arr_dB[power_step, current_step] = 20*math.log(math.sqrt(re**2 + im**2), 10)
+
+        im = ax.pcolor(X_arr, np.flip(Y_arr, 1), np.flip(slices_arr, 1), cmap="viridis")
+        cbar = fig.colorbar(im)
+        ax.set_xlabel('field coil current (mA)')
+        ax.set_ylabel('power (dBm)')
+        cbar.set_label('Gain (dB)')
+
+
+        pass
