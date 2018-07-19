@@ -191,8 +191,6 @@ class VNA8722ES(Instrument):
         Set min frequency
         '''
         assert type(value) is float or int, "frequency must be float or int"
-        if value > self.maxfreq:
-            raise Exception('Min frequency cannot be greater than stop frequency')
         self.write('STAR %f' % value)
         self._minfreq = value
 
