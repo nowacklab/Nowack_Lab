@@ -97,7 +97,7 @@ class VNA8722ES(Instrument):
     @property
     def powerstate(self):
         """Get whether power is on/off 1/0"""
-        # TODO ask then return
+        self._power_state = int(self.ask('SOUP?'))
         return self._power_state
 
     @powerstate.setter
@@ -115,7 +115,7 @@ class VNA8722ES(Instrument):
 
     @property
     def power(self):
-        '''Get the power (dBm)'''
+        """Get the power (dBm)"""
         self._power = float(self.ask('POWE?'))
         return self._power
 
@@ -147,17 +147,17 @@ class VNA8722ES(Instrument):
         "": "POWER",
         "": "CW"
         }
-        if self.ask('LINFREQ?') == str(1):
-            return "LIN"
-        elif self.ask('LOGFREQ?') == str(1):
-            return "LOG"
-        elif self.ask('LISFREQ?') == str(1):
-            return "LIST"
-        elif self.ask('CWTIME?') == str(1):
-            return "CW"
+        if self.ask('LINFREQ?') == '1':
+            self._sweepmode = "LIN"
+        elif self.ask('LOGFREQ?') == '1':
+            self._sweepmode = "LOG"
+        elif self.ask('LISFREQ?') == '1':
+            self._sweepmode = "LIST"
+        elif self.ask('CWTIME?') == '1':
+            self._sweepmode = "CW"
         else:
             print('Driver can only handle linear, log, list sweeps')
-        # TODO ask then return
+        return self._sweepmode
 
     @sweepmode.setter
     def sweepmode(self, value):
@@ -186,8 +186,8 @@ class VNA8722ES(Instrument):
         '''
         Get the min frequency
         '''
-        # TODO ask then return
-        return float(self.ask('STAR?'))
+        self._minfreq = float(self.ask('STAR?'))
+        return self._minfreq
 
     @minfreq.setter
     def minfreq(self, value):
@@ -201,8 +201,8 @@ class VNA8722ES(Instrument):
     @property
     def maxfreq(self):
         """Get the stop frequency"""
-        # TODO ask then return
-        return float(self.ask('STOP?'))
+        self._maxfreq = float(self.ask('STOP?'))
+        return self._maxfreq
 
     @maxfreq.setter
     def maxfreq(self, value):
@@ -216,13 +216,25 @@ class VNA8722ES(Instrument):
     @property
     def numpoints(self):
         """Get the number of points in sweep"""
-        # TODO ask then return
-        return float(self.ask('POIN?'))
+        self._numpoints = float(self.ask('POIN?'))
+        return self._numpoints
+
+    @numpoints.setter
+    def numpoints(self, value):
+        '''Set the number of points in sweep (and wait for clean sweep)'''
+        vals = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
+        assert value in vals, "must be in " + str(vals)
+        self.write('OPC?;POIN %f;' % value)
+        self._numpoints = value
+        if self._sweepmode != "CW":
+            self.write('SWET 1')  # set sweep time to 1 second; slower causes problems
+        time.sleep(2)
+        print("Setting manual sweep time to 1 second")
 
     @property
     def sweeptime(self):
-        # TODO ask then return
-        return float(self.ask('SWET?'))
+        self._sweeptime = float(self.ask('SWET?'))
+        return self._sweeptime
 
     @sweeptime.setter
     def sweeptime(self, value):
@@ -238,8 +250,8 @@ class VNA8722ES(Instrument):
     @property
     def cw_freq(self):
         """Get the frequency used for cw mode"""
-        return float(self.ask('CWFREQ?'))
-        # TODO ask then return
+        self._cw_freq = float(self.ask('CWFREQ?'))
+        return self._cw_freq
 
     @cw_freq.setter
     def cw_freq(self, value):
@@ -247,23 +259,9 @@ class VNA8722ES(Instrument):
         self.write('CWFREQ %f' % value)
         self._cw_freq = value
 
-
-
-    @numpoints.setter
-    def numpoints(self, value):
-        '''Set the number of points in sweep (and wait for clean sweep)'''
-        vals = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
-        assert value in vals, "must be in " + str(vals)
-        self.write('OPC?;POIN %f;' %value)
-        self._numpoints = value
-        if self._sweepmode != "CW":
-            self.write('SWET 1')  # set sweep time to 1 second
-        time.sleep(2)
-        print("Setting manual sweep time to 1 second")
-
     @property
     def averaging_state(self):
-        '''Get averaging state (on/off 1/0)'''
+        """Get averaging state (on/off 1/0)"""
         self._averaging_state = int(self.ask('AVERO?'))
         return self._averaging_state
 
@@ -282,7 +280,8 @@ class VNA8722ES(Instrument):
     @property
     def averaging_factor(self):
         '''Get averaging factor'''
-        return int(float(self.ask('AVERFACT?')))
+        self._averaging_factor = int(float(self.ask('AVERFACT?')))
+        return self._averaging_factor
 
     @averaging_factor.setter
     def averaging_factor(self, value):
@@ -291,12 +290,13 @@ class VNA8722ES(Instrument):
         self.write('AVERFACT%s' % value)
 
     def averaging_restart(self):
-        '''Restart the measurement averaging'''
+        """Restart the measurement averaging"""
         self.write('AVERREST')
 
     @property
     def smoothing_state(self):
-        '''Get smoothing state'''
+        """Get smoothing state"""
+        self._smoothing_state = int(self.ask('SMOOO?'))
         return self._smoothing_state
 
     @smoothing_state.setter
@@ -309,7 +309,7 @@ class VNA8722ES(Instrument):
 
     @property
     def smoothing_factor(self):
-        '''Get smoothing factor'''
+        """Get smoothing factor"""
         self._smoothing_factor = float(self.ask('SMOOAPER?'))
         return self._smoothing_factor
 
@@ -322,15 +322,16 @@ class VNA8722ES(Instrument):
 
     @property
     def networkparam(self):
-        '''Get which network parameter is being measured'''
+        """Get which network parameter is being measured"""
         if self.ask('S11') == '1':
-            return 'S11'
+            self._networkparam = 'S11'
         elif self.ask('S21') == '1':
-            return 'S21'
+            self._networkparam = 'S21'
         elif self.ask('S12') == '1':
-            return 'S12'
+            self._networkparam = 'S12'
         elif self.ask('S22') == '1':
-            return 'S22'
+            self._networkparam = 'S22'
+        return self._networkparam
 
     @networkparam.setter
     def networkparam(self, value):
