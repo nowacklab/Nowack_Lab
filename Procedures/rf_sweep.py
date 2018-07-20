@@ -384,7 +384,7 @@ class RF_CW_sweep_power():
     def __init__(self, k_Istart, k_Istop, k_Isteps, v_cw_freq,
                 v_power_start, v_power_stop, v_power_step, filepath,
                 v_sweeptime = .1, v_numpoints=201,v_avg_factor = 1,
-                notes="No notes", plot=False):
+                notes="No notes", plot=False, hysteresis = False):
 
         # Set object variables
         self.k_Istart = k_Istart
@@ -401,6 +401,7 @@ class RF_CW_sweep_power():
         self.v_sweeptime = v_sweeptime
         self.notes = notes
         self.plot = plot
+        self.hysteresis = False
 
 
 
@@ -438,8 +439,6 @@ class RF_CW_sweep_power():
         self.v1.powerstate = 1  # turn vna source power on
         self.v1.averaging_state = 1  # Turn averaging on
         self.v1.averaging_factor = self.v_avg_factor
-        self.v1.maxfreq = self.v_freqmax
-        self.v1.minfreq = self.v_freqmin
         self.v1.numpoints = self.v_numpoints  # set num freq pnts for VNA
 
         #creates a timestamp that will be in the h5 file name for this run
@@ -463,7 +462,7 @@ class RF_CW_sweep_power():
         for powerIndex in range(0, self.v_power_step):
             self.v1.power += Power_stepsize
             if powerIndex % 10 == 0:
-                print("Power source step #" + str(step+1) + " out of " + str(self.v_power_step))
+                print("Power source step #" + str(powerIndex+1) + " out of " + str(self.v_power_step))
             # sweep foward in current
             for step in range(0, self.k_Isteps):
                 if step % 10 == 0:
@@ -474,38 +473,38 @@ class RF_CW_sweep_power():
 
 
 
-            # sweep backwards in current
+        # sweep backwards in current
+        if self.hysteresis:
+            self.v1.power = self.v_power_start - Power_stepsize
+            for powerIndex in range(0, self.v_power_step):
+                self.v1.power += Power_stepsize
+                if powerIndex % 10 == 0:
+                    print("Power source step #" + str(powerIndex+1) + " out of " + str(self.v_power_step))
+                for step in range(0, self.k_Isteps):
+                    if step % 10 == 0:
+                        print("Current source step #" + str(step+1) + " out of " + str(self.k_Isteps))
+                    self.k3.Iout = self.k3.Iout - I_stepsize  # increment current
+                    self.v1.averaging_restart()  # restart averaging
+                    re_im_rev[powerIndex][step] = self.v1.save_Re_Im()
+
+
+        if self.hysteresis:
+            self.save_data(timestamp, re_im, re_im_rev=re_im_rev)
+        else:
+            self.save_data(timestamp, re_im)    # save data to h5
+
+        self.k3.Iout = 0
+        self.k3.output = 'off'  # turn off keithley output
+        self.v1.powerstate = 0  # turn off VNA source power
+
+        if self.plot:
+            RF_CW_sweep_power.plotPowerSweep(self.filepath + "\\" + timestamp + "_RF_CW_sweep_power.hdf5")
             if self.hysteresis:
-                self.v1.power = self.v_power_start - Power_stepsize
-                for powerIndex in range(0, self.v_power_step):
-                    self.v1.power += Power_stepsize
-                    if powerIndex % 10 == 0:
-                        print("Power source step #" + str(step+1) + " out of " + str(self.v_power_step))
-                    for step in range(0, self.k_Isteps):
-                        if step % 10 == 0:
-                            print("Current source step #" + str(step+1) + " out of " + str(self.k_Isteps))
-                        self.k3.Iout = self.k3.Iout - I_stepsize  # increment current
-                        self.v1.averaging_restart()  # restart averaging
-                        re_im_rev[powerIndex][step] = self.v1.save_Re_Im()
-
-
-            if self.hysteresis:
-                self.save_data(timestamp, re_im, re_im_rev=re_im_rev)
-            else:
-                self.save_data(timestamp, re_im)    # save data to h5
-
-            self.k3.Iout = 0
-            self.k3.output = 'off'  # turn off keithley output
-            self.v1.powerstate = 0  # turn off VNA source power
-
-            if self.plot:
-                RF_sweep_current.plotPowerSweep(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5")
-                if self.hysteresis:
-                    RF_sweep_current.plotPowerSweep(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5", rev=False)
+                RF_CW_sweep_power.plotPowerSweep(self.filepath + "\\" + timestamp + "_RF_CW_sweep_power.hdf5", rev=False)
 
 
     def save_data(self, timestamp, re_im):
-        name = timestamp + 'RF_CW_sweep_power'
+        name = timestamp + '_RF_CW_sweep_power'
         path = os.path.join(self.filepath, name + '.hdf5')
         info = dataset.Dataset(path)
         info.append(path + '/Istart', self.k_Istart)
