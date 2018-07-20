@@ -532,13 +532,13 @@ class RF_CW_sweep_power():
             current = np.linspace(data.get(filename + '/Istop')*1000,
                         data.get(filename + '/Istart')*1000,
                         data.get(filename + '/Isteps'))
-        power = np.linspace(data.get(filename + '/v_power_start)'),
+        power = np.linspace(data.get(filename + '/v_power_start'),
                     data.get(filename + '/v_power_stop'),
                     data.get(filename + '/v_power_step'))
         freq = data.get(filename + '/v_cw_freq')/1e9
         X,Y = np.meshgrid(power, current)
-        dB = RF_sweep_current.dB_data_pow_sweep(filename, rev = rev)
-        dB_avg = np.empty((self.v_power_step,int(self.k_Isteps)))
+        dB = RF_CW_sweep_power.dB_data_pow_sweep(filename, rev = rev)
+        dB_avg = np.empty((data.get(filename + '/v_power_step'),int(data.get(filename + '/Isteps'))))
         n = 0
         for array in dB:
             m=0
@@ -571,7 +571,7 @@ class RF_CW_sweep_power():
             re_im_info = data.get(filename + '/re_im/data')
         else:
             re_im_info = data.get(filename + '/re_im_rev/data')
-        attenuation = np.empty((self.v_power_step,int(self.k_Isteps), self.v_numpoints))
+        attenuation = np.empty((data.get(filename + '/v_power_step'),int(data.get(filename + '/Isteps')), data.get(filename + '/numpoints')))
         n = 0
         for array in re_im_info:
             m=0
