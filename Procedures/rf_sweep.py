@@ -463,6 +463,7 @@ class RF_CW_sweep_power():
             self.v1.power += Power_stepsize
             if powerIndex % 10 == 0:
                 print("Power source step #" + str(powerIndex+1) + " out of " + str(self.v_power_step))
+            self.k3.Iout = self.k_Istart
             # sweep foward in current
             for step in range(0, self.k_Isteps):
                 if step % 10 == 0:
@@ -480,6 +481,7 @@ class RF_CW_sweep_power():
                 self.v1.power += Power_stepsize
                 if powerIndex % 10 == 0:
                     print("Power source step #" + str(powerIndex+1) + " out of " + str(self.v_power_step))
+                self.k3.Iout = self.k_Istart
                 for step in range(0, self.k_Isteps):
                     if step % 10 == 0:
                         print("Current source step #" + str(step+1) + " out of " + str(self.k_Isteps))
