@@ -48,22 +48,22 @@ class AMI430(VISAInstrument):
 
         self.axis = axis
 
-    def __getstate__(self):
-        '''
-        Set up save dictionary.
-        '''
-        self._save_dict = {param:getattr(self, param) for param in self._params}
-        return self._save_dict
+    # def __getstate__(self):
+    #     '''
+    #     Set up save dictionary.
+    #     '''
+    #     self._save_dict = {param:getattr(self, param) for param in self._params}
+    #     return self._save_dict
 
-    def __setstate__(self, state):
-        '''
-        Load private variables for properties
-        '''
-
-        for param in self._params:
-            state['_'+param] = state.pop(param)
-
-        self.__dict__.update(state)
+    # def __setstate__(self, state):
+    #     '''
+    #     Load private variables for properties
+    #     '''
+    #
+    #     for param in self._params:
+    #         state['_'+param] = state.pop(param)
+    #
+    #     self.__dict__.update(state)
 
     def _init_visa(self, resource):
         '''

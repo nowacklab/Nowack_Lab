@@ -8,7 +8,7 @@ class Instrument(Saver):
     _label = 'instrument'
 
     def __getstate__(self):
-    	return self.__dict__
+    	return self.__dict__.copy()
 
     def __setstate__(self, state):
         '''
@@ -27,6 +27,12 @@ class VISAInstrument(Instrument):
         Destroy the object and close the visa handle
         '''
         self.close()
+
+    def __getstate__(self):
+        d = super().__getstate__()
+        if '_visa_handle' in d:
+            d.pop('_visa_handle')
+        return d
 
     def _init_visa(self, resource, termination='\n'):
         r'''

@@ -376,10 +376,10 @@ class SR830(VISAInstrument):
             return np.array(value/10*self.sensitivity) # will give actual output in volts, since output is scaled to 10 V == sensitivity
         return value/10*self.sensitivity
 
-    def sweep(self, Vstart, Vend, Vstep=0.01, sweep_rate=0.1):
+    def sweep(self, Vstart, Vend, Vstep=0.001, sweep_rate=0.1):
         '''
         Sweeps the lockin amplitude at given sweep rate in V/s (default 0.1).
-        Sweeps with a step size of 0.01 V by default.
+        Sweeps with a step size of 0.001 V by default.
         '''
         delay = Vstep/sweep_rate
         numsteps = abs(Vstart-Vend)/Vstep

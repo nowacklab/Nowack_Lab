@@ -18,7 +18,7 @@ class AMI1700(VISAInstrument):
 
     def __getstate__(self):
         self._save_dict = {
-            'level': self._level
+            '_level': self.level()
         }
         return self._save_dict
 
