@@ -1,11 +1,9 @@
 import numpy as np
 from numpy.linalg import lstsq
-from .planefit import Planefit
 import time, os
 from datetime import datetime
 from scipy.interpolate import interp1d as interp
 import matplotlib.pyplot as plt
-from IPython import display
 from numpy import ma
 from importlib import reload
 
@@ -24,6 +22,10 @@ from Nowack_Lab.Procedures.daqspectrum import SQUIDSpectrum
 import Nowack_Lab.Utilities.utilities
 reload(Nowack_Lab.Utilities.utilities)
 from Nowack_Lab.Utilities.utilities import AttrDict
+
+import Nowack_Lab.Procedures.planefit
+reload(Nowack_Lab.Procedures.planefit)
+from Nowack_Lab.Procedures.planefit import Planefit
 
 class Scanspectra(Measurement):
     _daq_inputs = ['dc'] # DAQ channel labels expected by this class

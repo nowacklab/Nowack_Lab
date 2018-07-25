@@ -23,13 +23,17 @@ class dplot():
         '''
         Make colorbar with scientific notation as labels
         '''
+        formatter = dplot.cbar_sci_formatter()
+        return dplot.makecbar(ax, image, formatter)
+
+    @staticmethod
+    def cbar_sci_formatter():
         def fmt(x, pos):
             a,b = '{:.2e}'.format(x).split('e')
             b = int(b)
             return r'${} \times 10^{{{}}}$'.format(a,b)
 
-        formatter = ticker.FuncFormatter(fmt)
-        return dplot.makecbar(ax, image, formatter)
+        return ticker.FuncFormatter(fmt)
     
     @staticmethod
     def noaxes(ax):
@@ -158,6 +162,74 @@ class dplot():
                               vmax=vmax, vmin=vmin,
                               sigma=sigma, cbarsci=cbarsci)
 
+    @staticmethod
+    def plotscanspectra(sc, ax, phi0perV = 1/14.4, cmap='viridis', 
+                        aspect='equal', vmax=None, vmin=None, sigma=-1,
+                        cbarsci=True, deriv=False, derivdir=0, timeav=True):
+        psds = np.array(sc.psdAve.reshape(sc.numpts[0],sc.numpts[1],-1))
+        vs   = np.array(sc.V.reshape(sc.numpts[0],sc.numpts[1],-1))
+        timeaveragev = np.mean(vs, axis=-1)
+        freqaveragev = np.mean(psds, axis=-1)
+
+        if deriv:
+            if derivdir == 0:
+                diff = np.abs(sc.X[0,1] - sc.X[0,0])
+            else:
+                diff = np.abs(sc.Y[1,0] - sc.Y[0,0])
+        if timeav and deriv:
+            plotted = np.gradient(timeaveragev, diff, axis=derivdir)
+        elif timeav and not deriv:
+            plotted = timeaveragev
+        elif not timeav and deriv:
+            plotted = np.gradient(freqaveragev, diff, axis=derivdir)
+        elif not timeav and not deriv:
+            plotted = freqaveragev
+
+
+        extent = (sc.X[0,0],sc.X[-1,-1], sc.Y[0,0], sc.Y[-1,-1])
+
+        if sigma != -1:
+            mean = np.mean(plotted)
+            std = np.std(plotted)
+            vmax = mean+sigma*std
+            vmin = mean-sigma*std
+
+        image = ax.imshow(plotted,
+                          cmap=cmap,
+                          aspect=aspect,
+                          extent=extent,
+                          origin='lower',
+                          vmax=vmax,
+                          vmin=vmin)
+        if cbarsci:
+            [cax, cbar] = dplot.makecbar_sci(ax, image)
+        else:
+            [cax, cbar] = dplot.makecbar(ax, image)
+
+        return [image, cax, cbar, vmin, vmax]
+
+    @staticmethod
+    def dumbimshow(data, ax, extent=None, cmap='viridis',
+                    aspect='equal', cbarsci=True, origin='lower',
+                    small=False, cbar=True, vmax=None,vmin=None):
+        image = ax.imshow(data, cmap=cmap, aspect=aspect,
+                          extent=extent, origin=origin,
+                          vmax=vmax, vmin=vmin)
+        if cbar:
+            if cbarsci:
+                [cax, cbar] = dplot.makecbar_sci(ax, image)
+            else:
+                [cax, cbar] = dplot.makecbar(ax, image)
+
+        if small:
+            dplot.noaxes(ax)
+            if cbar:
+                cbar.ax.tick_params(labelsize=5) 
+            else:
+                cbar=None
+                cax=None
+
+        return [image, cax, cbar]
     
     @staticmethod
     def findindicies(X, Y, x=(-400,400), y=(-400,400)):
