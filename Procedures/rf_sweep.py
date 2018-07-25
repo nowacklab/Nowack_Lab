@@ -538,9 +538,9 @@ class RF_CW_sweep_power():
                     data.get(filename + '/v_power_stop'),
                     data.get(filename + '/v_power_step'))
         freq = data.get(filename + '/v_cw_freq')/1e9
-        X,Y = np.meshgrid(power, current)
+        Y, X = np.meshgrid(current, power)
         dB = RF_CW_sweep_power.dB_data_pow_sweep(filename, rev = rev)
-        dB_avg = np.empty((data.get(filename + '/v_power_step'),int(data.get(filename + '/Isteps'))))
+        dB_avg = np.empty((int(data.get(filename + '/v_power_step')),int(data.get(filename + '/Isteps'))))
         n = 0
         for array in dB:
             m=0
