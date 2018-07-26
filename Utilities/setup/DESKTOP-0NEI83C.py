@@ -21,7 +21,7 @@ from Nowack_Lab.Utilities.plotting import plot_mpl
 from Nowack_Lab.Utilities.say import say
 from Nowack_Lab.Utilities.save import Saver
 from Nowack_Lab.Measurements.array_tune import BestLockPoint
-from Nowack_Lab.Measurements.daqspectrum import DaqSpectrum, SQUIDSpectrum, ZurichSpectrum
+from Nowack_Lab.Measurements.spectrum import DaqSpectrum, SQUIDSpectrum, ZurichSpectrum
 from Nowack_Lab.Measurements.dctransport import DAQ_IV
 from Nowack_Lab.Measurements.heightsweep import Heightsweep
 from Nowack_Lab.Measurements.measurement import Measurement

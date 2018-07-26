@@ -21,9 +21,9 @@ import Nowack_Lab.Utilities.utilities
 reload(Nowack_Lab.Utilities.utilities)
 from Nowack_Lab.Utilities.utilities import running_std
 
-import Nowack_Lab.Measurements.daqspectrum
-reload(Nowack_Lab.Measurements.daqspectrum)
-from Nowack_Lab.Measurements.daqspectrum import SQUIDSpectrum
+import Nowack_Lab.Measurements.spectrum
+reload(Nowack_Lab.Measurements.spectrum)
+from Nowack_Lab.Measurements.spectrum import SQUIDSpectrum
 
 import Nowack_Lab.Measurements.mutual_inductance
 reload(Nowack_Lab.Measurements.mutual_inductance)

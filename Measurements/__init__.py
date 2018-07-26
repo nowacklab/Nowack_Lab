@@ -1,4 +1,4 @@
-from .daqspectrum import DaqSpectrum
+from .spectrum import DaqSpectrum
 from .squidIV import SquidIV
 from .mod2D import Mod2D
 from .mutual_inductance import MutualInductance
