@@ -59,22 +59,14 @@ class DaqSpectrum(Measurement):
         Returns:
         psdAve (np.ndarray): power spectral density
         '''
-        Nfft = int(self.measure_freq * self.measure_time / 2)  # 7/12/2018 daq changed forced remove +1
-        psdAve = np.zeros(Nfft)
+        Nfft = np.round(self.measure_freq * self.measure_time / 2) + 1
+            # 7/12/2018 daq changed forced remove +1
+            # 7/26/2018 Needed to add +1 for Zurich. Check DAQ again.
+        psdAve = np.zeros(int(Nfft))
 
         for i in range(self.averages):
-            received = self.daq.monitor('dc', self.measure_time,
-                                        sample_rate=self.measure_freq
-                                        )
-            # Unpack data recieved from daq.
-            # Divide out any preamp gain applied.
-            if hasattr(self, 'preamp'):
-                gain = self.preamp.gain
-            else:
-                gain = 1
-            self.V = received['dc'] / gain
-            self.t = received['t']
-            self.f, psd = signal.periodogram(self.V, self.measure_freq,
+            t, V = self.get_time_trace()
+            self.f, psd = signal.periodogram(V, self.measure_freq,
                                              'blackmanharris')
             psdAve = psdAve + psd
 
@@ -82,6 +74,23 @@ class DaqSpectrum(Measurement):
         psdAve = psdAve / self.averages
         # Convert spectrum to V/sqrt(Hz)
         return np.sqrt(psdAve)
+
+    def get_time_trace(self):
+        '''
+        Collect a single time trace from the DAQ.
+        '''
+        received = self.daq.monitor('dc', self.measure_time,
+                                    sample_rate=self.measure_freq
+                                    )
+        # Unpack data recieved from daq.
+        # Divide out any preamp gain applied.
+        if hasattr(self, 'preamp'):
+            gain = self.preamp.gain
+        else:
+            gain = 1
+        self.V = received['dc'] / gain
+        self.t = received['t']
+        return t, V
 
     def plot(self):
         '''
@@ -119,6 +128,43 @@ class DaqSpectrum(Measurement):
         self.preamp.dc_coupling()
         self.preamp.diff_input(False)
 
+
+class ZurichSpectrum(DaqSpectrum):
+    '''
+    Use the Zurich MFLI to take a spectrum
+    '''
+    instrument_list = ['zurich']
+
+    def __init__(
+            self,
+            instruments={},
+            measure_freq=14.6e3,
+            averages=30):
+        '''
+        Create a DaqSpectrum object
+
+        Args:
+        instruments (dict): Instrument dictionary
+        measure_freq (float): sampling rate (Hz). Must be in MFLI.freq_opts
+        averages (int): number of time traces averaged before computing the FFT
+        '''
+        super().__init__(instruments, None, measure_freq, averages)
+
+        if measure_freq not in self.zurich.freq_opts:
+            raise Exception('Frequency must be in: %s' %self.freq_opts)
+        self.measure_time = 16384/measure_freq  # 16384 = 2^14 fixed number
+
+    def get_time_trace(self):
+        '''
+        Collect a single time trace from the Zurich.
+        '''
+        return self.zurich.get_scope_trace(freq=self.measure_freq, N=16384)
+
+    def setup_preamp(self):
+        '''
+        No preamp used with Zurich
+        '''
+        pass
 
 
 class SQUIDSpectrum(DaqSpectrum):

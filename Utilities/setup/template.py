@@ -46,4 +46,4 @@ from Nowack_Lab.Instruments.squidarray import SquidArray
 from Nowack_Lab.Instruments.lockin import SR830
 from Nowack_Lab.Instruments.ppms import PPMS
 from Nowack_Lab.Instruments.magnet import Magnet, AMI420
-from Nowack_Lab.Instruments.zurich import HF2LI
+from Nowack_Lab.Instruments.zurich import HF2LI, MFLI

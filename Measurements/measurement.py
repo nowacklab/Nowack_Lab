@@ -93,6 +93,7 @@ class Measurement(Saver, Plotter):
             self._exception_info = traceback.format_exc()
         except:
             self._exception_info = traceback.format_exc()
+            raise
 
         # After the do.
         time_end = time.time()
