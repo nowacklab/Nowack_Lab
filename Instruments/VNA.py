@@ -97,7 +97,7 @@ class VNA8722ES(Instrument):
     @property
     def powerstate(self):
         """Get whether power is on/off 1/0"""
-        self._power_state = int(self.ask('SOUP?'))
+        self._power_state = int(float(self.ask('SOUP?')))
         return self._power_state
 
     @powerstate.setter
@@ -127,7 +127,6 @@ class VNA8722ES(Instrument):
             raise Exception('Power should be between -10 and -80 dBm')
         rangenum = min(math.floor((-value + 5)/5)-1, 11)
         print(self.ask('POWE?'))
-        print("float val", str(float(value)))
         self.write('POWR%02d' %rangenum)  # first change power range
         print("Setting power range to %d..." % rangenum); time.sleep(8)
         self.write('POWE%f' %value)  # then can change power
@@ -214,7 +213,7 @@ class VNA8722ES(Instrument):
     @property
     def numpoints(self):
         """Get the number of points in sweep"""
-        self._numpoints = int(self.ask('POIN?'))
+        self._numpoints = int(float(self.ask('POIN?')))
         return self._numpoints
 
     @numpoints.setter
@@ -260,7 +259,7 @@ class VNA8722ES(Instrument):
     @property
     def averaging_state(self):
         """Get averaging state (on/off 1/0)"""
-        self._averaging_state = int(self.ask('AVERO?'))
+        self._averaging_state = int(float(self.ask('AVERO?')))
         return self._averaging_state
 
     @averaging_state.setter
@@ -294,7 +293,7 @@ class VNA8722ES(Instrument):
     @property
     def smoothing_state(self):
         """Get smoothing state"""
-        self._smoothing_state = int(self.ask('SMOOO?'))
+        self._smoothing_state = int(float(self.ask('SMOOO?')))
         return self._smoothing_state
 
     @smoothing_state.setter
