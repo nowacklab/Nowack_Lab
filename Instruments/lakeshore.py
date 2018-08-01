@@ -399,3 +399,15 @@ class Lakeshore372(VISAInstrument):
 
         self.write("RANGE 0,{0}".format(mode))
         return
+
+    @property
+    def ramp(self):
+        """Ramp rate for temperature control."""
+        return self.ask("RAMP? 0").splot(",")
+
+
+    @ramp.setter
+    def ramp(self, rate):
+        """Set the ramp rate."""
+        data = "RAMP0,1,{}[term]".format(rate)
+        self.write(data)

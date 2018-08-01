@@ -282,6 +282,93 @@ class BlueforsRvsT(RvsSomething):
         lockins manually
         '''
         pass
+
+class PID_T(Measurement):
+    """PID control temperature while monitoring instrument attributes.
+    """
+    instrument_list = ['lakeshore']
+    def __init__(self, instruments, temps, attributes, tol):
+        """Record the values of the attributes while tuning temperature.
+
+        Args:
+        attributes (iterable): Iterable of (instrument, attribute, name) pairs
+        temps (iterable): Temperature setpoints for the experiment.
+        instruments (dict): Instruments used for the experiment.
+        tol (float): Temperature tolerance 
+
+        Ideally the instruments specified in attribues are also in the
+        instruments dictionary so the configuration of all instrumens in the
+        experiment is saved in the json file.
+        """
+        super().__init__(instruments)
+        self.temps = temps
+        self.callables = [CallableAttribute(self.lakeshore.chan6, "T", "T")]
+        self.data = {"T": []}
+        for attr in attributes:
+            self.callables.append(CallableAttribute(*attr))
+            self.data[attr[2]] = []
+        self.attributes = attributes
+        self.tol = tol
+        self.temp_data = []
+
+    def do(self, plot=False, auto_gain=False):
+        for temp in self.temps:
+            # Adjust the temperature
+            self.lakeshore.pid_setpoint = temp
+            # Wait for temperature stability
+            ret = RvTPID.check_stability(self.lakeshore, self.tol, 10, 300)
+            self.temp_data.append(ret)
+            time.sleep(10)
+            # Record the data for 
+            for call in self.callables:
+                self.data[call.name].append(call())
+
+    def save(self, filename=None, savefig=False, **kwargs):
+        """Ignore reloading failed exception."""
+        try:
+            self._save(filename, savefig, **kwargs)
+        except:
+            pass
+            
+    @staticmethod
+    def check_stability(lakeshore, tol, monitor_time, max_time):
+        """Return when all points within last monitor_time are within tol"""
+        data = []
+        start = time.time()
+        # Sample the temperature
+        while ((start + monitor_time) > time.time()):
+            time.sleep(1)
+            data.append(lakeshore.chan6.T)
+
+        # Check if temperature is stable
+        while ((start + max_time) > time.time()):
+            time.sleep(1)
+            done = False
+            for t in data:
+                # If a point is not within tol take another point
+                if (np.abs(t - lakeshore.pid_setpoint) > tol):
+                    data.append(lakeshore.chan6.T)
+                    del data[0]
+                    break
+                else:
+                    done = True
+            if done:
+                break
+        return data
+                
+
+class CallableAttribute(object):
+    """Make an instrument attribute a callable function."""
+    def __init__(self, instrument, attribute, name):
+        self.instrument = instrument
+        self.attribute = attribute
+        self.name = name
+
+    def __call__(self):
+        """Return the attribute of the instrument."""
+        return getattr(self.instrument, self.attribute)
+
+    
 class SimpleRvsTime(Measurement):
     def __init__(self, instruments={}, duration=100, delay=1):
         super().__init__(instruments=instruments)
