@@ -132,7 +132,7 @@ class PFL102(Instrument):
 
     ######### PROPERTY DEFINITIONS ###################
 
-#S_bias
+    #S_bias
     @property
     def S_bias(self):
         """ SQUID bias in uA """
@@ -148,7 +148,7 @@ class PFL102(Instrument):
             self._S_bias = value
         self.updateParam('S_bias')
 
-# A_bias
+    # A_bias
     @property
     def A_bias(self):
         """ Array bias in uA """
