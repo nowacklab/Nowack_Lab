@@ -15,6 +15,7 @@ class dplot():
         d = make_axes_locatable(ax)
         cax = d.append_axes('right', size=.1, pad=.1)
         cbar = plt.colorbar(image, cax=cax, format=formatter)
+        #cbar.formatter.set_powerlimits((-0,0))
         #cbar.set_label(label)
         return [cax, cbar]
     
@@ -334,6 +335,21 @@ class dplot():
                       vmax=None, vmin=None, sigma=-1, cbarsci=True)
 
         return [std, amp, sp.Y[yi_i:yf_i,0]]
+
+    @staticmethod
+    def vibplot_image(ax, image, aspect='auto', extent=None, 
+                     cmap='viridis', vmax=None, vmin=None, 
+                     label=r'm$\Phi_0$'):
+        im = ax.imshow(image, cmap=cmap, aspect=aspect, extent=extent,
+                        origin='lower', vmax=vmax, vmin=vmin)
+
+        [cax, cbar] = dplot.makecbar(ax, im)
+        cbar.set_label(label)
+
+        dplot.noaxes(ax)
+
+        return im
+
 
             
 
