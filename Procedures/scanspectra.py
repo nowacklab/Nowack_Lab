@@ -1,3 +1,4 @@
+
 import numpy as np
 from numpy.linalg import lstsq
 import time, os
@@ -29,7 +30,7 @@ from Nowack_Lab.Procedures.planefit import Planefit
 
 class Scanspectra(Measurement):
     _daq_inputs = ['dc'] # DAQ channel labels expected by this class
-    instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto','daq']
+    instrument_list = ['piezos','squidarray','preamp','lockin_squid','lockin_cap','atto','daq']
 
     Vavg = AttrDict({
         chan: np.nan for chan in _daq_inputs
