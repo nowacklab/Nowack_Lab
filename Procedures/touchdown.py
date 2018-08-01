@@ -341,7 +341,7 @@ class Touchdown(Measurement):
         if (msg is 'q'):
             raise KeyboardInterrupt;
         if (msg is 'm'):
-            self.atto.z.move(self.attoshift)
+            pass
         else:
             pass
 
