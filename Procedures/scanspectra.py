@@ -76,6 +76,10 @@ class Scanspectra(Measurement):
             self.piezos.z.check_lim(self.Z[i,:])
             
         # Move to each point on the grid and take a spectrum
+        # NOTE self.X[0,:] increments over X and self.Y[:,0] increments over Y
+        #      Thus, X[i,j] is the jth x you want to scan and Y[i,j] is the ith
+        #      y element you want to scan.  
+        #      Thus, self.V[i*j] is V at the jth x and ith y
         for i in range(self.X.shape[0]):
             for j in range(self.Y.shape[1]):
                 #print(self.X[i,j], self.Y[i,j])
