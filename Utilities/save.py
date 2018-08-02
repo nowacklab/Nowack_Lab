@@ -1,15 +1,17 @@
 from jsonpickle.ext import numpy as jspnp
 import json
 import os
-import pickle
-import bz2 
 import jsonpickle as jsp 
 import numpy as np 
 import re
 from datetime import datetime
 jspnp.register_handlers()
-from copy import copy
-import h5py, glob, matplotlib, inspect, platform, hashlib, shutil, time
+import h5py
+import glob
+import platform
+import hashlib
+import shutil
+import time
 import matplotlib.pyplot as plt
 from importlib import reload
 
@@ -165,19 +167,19 @@ class Measurement:
             Walk through dictionary to prune out Instruments
             '''
             for key in list(d.keys()): # convert to list because dictionary changes size
-                #print(key)
-                #print(key)
+                #print(key, flush=True)
                 if key in unwanted_keys: # get rid of keys you don't want to load
                     d[key] = None
                 elif 'py/' in key:
                     if 'py/object' in d:
                         if 'Instruments' in d['py/object']: # if this is an instrument
-                            d = None # Don't load it.
+                            #d = None # Don't load it.
+                            d = d['py/state'] # save the instrument state 
                             break
                     elif 'py/id' in d: # This is probably another instance of an Instrument.
                         d = None # Don't load it.
                         break
-                if 'dict' in utilities.get_superclasses(d[key]):
+                if d is not None and 'dict' in utilities.get_superclasses(d[key]):
                     d[key] = walk(d[key])
             return d
 
