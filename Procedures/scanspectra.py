@@ -58,14 +58,14 @@ class Scanspectra(Measurement):
         x = np.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
         y = np.linspace(center[1]-span[1]/2, center[1]+span[1]/2, numpts[1])
 
-        self.X, self.Y = np.meshgrid(x, y)
+        self.X, self.Y = np.meshgrid(x, y, indexing='ij') # self.X.shape = (len(x), len(y))
         try:
             self.Z = self.plane.plane(self.X, self.Y) - self.scanheight
         except:
             print('plane not loaded... no idea where the surface is without a plane!')
 
         self.psdAve = []
-        self.V = []
+        self.V = np.full( self.X.shape + (self.monitortime * self.sample_rate,), np.nan)
 
     def do(self):
         self.setup_preamp()
@@ -76,13 +76,8 @@ class Scanspectra(Measurement):
             self.piezos.z.check_lim(self.Z[i,:])
             
         # Move to each point on the grid and take a spectrum
-        # NOTE self.X[0,:] increments over X and self.Y[:,0] increments over Y
-        #      Thus, X[i,j] is the jth x you want to scan and Y[i,j] is the ith
-        #      y element you want to scan.  
-        #      Thus, self.V[i*j] is V at the jth x and ith y
-        for i in range(self.X.shape[0]):
-            for j in range(self.Y.shape[1]):
-                #print(self.X[i,j], self.Y[i,j])
+        for j in range(self.Y.shape[0]):
+            for i in range(self.X.shape[1]):
                 self.piezos.V = {'x': self.X[i,j], 'y': self.Y[i,j], 'z': self.Z[i,j]}
                 self.squidarray.reset()
                 time.sleep(0.5)
@@ -93,18 +88,15 @@ class Scanspectra(Measurement):
                                          self.num_averages)
                 spectrum.do()
                 self.psdAve.append(spectrum.psdAve)
-                self.V.append(spectrum.V)
+                self.V[i,j] = spectrum.V
                 plt.close()
         # All spectra are identical - save the frequencies and times only once
         self.f = spectrum.f
         self.t = spectrum.t
         # Reshape lists into numpy arrays
-        self.psdAve = np.array(self.psdAve).reshape(self.numpts[0], 
-                                                    self.numpts[1],
+        self.psdAve = np.array(self.psdAve).reshape(self.X.shape[0], 
+                                                    self.Y.shape[1],
                                                     -1)
-        self.V = np.array(self.V).reshape(self.numpts[0],
-                                          self.numpts[1],
-                                          -1)
 
     def setup_preamp(self):
         self.preamp.dc_coupling()
