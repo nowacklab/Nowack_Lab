@@ -8,7 +8,6 @@ class LakeshoreChannel(VISAInstrument):
     representing each of the input channels on the instrument.
     '''
     _label = 'LakeshoreChannel'
-    _idn = None #TODO
     _num = 0
     _strip = '\r'
     _insets = ['enabled', 'dwell', 'pause', 'curve_num', 'temp_coef']
@@ -195,6 +194,7 @@ class Lakeshore372(VISAInstrument):
     Driver to communicate with LakeShore Model 372 AC Resistance Bridge & Temperature Controller for the BlueFors dilution refrigerator
     '''
     _label = 'Lakeshore Model 372'
+    _idn = 'MODEL372'
     _strip = '\r'
     _channel_names = {
         1: '50K',
@@ -206,8 +206,12 @@ class Lakeshore372(VISAInstrument):
         8: 'User2'
     }
 
-    def __init__(self, host = '192.168.100.143', port=7777):
-        self._init_visa('TCPIP::%s::%i::SOCKET' %(host, port), termination='\n')
+    def __init__(self, host = '192.168.82.72', port=7777, usb=True, com=72):
+        if usb:
+            self._init_visa('COM{}'.format(com), parity=1,  # odd parity
+                data_bits=7, baud_rate=57600)
+        else:
+            self._init_visa('TCPIP::%s::%i::SOCKET' %(host, port), termination='\n')
 
         # Make channel objects
         for c, n in self._channel_names.items():
@@ -228,6 +232,13 @@ class Lakeshore372(VISAInstrument):
             'chan%i' %i: getattr(self, 'chan%i' %i)
             for i in self._channel_names.keys()
         }
+        self._save_dict.update({
+            'ramp': self.ramp,
+            'heater_range': self.heater_range,
+            'sample_heater_ch': self.sample_heater_ch,
+            'sample_heater': self.sample_heater,
+            'pid_setpoint': self.pid_setpoint
+        })
 
         return self._save_dict
 
@@ -281,3 +292,157 @@ class Lakeshore372(VISAInstrument):
         autoscan: whether to automatically loop through channels
         '''
         getattr(self, 'chan%i' %self._num).scan(autoscan)
+
+    @property
+    def pid_setpoint(self):
+        '''
+        Get setpoint for PID
+        '''
+        return float(self.query('SETP? 0')) #0 is sample heater
+
+    @pid_setpoint.setter
+    def pid_setpoint(self, setpoint):
+        '''
+        Set setpoint for PID.  Should be float.  In preferred units
+        of the setpoint (Kelvin, unless changed)
+        '''
+        self.write('SETP 0,{0}'.format(float(setpoint)))
+
+    _MODE_LOOKUP = {
+            0: 'Off',
+            1: 'Monitor Out',
+            2: 'Manual',
+            3: 'Zone',
+            4: 'Still',
+            5: 'PID',
+            6: 'Warm up'
+    }
+
+    @property
+    def sample_heater(self):
+        '''
+        Get control mode for sample heater.
+        '''
+
+        s = self.query('OUTMODE? 0').split(',')
+        return self._MODE_LOOKUP[int(s[0])]
+
+    @sample_heater.setter
+    def sample_heater(self, s):
+        '''
+        Set control mode for sample heater. Must be key or value in _MODE_LOOKUP
+        '''
+
+        mode = -1
+        try:
+            mode = int(s)
+        except:
+            l    = self._MODE_LOOKUP.items()
+            for key, value in l:
+                if s.lower() == value.lower():
+                    mode = key
+        if mode == -1:
+            print('Invalid mode: {0}'.format(s))
+            print('Mode must be in a key or value in _MODE_LOOKUP:')
+            print(self._MODE_LOOKUP)
+            return
+
+        settings = self.query('OUTMODE? 0').split(',')
+        self.write('OUTMODE 0,{0},{1},{2},{3},{4},{5}'.format(
+                    mode,
+                    settings[1],
+                    settings[2],
+                    settings[3],
+                    settings[4],
+                    settings[5]
+                   ))
+        return
+
+    @property
+    def sample_heater_ch(self):
+        '''
+        Get the channel number monitored for PID temperature control.
+        TODO: rename this property!
+        '''
+
+        return int(self.query('OUTMODE? 0').split(',')[1])
+
+    @sample_heater_ch.setter
+    def sample_heater_ch(self, ch):
+        '''
+        Set the channel number monitored for PID temperature control.
+        TODO: rename this property!
+        '''
+        raise Exception('WRITE DOCSTRING FOR sample_heater_ch setter')
+
+        if type(ch) == int and ch>=1 and ch<=16:
+            settings = self.query('OUTMODE? 0').split(',')
+            self.write('OUTMODE 0,{0},{1},{2},{3},{4},{5}'.format(
+                        settings[0],
+                        ch,
+                        settings[2],
+                        settings[3],
+                        settings[4],
+                        settings[5]
+                      )
+            )
+        else:
+            print('Invalid channel: {0}'.format(ch))
+
+    _RANGE_LOOKUP = {
+            0: 'Off',
+            1: '31.6 uA',
+            2: '100 uA',
+            3: '316 uA',
+            4: '1.00 mA',
+            5: '3.16 mA',
+            6: '10.0 mA',
+            7: '31.6 mA',
+            8: '100 mA'
+    }
+    @property
+    def heater_range(self):
+        '''
+        Get the heater range (current)
+        '''
+        s = self.query('RANGE? 0').split(',')
+        return self._RANGE_LOOKUP[int(s[0])]
+
+    @heater_range.setter
+    def heater_range(self, s):
+        '''
+        Set the heater range current. Must use string or key in _RANGE_LOOKUP.
+        TODO: Accept float.
+        '''
+        mode = -1
+        try:
+            mode = int(s)
+        except:
+            l    = self._RANGE_LOOKUP.items()
+            for key, value in l:
+                if s.lower() == value.lower():
+                    mode = key
+        if mode == -1:
+            print('Invalid range: {0}'.format(s))
+            print('Range must be in a key or value in _RANGE_LOOKUP:')
+            print(self._RANGE_LOOKUP)
+            return
+
+        self.write('RANGE 0,{0}'.format(mode))
+        return
+
+    @property
+    def ramp(self):
+        '''
+        Ramp rate for temperature control.
+        '''
+        return self.query('RAMP? 0').split(',')
+
+
+    @ramp.setter
+    def ramp(self, rate):
+        '''
+        Set the ramp rate.
+        '''
+        data = 'RAMP0,1,{}[term]'.format(rate)
+        self.write(data)
