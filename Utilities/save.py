@@ -151,7 +151,8 @@ class Saver(object):
                     if f.get(key, getclass=True) is h5py._hl.group.Group:
                         if key[0] == '!': # it's an object
                             # [1:] strips the !; walk through the subobject
-                            walk(d[key[1:]].__dict__, f[key])
+                            if d != {}:
+                                walk(d[key[1:]].__dict__, f[key])
                         else:  # it's a dictionary
                             if key not in d:  # Needed for Zurich _save_dict
                                 d[key] = dict()  # Empty dict to accept data

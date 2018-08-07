@@ -228,11 +228,11 @@ class Lakeshore372(VISAInstrument):
             )
 
     def __getstate__(self):
-        self._save_dict = {
+        _save_dict = {
             'chan%i' %i: getattr(self, 'chan%i' %i)
             for i in self._channel_names.keys()
         }
-        self._save_dict.update({
+        _save_dict.update({
             'ramp': self.ramp,
             'heater_range': self.heater_range,
             'sample_heater_ch': self.sample_heater_ch,
@@ -240,7 +240,7 @@ class Lakeshore372(VISAInstrument):
             'pid_setpoint': self.pid_setpoint
         })
 
-        return self._save_dict
+        return _save_dict
 
 
     def _get_param(self, param):
