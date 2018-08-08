@@ -31,6 +31,8 @@ class RvsSomething(Measurement):
         self.Ix = np.array([])
         self.Iy = np.array([])
         self.B = np.array([]) # if we can record field, let's do it.
+        self.T = np.array([]) # if we can record temperature
+
         self.R = {i: np.array([]) for i in range(self.num_lockins)}
         setattr(self, self.something, np.array([]))
 
@@ -96,16 +98,10 @@ class RvsSomething(Measurement):
         if delay > 0:
             time.sleep(delay)
 
+
         self.Ix = np.append(self.Ix, self.lockin_I.X)
         self.Iy = np.append(self.Iy, self.lockin_I.Y)
-        if hasattr(self, 'ppms'):
-            self.B = np.append(self.B, self.ppms.field/10000) # Oe to T
-        elif hasattr(self, 'magnet'):
-            if self.magnet.p_switch:  # in driven mode
-                B = self.magnet.Bsupply
-            else:  # in persistent mode
-                B = self.magnet.Bmagnet
-            self.B = np.append(self.B, B)
+
         for j in range(self.num_lockins):
             if auto_gain:
                 getattr(self, 'lockin_V%i' %(j+1)).fix_sensitivity() # make sure we aren't overloading or underloading.
@@ -129,6 +125,23 @@ class RvsSomething(Measurement):
             self.Vx[j] = np.append(self.Vx[j], vx)
             self.Vy[j] = np.append(self.Vy[j], vy)
             self.R[j] = np.append(self.R[j], r)
+
+        # Get temperature and field (if available)
+        if hasattr(self, 'ppms'):
+            self.B = np.append(self.B, self.ppms.field/10000) # Oe to T
+        elif hasattr(self, 'magnet'):
+            if self.magnet.p_switch:  # in driven mode
+                B = self.magnet.Bsupply
+            else:  # in persistent mode
+                B = self.magnet.Bmagnet
+            self.B = np.append(self.B, B)
+
+        if hasattr(self, 'montana'):
+            self.T = np.append(self.T, self.montana.temperature['platform'])
+        elif hasattr(self, 'ppms'):
+            self.T = np.append(self.T, self.ppms.temperature)
+        elif hasattr(self, 'lakeshore'):
+            self.T = np.append(self.T, self.lakeshore.T[6])
 
         if plot:
             self.plot()
@@ -368,7 +381,6 @@ class RvsVg(RvsSomething):
             )
 
         self.Ig = np.array([])
-        self.T = np.array([])
 
 
     def do(self, num_avg = 1, delay_avg = 0, zero=False, plot=True, auto_gain=False):
@@ -383,10 +395,6 @@ class RvsVg(RvsSomething):
             self.Vg = np.append(self.Vg, Vg)
             self.keithley.Vout = Vg
             self.Ig = np.append(self.Ig, self.keithley.I)
-            if hasattr(self, 'montana'):
-                self.T = np.append(self.T, self.montana.temperature['platform'])
-            elif hasattr(self, 'ppms'):
-                self.T = np.append(self.T, self.ppms.temperature)
 
             self.do_measurement(self.delay, num_avg, delay_avg, plot=plot, auto_gain=auto_gain)
 
