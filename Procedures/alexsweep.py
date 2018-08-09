@@ -48,12 +48,13 @@ class Sweep(Measurement):
     and actively swept parameters may be added as Repeaters
     '''
 
-    def __init__(self, name, filename = False, pathtosave = False,
+    def __init__(self, name, filename = False, pathtosave = False, bi = True,
                                     saveasyougo = False, saveatend = True):
         self.repeaters = []
         self.sweeps_data = []
         self.name = name
         self.ns = []
+        self.bi = bi
         self.saveasyougo = saveasyougo
         self.filename = filenames
         if pathtosave:
@@ -97,6 +98,26 @@ class Sweep(Measurement):
                                         + '\%i\%s' % (point, r.name), r(point))
                 else:
                     r(point)
+        if bi = True:
+            for point in  range(self.points):
+                clear_output()
+                print('On point ' + str(point) + ' out of ' + str(self.points))
+                sweep_data[point + self.points] = {}
+                for r in self.repeaters:
+                    if(self.waiter and self.waiter.test(n)):
+                        break
+                    if hasattr(r,"name"):
+                        sweep_data[point + self.points][r.name]
+                                                    = r(self.points - point)
+                        if self.saveasyougo:
+                            self.savedata.append(self.pathtosave
+                                    + '\%i\%s' % (point + self.points, r.name),
+                                     r(self.points - point))
+                    else:
+                        r(self.points - point)
+
+
+
         if self.saveatend:
             self.savedata.append(self.pathtosave, sweep_data)
             self.save()
@@ -148,6 +169,12 @@ class Sweep(Measurement):
         Removes a repeater.
         '''
         self.repeaters.remove(remove_me)
+
+    def remove_all_repeaters(self):
+        '''
+        Remove all repeaters
+        '''
+        self.repeaters = []
 
     def set_points(self, points, waiter = False):
         '''
