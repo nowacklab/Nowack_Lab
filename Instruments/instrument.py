@@ -58,7 +58,8 @@ class VISAInstrument(Instrument):
             assert parity in [0,1]
             parity = visa.constants.Parity(parity)
         for var in ['parity', 'data_bits', 'baud_rate']:
-            setattr(self._visa_handle, var, eval(var))
+            if eval(var) is not None:
+                setattr(self._visa_handle, var, eval(var))
 
         if self._idn is not None:
             idn = self.query('*IDN?')
