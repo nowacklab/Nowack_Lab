@@ -162,6 +162,12 @@ class zitransport():
         self.recordleakage = alexsweep.Recorder(self.gate, 'I', 'Gate leakage')
         if gate:
             gate.I_compliance = maxgatecurrent
+            self.recordgatevoltage = alexsweep.Recorder(self.gate, 'V',
+                                                        'Gate voltage')
+            self.recordgateleakage =  alexsweep.Recorder(self.gate,'I',
+                                                        'Gate Leakage')
+            self.gaterecorders = [self.recordgateleakage,self.recordgatevoltage]
+
         self.genericrecorders = [self.record4pnt, self.recordcurrent,
                                         self.recorddcbias, self.recordleakage]
         self.activemeasurement = False
@@ -202,7 +208,8 @@ class zitransport():
         '''
         Sets up a gatesweep. Must have written self.desc before running this.
         '''
-
+        if not self.gate:
+            raise Exception('No gate defined!')
         self.RvsGate = alexsweep.Sweep("RvsGate" + self.desc,
                                              saveatend = False, bi = bidir)
         settler = alexsweep.Delayer(settle*self.largestTimeconstant())
@@ -214,7 +221,8 @@ class zitransport():
             tolerance = acceptableleakage, timetoaccept = .1)
 
         self.RvsGate.repeaters = ([bg, incomp, settler] +
-                                                        self.genericrecorders)
+                                                        self.genericrecorders
+                                                        )
 
     def setupRvsI(self,istart, istop, numpoints, settle = 5, startupwait = 10,
                                 acceptablecurrenterror = 1e-9, bidir = True):
