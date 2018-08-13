@@ -48,7 +48,7 @@ class Sweep(Measurement):
     and actively swept parameters may be added as Repeaters
     '''
 
-    def __init__(self, name, filename = False, pathtosave = False, bi = True,
+    def __init__(self, name, pathtosave = '/', bi = True,
                                     saveasyougo = False, saveatend = True):
         self.repeaters = []
         self.sweeps_data = []
@@ -56,15 +56,10 @@ class Sweep(Measurement):
         self.ns = []
         self.bi = bi
         self.saveasyougo = saveasyougo
-        self.filename = filenames
-        if pathtosave:
-            self.pathtosave = pathtosave
-        else:
-            self.pathtosave = '/'
         if (saveasyougo or saveatend) and not filename:
             raise Exception('Must specify filename for saving')
         elif saveasyougo or saveatend :
-            self.savedata = Dataset(self.filename, adddatetime = True)
+            self.savedata = Datasaver(name)
         self.saveatend = saveatend
 
 
@@ -86,7 +81,8 @@ class Sweep(Measurement):
             self.waiter.reset()
         for point in  range(self.points):
             clear_output()
-            print('On point ' + str(point) + ' out of ' + str(self.points))
+            print('On point ' + str(point) +
+                                        ' out of ' + str(self.points))
             sweep_data[point] = {}
             for r in self.repeaters:
                 if(self.waiter and self.waiter.test(n)):
@@ -95,23 +91,24 @@ class Sweep(Measurement):
                     sweep_data[point][r.name] = r(point)
                     if self.saveasyougo:
                         self.savedata.append(self.pathtosave
-                                        + '\%i\%s' % (point, r.name), r(point))
+                                + '\%i\%s' % (point, r.name), r(point))
                 else:
                     r(point)
-        if bi = True:
+        if bi:
             for point in  range(self.points):
                 clear_output()
-                print('On point ' + str(point) + ' out of ' + str(self.points))
+                print('On point ' + str(point) +
+                                        ' out of ' + str(self.points))
                 sweep_data[point + self.points] = {}
                 for r in self.repeaters:
                     if(self.waiter and self.waiter.test(n)):
                         break
                     if hasattr(r,"name"):
-                        sweep_data[point + self.points][r.name]
-                                                    = r(self.points - point)
+                        sweep_data[point + self.points][r.name] = r(
+                                                    self.points - point)
                         if self.saveasyougo:
                             self.savedata.append(self.pathtosave
-                                    + '\%i\%s' % (point + self.points, r.name),
+                            + '\%i\%s' % (point + self.points, r.name),
                                      r(self.points - point))
                     else:
                         r(self.points - point)
@@ -319,6 +316,6 @@ class Wait(Measurement):
             if time.time()- tstart > self.timeout:
                 raise('Waiting timed out at value ' + str(self.values[n])
                         + ' of waiter ' + self.name)
-            if test(n):
+            if self.test(n):
                 break
         return currst
