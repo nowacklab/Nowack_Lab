@@ -1,6 +1,7 @@
 
 from Nowack_Lab.Procedures import alexsweep
 import numpy as np
+from Nowack_Lab.Utilities.datasaver import Saver
 class zitransport():
 
     _measurements = ['RvsI', 'RvsGate']
@@ -9,7 +10,7 @@ class zitransport():
                 dccurrentoutput = 0, voltageinput = 1,  voltageoutput = 0,
                 acamp = .01, TAchannel = 0, voltagerange = 2, currentrange = 2,
                 outputrange = 1, TAgain = 1e6, freq = 17.76,
-                voltagepreamp = False, externalvoltagegain = 1,
+                voltagepreamp = False, voltdiff = False, externalvoltagegain = 1,
                 maxdccurrent = 1e-3, maxgate = 110, maxgatecurrent = 20e-9,
                 gate = False, estdevres = 1e5, timeconstant = 1):
         '''
@@ -73,6 +74,7 @@ class zitransport():
         self.gate = gate
         self.estdevres = estdevres
         self.activemeasurement = None
+        self.runnumber = 0
         #configure the demods
         tampdc = 1
         if freq > 200:
@@ -96,7 +98,7 @@ class zitransport():
 ['/%s/sigins/%d/IMP50'       % (lockin.device_id, currentinput), 0],
 
 ['/%s/sigins/%d/range'       % (lockin.device_id, voltageinput), voltagerange],
-['/%s/sigins/%d/diff'        % (lockin.device_id, voltageinput), 1],
+['/%s/sigins/%d/diff'        % (lockin.device_id, voltageinput),int(voltdiff)],
 
 ['/%s/sigins/%d/range'       % (lockin.device_id, currentinput), currentrange],
 ['/%s/sigins/%d/diff'        % (lockin.device_id, currentinput), 0],
@@ -126,8 +128,8 @@ class zitransport():
 ['/%s/pids/%d/OUTPUTCHANNEL'   % (lockin.device_id, 0), dccurrentoutput],
 ['/%s/pids/%d/OUTPUTDEFAULTENABLE'   % (lockin.device_id, 0), 1],
 ['/%s/pids/%d/OUTPUTDEFAULT'   % (lockin.device_id, 0), 0],
-['/%s/pids/%d/P'   % (lockin.device_id, 0), (rbias + estdevres)/TAgain],
-['/%s/pids/%d/I'   % (lockin.device_id, 0), -.1*(rbias + estdevres)/TAgain],
+['/%s/pids/%d/P'   % (lockin.device_id, 0), 0],
+['/%s/pids/%d/I'   % (lockin.device_id, 0), -1*(rbias + estdevres)/TAgain],
 ['/%s/pids/%d/D'   % (lockin.device_id, 0), 0],
 ['/%s/pids/%d/SETPOINT'   % (lockin.device_id, 0), 0],
 ['/%s/pids/%d/CENTER'   % (lockin.device_id, 0), 0],
@@ -137,6 +139,8 @@ class zitransport():
 
 ['/%s/sigouts/%d/enables/*' % (lockin.device_id, voltageoutput),0],
 ['/%s/sigouts/%d/enables/%d'
+        % (lockin.device_id, voltageoutput, out_mix_ch), 1],
+['/%s/sigouts/%d/amplitudes/%d'
         % (lockin.device_id, voltageoutput, out_mix_ch), acamp/outputrange],
 ['/%s/oscs/%d/freq'         % (lockin.device_id, voltageoutput), freq],
 ['/%s/sigouts/%d/range'     % (lockin.device_id, voltageoutput), outputrange],
@@ -157,41 +161,39 @@ class zitransport():
                                 voltagedemod, 'Raw four point voltage')
         self.recordcurrent = alexsweep.Recorder(self.lockin,'DEMODS_%d_SAMPLE'
                                     % currentdemod, 'Raw AC current')
-        self.recorddcbias = alexsweep.Recorder(self.lockin,'AUXOUT_%d_VALUE'
-                                    % dccurrentoutput , 'Raw DC current bias')
-        self.recordleakage = alexsweep.Recorder(self.gate, 'I', 'Gate leakage')
+        self.recorddcbias = alexsweep.Recorder(self.lockin,'AUXINS_0_VALUES_%d'
+                                    % dccurrentinput , 'Raw DC current bias')
+
         if gate:
             gate.I_compliance = maxgatecurrent
             self.recordgatevoltage = alexsweep.Recorder(self.gate, 'V',
                                                         'Gate voltage')
             self.recordgateleakage =  alexsweep.Recorder(self.gate,'I',
                                                         'Gate Leakage')
-            self.gaterecorders = [self.recordgateleakage,self.recordgatevoltage]
-
-        self.genericrecorders = [self.record4pnt, self.recordcurrent,
-                                        self.recorddcbias, self.recordleakage]
+            self.genericrecorders = [self.recordgateleakage,
+                    self.recordgatevoltage,self.record4pnt, self.recordcurrent,
+                                        self.recorddcbias]
+        else:
+            self.genericrecorders = [self.record4pnt, self.recordcurrent,
+                                        self.recorddcbias]
         self.activemeasurement = False
 
     @property
     def dccurrent(self):
         currentgain = getattr(self.lockin, 'ZCTRLS_0_TAMP_%i_CURRENTGAIN'
-                                                            % self.TAchannel )
-        return -currentgain*getattr(self.lockin, 'DEMODS_%i_SAMPLE'
-                                                    % self.currentinput)['x']
+                        % self.TAchannel )*getattr(self.lockin,
+                        'ZCTRLS_0_TAMP_%d_VOLTAGEGAIN' % self.TAchannel)
+        return getattr(self.lockin, 'AUXINS_0_VALUES_%d'
+                                            % self.dccurrentinput)/currentgain
 
     @dccurrent.setter
     def dccurrent(self, value):
-        curval = (self.lockin.PIDS_0_SHIFT
-                                    + self.lockin.PIDS_0_CENTER)
-        self.lockin.PIDS_0_DEFAULT = curval
-        self.lockin.PIDS_0_ENABLE = 0
-        self.lockin.PIDS_0_SETPOINT = - getattr(self.lockin,
-                'ZCTRLS_1_TAMP_%d_CURRENTGAIN' % self.TAchannel)*getattr(
-                                self.lockin, 'ZCTRLS_1_TAMP_%d_VOLTAGEGAIN' %
-                                                    self.TAchannel) * value
         self.lockin.PIDS_0_CENTER = value*(self.rbias + self.estdevres)
-        self.lockin.PIDS_0_ENABLE = 1
-        self.lockin.PIDS_0_DEFAULT = 0
+        self.lockin.PIDS_0_SETPOINT = - getattr(self.lockin,
+                'ZCTRLS_0_TAMP_%d_CURRENTGAIN' % self.TAchannel)*getattr(
+                                self.lockin, 'ZCTRLS_0_TAMP_%d_VOLTAGEGAIN' %
+                                                    self.TAchannel) * value
+
 
     def largestTimeconstant(self):
         '''
@@ -224,7 +226,7 @@ class zitransport():
                                                         self.genericrecorders
                                                         )
 
-    def setupRvsI(self,istart, istop, numpoints, settle = 5, startupwait = 10,
+    def setupRvsI(self,istart, istop, numpoints, settle = 5,
                                 acceptablecurrenterror = 1e-9, bidir = True):
         '''
         Sets up a dc bias sweep. Must have written self.desc before running
@@ -237,10 +239,13 @@ class zitransport():
         biases = alexsweep.Active(self, "dccurrent", 'DC Current Bias',
                                                                 biascurrents)
         self.RvsI.set_points(numpoints)
+        curtagain = getattr(self.lockin, 'ZCTRLS_0_TAMP_%d_CURRENTGAIN'
+                        % self.TAchannel)*getattr(self.lockin,
+                        'ZCTRLS_0_TAMP_%d_VOLTAGEGAIN' % self.TAchannel)
         incomp = alexsweep.Wait('Ensure dc current bias is in compliance',
-            self, 'dccurrent', biascurrents, valence = 0,
-            tolerance = acceptablecurrenterror, timetoaccept = .1)
-
+            self, 'dccurrent', -biascurrents, valence = 0,
+            tolerance = acceptablecurrenterror, timetoaccept = .1, timeout=30)
+        self.incomp = incomp
         self.RvsI.repeaters = ([biases, incomp, settler] +
                                                          self.genericrecorders)
 
@@ -254,8 +259,46 @@ class zitransport():
         '''
         if self.activemeasurement in zitransport._measurements:
             measurementobject = getattr(self, self.activemeasurement)
-            sweeps_data = measurementobject(n)
+            sweep_data = measurementobject(n)
         else:
             raise Exception('Unknown active measurement!')
+        datasvr = Saver(name = self.activemeasurement + self.desc)
+        currentgain = getattr(self.lockin, 'ZCTRLS_0_TAMP_%i_CURRENTGAIN'
+                        % self.TAchannel )*getattr(self.lockin,
+                        'ZCTRLS_0_TAMP_%d_VOLTAGEGAIN' % self.TAchannel)
+        self.acsignal = (getattr(self.lockin, 'SIGOUTS_%d_AMPLITUDES_%d'
+                % (self.voltageoutput, self.out_mix_ch)) *
+                getattr(self.lockin, 'SIGOUTS_%d_RANGE'
+                        % self.voltageoutput))/(2.0**.5)
+        for point in range(len(sweep_data)):
+            sweep_data[point]['AC Two-point resistance (Ohms)'] = (self.acsignal/(
+            sweep_data[point]['Raw AC current']['x']/currentgain))
+            sweep_data[point]['AC Four-point resistance (Ohms)'] = (
+            sweep_data[point]['Raw four point voltage'
+            ]['x']/(self.externalvoltagegain*sweep_data[point]['Raw AC current'
+            ]['x']/currentgain))
+            sweep_data[point]['DC Current (Ampere)'] = (
+            sweep_data[point]['Raw DC current bias']/currentgain)
+        return sweep_data
 
-        return sweeps_data
+    def run(self, plot = True, save = True):
+        sweep_data = self.__call__(self.runnumber)
+        self.runnumber += 1
+
+        if save:
+            datasvr = Saver(name = self.activemeasurement + self.desc)
+            datasvr.append('/data/',sweep_data)
+            datasvr.append('/setup/lockin/', self.lockin.__getstate__())
+            datasvr.append('/setup/params', {
+            'rbias': self.rbias,
+            'Zurich current input': self.currentinput,
+            'Zurich aux dc current input': self.dccurrentinput,
+            'Zurich voltage input': self.voltageinput,
+            'Zurich Lockin Output': self.voltageoutput,
+            'Zurich TA Channel': self.TAchannel,
+            'External voltage gain': self.externalvoltagegain,
+            'Max DC current': self.maxdccurrent,
+            'Max gate voltage': self.maxgate})
+
+        if plot:
+            import matplotlib.pyplot as plt

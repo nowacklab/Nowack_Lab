@@ -85,8 +85,10 @@ class zurichInstrument(Instrument):
                 "lambda self: {'x': self.daq.getSample('%s')['x'][0]," % elem
                             + "'y':self.daq.getSample('%s')['y'][0]}" % elem)))
     def __getstate__(self):
-
-        self._save_dict = self.daq.get('/', True)
+        zdict = self.daq.get('/', True)
+        self._save_dict = {}
+        for key in zdict.keys():
+            self._save_dict[key.replace('/','_')[9:].upper()]= zdict[key]
         return self._save_dict
 
     def setup(self, config):

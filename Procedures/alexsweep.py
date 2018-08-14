@@ -76,14 +76,14 @@ class Sweep(Measurement):
             else:
                 n = shoulduse
         self.ns.append(n)
-        sweep_data = {}
+        sweep_data = []
         if self.waiter:
             self.waiter.reset()
         for point in  range(self.points):
             clear_output()
             print('On point ' + str(point) +
                                         ' out of ' + str(self.points))
-            sweep_data[point] = {}
+            sweep_data.append({})
             for r in self.repeaters:
                 if(self.waiter and self.waiter.test(n)):
                     break
@@ -94,22 +94,22 @@ class Sweep(Measurement):
                                 + '\%i\%s' % (point, r.name), r(point))
                 else:
                     r(point)
-        if bi:
+        if self.bi:
             for point in  range(self.points):
                 clear_output()
                 print('On point ' + str(point) +
                                         ' out of ' + str(self.points))
-                sweep_data[point + self.points] = {}
+                sweep_data.append({})
                 for r in self.repeaters:
                     if(self.waiter and self.waiter.test(n)):
                         break
                     if hasattr(r,"name"):
                         sweep_data[point + self.points][r.name] = r(
-                                                    self.points - point)
+                                                self.points - point - 1)
                         if self.saveasyougo:
                             self.savedata.append(self.pathtosave
                             + '\%i\%s' % (point + self.points, r.name),
-                                     r(self.points - point))
+                                     r(self.points - point - 1))
                     else:
                         r(self.points - point)
 
@@ -118,6 +118,7 @@ class Sweep(Measurement):
         if self.saveatend:
             self.savedata.append(self.pathtosave, sweep_data)
             self.save()
+        return sweep_data
 
     def run(self):
         '''
@@ -189,7 +190,7 @@ class Sweep(Measurement):
         sweepnum-th sweep
         '''
         if not sweepdata:
-            sweepdata = self.sweeps_data[sweepnum]
+            sweepdata = self.sweeps_data
         sweep = sweepdata[sweepnum]
         data = []
         for key in range(len(sweep.keys())):
@@ -312,10 +313,12 @@ class Wait(Measurement):
     def __call__(self, n):
         tstart = time.time()
         start_time_in_range = tstart
+        print('Waiting to ' + self.name)
         while(True):
             if time.time()- tstart > self.timeout:
-                raise('Waiting timed out at value ' + str(self.values[n])
-                        + ' of waiter ' + self.name)
+                raise Exception('Waiting timed out at value '
+                    + str(self.values[n]) + ' of waiter ' + self.name)
             if self.test(n):
+                print('Done')
                 break
-        return currst
+        return time.time() - tstart
