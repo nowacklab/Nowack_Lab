@@ -86,7 +86,7 @@ class Saver():
         for dataset_name in self.datasets.keys():
             self.datasets[dataset_name].append(*args, **kwargs)
 
-    def get(self,*args, filetouse = 'localdir', **kwargs):
+    def get(self,*args, filetouse = 'local', **kwargs):
         '''
         get(self, pathtoget, filetouse = 'localdir', slice = False)
         Takes the path to an object in an h5 file and the object itself.

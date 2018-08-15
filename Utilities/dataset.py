@@ -83,7 +83,7 @@ class Dataset():
                 groups if needed), and puts the contents of obj there.
                 '''
                 sep = '/'
-                h5path = pathtowrite + sep.join(path)
+                h5path = pathtowrite + sep.join([str(place) for place in path])
                 if not isinstance(obj, dict):
                     self._writetoh5(data = obj, path = h5path)
             self.dictvisititems(cleandatatowrite, _loadhdf5)

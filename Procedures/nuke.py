@@ -1,25 +1,35 @@
 import numpy as np
 import time
 import matplotlib.pyplot as plt
-from ..Utilities.save import Measurement
+from Nowack_Lab.Utilities.datasaver import Saver
 from IPython.display import clear_output
 
-class PulseMeasurement(Measurement):
 
-    def __init__(self,oscope):
-        testdata = oscope.getdata
-        self.oscope = oscope
-        self.burstspacing  = 1e-3
-        self.numoscopeavg = 512
+class dcnuke():
 
-    def relaxationtrace(self, num_avg):
-        self.xaxis = self.oscope.getdata[0]
-        self.avgdata = np.zeros(len(self.xaxis))
-        for i in range(num_avg):
-            clear_output()
-            print('Average ' + str(i) + ' of ' + str(num_avg))
-            time.sleep(self.numoscopeavg*self.burstspacing/2)
-            self.avgdata = self.oscope.getdata[1]/num_avg + self.avgdata
-        plt.clf()
-        plt.plot(self.xaxis, self.avgdata)
-        plt.show()
+    def __init__(instruments, sweeprange, numpoints = 2000, sweeprate = 1000,
+                sweepcount = 1, bi = True, plot = True, samplename = '',
+                                                                bfield = '1mT'):
+        self.sweepbidir = alexsweep.Sweep("Iterator sweep", bi = False,
+                                                              saveatend = False)
+        self.sweepbidir.set_points(sweepcount)
+        svr = Saver()
+        self.sweepname = ("Sweep of frequency on %s NQR with %s Bz"
+                                                        % (samplename, bfield))
+        forwardsweep = alexsweep.Sweep(self.sweepname,svr = svr, bi = bi,
+                                           saveatend = False, saveasyougo=True)
+        forwardsweep.set_points(numpoints)
+        forwardfreqs = np.linspace(sweeprange[0],sweeprange[1],num = numpoints)
+        osc1freq = alexsweep.Active(bigz,"OSCS_0_FREQ","Field Coil Frequency",
+                                                                  forwardfreqs)
+        forwardsweep.add_repeater(osc1freq)
+        wait_each_point = alexsweep.Delayer((sweeprange[1] - sweeprange[0])/
+                                                        (sweeprate * numpoints))
+        forwardsweep.add_repeater(wait_each_point)
+        squidname = "DC SQUID SIGNAL %sx gain" % str(instruments['preamp'].gain)
+        record_dcflux = alexsweep.Recorder(daq.ai6, "V", squidname )
+        forwardsweep.add_repeater(record_dcflux)
+        self.sweepbidir.add_repeater(forwardsweep)
+
+    def __call__(self, n):
+        self.sweepbidir(n)        
