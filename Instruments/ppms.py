@@ -39,7 +39,7 @@ class PPMS(Instrument):
 
         # Getters and setters for available commands
         getsetparams = [
-            # 'temperature',
+            'temperature',
             'temperature_rate',
             'field',
             'field_rate',
@@ -55,6 +55,8 @@ class PPMS(Instrument):
         self._params = getsetparams + getonlyparams
 
         for param in self._params:
+            if param == 'temperature':
+                continue  # will deal with it below
             fget = eval("lambda self: self._get_param('%s')" %param)
             if param in getsetparams:
                 fset = eval("lambda self, value: self._set_param('%s',value)" %param)
