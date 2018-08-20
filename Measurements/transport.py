@@ -430,7 +430,7 @@ class RvsVg(RvsSomething):
             else:
                 self.legendtitle += '\n'+text
 
-        add_text_to_legend('Vstep = %.2f V' %self.Vstep)
+        add_text_to_legend('Vstep = %.3f V' %self.Vstep)
         add_text_to_legend('delay = %.2f s' %self.delay)
         if self.Vstart < self.Vend:
             add_text_to_legend(r'sweep $\longrightarrow$')
@@ -480,6 +480,7 @@ class RvsVg_Vtg(RvsVg):
         '''
         for i, Vtg in enumerate(self.Vtg):
             # sweep topgate
+            raise Exception('fix sweep!')
             self.keithley_tg.sweep_V(keithley_tg.V, Vtg, .005, .01) # 5 mV steps, 10 mV/second
 
             # reset arrays for gatesweep
@@ -564,7 +565,8 @@ class RvsVg_T(RvsVg):
     instrument_list = list(set(RvsT.instrument_list) | set(RvsVg.instrument_list))
 
     def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1,
-                delay=1, Tstart = 5, Tend = 300, Tstep=5, Tdelay=1, sweep_rate=5, Vg_sweep=None):
+                delay=1, sweep=1, Tstart = 5, Tend = 300, Tstep=5, Tdelay=1,
+                sweep_rate=5, wait=5, Vg_sweep=None):
         '''
         Does gatesweeps at a series of temperatures.
         Stores the full gatesweeps at each field, as well as a RvsT curve done
@@ -574,11 +576,13 @@ class RvsVg_T(RvsVg):
         Vend: end of gatesweep
         Vstep: gatesweep voltage step size
         delay: gatesweep delay time
+        sweep: sweep rate to Vstart (V/s)
         Tstart: starting temperature (Kelvin)
         Tend: end temperature (Kelvin)
         Tstep: temperature step between gatesweeps (Kelvin)
         Tdelay: delay between resistance measurements during temperature sweep (seconds)
         sweep_rate: temperature sweep rate (K/min)
+        wait: wait time once reach target temperature (min)
         Vg_sweep: gate voltage at which to do the temperature sweep (V). Leave at None if you don't care.
         '''
         super().__init__(instruments=instruments, Vstart=Vstart, Vend=Vend, Vstep=Vstep, delay=delay)
@@ -604,13 +608,10 @@ class RvsVg_T(RvsVg):
             setattr(self, 'R%ifull' %j, np.array([]))
 
 
-    def do(self, delay=0, auto_gain=False):
-        '''
-        delay: wait time after sweeping temperature
-        '''
+    def do(self, auto_gain=False):
         for i, T in enumerate(self.T):
             if self.Vg_sweep is not None:
-                self.keithley.sweep_V(self.keithley.V, self.Vg_sweep, .1, 1) # set desired gate voltage for the temp sweep
+                self.keithley.sweep_V(self.keithley.V, self.Vg_sweep, self.Vstep, self.sweep) # set desired gate voltage for the temp sweep
             else: # otherwise we will go as quickly as possible and reverse every other gatesweep
                 self.Vstart, self.Vend = self.Vend, self.Vstart
 
@@ -619,7 +620,8 @@ class RvsVg_T(RvsVg):
             self.ts.run(plot=False)
 
             # Wait for cooling/stabilization
-            time.sleep(delay)
+            print('Waiting %i minutes for thermalization.' %self.wait)
+            time.sleep(self.wait*60)
 
             # store full temp sweep data
             self.Tfull = np.append(self.Tfull, self.ts.T)
