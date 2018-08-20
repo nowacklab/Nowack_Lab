@@ -424,7 +424,7 @@ class RvsVg(RvsSomething):
             else:
                 self.legendtitle += '\n'+text
 
-        add_text_to_legend('Vstep = %.2f V' %self.Vstep)
+        add_text_to_legend('Vstep = %.3f V' %self.Vstep)
         add_text_to_legend('delay = %.2f s' %self.delay)
         if self.Vstart < self.Vend:
             add_text_to_legend(r'sweep $\longrightarrow$')
