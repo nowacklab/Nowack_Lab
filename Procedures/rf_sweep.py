@@ -101,11 +101,14 @@ class RF_take_spectra:
         info.append(path + '/notes', self.notes)
 
 
-'''Class for sweeping current with the Keithley2400 and recording
-data from the VNA8722ES at each current step.
-'''
 
-class RF_sweep_current: # should this extend class Measurement?
+
+class RF_sweep_current:
+
+    '''Class for sweeping current with the Keithley2400 and recording
+    data from the VNA8722ES at each current step.
+    '''
+                        # should this extend class Measurement?
                         # also, there will be other sweeps in the future (e.g. power sweep),
                         # so may be worth having the class WithoutDAQ_ThreeParam_Sweep (esp. for plotting fxns)
                         # and having these RF_sweep_<some parameter> classes extend WithoutDAQ_ThreeParam_Sweep
