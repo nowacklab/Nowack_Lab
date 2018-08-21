@@ -91,6 +91,9 @@ class zurichInstrument(Instrument):
             self._save_dict[key.replace('/','_')[9:].upper()]= zdict[key]
         return self._save_dict
 
+    def convert_output(self, value):
+        return value
+
     def setup(self, config):
             '''
             Pass in a dictionary with the desired configuration. If an element

@@ -233,7 +233,7 @@ class Scanplane(Measurement):
             # Return to zero for a couple of seconds:
             #self.piezos.V = 0
             #time.sleep(2)
-            
+
             # Back off with the Z piezo before moving to the next line
             self.piezos.V = {'z': 0}
             self.squidarray.reset()
@@ -270,7 +270,7 @@ class Scanplane(Measurement):
                         self.Vfull[chan])(self.Vinterp['piezo']
                                           )
                     self.V[chan][:, i] = self.Vinterp[chan]
-                    
+
             self.save_line(i, Vstart)
             self.plot()
         self.piezos.V = 0
