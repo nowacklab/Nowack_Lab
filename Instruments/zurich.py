@@ -167,10 +167,8 @@ class MFLI(Zurich):
 
             scope.execute()
 
-            print('Obtaining scope trace...')
             while scope.progress() < 1:
                 time.sleep(0.1)
-            print('Done.')
 
             daq.setInt('/%s/scopes/0/enable' %self.device_id, 0)
             rawdata=scope.read()

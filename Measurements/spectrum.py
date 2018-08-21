@@ -42,6 +42,9 @@ class DaqSpectrum(Measurement):
         for arg in ['measure_time', 'measure_freq', 'averages']:
             setattr(self, arg, eval(arg))
 
+        self.timetraces_t = [None]*averages
+        self.timetraces_V = [None]*averages
+
     def do(self):
         '''
         Do the DaqSpectrum measurment.
@@ -66,6 +69,8 @@ class DaqSpectrum(Measurement):
 
         for i in range(self.averages):
             t, V = self.get_time_trace()
+            self.timetraces_t[i] = t
+            self.timetraces_V[i] = V
             self.f, psd = signal.periodogram(V, self.measure_freq,
                                              'blackmanharris')
             psdAve = psdAve + psd
@@ -141,7 +146,7 @@ class ZurichSpectrum(DaqSpectrum):
             measure_freq=14.6e3,
             averages=30):
         '''
-        Create a DaqSpectrum object
+        Create a ZurichSpectrum object
 
         Args:
         instruments (dict): Instrument dictionary
