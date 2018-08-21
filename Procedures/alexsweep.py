@@ -49,7 +49,8 @@ class Sweep(Measurement):
     '''
 
     def __init__(self, name, pathtosave = '/', bi = True, runcount = 1,
-                            saveasyougo = False, saveatend = True, svr = False):
+                 pausebeforesweep = 0, saveasyougo = False, saveatend = True,
+                 svr = False):
 
         if saveatend and saveasyougo:
             raise Exception('only one saving method allowed!')
@@ -61,6 +62,7 @@ class Sweep(Measurement):
         self.runcount = runcount
         self.saveasyougo = saveasyougo
         self.pathtosave = pathtosave
+        self.pausebeforesweep = pausebeforesweep
         if (saveasyougo or saveatend) and not svr:
             self.savedata = Datasaver(name)
         elif svr:
@@ -74,6 +76,7 @@ class Sweep(Measurement):
         '''
         sweep_data = {}
         for k in range(self.runcount):
+            time.sleep(self.pausebeforesweep)
             sweep_data["iteration: " + str(k)] = {}
             if n in self.ns:
                 shoulduse = input('This n has already been swept. If you want to use'
@@ -111,6 +114,7 @@ class Sweep(Measurement):
                     else:
                         r(point)
             if self.bi:
+                time.sleep(self.pausebeforesweep)
                 sweep_data["iteration: " + str(k)]['reverse'] = {}
                 for r in self.repeaters:
                     if hasattr(r,"name"):
