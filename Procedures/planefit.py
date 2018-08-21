@@ -290,11 +290,12 @@ class Planefit(Measurement):
             axes.append(ax)
         self.fig.subplots_adjust(wspace=0, hspace=0)
         self.axes = np.reshape(axes, self.numpts)
-        self.fig.suptitle(self.filename +
-                          '\n atto: X={0:2.2f}, Y={1:2.2f}, Z={2:2.2f}'.format(
-                              self.atto.x.pos,
-                              self.atto.y.pos,
-                              self.atto.z.pos))
+        self.fig.suptitle(self.filename #+
+                          #'\n atto: X={0:2.2f}, Y={1:2.2f}, Z={2:2.2f}'.format(
+                            #  self.atto.x.pos,
+                            #  self.atto.y.pos,
+                            #  self.atto.z.pos)
+                            )
 
     def surface(self, x, y):
         '''

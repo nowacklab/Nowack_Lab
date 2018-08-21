@@ -9,8 +9,8 @@ class Dataset():
     leaves including numpy arrays. It further allows iterative saving to those
     numpy arrays with overwrite protection
     '''
-    allowedtypes = ['float', 'int','complex', 'uint']
-    allowednonnumpytypes = [str, float, int, list]
+    allowedtypes = [float, int,complex]
+    allowednonlisttypes = [str, float, int, complex]
 
     def __init__(self, filename):
         '''
@@ -174,7 +174,8 @@ class Dataset():
         Sanitizes input before loading into an h5 file. If sanitization fails,
         prints a message and converts to a string.
         '''
-        if type(data) in self.allowedtypes + self.allowednonnumpytypes:
+        if any([isinstance(data, sometype) for sometype in
+                                                    self.allowednonlisttypes]):
             cleandata = data
         elif type(data) == np.ndarray:
             if data.dtype in [np.dtype(a) for a in self.allowedtypes]:
@@ -186,6 +187,22 @@ class Dataset():
                     print('Could not convert dtype of numpy array to float.'
                           +' Saving as a string')
                     cleandata = str(data)
+        elif type(data) == list:
+            if all([any([isinstance(elem, sometype) for sometype in
+                                        self.allowedtypes]) for elem in data]):
+                cleandata = data
+            else:
+                print('List with unauthorized types. Most likely dicts' +
+                                ' or strings. Attempting to convert to string.')
+                try:
+                    cleandata = str(data)
+                    print('Success!')
+                except:
+                    shouldcontinue = input('COULD NOT CONVERT TO STRING. '
+                    + 'DATA WILL NOT BE SAVED. Continue y/(n)')
+                    if shouldcontinue != 'y':
+                        raise Exception('TypeError: could not convert to h5')
+                    cleandata = 'unconvertable'
         elif isinstance(data, dict):
             cleandata = {}
             for key in data.keys():

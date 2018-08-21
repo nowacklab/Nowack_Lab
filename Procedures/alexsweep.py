@@ -27,7 +27,7 @@ class Active(Measurement):
     gettable class will return its gotten value after setting. Delays code by
     .1 ms to allow properties time to change.
     '''
-    def __init__(self, obj, prop, name, array, delay = 1e-4):
+    def __init__(self, obj, prop, name, array, delay = 1e-2):
         self.prop = prop
         self.obj = obj
         self.array = array
@@ -48,15 +48,21 @@ class Sweep(Measurement):
     and actively swept parameters may be added as Repeaters
     '''
 
-    def __init__(self, name, pathtosave = '/', bi = True,
-                            saveasyougo = False, saveatend = True, svr = False):
+    def __init__(self, name, pathtosave = '/', bi = True, runcount = 1,
+                 pausebeforesweep = 0, saveasyougo = False, saveatend = True,
+                 svr = False):
+
+        if saveatend and saveasyougo:
+            raise Exception('only one saving method allowed!')
         self.repeaters = []
         self.sweeps_data = []
         self.name = name
         self.ns = []
         self.bi = bi
+        self.runcount = runcount
         self.saveasyougo = saveasyougo
         self.pathtosave = pathtosave
+        self.pausebeforesweep = pausebeforesweep
         if (saveasyougo or saveatend) and not svr:
             self.savedata = Datasaver(name)
         elif svr:
@@ -68,57 +74,80 @@ class Sweep(Measurement):
         '''
         Runs the sweep, appending the sweep data to self.sweeps_data.
         '''
-        if n in self.ns:
-            shoulduse = input('This n has already been used. If you want to use'
-                              +' it anyway, overwriting data, type OVERWRITE. '
-                              + 'Otherwise, type another n to use')
-            if shoulduse == 'OVERWRITE':
-                pass
-            else:
-                n = shoulduse
-        self.ns.append(n)
         sweep_data = {}
-        if self.waiter:
-            self.waiter.reset()
-        for point in  range(self.points):
-            clear_output()
-            print('On point ' + str(point) +
-                                        ' out of ' + str(self.points))
-            sweep_data[point] = {}
-            for r in self.repeaters:
-                if(self.waiter and self.waiter.test(n)):
-                    break
-                if hasattr(r,"name"):
-                    sweep_data[point][r.name] = r(point)
-                    if self.saveasyougo:
-                        self.savedata.append(self.pathtosave
-                                + '%s/%i/%s/' % (str(n), point, r.name), r(point))
+        for k in range(self.runcount):
+            time.sleep(self.pausebeforesweep)
+            sweep_data["iteration: " + str(k)] = {}
+            if n in self.ns:
+                shoulduse = input('This n has already been swept. If you want to use'
+                                  +' it anyway, overwriting data, type OVERWRITE. '
+                                  + 'Otherwise, type another n to use')
+                if shoulduse == 'OVERWRITE':
+                    pass
                 else:
-                    r(point)
-        if self.bi:
+                    n = shoulduse
+            self.ns.append(n)
+            sweep_data["iteration: " + str(k)]['forward'] = {}
+            for r in self.repeaters:
+                if hasattr(r,"name"):
+                    sweep_data["iteration: " + str(k)]['forward'][r.name]=(
+                                        np.full(self.points, np.nan))
+                    if self.saveasyougo:
+                            self.savedata.append(self.pathtosave
+                                    + 'initialization: %s/iteration: %s/forward/%s/'
+                           % (str(n),str(k), r.name), np.full(self.points, np.nan))
+            if self.waiter:
+                self.waiter.reset()
             for point in  range(self.points):
-                clear_output()
-                print('On point ' + str(point) +
-                                        ' out of ' + str(self.points))
-                sweep_data[point + self.points] = {}
+                #clear_output()
+                #print('On point ' + str(point) +
+                #                            ' out of ' + str(self.points))
                 for r in self.repeaters:
                     if(self.waiter and self.waiter.test(n)):
                         break
                     if hasattr(r,"name"):
-                        sweep_data[point + self.points][r.name] = r(
-                                                self.points - point - 1)
+                        sweep_data["iteration: " + str(k)]['forward'][r.name][point] = r(point)
                         if self.saveasyougo:
                             self.savedata.append(self.pathtosave
-                            + '%s/%i/%s/' % (str(n), point + self.points, r.name),
-                                     r(self.points - point - 1))
+                                    + 'initialization: %s/iteration: %s/forward/%s/'
+                                    % (str(n),str(k), r.name),r(point),slice= slice(point, point + 1))
                     else:
-                        r(self.points - point)
+                        r(point)
+            if self.bi:
+                time.sleep(self.pausebeforesweep)
+                sweep_data["iteration: " + str(k)]['reverse'] = {}
+                for r in self.repeaters:
+                    if hasattr(r,"name"):
+                        sweep_data["iteration: " + str(k)]['reverse'][r.name]=(
+                                            np.full(self.points, np.nan))
+                        if self.saveasyougo:
+                                self.savedata.append(self.pathtosave
+                                        + 'initialization: %s/iteration: %s/reverse/%s/'
+                               % (str(n),str(k), r.name), np.full(self.points, np.nan))
+                for point in  range(self.points):
+                    #clear_output()
+                    #print('On point ' + str(point) +
+                    #                        ' out of ' + str(self.points))
+                    for r in self.repeaters:
+                        if(self.waiter and self.waiter.test(n)):
+                            break
+                        if hasattr(r,"name"):
+                            sweep_data["iteration: " + str(k)]['reverse'][r.name][point] =  r(
+                                                    self.points - point - 1)
+                            if self.saveasyougo:
+                                self.savedata.append(self.pathtosave
+                                        + 'initialization: %s/iteration: %s/reverse/%s/'
+                                        % (str(n),str(k), r.name),r(
+                                                                self.points - point - 1), slice= slice(point, point + 1))
+                        else:
+                            r(self.points - point - 1)
 
 
 
         if self.saveatend:
-            self.savedata.append(self.pathtosave, sweep_data)
-            self.save()
+            self.savedata.append(self.pathtosave + 'initialization: %s/'
+                                                        % str(n), sweep_data)
+            #self.save()
         return sweep_data
 
     def run(self):
@@ -184,24 +213,6 @@ class Sweep(Measurement):
         '''
         self.points = points
         self.waiter = waiter
-
-    def process_data(self, sweepnum, listofkeys, sweepdata = False):
-        '''
-        Returns a one d array of the data at location list of keys from the
-        sweepnum-th sweep
-        '''
-        if not sweepdata:
-            sweep = self.sweeps_data[sweepnum]
-        else:
-            sweep = sweepdata
-        data = []
-        for key in range(len(sweep.keys())):
-            elem =  sweep[str(key)]
-            processed = np.zeros(len(listofkeys))
-            for i in range(len(listofkeys)):
-                processed[i] = elem[listofkeys[i]]
-                data.append(processed)
-        return data
 
 class Time(Measurement):
     '''

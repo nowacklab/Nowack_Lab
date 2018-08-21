@@ -4,7 +4,6 @@ Nowack_Lab high level driver for Zurich HF2LI
 Needs: zhinst, numpy, .instrument, time and _future_
 """
 
-# Copyright 2016 Zurich Instruments AG
 
 from __future__ import print_function
 import time
