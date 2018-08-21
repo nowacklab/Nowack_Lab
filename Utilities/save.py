@@ -449,7 +449,7 @@ def get_experiment_data_dir():
     with open(path, 'r') as f:
         exp = f.read()
 
-    return exp
+    return exp.rstrip()  # rstrip to remove /n, /r etc.
 
 
 def get_data_server_path():
