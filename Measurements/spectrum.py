@@ -62,7 +62,7 @@ class DaqSpectrum(Measurement):
         Returns:
         psdAve (np.ndarray): power spectral density
         '''
-        Nfft = np.round(self.measure_freq * self.measure_time / 2) + 1
+        Nfft = np.round(self.measure_freq * self.measure_time / 2)
             # 7/12/2018 daq changed forced remove +1
             # 7/26/2018 Needed to add +1 for Zurich. Check DAQ again.
         psdAve = np.zeros(int(Nfft))
@@ -93,8 +93,8 @@ class DaqSpectrum(Measurement):
             gain = self.preamp.gain
         else:
             gain = 1
-        self.V = received['dc'] / gain
-        self.t = received['t']
+        V = received['dc'] / gain
+        t = received['t']
         return t, V
 
     def plot(self):

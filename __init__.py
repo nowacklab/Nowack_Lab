@@ -12,11 +12,11 @@ try:
 except:
     pass
 
-print('Use save.set_experiment_data_dir to change experiments\n')
+print('Use save.set_experiment_data_dir to change experiments')
 
 # Check for remote data server connection
 if not os.path.exists(save.get_data_server_path()):
-    print('''\nSAMBASHARE not connected. Could not find path %s.''' %save.get_data_server_path())
+    print('''SAMBASHARE not connected. Could not find path %s.''' %save.get_data_server_path())
 
 # Make a setup file. This file contains all desired imports.
 setup_path = os.path.join(os.path.dirname(__file__),
@@ -25,7 +25,7 @@ setup_path = os.path.join(os.path.dirname(__file__),
                             save.get_computer_name() + '.py'
                         )
 if not os.path.exists(setup_path):
-    print('Setup file %s created.' %setup_path)
+    print('\nSetup file %s created.' %setup_path)
     template_path = os.path.join(os.path.dirname(__file__),
                             'Utilities',
                             'setup',

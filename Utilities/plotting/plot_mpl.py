@@ -86,7 +86,7 @@ def plotline(ax, x, y, z):
 ## We may want to rename this as "our" imshow
 ## For moving forward, this function should take care of all the non-obvious stuff (e.g. don't need set_xlabel)
 def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='',
-           ylabel='', clabel='', fontsize=20, equal_aspect=True):
+           ylabel='', clabel='', fontsize=20, equal_aspect=True, cbar=True):
     '''
     Plots a 2D heatmap on axes ax using plt.imshow.
     x,y must be a meshgrid with default indexing, or lists.
@@ -94,28 +94,29 @@ def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='',
     Masks Nones and will plot as white.
     Can specify title and axis labels here as well
     Fontsize kwarg will affect title and all labels
+    cbar (bool): include colorbar
     '''
 
-    ## Format axes
-    ## NOTE: REMOVE
+    # Format axes
+    # NOTE: REMOVE
     ax.set_title(title, fontsize=12)
     ax.set_xlabel(xlabel, fontsize=fontsize)
     ax.set_ylabel(ylabel, fontsize=fontsize)
 
-    ## If lists, convert to arrays
-    ## NOTE: POSSIBLY REMOVE?
+    # If lists, convert to arrays
+    # NOTE: POSSIBLY REMOVE?
     if type(x) == list:
         x = np.array(x)
     if type(y) == list:
         y = np.array(y)
 
-    ## Convert image to a masked numpy array
-    ## NOTE: KEEP
+    # Convert image to a masked numpy array
+    # NOTE: KEEP
     z = np.array(z, dtype=np.float) # Will convert Nones to nans
     zm = np.ma.masked_where(np.isnan(z), z)
 
-    ## Create the image
-    ## NOTE: KEEP, but allow for arbitrary kwargs, include cmap and interpolation here
+    # Create the image
+    # NOTE: KEEP, but allow for arbitrary kwargs, include cmap and interpolation here
     im = ax.imshow(
                 zm, # not transpose for xy indexing!!
                 cmap=cmap,
@@ -124,13 +125,14 @@ def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='',
                 extent=extents(x,y) ## NOTE: KEEP
             )
 
-    ## Make a colorbar
-    ## NOTE: KEEP, but maybe just put it in another function?
-    cb = plt.colorbar(im, ax=ax)
-    cb.formatter.set_powerlimits((-2,2)) # only two decimal places!
-    cb.set_label(clabel, fontsize=12)
+    # Make a colorbar
+    # NOTE: KEEP, but maybe just put it in another function?
+    if cbar:
+        cb = plt.colorbar(im, ax=ax)
+        cb.formatter.set_powerlimits((-2,2)) # only two decimal places!
+        cb.set_label(clabel, fontsize=12)
 
-    ## NOTE: REMOVE
+    # NOTE: REMOVE
     if equal_aspect:
         aspect(ax, 1, absolute=False) # equal aspect ratio based on data scales
 

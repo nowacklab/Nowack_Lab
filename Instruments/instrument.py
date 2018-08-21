@@ -34,7 +34,8 @@ class VISAInstrument(Instrument):
             d.pop('_visa_handle')
         return d
 
-    def _init_visa(self, resource, termination='\n'):
+    def _init_visa(self, resource, termination='\n', parity=None,
+        data_bits=None, baud_rate=None):
         r'''
         Initialize the VISA connection.
         Pass in the resource name. This can be:
@@ -47,9 +48,19 @@ class VISAInstrument(Instrument):
         - Or many others...
             See https://pyvisa.readthedocs.io/en/stable/names.html
         termination: e.g. \r\n: read termination.
+        parity, data_bits, baud_rate: if not None, will set these properties for
+            the visa handle
         '''
         self._visa_handle = visa.ResourceManager().open_resource(resource)
         self._visa_handle.read_termination = termination
+
+        if parity is not None:
+            assert parity in [0,1]
+            parity = visa.constants.Parity(parity)
+        for var in ['parity', 'data_bits', 'baud_rate']:
+            if eval(var) is not None:
+                setattr(self._visa_handle, var, eval(var))
+
         if self._idn is not None:
             idn = self.query('*IDN?')
             if self._idn not in idn:
