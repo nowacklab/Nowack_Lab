@@ -416,7 +416,7 @@ class Keithley2450(Keithley2400):
         return float(V)
 
 
-    def sweep_V(self, Vstart, Vend, Vstep=.1, sweep_rate=.1):
+    def sweep_V(self, Vstart, Vend, Vstep=.1, sweep_rate=1):
         '''
         Sweep WITHOUT using Keithley internal function
         '''

@@ -62,7 +62,7 @@ class DaqSpectrum(Measurement):
         Returns:
         psdAve (np.ndarray): power spectral density
         '''
-        Nfft = np.round(self.measure_freq * self.measure_time / 2)
+        Nfft = np.round(self.measure_freq * self.measure_time / 2)+1
             # 7/12/2018 daq changed forced remove +1
             # 7/26/2018 Needed to add +1 for Zurich. Check DAQ again.
         psdAve = np.zeros(int(Nfft))
@@ -74,6 +74,9 @@ class DaqSpectrum(Measurement):
             self.f, psd = signal.periodogram(V, self.measure_freq,
                                              'blackmanharris')
             psdAve = psdAve + psd
+
+        self.timetraces_t = np.array(self.timetraces_t)
+        self.timetraces_V = np.array(self.timetraces_V)
 
         # Normalize by the number of averages
         psdAve = psdAve / self.averages
