@@ -345,13 +345,12 @@ class RvsVg(RvsSomething):
     something_units = 'V'
     Igwarning = None
 
-    def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1, delay=1, sweep=1, fine_range=None):
+    def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1, delay=1, fine_range=None):
         '''
         Vstart: starting voltage (V)
         Vend: ending voltage (V)
         Vstep: voltage step size (V)
         delay: time delay between measurements (sec)
-        sweep: sweep rate to Vstart (V/s)
         fine_range: [Vmin, Vmax], a list of two voltages that define a range
         in which we will take N times as many data points. N=5.
         Note that Vmin is closer to Vstart and Vmax is closer to Vend,
@@ -363,7 +362,6 @@ class RvsVg(RvsSomething):
         self.Vend = Vend
         self.Vstep = Vstep
         self.delay = delay
-        self.sweep = sweep
 
         if fine_range is None:
             self.Vg_values = np.linspace(Vstart, Vend, round(abs(Vend-Vstart)/Vstep)+1)
@@ -385,7 +383,7 @@ class RvsVg(RvsSomething):
 
     def do(self, num_avg = 1, delay_avg = 0, zero=False, plot=True, auto_gain=False):
         # Sweep to Vstart
-        self.keithley.sweep_V(self.keithley.V, self.Vstart, self.Vstep, self.sweep)
+        self.keithley.sweep_V(self.keithley.V, self.Vstart)
         self.keithley.Vout_range = abs(self.Vg_values).max()
         time.sleep(self.delay*3)
 
@@ -398,9 +396,9 @@ class RvsVg(RvsSomething):
 
             self.do_measurement(self.delay, num_avg, delay_avg, plot=plot, auto_gain=auto_gain)
 
-        # Sweep back to zero at same sweep rate as before
+        # Sweep back to zero
         if zero:
-            self.keithley.zero_V(self.Vstep, self.sweep)
+            self.keithley.zero_V()
 
 
     def plot(self):
@@ -481,7 +479,7 @@ class RvsVg_Vtg(RvsVg):
         for i, Vtg in enumerate(self.Vtg):
             # sweep topgate
             raise Exception('fix sweep!')
-            self.keithley_tg.sweep_V(keithley_tg.V, Vtg, .005, .01) # 5 mV steps, 10 mV/second
+            self.keithley_tg.sweep_V(keithley_tg.V, Vtg)
 
             # reset arrays for gatesweep
             self.gs = RvsVg(self.instruments, self.Vstart, self.Vend, self.Vstep, self.delay)
@@ -565,7 +563,7 @@ class RvsVg_T(RvsVg):
     instrument_list = list(set(RvsT.instrument_list) | set(RvsVg.instrument_list))
 
     def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1,
-                delay=1, sweep=1, Tstart = 5, Tend = 300, Tstep=5, Tdelay=1,
+                delay=1, Tstart = 5, Tend = 300, Tstep=5, Tdelay=1,
                 sweep_rate=5, wait=5, Vg_sweep=None):
         '''
         Does gatesweeps at a series of temperatures.
@@ -576,7 +574,6 @@ class RvsVg_T(RvsVg):
         Vend: end of gatesweep
         Vstep: gatesweep voltage step size
         delay: gatesweep delay time
-        sweep: sweep rate to Vstart (V/s)
         Tstart: starting temperature (Kelvin)
         Tend: end temperature (Kelvin)
         Tstep: temperature step between gatesweeps (Kelvin)
@@ -611,7 +608,7 @@ class RvsVg_T(RvsVg):
     def do(self, auto_gain=False):
         for i, T in enumerate(self.T):
             if self.Vg_sweep is not None:
-                self.keithley.sweep_V(self.keithley.V, self.Vg_sweep, self.Vstep, self.sweep) # set desired gate voltage for the temp sweep
+                self.keithley.sweep_V(self.keithley.V, self.Vg_sweep) # set desired gate voltage for the temp sweep
             else: # otherwise we will go as quickly as possible and reverse every other gatesweep
                 self.Vstart, self.Vend = self.Vend, self.Vstart
 

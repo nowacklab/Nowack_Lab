@@ -36,7 +36,7 @@ from Nowack_Lab.Measurements.touchdown import Touchdown
 from Nowack_Lab.Measurements.transport import RvsVg, RvsTime, RvsT, RvsVg_Vtg, RvsT_RT_to_4K, RvsVg_T
 from Nowack_Lab.Measurements.magnetotransport import RvsB, RvsVg_B, RvsB_BlueFors, RvsVg_B_BlueFors
 from Nowack_Lab.Instruments.attocube import Attocube
-from Nowack_Lab.Instruments.keithley import Keithley2400, Keithley2450, Keithley2600, KeithleyPPMS
+from Nowack_Lab.Instruments.keithley import Keithley2400, Keithley2450, KeithleyPPMS
 from Nowack_Lab.Instruments.lakeshore import Lakeshore372
 from Nowack_Lab.Instruments.montana import Montana
 from Nowack_Lab.Instruments.nidaq import NIDAQ
