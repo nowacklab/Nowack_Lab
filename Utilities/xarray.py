@@ -1,4 +1,5 @@
 import xarray as xr
+import numpy as np
 from importlib import reload
 
 class Xarray:
@@ -155,6 +156,264 @@ class Xarray:
                               }
                         )
         return ds
+
+    @staticmethod
+    def arraytunebatch1(fullpath):
+        '''
+        this will probably change considerably if/when we rework 
+        arraytunebatch
+        '''
+        import Nowack_Lab.Procedures.array_tune
+        reload(Nowack_Lab.Procedures.array_tune)
+        from Nowack_Lab.Procedures.array_tune import ArrayTuneBatch
+        atb = ArrayTuneBatch.load(fullpath)
+
+        sflux = atb.sflux
+        sbias = atb.sbias
+        aflux = atb.aflux
+
+        dims = ['sbias', 'aflux', 'sflux']
+
+        char_saasig = xr.DataArray(atb.char_saasig, 
+                                       dims= dims + ['t'],
+                                       coords = {'sbias': sbias,
+                                                 'aflux': aflux,
+                                                 'sflux': sflux,
+                                                 },
+                                       name='SAA signal for characteristic (Volts)',
+                                       attrs={'data units': 'Volts',
+                                              'sbias units': 'Micro Amps',
+                                              'aflux units': 'Micro Amps',
+                                              'sflux units': 'Micro Amps',
+                                              },
+                                       )
+
+        char_testsig = xr.DataArray(atb.char_testsig, 
+                                       dims= dims + ['t'],
+                                       coords = {'sbias': sbias,
+                                                 'aflux': aflux,
+                                                 'sflux': sflux,
+                                                 },
+                                       name='Test signal for characteristic (Volts)',
+                                       attrs={'data units': 'Volts',
+                                              'sbias units': 'Micro Amps',
+                                              'aflux units': 'Micro Amps',
+                                              'sflux units': 'Micro Amps',
+                                              },
+                                       )
+        spectrum_mean = xr.DataArray(atb.spectrum_mean[...,0], 
+                                       dims= dims,
+                                       coords = {'sbias': sbias,
+                                                 'aflux': aflux,
+                                                 'sflux': sflux,
+                                                 },
+                          name='Mean w.r.t frequency of Noise Spectrum (phi_0)',
+                                       attrs={'data units': 'phi_0',
+                                              'sbias units': 'Micro Amps',
+                                              'aflux units': 'Micro Amps',
+                                              'sflux units': 'Micro Amps',
+                                              },
+                                       )
+        spectrum_std = xr.DataArray(atb.spectrum_std[...,0], 
+                                       dims= dims,
+                                       coords = {'sbias': sbias,
+                                                 'aflux': aflux,
+                                                 'sflux': sflux,
+                                                 },
+            name='Standard deviation w.r.t frequency of Noise Spectrum (phi_0)',
+                                       attrs={'data units': 'phi_0',
+                                              'sbias units': 'Micro Amps',
+                                              'aflux units': 'Micro Amps',
+                                              'sflux units': 'Micro Amps',
+                                              },
+                                       )
+        spectrum_psd = xr.DataArray(atb.spectrum_psd, 
+                                       dims= dims + ['frequency'],
+                                       coords = {'sbias': sbias,
+                                                 'aflux': aflux,
+                                                 'sflux': sflux,
+                                                 'frequency': atb.spectrum_f,
+                                                 },
+                          name='Mean w.r.t frequency of Noise Spectrum (phi_0)',
+                                       attrs={'data units': 'phi_0',
+                                              'sbias units': 'Micro Amps',
+                                              'aflux units': 'Micro Amps',
+                                              'sflux units': 'Micro Amps',
+                                              'frequency':   'Hz',
+                                              },
+                                       )
+        filenames = np.full(atb.filenameindex.shape, 
+                            max(atb.arraytunefilenames, key=len)
+                           )
+        shape = filenames.shape
+        for i in range(filenames.flatten().shape[0]):
+            index = np.unravel_index(i, shape)
+            if np.isnan(atb.filenameindex[index]):
+                filenames[index] = 'N/A: Did Not Lock'
+                continue
+            filenames[index] = atb.arraytunefilenames[int(atb.filenameindex[index])]
+
+        atfilenames = xr.DataArray(filenames[...,0],
+                                        dims = dims,
+                                       coords = {'sbias': sbias,
+                                                 'aflux': aflux,
+                                                 'sflux': sflux,
+                                                },
+                                       name='Array Tune filenames (string)',
+                                       attrs={'data units': 'string',
+                                              'sbias units': 'Micro Amps',
+                                              'aflux units': 'Micro Amps',
+                                              'sflux units': 'Micro Amps',
+                                              },
+                                       )
+        char_lockpt_mean = xr.DataArray(atb.char_stats[...,0], 
+                                     dims=dims,
+                                     coords = {'sbias': sbias,
+                                               'aflux': aflux,
+                                               'sflux': sflux,
+                                              },
+                                     name=('Squid Characteristic statistics: ' + 
+                                           'average of the value near the lockpoint ' +
+                                           '(Volts)'),
+                                       attrs={'data units': 'Volts',
+                                              'sbias units': 'Micro Amps',
+                                              'aflux units': 'Micro Amps',
+                                              'sflux units': 'Micro Amps',
+                                              },
+                                       )
+        char_lockpt_grad = xr.DataArray(atb.char_stats[...,1], 
+                                     dims=dims,
+                                     coords = {'sbias': sbias,
+                                               'aflux': aflux,
+                                               'sflux': sflux,
+                                              },
+                           name=('Squid Characteristic statistics: ' + 
+                                 'average of the gradient near the lockpoint ' +
+                                 '(Volts)'),
+                                       attrs={'data units': 'Volts',
+                                              'sbias units': 'Micro Amps',
+                                              'aflux units': 'Micro Amps',
+                                              'sflux units': 'Micro Amps',
+                                              },
+                                       )
+        char_lockpt_err = xr.DataArray(atb.char_stats[...,2], 
+                                     dims=dims,
+                                     coords = {'sbias': sbias,
+                                               'aflux': aflux,
+                                               'sflux': sflux,
+                                              },
+                                     name=('Squid Characteristic statistics: ' + 
+                                           'average of the error in the fit near ' + 
+                                           'the lockpoint (Volts)'),
+                                       attrs={'data units': 'Volts',
+                                              'sbias units': 'Micro Amps',
+                                              'aflux units': 'Micro Amps',
+                                              'sflux units': 'Micro Amps',
+                                              },
+                                       )
+        char_lockpt_good = xr.DataArray(atb.char_stats[...,3], 
+                                     dims=dims,
+                                     coords = {'sbias': sbias,
+                                               'aflux': aflux,
+                                               'sflux': sflux,
+                                              },
+                                     name=('Squid Characteristic statistics: ' + 
+                                           'average of the gradient/error near ' + 
+                                           'the lockpoint (Volts)'),
+                                       attrs={'data units': 'Volts',
+                                              'sbias units': 'Micro Amps',
+                                              'aflux units': 'Micro Amps',
+                                              'sflux units': 'Micro Amps',
+                                              },
+                                       )
+        # make dataset
+        ds = xr.Dataset({'char_saasig': char_saasig, 
+                         'char_testsig': char_testsig,
+                         'spectrum_mean': spectrum_mean,
+                         'spectrum_std': spectrum_std,
+                         'spectrum_psd': spectrum_psd,
+                         'arraytune_filenames': atfilenames,
+                         'char_lockpt_mean': char_lockpt_mean,
+                         'char_lockpt_grad': char_lockpt_grad,
+                         'char_lockpt_err': char_lockpt_err,
+                         'char_lockpt_good': char_lockpt_good,
+                        },
+                        attrs={'filename': atb.filename,
+                               'timestamp': atb.timestamp,
+                               'time_elapsed_s': atb.time_elapsed_s,
+                               'conversion': atb.conversion,
+                              }
+                        )
+        return ds
+        
+    @staticmethod
+    def bestlockpoint(fullpath):
+        import Nowack_Lab.Procedures.array_tune
+        reload(Nowack_Lab.Procedures.array_tune)
+        from Nowack_Lab.Procedures.array_tune import BestLockPoint
+        blp = BestLockPoint.load(fullpath)
+
+        dims = ['sbias']
+        sbias = blp.sbiasList
+        time = blp.bestloc_raw_time[0] # all times are the same
+        
+        char_timesort = xr.DataArray(np.dstack([blp.bestloc_raw_test, 
+                                                blp.bestloc_raw_saa]), 
+                                  dims=dims + ['time', 'params_timesort'],
+                                  coords={'sbias': sbias,
+                                          'time' : time,
+                                          'params_timesort': ['test', 'saa']},
+                                  name='{Test, SAA} Signal sorted by time (V)',
+                                  attrs={'data units': 'Volts',
+                                         'sbias units': 'Micro Amps',
+                                         'time units' : 'Seconds'
+                                        },
+                                  )
+
+        char_testsort = xr.DataArray(np.dstack([blp.bestloc_testsort_saa,
+                                                blp.bestloc_mean,
+                                                blp.bestloc_grad,
+                                                blp.bestloc_err,
+                                                blp.bestloc_absgrad_over_err]),
+                                  dims=dims + ['test_i', 'params_testsort'],
+                                  coords={'sbias': sbias,
+                                          'params_testsort': ['saa', 'smoothed',
+                                                     'gradient', 'error', 
+                                                     'gradient/error'],
+                                          'test_V': (('sbias', 'test_i'), 
+                                                    blp.bestloc_testsort_test)
+                                          },
+                                  name='Signals sorted by test signal (V)',
+                                  attrs={'data units': 'Volts',
+                                         'sbias units': 'Micro Amps',
+                                         'test meaning': 'Test Signal in Volts',
+                                         'saa meaning': 'SAA Signal in Volts',
+                                         'smoothed meaning': 
+                                            'Smoothed SAA Signal in Volts',
+                                         'gradient meaning': 
+                                            'Gradient of smoothed SAA Signal in Volts',
+                                         'error meaning': 
+                                            '(smoothed - saa) signal in Volts',
+                                         'gradient/error meaning':
+                                            'gradient / error signal in Volts'
+                                        },
+                                  )
+        ds = xr.Dataset({'char_timesort':char_timesort,
+                         'char_testsort':char_testsort,
+                         },
+                         attrs={'filename':  blp.filename,
+                                'timestamp': blp.timestamp,
+                                'monitortime': blp.monitortime,
+                                'preamp': blp.preamp,
+                                'samplerate': blp.samplerate,
+                                'squidarray': blp.squidarray,
+                                'testinputconv': blp.testinputconv,
+                                }
+                         )
+        return ds
+                                
+
+        
 
     @staticmethod
     def notNone(a, b, c):
