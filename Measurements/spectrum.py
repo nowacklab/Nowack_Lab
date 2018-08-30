@@ -55,6 +55,15 @@ class DaqSpectrum(Measurement):
 
         self.plot()
 
+    def get_average(self, fmin=0, fmax=1e12):
+        '''
+        Returns an average PSD over the given frequency range [fmin, fmax].
+        Default, returns average PSD over entire spectrum (up to 1 THz)
+        '''
+        argmin = abs(self.f-fmin).argmin()
+        argmax = abs(self.f-fmax).argmin()
+        return np.mean(self.psdAve[argmin:argmax])
+
     def get_spectrum(self):
         '''
         Collect time traces from the DAQ and compute the FFT.
