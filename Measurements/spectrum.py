@@ -55,11 +55,13 @@ class DaqSpectrum(Measurement):
 
         self.plot()
 
-    def get_average(self, fmin=0, fmax=1e12):
+    def get_average(self, fmin=0, fmax=None):
         '''
         Returns an average PSD over the given frequency range [fmin, fmax].
-        Default, returns average PSD over entire spectrum (up to 1 THz)
+        Default, returns average PSD over entire spectrum
         '''
+        if fmax is None:
+            fmax  = self.f.max()
         argmin = abs(self.f-fmin).argmin()
         argmax = abs(self.f-fmax).argmin()
         return np.mean(self.psdAve[argmin:argmax])
