@@ -369,6 +369,7 @@ class Xarray:
                                          'time units' : 'Seconds'
                                         },
                                   )
+        sbiasfull = np.tile(sbias, (2560,1)).T
 
         char_testsort = xr.DataArray(np.dstack([blp.bestloc_testsort_saa,
                                                 blp.bestloc_mean,
@@ -381,7 +382,9 @@ class Xarray:
                                                      'gradient', 'error', 
                                                      'gradient/error'],
                                           'test_V': (('sbias', 'test_i'), 
-                                                    blp.bestloc_testsort_test)
+                                                    blp.bestloc_testsort_test),
+                                          'sbias_full': (('sbias', 'test_i'), 
+                                                         sbiasfull),
                                           },
                                   name='Signals sorted by test signal (V)',
                                   attrs={'data units': 'Volts',
