@@ -119,7 +119,13 @@ class MFLI(Zurich):
         self.scope = self.daq.scopeModule()
         self.scope.subscribe('/%s/scopes/0/wave' %self.device_id)
 
-    def _setup_scope(self, freq=60e6, N=16384):
+    def _setup_scope(self, freq=60e6, N=16384, input_ch=0):
+        '''
+        Parameters:
+        freq - sampling rate (Hz). Must be in MFLI.freq_opts.
+        N - Length (pts).  2^14 = 16384 by default.
+        input_ch - Input channel. 0 = "Signal Input 1"; 9 = "Aux Input 2"
+        '''
         scope = self.scope
         daq = self.daq
 
@@ -138,7 +144,7 @@ class MFLI(Zurich):
 
         daq.setInt('/%s/scopes/0/single' %self.device_id, 1)
         daq.setInt('/%s/scopes/0/channel' %self.device_id, 1)
-        daq.setInt('/%s/scopes/0/channels/0/inputselect' %self.device_id, 0)
+        daq.setInt('/%s/scopes/0/channels/0/inputselect' %self.device_id, input_ch)
         daq.setInt('/dev3447/scopes/0/channels/0/bwlimit', 1)
         # To average rather than decimate signal acquired at max sampling rate
         # This avoids aliasing
@@ -149,14 +155,15 @@ class MFLI(Zurich):
 
 
 
-    def get_scope_trace(self, freq=60e6, N=16384):
+    def get_scope_trace(self, freq=60e6, N=16384, input_ch=0):
         '''
         Returns a tuple (array of time values, array of scope input values)
         Parameters:
         freq - sampling rate (Hz). Must be in MFLI.freq_opts.
         N - Length (pts).  2^14 = 16384 by default.
+        input_ch - Input channel. 0 = "Signal Input 1"; 9 = "Aux Input 2"
         '''
-        self._setup_scope(freq, N)
+        self._setup_scope(freq, N, input_ch)
 
         scope = self.scope
         daq = self.daq

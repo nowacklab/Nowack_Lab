@@ -45,7 +45,7 @@ class DaqSpectrum(Measurement):
         self.timetraces_t = [None]*averages
         self.timetraces_V = [None]*averages
 
-    def do(self):
+    def do(self, plot=True):
         '''
         Do the DaqSpectrum measurment.
         '''
@@ -53,7 +53,8 @@ class DaqSpectrum(Measurement):
 
         self.psdAve = self.get_spectrum()
 
-        self.plot()
+        if plot:
+            self.plot()
 
     def get_average(self, fmin=0, fmax=None):
         '''
@@ -158,7 +159,8 @@ class ZurichSpectrum(DaqSpectrum):
             self,
             instruments={},
             measure_freq=14.6e3,
-            averages=30):
+            averages=30,
+            input_ch = 0):
         '''
         Create a ZurichSpectrum object
 
@@ -166,18 +168,20 @@ class ZurichSpectrum(DaqSpectrum):
         instruments (dict): Instrument dictionary
         measure_freq (float): sampling rate (Hz). Must be in MFLI.freq_opts
         averages (int): number of time traces averaged before computing the FFT
+        input_ch - Input channel. 0 = "Signal Input 1"; 9 = "Aux Input 2"
         '''
         super().__init__(instruments, None, measure_freq, averages)
 
         if measure_freq not in self.zurich.freq_opts:
             raise Exception('Frequency must be in: %s' %self.freq_opts)
         self.measure_time = 16384/measure_freq  # 16384 = 2^14 fixed number
+        self.input_ch = input_ch
 
     def get_time_trace(self):
         '''
         Collect a single time trace from the Zurich.
         '''
-        return self.zurich.get_scope_trace(freq=self.measure_freq, N=16384)
+        return self.zurich.get_scope_trace(freq=self.measure_freq, N=16384, input_ch=self.input_ch)
 
     def setup_preamp(self):
         '''

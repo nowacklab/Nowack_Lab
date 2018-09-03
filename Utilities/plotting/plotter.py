@@ -13,6 +13,7 @@ class Plotter(object):
         super().__init__()  # To deal with multiple inheritance mro
         plt.ion()  # Enable interactive plots in command line
 
+
     def add_colorbar(self, ax, label=None, **kwargs):
         '''
         Add a colorbar to a set of axes containing an imshow image.
@@ -27,6 +28,7 @@ class Plotter(object):
         cbar.formatter.set_powerlimits((-2,2))
         return cbar
 
+
     def flush_events(self, fig=None):
         '''
         Flush events for a GUI backend; not needed for notebook or inline
@@ -38,14 +40,16 @@ class Plotter(object):
             fig.canvas.flush_events()
             plt.pause(1e-6)
 
-    def plot(self, **kwargs):
+
+    def plot(self, plot=True, **kwargs):
         '''
         Update all plots.
         '''
-        if self.fig is None:
-            self.setup_plots()
-        self.plot_update()  # update plot data
-        self.plot_draw()  # draw plots
+        if plot:
+            if self.fig is None:
+                self.setup_plots()
+            self.plot_update()  # update plot data
+            self.plot_draw()  # draw plots
 
 
     def plot_draw(self, autoscale=False):
