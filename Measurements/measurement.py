@@ -111,6 +111,7 @@ class Measurement(Saver, Plotter):
             t_unit = 'hours'
         # Print elapsed time e.g. "Scanplane took 2.3 hours."
         print('%s took %.1f %s.' %(self.__class__.__name__, t, t_unit))
+        print('Saving to %s' %self.filename)
 
         self.save()
 

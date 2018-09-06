@@ -5,9 +5,7 @@ Equipment_Drivers/__pycache__
 Utilities/__pycache__
 Utilities/test.csv
 Utilities/.test.txt
-*.pyc
-Measurements/__pycache__/planefit.cpython-35.pyc
-*.pyc
+Utilities/setup
 
 # Squid array amplifier settings #
 Instruments/squidarray_params.json
@@ -19,4 +17,3 @@ Instruments/squidarray_params.json
 *~
 \#*\#
 .#*
-Utilities/setup/DESKTOP-0NEI83C.txt
