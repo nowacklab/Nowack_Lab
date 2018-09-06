@@ -326,7 +326,8 @@ class Keithley2400(VISAInstrument):
         if sweep_rate is None:
             sweep_rate = self.max_sweep
 
-        if abs(Vstart - Vend) < Vstep: # within step size of the starting value
+        # if within step size of the starting value
+        if round(abs(Vstart - Vend), 6) <= Vstep:  # avoid floating point error
             self.Vout = Vend
             return
         self.Vout = Vstart
@@ -429,9 +430,9 @@ class Keithley2450(Keithley2400):
 
 
     def sweep_V(self, Vstart, Vend, Vstep=None, sweep_rate=None):
-        '''
+        r'''
         Sweep WITHOUT using Keithley internal function to sweep from Vstart to Vend
-         with a step size of Vstep and sweep rate of sweep_rate volts/second.
+        with a step size of Vstep and sweep rate of sweep_rate volts/second.
         If Vstep and sweep_rate are None, use maxes set in init
         '''
         if Vstep is None:
@@ -439,7 +440,8 @@ class Keithley2450(Keithley2400):
         if sweep_rate is None:
             sweep_rate = self.max_sweep
 
-        if abs(Vstart - Vend) < Vstep: # within step size of the starting value
+        # if within step size of the starting value
+        if round(abs(Vstart - Vend), 6) <= Vstep:  # avoid floating point error
             self.Vout = Vend
             return
         self.Vout = Vstart
