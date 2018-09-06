@@ -169,7 +169,7 @@ class RvsVg_B(RvsVg):
         del self.self # but includes self, get rid of this!
 
         self.B = np.linspace(Bstart, Bend, round(abs(Bstart-Bend)/Bstep)+1)
-        self.gs = RvsVg(self.instruments, self.Vstart, self.Vend, self.Vstep, self.delay, self.sweep)
+        self.gs = RvsVg(self.instruments, self.Vstart, self.Vend, self.Vstep, self.delay)
 
         self.Vg = self.gs.Vg_values
 
