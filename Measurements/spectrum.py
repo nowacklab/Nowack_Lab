@@ -3,21 +3,21 @@ from scipy import signal
 from .measurement import Measurement
 from ..Utilities.utilities import AttrDict
 from ..Utilities import conversions
-
+from scipy.optimize import curve_fit
 
 class DaqSpectrum(Measurement):
     '''
-    Monitor a DAQ channel and compute the power spectral density
+    Monitor a DAQ channel and compute the spectral density
 
     Acqurire a number of time traces from the channel labeled 'dc' on the DAQ.
-    Average the time traces and compute the power spectral density.
+    Average the time traces and compute the spectral density.
     '''
     _daq_inputs = ['dc']
     instrument_list = ['daq'] # 'preamp' optional
     f = 1
     V = 1
     t = 1
-    psdAve = 1
+    Vn = 1
     units = 'V'
     conversion = 1
 
@@ -51,28 +51,51 @@ class DaqSpectrum(Measurement):
         '''
         self.setup_preamp()
 
-        self.psdAve = self.get_spectrum()
+        self.Vn = self.get_spectrum()
 
         if plot:
             self.plot()
+
+
+    def fit_one_over_f(self, fmin=0, fmax=None):
+        '''
+        Returns a fit to A*1/f^alpha over the frequency range [fmin, fmax].
+        '''
+        argmin, argmax = self._get_argmin_argmax(fmin, fmax)
+        f = self.f[argmin:argmax]
+        Vn = self.Vn[argmin:argmax]
+
+        def one_over_f(f, A, alpha):
+            return A / f ** alpha
+
+        popt, pcov = curve_fit(one_over_f, f, Vn, p0=[1e-5,2])
+        return popt
+
 
     def get_average(self, fmin=0, fmax=None):
         '''
         Returns an average PSD over the given frequency range [fmin, fmax].
         Default, returns average PSD over entire spectrum
         '''
+        argmin, argmax = self._get_argmin_argmax(fmin, fmax)
+        return np.mean(self.Vn[argmin:argmax])
+
+    def _get_argmin_argmax(self, fmin=0, fmax=None):
+        '''
+        Get the indices corresponding to frequencies fmin and fmax
+        '''
         if fmax is None:
             fmax  = self.f.max()
         argmin = abs(self.f-fmin).argmin()
         argmax = abs(self.f-fmax).argmin()
-        return np.mean(self.psdAve[argmin:argmax])
+        return argmin, argmax
 
     def get_spectrum(self):
         '''
         Collect time traces from the DAQ and compute the FFT.
 
         Returns:
-        psdAve (np.ndarray): power spectral density
+        Vn (np.ndarray): Square root of the power spectral density
         '''
         Nfft = np.round(self.measure_freq * self.measure_time / 2)+1
             # 7/12/2018 daq changed forced remove +1
@@ -117,8 +140,8 @@ class DaqSpectrum(Measurement):
         Plot the power spectral density on a loglog and semilog scale
         '''
         super().plot()
-        self.ax['loglog'].loglog(self.f, self.psdAve * self.conversion)
-        self.ax['semilog'].semilogy(self.f, self.psdAve * self.conversion)
+        self.ax['loglog'].loglog(self.f, self.Vn * self.conversion)
+        self.ax['semilog'].semilogy(self.f, self.Vn * self.conversion)
 
     def setup_plots(self):
         '''
@@ -132,7 +155,7 @@ class DaqSpectrum(Measurement):
         for ax in self.ax.values():
             ax.set_xlabel('Frequency (Hz)')
             ax.set_ylabel(
-                r'Power Spectral Density ($\mathrm{%s/\sqrt{Hz}}$)' %
+                r'Spectral Density ($\mathrm{%s/\sqrt{Hz}}$)' %
                 self.units)
             # apply a timestamp to the plot
             ax.annotate(self.timestamp, xy=(0.02, .98), xycoords='axes fraction',
