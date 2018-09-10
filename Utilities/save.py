@@ -2,10 +2,12 @@ from jsonpickle.ext import numpy as jspnp
 import json, os, jsonpickle as jsp, numpy as np, subprocess, numpy
 from datetime import datetime as dt
 jspnp.register_handlers() # what is purpose of this line?
-import h5py, glob, matplotlib, platform, hashlib, shutil, socket
+import h5py, glob, matplotlib, platform, hashlib, shutil
 import matplotlib.pyplot as plt
 from . import utilities
 import Nowack_Lab # Necessary for saving as Nowack_Lab-defined types
+
+from .plotting.plotter import Plotter
 
 '''
 How saving and loading works:
@@ -396,7 +398,7 @@ def exists(filename):
 
 
 def get_computer_name():
-    computer_name = socket.gethostname()
+    computer_name = utilities.get_computer_name()
     aliases = {'SPRUCE': 'bluefors', 'HEMLOCK': 'montana'} # different names we want to give the directories for each computer
     if computer_name in aliases.keys():
         computer_name = aliases[computer_name]
