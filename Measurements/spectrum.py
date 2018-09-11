@@ -57,25 +57,40 @@ class DaqSpectrum(Measurement):
             self.plot()
 
 
-    def fit_one_over_f(self, fmin=0, fmax=None):
+    def fit_one_over_f(self, fmin=0, fmax=None, filters=[60], filters_bw=[10]):
         '''
         Returns a fit to A/f^alpha over the frequency range [fmin, fmax].
+        filter: A list of frequencies (Hz) to filter out for the fit.
+        filter_bw: A list of bandwidths (Hz) corresponding to each filter frequency
         '''
         argmin, argmax = self._get_argmin_argmax(fmin, fmax)
         f = self.f[argmin:argmax]
         Vn = self.Vn[argmin:argmax]
 
+        for i in range(len(filters)):
+            freq0 = filters[i]
+            freq = freq0
+            j=1
+            while freq < fmax:
+                # harmonics
+                freq = freq0 * j
+                j += 1
+
+                where, = np.where(abs(f-freq) > filters_bw[i]/2)  # find indices where frequency is outside bandwidth of filter center frequency
+                f = f[where]
+                Vn = Vn[where]
+
         def one_over_f(f, A, alpha):
             return A / f ** alpha
 
-        popt, pcov = curve_fit(one_over_f, f, Vn, p0=[1e-5,2])
+        popt, pcov = curve_fit(one_over_f, f, Vn, p0=[1e-5,.5], bounds=([-np.inf, .4], [np.inf, .6]))
         return popt
 
 
     def get_average(self, fmin=0, fmax=None):
         '''
-        Returns an average PSD over the given frequency range [fmin, fmax].
-        Default, returns average PSD over entire spectrum
+        Returns an average spectral density over the given frequency range [fmin, fmax].
+        Default, returns average spectral density over entire spectrum
         '''
         argmin, argmax = self._get_argmin_argmax(fmin, fmax)
         return np.mean(self.Vn[argmin:argmax])
@@ -154,7 +169,7 @@ class DaqSpectrum(Measurement):
 
     def setup_plots(self):
         '''
-        Setup loglog and semilog plots for PSD
+        Setup loglog and semilog plots for spectral density
         '''
         self.fig = plt.figure(figsize=(12, 6))
         self.ax = AttrDict()

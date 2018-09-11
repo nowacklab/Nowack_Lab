@@ -21,9 +21,9 @@ class SpectrumSeries(Saver):
     def get_averages(self, fmin=0, fmax=None):
         '''
         Averages the spectrum over frequency range (fmin, fmax) (Hz) to obtain
-        an average voltage PSD for the spectrum. Also averages the timetrace to
-        obtain an average DC voltage. Also takes the input current of the
-        keithley used to bias the sample.
+        an average voltage spectral density for the spectrum. Also averages the
+        timetrace to obtain an average DC voltage. Also takes the input current
+        of the keithley used to bias the sample.
         '''
         Vav = []
         Ibias = []
@@ -41,7 +41,7 @@ class SpectrumSeries(Saver):
         self.Vn = np.array(Vn)
 
 
-    def get_one_over_f(self, fmin=.1, fmax=None):
+    def get_one_over_f(self, fmin=.1, fmax=None, filters=[60], filters_bw=[10]):
         '''
         Gets the fit parameters to A/f^alpha (using fit_one_over_f in ZurichSpectrum)
         over the frequency range (fmin, fmax) (Hz).
@@ -52,7 +52,7 @@ class SpectrumSeries(Saver):
         for j, Vtg in enumerate(self.Vtgs):
             self.zs = ZurichSpectrum.load(self.paths[j])
             zs = self.zs
-            A, alpha = zs.fit_one_over_f(fmin, fmax)
+            A, alpha = zs.fit_one_over_f(fmin, fmax, filters=[60], filters_bw=[10])
             As.append(A)
             alphas.append(alpha)
 
@@ -62,7 +62,7 @@ class SpectrumSeries(Saver):
 
     def plot(self):
         '''
-        Plots Vav/Ibias and PSDav versus topgate voltage.
+        Plots Vav/Ibias and Vn versus topgate voltage.
         '''
         self.fig, self.ax = plt.subplots()
         self.ax.set_title('%.2f $\mu$A bias' %self.Vbias)
@@ -72,7 +72,7 @@ class SpectrumSeries(Saver):
 
         self.ax2 = self.ax.twinx()
         self.ax2.semilogy(self.Vtgs, self.Vn, 'C1')
-        self.ax2.set_ylabel('Average PSD (V/Hz$^{1/2}$)', color='C1')
+        self.ax2.set_ylabel('Average spectral density (V/Hz$^{1/2}$)', color='C1')
         self.fig.tight_layout()
 
     def plot_single_spectrum(self, idx):
@@ -83,7 +83,7 @@ class SpectrumSeries(Saver):
         fig, ax = plt.subplots()
         ax.set_title('%.2f $\mu$A bias, %.3f Vtg' %(self.Vbias, self.Vtgs[idx]))
         ax.set_xlabel('Frequency (Hz)')
-        ax.set_ylabel('Voltage PSD (V/Hz$^{1/2}$)')
+        ax.set_ylabel('Voltage spectral density (V/Hz$^{1/2}$)')
 
         self.zs = ZurichSpectrum.load(self.paths[idx])
         zs = self.zs
