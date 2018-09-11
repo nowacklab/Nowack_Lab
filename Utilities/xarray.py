@@ -3,6 +3,18 @@ import numpy as np
 from importlib import reload
 
 class Xarray:
+    '''
+    Features:
+    - returns Nowack_Lab.Procedures as xarray datasets
+    - datasets are organized logically with units and labels
+    - datasets can be saved and loaded with h5netcdf
+
+    Warnings:
+    - netcdf does not support booleans.  It will import correctly, but not 
+      save correctly.  To avoid, but not solve, the problem, save with 
+      'h5netcdf' engine.  h5netcdf casts the boolean into an int and 
+      handles it on load.  
+    '''
     
     @staticmethod
     def scanplane(fullpath):
@@ -58,7 +70,13 @@ class Xarray:
         
         
         #make dataset 
-        ds = xr.Dataset({'dc': dc, 'acx':acx, 'acy': acy, 'cap': cap, 'z': z},
+        ds = xr.Dataset({'dc': dc, 'acx':acx, 'acy': acy, 'cap': cap, 'z': z,
+                        'squidarray':Xarray.toblankdataarray(squidarray),
+                        'preamp':Xarray.toblankdataarray(preamp),
+                        'lockin_current':Xarray.toblankdataarray(lockin_current),
+                        'lockin_squid':Xarray.toblankdataarray(lockin_squid),
+                        'lockin_cap':Xarray.toblankdataarray(lockin_cap),
+                        },
                         attrs={'filename': sp.filename,
                               'scan_rate': sp.scan_rate,
                               'scan_height': sp.scanheight,
@@ -67,11 +85,6 @@ class Xarray:
                               'interrupt': sp.interrupt,
                               'fast_axis': sp.fast_axis,
                               'center': sp.center,
-                              'squidarray': squidarray,
-                              'preamp': preamp,
-                              'lockin_current': lockin_current,
-                              'lockin_squid': lockin_squid,
-                              'lockin_cap': lockin_cap
                               }
                         )
         return ds
@@ -139,7 +152,10 @@ class Xarray:
         #                                sp.instruments['lockin_cap'])
 
         # make dataset
-        ds = xr.Dataset({'V': V, 'psdAve':psdAve, 'z': Z, },
+        ds = xr.Dataset({'V': V, 'psdAve':psdAve, 'z': Z, 
+                        'preamp':Xarray.toblankdataarray(preamp),
+                        'squidarray':Xarray.toblankdataarray(squidarray),
+                        },
                         attrs={'filename': sp.filename,
                                'monitor_time': sp.monitor_time,
                                'num_averages': sp.num_averages,
@@ -148,8 +164,6 @@ class Xarray:
                                'scanheight': sp.scanheight,
                                'timestamp': sp.timestamp,
                                'time_elapsed_s': sp.time_elapsed_s,
-                               'squidarray': squidarray,
-                              'preamp': preamp,
         #                      'lockin_current': lockin_current,
         #                      'lockin_squid': lockin_squid,
         #                      'lockin_cap': lockin_cap
@@ -369,7 +383,7 @@ class Xarray:
                                          'time units' : 'Seconds'
                                         },
                                   )
-        sbiasfull = np.tile(sbias, (2560,1)).T
+        sbiasfull = np.tile(sbias, (blp.bestloc_testsort_saa.shape[1],1)).T
 
         char_testsort = xr.DataArray(np.dstack([blp.bestloc_testsort_saa,
                                                 blp.bestloc_mean,
@@ -380,7 +394,7 @@ class Xarray:
                                   coords={'sbias': sbias,
                                           'params_testsort': ['saa', 'smoothed',
                                                      'gradient', 'error', 
-                                                     'gradient/error'],
+                                                     'gradient_error'],
                                           'test_V': (('sbias', 'test_i'), 
                                                     blp.bestloc_testsort_test),
                                           'sbias_full': (('sbias', 'test_i'), 
@@ -397,19 +411,21 @@ class Xarray:
                                             'Gradient of smoothed SAA Signal in Volts',
                                          'error meaning': 
                                             '(smoothed - saa) signal in Volts',
-                                         'gradient/error meaning':
+                                         'gradient_error meaning':
                                             'gradient / error signal in Volts'
                                         },
                                   )
         ds = xr.Dataset({'char_timesort':char_timesort,
                          'char_testsort':char_testsort,
+                         'preamp':Xarray.toblankdataarray(blp.preamp, 
+                                                          'preamp'),
+                         'squidarray':Xarray.toblankdataarray(blp.squidarray, 
+                                                              'preamp'),
                          },
                          attrs={'filename':  blp.filename,
                                 'timestamp': blp.timestamp,
                                 'monitortime': blp.monitortime,
-                                'preamp': blp.preamp,
                                 'samplerate': blp.samplerate,
-                                'squidarray': blp.squidarray,
                                 'testinputconv': blp.testinputconv,
                                 }
                          )
@@ -425,4 +441,9 @@ class Xarray:
         elif a is None:
             return b
         return a
+
+    @staticmethod
+    def toblankdataarray(dictionary, name):
+        return xr.DataArray([], dims=None, coords=None, name=name, 
+                            attrs=dictionary)
 
