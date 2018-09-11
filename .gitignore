@@ -3,9 +3,6 @@
 *.m~
 Equipment_Drivers/__pycache__
 Utilities/__pycache__
-Utilities/test.csv
-Utilities/.test.txt
-Utilities/setup
 
 # Squid array amplifier settings #
 Instruments/squidarray_params.json
