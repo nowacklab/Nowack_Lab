@@ -59,7 +59,7 @@ class DaqSpectrum(Measurement):
 
     def fit_one_over_f(self, fmin=0, fmax=None):
         '''
-        Returns a fit to A*1/f^alpha over the frequency range [fmin, fmax].
+        Returns a fit to A/f^alpha over the frequency range [fmin, fmax].
         '''
         argmin, argmax = self._get_argmin_argmax(fmin, fmax)
         f = self.f[argmin:argmax]
@@ -134,6 +134,15 @@ class DaqSpectrum(Measurement):
         V = received['dc'] / gain
         t = received['t']
         return t, V
+
+    @classmethod
+    def load(cls, filename=None):
+        '''
+        Overwritten load method to fix variable name
+        '''
+        obj = ZurichSpectrum._load(filename)
+        obj.Vn = obj.psdAve  # legacy loading after variable name change
+        return obj
 
     def plot(self):
         '''

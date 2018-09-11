@@ -39,6 +39,7 @@ from Nowack_Lab.Measurements.magnetotransport import RvsB, RvsVg_B, RvsB_BlueFor
 from Nowack_Lab.Instruments.attocube import Attocube
 from Nowack_Lab.Instruments.keithley import Keithley2400, Keithley2450, KeithleyPPMS
 from Nowack_Lab.Instruments.lakeshore import Lakeshore372
+from Nowack_Lab.Instruments.levelmeter import AMI1700
 from Nowack_Lab.Instruments.montana import Montana
 from Nowack_Lab.Instruments.nidaq import NIDAQ
 from Nowack_Lab.Instruments.piezos import Piezos
