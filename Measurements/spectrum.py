@@ -4,6 +4,7 @@ from .measurement import Measurement
 from ..Utilities.utilities import AttrDict
 from ..Utilities import conversions
 from scipy.optimize import curve_fit
+from scipy.stats import linregress as lr
 
 class DaqSpectrum(Measurement):
     '''
@@ -80,12 +81,10 @@ class DaqSpectrum(Measurement):
                 f = f[where]
                 Vn = Vn[where]
 
-        def one_over_f(f, A, alpha):
-            return A / f ** alpha
-
-        popt, pcov = curve_fit(one_over_f, f, Vn, p0=[1e-5,.5], bounds=([-np.inf, .4], [np.inf, .6]))
-        return popt
-
+        # popt, pcov = curve_fit(one_over_f, f, Vn, p0=[1e-5,.5], bounds=([-np.inf, .4], [np.inf, .6]))
+        # return popt
+        m,b, _, _, _ = lr(np.log(f), np.log(Vn))
+        return np.exp(b), -m
 
     def get_average(self, fmin=0, fmax=None):
         '''
