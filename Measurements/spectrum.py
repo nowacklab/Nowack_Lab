@@ -155,7 +155,8 @@ class DaqSpectrum(Measurement):
         Overwritten load method to fix variable name
         '''
         obj = ZurichSpectrum._load(filename)
-        obj.Vn = obj.psdAve  # legacy loading after variable name change
+        if hasattr(obj, 'psdAve'):
+            obj.Vn = obj.psdAve  # legacy loading after variable name change
         return obj
 
     def plot(self):
