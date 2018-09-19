@@ -1,5 +1,5 @@
 import time, numpy as np, matplotlib.pyplot as plt
-from ..Utilities.save import Measurement
+from .measurement import Measurement
 from .transport import RvsSomething, RvsVg
 from ..Utilities.plotting import plot_mpl
 import peakutils
@@ -152,10 +152,10 @@ class RvsVg_B(RvsVg):
         Stores the full gatesweeps at each field, as well as a RvsB curve done
         at a particular gate voltage between gatesweeps.
 
-        Vstart: start of gatesweep
-        Vend: end of gatesweep
-        Vstep: gatesweep voltage step size
-        delay: gatesweep delay time
+        Vstart: start of gatesweep (V)
+        Vend: end of gatesweep (V)
+        Vstep: gatesweep voltage step size (V)
+        delay: gatesweep delay time (s)
         Bstart: starting field (Tesla)
         Bend: end field (Tesla)
         Bstep: field step between gatesweeps (Tesla)
@@ -194,7 +194,7 @@ class RvsVg_B(RvsVg):
         '''
         for i, B in enumerate(self.B):
             if self.Vg_sweep is not None:
-                self.keithley.sweep_V(self.keithley.V, self.Vg_sweep, .1, 1) # set desired gate voltage for the field sweep
+                self.keithley.sweep_V(self.keithley.V, self.Vg_sweep) # set desired gate voltage for the field sweep
             elif self.raster: # otherwise we will go as quickly as possible and reverse every other gatesweep
                 self.Vstart, self.Vend = self.Vend, self.Vstart
 

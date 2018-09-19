@@ -1,6 +1,6 @@
 from scipy.optimize import curve_fit
 import time, os, matplotlib, matplotlib.pyplot as plt, numpy as np
-from ..Utilities.save import Measurement
+from .measurement import Measurement
 from ..Utilities import conversions
 from ..Utilities.utilities import AttrDict
 
@@ -48,6 +48,8 @@ class Touchdown(Measurement):
     start_offset = 0
 
     baseline = 0
+
+    subdirectory = 'touchdowns'
 
     def __init__(self, instruments={}, disable_atto=False, Vz_max=None):
         '''
@@ -486,14 +488,6 @@ n: Sweep z piezo down and redo without moving z attocube.\n \
         # Plot the touchdown voltage with the 1 standard deviation error
         self._set_title('touchdown: %.2f V, error: %.2f' % (self.Vtd, self.err[0]))
         self.plot()
-
-
-    def save(self, savefig=True, appendedpath='touchdowns'):
-        '''
-        Saves the touchdown object.
-        Also saves the figure as a pdf, if wanted.
-        '''
-        self._save(savefig=savefig, appendedpath=appendedpath)
 
 
     def setup_plots(self):

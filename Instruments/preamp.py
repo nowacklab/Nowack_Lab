@@ -39,8 +39,8 @@ class SR5113(VISAInstrument):
     @property
     def filter(self):
         try:
-            low = self.ask('FF0')
-            high = self.ask('FF1')
+            low = self.query('FF0')
+            high = self.query('FF1')
             self._filter = (FILTER[int(low)], FILTER[int(high)])
         except:
             print('Couldn\'t communicate with SR5113; filter may be wrong!')
@@ -72,8 +72,8 @@ class SR5113(VISAInstrument):
     @property
     def gain(self):
         try:
-            cg = self.ask('CG')  # gets coarse gain index
-            fg = self.ask('FG')  # gets fine gain index
+            cg = self.query('CG')  # gets coarse gain index
+            fg = self.query('FG')  # gets fine gain index
             if int(fg) < 0:
                 self._gain = 5+int(fg)
             else:
@@ -107,12 +107,12 @@ class SR5113(VISAInstrument):
 
 
     def id(self):
-        msg = self.ask('ID')
+        msg = self.query('ID')
         print(msg)
 
 
     def is_OL(self):
-        status = self.ask('ST')
+        status = self.query('ST')
         status = int(status)  # returned a string
         if ((status >> 3) & 1):  # if third bit is 1
             return True
@@ -146,7 +146,7 @@ class SR5113(VISAInstrument):
     def time_const(self, tensec):
         self.write('TC%i' %(tensec))  # 0 = 1s, 1 = 10s
 
-    def ask(self, cmd):
+    def query(self, cmd):
         '''
         Will write commands to SR5113 preamp via serial port.
         Figured this out by trial and error.

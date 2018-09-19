@@ -15,19 +15,19 @@ import sys
 
 import Nowack_Lab.Utilities.save
 reload(Nowack_Lab.Utilities.save)
-from Nowack_Lab.Utilities.save import Measurement
+from .measurement import Measurement
 
 import Nowack_Lab.Utilities.utilities
 reload(Nowack_Lab.Utilities.utilities)
 from Nowack_Lab.Utilities.utilities import running_std
 
-import Nowack_Lab.Procedures.daqspectrum
-reload(Nowack_Lab.Procedures.daqspectrum)
-from Nowack_Lab.Procedures.daqspectrum import SQUIDSpectrum
+import Nowack_Lab.Measurements.spectrum
+reload(Nowack_Lab.Measurements.spectrum)
+from Nowack_Lab.Measurements.spectrum import SQUIDSpectrum
 
-import Nowack_Lab.Procedures.mutual_inductance
-reload(Nowack_Lab.Procedures.mutual_inductance)
-from Nowack_Lab.Procedures.mutual_inductance import MutualInductance2
+import Nowack_Lab.Measurements.mutual_inductance
+reload(Nowack_Lab.Measurements.mutual_inductance)
+from Nowack_Lab.Measurements.mutual_inductance import MutualInductance2
 
 
 class ArrayTune(Measurement):
@@ -293,7 +293,7 @@ class ArrayTune(Measurement):
 
 
 
-    def run_spectrum(self, save_appendedpath=''):
+    def run_spectrum(self):
         '''
         Run a squid spectrum
         '''
@@ -311,9 +311,9 @@ class ArrayTune(Measurement):
         self.isOL = self.preamp.is_OL()
         if self.isOL:
             print('Overloaded Preamp!')
-        self.spectrum.run(welch=True, save_appendedpath = save_appendedpath)
+        self.spectrum.run(welch=True)
 
-    def run_mi(self, save_appendedpath=''):
+    def run_mi(self):
         '''
         Run a mutual inductance
         '''
@@ -328,7 +328,7 @@ class ArrayTune(Measurement):
                                        conversion = 1,
                                        units = 'V')
         self.sweep.saa_status = self.squidarray.__dict__
-        self.sweep.run(save_appendedpath = save_appendedpath)
+        self.sweep.run()
 
     def do(self):
         # TODO: Measure array V/phi_0 conversion
@@ -363,9 +363,9 @@ class ArrayTune(Measurement):
             self._DO_NOT_SAVE = True
             return False
 
-        self.run_spectrum(self._save_appendedpath)
+        self.run_spectrum()
         plt.close()
-        self.run_mi(self._save_appendedpath)
+        self.run_mi()
         plt.close()
 
         # make some statistics
@@ -384,11 +384,11 @@ class ArrayTune(Measurement):
         self.ax = list(self.ax.flatten())
         return True
 
-    def save(self, filename=None, savefig=True, **kwargs):
+    def save(self, filename=None, **kwargs):
         if hasattr(self, '_DO_NOT_SAVE') and self._DO_NOT_SAVE == True:
             return
 
-        self._save(filename, savefig=True, **kwargs)
+        self._save(filename, **kwargs)
 
     def findconversion(self, dur=.1, stepsize=1):
         '''
@@ -882,7 +882,6 @@ class ArrayTuneBatch(Measurement):
                  aflux_tol = 10e-3,
                  sbias_ex = 100,
                  aflux_ex = 0,
-                 save_appendedpath = '',
                  conversion=1/1.44,
                  debug=False):
         '''
@@ -902,7 +901,6 @@ class ArrayTuneBatch(Measurement):
         self.sflux = np.array(sflux)
         self.squid_tol = squid_tol
         self.aflux_tol = aflux_tol
-        self.save_appendedpath = save_appendedpath
         self.sbias_ex = sbias_ex
         self.aflux_ex = aflux_ex
         self.conversion = conversion
@@ -999,7 +997,7 @@ class ArrayTuneBatch(Measurement):
                        aflux_offset=aflux,
                        conversion=self.conversion,
                        debug=self.debug)
-        locked = at.run(save_appendedpath=self.save_appendedpath)
+        locked = at.run()
 
         try:
         # what to save

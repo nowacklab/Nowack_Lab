@@ -53,7 +53,7 @@ class Montana(Instrument):
 
     @property
     def compressor_speed(self):
-        cs = self.ask('GCS')
+        cs = self.query('GCS')
         if cs in (25, 30):
             self._compressor_speed = 'high'
         elif cs == 14:
@@ -71,21 +71,21 @@ class Montana(Instrument):
         '''
         assert value in ('high', 'low', 'off')
         if value == 'high':
-            response = self.ask('SCS7', to_float=False)
+            response = self.query('SCS7', to_float=False)
         elif value == 'low':
-            response = self.ask('SCS2', to_float=False)
+            response = self.query('SCS2', to_float=False)
         elif value == 'off':
-            response = self.ask('SCS0', to_float=False)
+            response = self.query('SCS0', to_float=False)
         print(response)
 
     @property
     def pressure(self):
-        self._pressure = self.ask('GCP')
+        self._pressure = self.query('GCP')
         return self._pressure
 
     @property
     def temperature(self):
-        temps = self.ask('GPT', 'GS1T', 'GS2T', 'GST', 'GUT', 'GTSP')
+        temps = self.query('GPT', 'GS1T', 'GS2T', 'GST', 'GUT', 'GTSP')
         self._temperature['platform'] = temps['GPT']
         self._temperature['stage 1'] = temps['GS1T']
         self._temperature['stage 2'] = temps['GS2T']
@@ -98,18 +98,18 @@ class Montana(Instrument):
     @temperature.setter
     def temperature(self, value):
         self._temperature['setpoint'] = value
-        response = self.ask('STSP'+str(value), to_float=False)
+        response = self.query('STSP'+str(value), to_float=False)
         print(response)
 
     @property
     def temperature_stability(self):
-        stabs = self.ask('GPS', 'GSS', 'GUS')
+        stabs = self.query('GPS', 'GSS', 'GUS')
         self._temperature_stability['platform'] = stabs['GPS']
         self._temperature_stability['sample'] = stabs['GSS']
         self._temperature_stability['user'] = stabs['GUS']
         return self._temperature_stability
 
-    def ask(self, *args, to_float = True):
+    def query(self, *args, to_float = True):
         '''
         Sends many commands to Montana. If one command, returns one value. Else returns a dictionary with keys = commands, values = responses
         '''
@@ -142,7 +142,7 @@ class Montana(Instrument):
             return False
 
     def cooldown(self):
-        resp = self.ask('SCD', to_float = False)
+        resp = self.query('SCD', to_float = False)
         print(resp)
 
     def connect(self):
@@ -175,11 +175,11 @@ class Montana(Instrument):
         return tabulate(table)
 
     def standby(self):
-        resp = self.ask('SSB', to_float = False)
+        resp = self.query('SSB', to_float = False)
         print(resp)
 
     def warmup(self):
-        resp = self.ask('SWU', to_float = False)
+        resp = self.query('SWU', to_float = False)
         print(resp)
 
 if __name__ == '__main__':

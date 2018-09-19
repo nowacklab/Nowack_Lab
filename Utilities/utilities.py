@@ -26,6 +26,9 @@ def fit_plane(x,y,z):
     Calculates plane parameters a, b, and c for 2D data.
     z = ax + by + c
     '''
+    if x.ndim == 1 and y.ndim ==1:
+        x, y = np.meshgrid(x,y)
+
     X = x.flatten()
     Y = y.flatten()
     Z = z.copy()
@@ -116,13 +119,6 @@ def get_nb_kernel():
     return k_dict['key']
 
 
-def get_superclasses(obj):
-    '''
-    Get a tuple of names of all superclasses of an object.
-    '''
-    return [c.__name__ for c in obj.__class__.__mro__]
-
-
 def nanmin(data):
     result = np.nanmin(data)
     return result if not np.isnan(result) else 0
@@ -194,6 +190,7 @@ def reject_outliers_quick(data, m=2):
     new_data = np.ma.masked_where(abs(data - mean) > m*std, data)
     return new_data
 
+
 def keeprange(master, slaves, m0, mend):
     '''
     WHAT DOES THIS DO?
@@ -208,6 +205,7 @@ def keeprange(master, slaves, m0, mend):
         ret.append(s[index0:indexe])
 
     return ret
+
 
 def reject_outliers_spectrum(f, specden, m=2):
     '''

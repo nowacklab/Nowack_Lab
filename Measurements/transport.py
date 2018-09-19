@@ -1,5 +1,5 @@
 import time, numpy as np, matplotlib.pyplot as plt
-from ..Utilities.save import Measurement
+from .measurement import Measurement
 from ..Utilities.plotting import plot_mpl
 from matplotlib import cm
 
@@ -31,6 +31,8 @@ class RvsSomething(Measurement):
         self.Ix = np.array([])
         self.Iy = np.array([])
         self.B = np.array([]) # if we can record field, let's do it.
+        self.T = np.array([]) # if we can record temperature
+
         self.R = {i: np.array([]) for i in range(self.num_lockins)}
         setattr(self, self.something, np.array([]))
 
@@ -96,12 +98,10 @@ class RvsSomething(Measurement):
         if delay > 0:
             time.sleep(delay)
 
+
         self.Ix = np.append(self.Ix, self.lockin_I.X)
         self.Iy = np.append(self.Iy, self.lockin_I.Y)
-        if hasattr(self, 'ppms'):
-            self.B = np.append(self.B, self.ppms.field/10000) # Oe to T
-        elif hasattr(self, 'magnet'):
-            self.B = np.append(self.B, self.magnet.B)
+
         for j in range(self.num_lockins):
             if auto_gain:
                 getattr(self, 'lockin_V%i' %(j+1)).fix_sensitivity() # make sure we aren't overloading or underloading.
@@ -125,6 +125,23 @@ class RvsSomething(Measurement):
             self.Vx[j] = np.append(self.Vx[j], vx)
             self.Vy[j] = np.append(self.Vy[j], vy)
             self.R[j] = np.append(self.R[j], r)
+
+        # Get temperature and field (if available)
+        if hasattr(self, 'ppms'):
+            self.B = np.append(self.B, self.ppms.field/10000) # Oe to T
+        elif hasattr(self, 'magnet'):
+            if self.magnet.p_switch:  # in driven mode
+                B = self.magnet.Bsupply
+            else:  # in persistent mode
+                B = self.magnet.Bmagnet
+            self.B = np.append(self.B, B)
+
+        if hasattr(self, 'montana'):
+            self.T = np.append(self.T, self.montana.temperature['platform'])
+        elif hasattr(self, 'ppms'):
+            self.T = np.append(self.T, self.ppms.temperature)
+        elif hasattr(self, 'lakeshore'):
+            self.T = np.append(self.T, self.lakeshore.T[6])
 
         if plot:
             self.plot()
@@ -176,7 +193,7 @@ class RvsSomething(Measurement):
         if hasattr(self, 'magnet'):
             if self.magnet is not None:
                 if self.something != 'B':
-                    add_text_to_legend('B = %.2f T' %self.magnet.B)
+                    add_text_to_legend('B = %.2f T' %self.magnet.Bmagnet)
 
         if hasattr(self, 'keithley'):
             if self.keithley is not None:
@@ -208,6 +225,8 @@ class RvsSomething(Measurement):
 
         l = self.ax.legend(['R%i' %(i+1) for i in range(self.num_lockins)], loc='best', title=self.legendtitle)
         self.ax.set_title(self.filename)
+        self.fig.tight_layout()
+
 
 class RvsTime(RvsSomething):
     '''
@@ -326,13 +345,12 @@ class RvsVg(RvsSomething):
     something_units = 'V'
     Igwarning = None
 
-    def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1, delay=1, sweep=1, fine_range=None):
+    def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1, delay=1, fine_range=None):
         '''
         Vstart: starting voltage (V)
         Vend: ending voltage (V)
         Vstep: voltage step size (V)
         delay: time delay between measurements (sec)
-        sweep: sweep rate to Vstart (V/s)
         fine_range: [Vmin, Vmax], a list of two voltages that define a range
         in which we will take N times as many data points. N=5.
         Note that Vmin is closer to Vstart and Vmax is closer to Vend,
@@ -344,16 +362,15 @@ class RvsVg(RvsSomething):
         self.Vend = Vend
         self.Vstep = Vstep
         self.delay = delay
-        self.sweep = sweep
 
         if fine_range is None:
             self.Vg_values = np.linspace(Vstart, Vend, round(abs(Vend-Vstart)/Vstep)+1)
-        else: # Use more points if a fine range specified
+        else:  # Use more points if a fine range specified
             Vmin = fine_range[0]
             Vmax = fine_range[1]
-            numpts_sm = round(abs(Vmin-Vstart)/Vstep)+1 # sm = "start min"
-            numpts_mm = round(abs(Vmin-Vmax)/Vstep*10)+1 # mm = "min max"
-            numpts_me = round(abs(Vmax-Vend)/Vstep)+1 # me = "max end"
+            numpts_sm = round(abs(Vmin-Vstart)/Vstep)+1  # sm = "start min"
+            numpts_mm = round(abs(Vmin-Vmax)/Vstep*10)+1  # mm = "min max"
+            numpts_me = round(abs(Vmax-Vend)/Vstep)+1  # me = "max end"
             self.Vg_values = np.concatenate((
                     np.linspace(Vstart, Vmin, numpts_sm, endpoint=False),
                     np.linspace(Vmin, Vmax, numpts_mm, endpoint=False),
@@ -362,32 +379,26 @@ class RvsVg(RvsSomething):
             )
 
         self.Ig = np.array([])
-        self.T = np.array([])
 
-        self.setup_keithley()
 
     def do(self, num_avg = 1, delay_avg = 0, zero=False, plot=True, auto_gain=False):
-#         self.keithley.output = 'on' #NO! will cause a spike!
-
         # Sweep to Vstart
-        self.keithley.sweep_V(self.keithley.V, self.Vstart, self.Vstep, self.sweep)
+        self.keithley.sweep_V(self.keithley.V, self.Vstart)
+        self.keithley.Vout_range = abs(self.Vg_values).max()
         time.sleep(self.delay*3)
+
 
         # Do the measurement sweep
         for i, Vg in enumerate(self.Vg_values):
             self.Vg = np.append(self.Vg, Vg)
             self.keithley.Vout = Vg
             self.Ig = np.append(self.Ig, self.keithley.I)
-            if hasattr(self, 'montana'):
-                self.T = np.append(self.T, self.montana.temperature['platform'])
-            elif hasattr(self, 'ppms'):
-                self.T = np.append(self.T, self.ppms.temperature)
 
             self.do_measurement(self.delay, num_avg, delay_avg, plot=plot, auto_gain=auto_gain)
 
-        # Sweep back to zero at same sweep rate as before
+        # Sweep back to zero
         if zero:
-            self.keithley.zero_V(self.Vstep, self.sweep)
+            self.keithley.zero_V()
 
 
     def plot(self):
@@ -395,21 +406,14 @@ class RvsVg(RvsSomething):
         Plots using superclass function and adds warning for Ig > 1 nA
         '''
         super().plot()
-        if self.Igwarning is None: # if no warning
-            if len(self.Ig)>0: # if have data
-                if abs(self.Ig).max() >= 1e-9: # if should be warning
+        if self.Igwarning is None:  # if no warning
+            if len(self.Ig)>0:  # if have data
+                if abs(self.Ig).max() >= 1e-9:  # if should be warning
                     self.Igwarning = self.ax.text(.02,.95,
                                         r'$|I_g| \geq 1$ nA!',
                                         transform=self.ax.transAxes,
                                         color = 'C3'
-                                    ) # warning
-
-    def setup_keithley(self):
-        pass
-        # self.keithley.zero_V(1) # 1V/s
-        # self.keithley.source = 'V'
-        # self.keithley.I_compliance = 1e-6
-        # self.keithley.Vout_range = max(abs(self.Vstart), abs(self.Vend))
+                                    )  # warning
 
 
     def setup_label(self):
@@ -424,7 +428,7 @@ class RvsVg(RvsSomething):
             else:
                 self.legendtitle += '\n'+text
 
-        add_text_to_legend('Vstep = %.2f V' %self.Vstep)
+        add_text_to_legend('Vstep = %.3f V' %self.Vstep)
         add_text_to_legend('delay = %.2f s' %self.delay)
         if self.Vstart < self.Vend:
             add_text_to_legend(r'sweep $\longrightarrow$')
@@ -474,7 +478,8 @@ class RvsVg_Vtg(RvsVg):
         '''
         for i, Vtg in enumerate(self.Vtg):
             # sweep topgate
-            self.keithley_tg.sweep_V(keithley_tg.V, Vtg, .005, .01) # 5 mV steps, 10 mV/second
+            raise Exception('fix sweep!')
+            self.keithley_tg.sweep_V(keithley_tg.V, Vtg)
 
             # reset arrays for gatesweep
             self.gs = RvsVg(self.instruments, self.Vstart, self.Vend, self.Vstep, self.delay)
@@ -482,13 +487,15 @@ class RvsVg_Vtg(RvsVg):
 
             for j in range(self.num_lockins):
                 if self.Vstart > self.Vend:
-                    self.R2D[j][i, :] = self.gs.R[j][::-1] # reverse if we did the sweep backwards
-                    self.Vx2D[j][i, :] = self.gs.Vx[j][::-1] # reverse if we did the sweep backwards
-                    self.Vy2D[j][i, :] = self.gs.Vy[j][::-1] # reverse if we did the sweep backwards
-                    self.Ix2D[i, :] = self.gs.Ix[::-1] # reverse if we did the sweep backwards
-                    self.Iy2D[i, :] = self.gs.Iy[::-1] # reverse if we did the sweep backwards
+                    #[::-1] reverses sweeps if we did them backwards
+                    self.R2D[j][i, :] = self.gs.R[j][::-1]
+                    self.Vx2D[j][i, :] = self.gs.Vx[j][::-1]
+                    self.Vy2D[j][i, :] = self.gs.Vy[j][::-1]
+                    self.Ix2D[i, :] = self.gs.Ix[::-1]
+                    self.Iy2D[i, :] = self.gs.Iy[::-1]
                 else:
-                    self.R2D[j][i, :] = self.gs.R[j] # first index is voltage channel, second is Vtg, third is Vg. Reve
+                    # first index is voltage channel, second is Vtg, third is Vg
+                    self.R2D[j][i, :] = self.gs.R[j]
                     self.Vx2D[j][i, :] = self.gs.Vx[j]
                     self.Vy2D[j][i, :] = self.gs.Vy[j]
                     self.Ix2D[i, :] = self.gs.Ix
@@ -497,9 +504,9 @@ class RvsVg_Vtg(RvsVg):
 
 
     def plot(self):
-        Measurement.plot(self) # don't want to do RvsVg plotting
+        Measurement.plot(self)  # don't want to do RvsVg plotting
 
-        for i in range(len(self.ax.keys())): # rows == different channels
+        for i in range(len(self.ax.keys())):  # rows == different channels
             plot_mpl.update2D(self.im[i][0], np.abs(self.R2D[i]), equal_aspect=False)
             plot_mpl.update2D(self.im[i][1], np.log(np.abs(self.R2D[i])), equal_aspect=False)
 
@@ -556,7 +563,8 @@ class RvsVg_T(RvsVg):
     instrument_list = list(set(RvsT.instrument_list) | set(RvsVg.instrument_list))
 
     def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1,
-                delay=1, Tstart = 5, Tend = 300, Tstep=5, Tdelay=1, sweep_rate=5, Vg_sweep=None):
+                delay=1, Tstart = 5, Tend = 300, Tstep=5, Tdelay=1,
+                sweep_rate=5, wait=5, Vg_sweep=None):
         '''
         Does gatesweeps at a series of temperatures.
         Stores the full gatesweeps at each field, as well as a RvsT curve done
@@ -571,6 +579,7 @@ class RvsVg_T(RvsVg):
         Tstep: temperature step between gatesweeps (Kelvin)
         Tdelay: delay between resistance measurements during temperature sweep (seconds)
         sweep_rate: temperature sweep rate (K/min)
+        wait: wait time once reach target temperature (min)
         Vg_sweep: gate voltage at which to do the temperature sweep (V). Leave at None if you don't care.
         '''
         super().__init__(instruments=instruments, Vstart=Vstart, Vend=Vend, Vstep=Vstep, delay=delay)
@@ -596,13 +605,10 @@ class RvsVg_T(RvsVg):
             setattr(self, 'R%ifull' %j, np.array([]))
 
 
-    def do(self, delay=0, auto_gain=False):
-        '''
-        delay: wait time after sweeping temperature
-        '''
+    def do(self, auto_gain=False):
         for i, T in enumerate(self.T):
             if self.Vg_sweep is not None:
-                self.keithley.sweep_V(self.keithley.V, self.Vg_sweep, .1, 1) # set desired gate voltage for the temp sweep
+                self.keithley.sweep_V(self.keithley.V, self.Vg_sweep) # set desired gate voltage for the temp sweep
             else: # otherwise we will go as quickly as possible and reverse every other gatesweep
                 self.Vstart, self.Vend = self.Vend, self.Vstart
 
@@ -611,7 +617,8 @@ class RvsVg_T(RvsVg):
             self.ts.run(plot=False)
 
             # Wait for cooling/stabilization
-            time.sleep(delay)
+            print('Waiting %i minutes for thermalization.' %self.wait)
+            time.sleep(self.wait*60)
 
             # store full temp sweep data
             self.Tfull = np.append(self.Tfull, self.ts.T)

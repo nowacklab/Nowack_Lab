@@ -36,8 +36,8 @@ class BasicGPIB():
 	def read(self):
 		return self.raw.read()		# pure passthrough function
 
-	# Mimics the pyvisa 'ask' method with a wait
-	def ask(self,data):
+	# Mimics the pyvisa 'query' method with a wait
+	def query(self,data):
 		self.raw.write(data +'\n')	# write data or command
 		sleep(0.001)				# wait 1ms (arbitrary)
 		return self.raw.read()		# read result (if any)
@@ -51,7 +51,7 @@ class BasicGPIB():
 		sleep(15)					# wait 15s for effect
 
 	def ID(self):
-		return self.ask('*IDN?')
+		return self.query('*IDN?')
 
 	# beep at frequency 'pitch' with length 'sust'
 	# freq range is 65 to 2e6

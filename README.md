@@ -127,3 +127,4 @@ Will include information and guidelines regarding:
 * [PyMeasure](https://github.com/ralph-group/pymeasure)
 * [Instrumental](https://github.com/mabuchilab/Instrumental)
 * [PyQDInstrument](https://github.com/guenp/PyQDInstrument)
+* [QCoDeS](http://qcodes.github.io/Qcodes/)

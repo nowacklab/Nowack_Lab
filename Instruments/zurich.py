@@ -8,67 +8,38 @@ try:
 except:
     print('zhinst not imported in zurich.py!')
 
-class gateVoltageError(Exception):
-    pass
 
-class HF2LI(Instrument):
+class Zurich(Instrument):
     '''
-    Creates a Zurich HF2Li object, to control a zurich lock in amplifier
+    Creates a Zurich base class object, to control a Zurich Instruments lockin
     '''
 
-    _label = 'Zurich HF2LI'
+    _label = 'Zurich'
     device_id = None
 
-    def __init__(self, server_address = 'localhost', server_port = 8005 ,
-                    device_serial = '', in_channel = None, meas_type='V'):
+    def __init__(self, device_serial, in_channel = 1, meas_type='V'):
             '''
-            Creates the HF2LI object. By choosing server address, can connection
-            to HF2LI on remote (local network) computer.
+            Creates the Zurich object.
             Arguments:
-            server_address (str,optional) = Private IPV4 address of the computer
-                                hosting the zurich. Defults to 'localhost',
-                                the computer the python kernel is running on.
-            server_port (int, optional) = Port of Zurich HF2LI. For local is
-                                always 8005 (default), usually 8006 for remote.
-            device_serial (str, optional) = Serial number of prefered zurich
-                                hf2li. If empty string or does not exist,
-                                uses first avaliable ZI.
-            in_channel: if None, will use both inputs (TODO). Else, choose input 1
-                                or 2.
+            device_serial (int): Serial number of Zurich instrument
+            in_channel: if None, will use both inputs (TODO).
+                            Else, choose input 1 or 2.
             meas_type: 'I' or 'V'. Choose whether this channel measures current
                                 (via transimpedance amplifier) or voltage.
             '''
 
             super().__init__()
 
-            self.daq = ziP.ziDAQServer(server_address, server_port)
-            deviceList = utils.devices(self.daq)
-
-            # Find device
-            if device_serial in deviceList:
-                self.device_id = device_serial
-            elif device_serial != '':
-                print('Requested device not found.')
-            if self.device_id is None:
-                self.device_id = utils.autoDetect(self.daq)  # first available
-            print('Using Zurich HF2LI with serial %s' % self.device_id)
+            api_level = 5  # API level 5 necessary for MFLI scope
+            self.daq, self.device_id, self.props = utils.create_api_session(
+                'dev%i' % device_serial, api_level
+            )
 
             if in_channel is None:
                 raise Exception()
             self.in_channel = in_channel
             self.meas_type = meas_type
 
-            # This code wouild disable all outputs and demods
-            # general_setting = [['/%s/demods/*/enable' % self.device_id, 0],
-            #        ['/%s/demods/*/trigger' % self.device_id, 0],
-            #        ['/%s/sigouts/*/enables/*' % self.device_id, 0],
-            #        ['/%s/scopes/*/enable' % self.device_id, 0]]
-            #
-            # self.daq.set(general_setting)
-            # self.daq.sync()
-
-            # self.configure()
-            # print('Must now reenable data transfer and output in Zurich software. Check setup again.')
 
     def __getstate__(self):
         self._save_dict = {'device_id': self.device_id,
@@ -85,48 +56,6 @@ class HF2LI(Instrument):
 
         self.__dict__.update(state)
 
-    def configure(self):
-        pass
-#         '''
-#         configure the instrument for this experiment. The following
-#         channels and indices work on all device configurations. The values
-#         below may be changed if the instrument has multiple input/output
-#         channels and/or either the Multifrequency or Multidemodulator
-#         options installed.
-#         '''
-#         out_channel = outputchan - 1
-#         in_channel = inputchan - 1
-#         demod_index = 0
-#         osc_index = outputchan-1
-#         demod_rate = 10e3
-#         out_mix_ch = int(self.daq.listNodes('/%s/sigouts/%d/amplitudes/'
-#                                         % (self.device_id, out_channel),0)[0])
-#         if couple == 'ac':
-#             acUse = 1
-#         else:
-#             acUse = 0
-#         exp_setting = [
-# ['/%s/sigins/%d/ac'             % (self.device_id, self.in_channel), 0],
-# ['/%s/sigins/%d/range'          % (self.device_id, self.in_channel), 2],
-# ['/%s/demods/%d/enable'         % (self.device_id, demod_index), 1],
-# ['/%s/demods/%d/rate'           % (self.device_id, demod_index), demod_rate],
-# ['/%s/demods/%d/adcselect'      % (self.device_id, demod_index), self.in_channel],
-# ['/%s/demods/%d/order'          % (self.device_id, demod_index), 4],
-# ['/%s/demods/%d/timeconstant'   % (self.device_id, demod_index),
-#                                                                 time_constant],
-# ['/%s/demods/%d/oscselect'      % (self.device_id, demod_index), osc_index],
-# ['/%s/demods/%d/harmonic'       % (self.device_id, demod_index), 1],
-# ['/%s/sigouts/%d/on'            % (self.device_id, out_channel), 1],
-# ['/%s/sigouts/%d/enables/%d'    % (self.device_id, out_channel, out_mix_ch),
-#                                                                             1],
-# ['/%s/sigouts/%d/range'         % (self.device_id, out_channel),  1],
-# ['/%s/sigouts/%d/amplitudes/%d' % (self.device_id, out_channel, out_mix_ch),
-#                                                                     amplitude],
-# ['/%s/sigins/%d/diff'           % (self.device_id, self.in_channel), 0],
-# ['/%s/sigouts/%d/add'           % (self.device_id, out_channel), 0],
-#                        ]
-#
-#         self.daq.set(exp_setting)
 
     @property
     def X(self):
@@ -170,3 +99,101 @@ class HF2LI(Instrument):
         Bypass the Zurich's annoying get protocol.
         '''
         return self.daq.get(param, True)[param]
+
+
+class HF2LI(Zurich):
+    _label = 'Zurich HF2LI'
+
+
+class MFLI(Zurich):
+    _label = 'Zurich MFLI'
+    freq_opts = [60e6, 30e6, 15e6, 7.5e6, 3.75e6, 1.88e6, 938e3, 469e3, 234e3,
+        117e3, 58.6e3, 29.3e3, 14.6e3, 7.32e3, 3.66e3, 1.83e3, 916]
+
+    '''
+    MFLI - additional functionality for scope that may be different from HF2LI
+    '''
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.scope = self.daq.scopeModule()
+        self.scope.subscribe('/%s/scopes/0/wave' %self.device_id)
+
+    def _setup_scope(self, freq=60e6, N=16384, input_ch=0):
+        '''
+        Parameters:
+        freq - sampling rate (Hz). Must be in MFLI.freq_opts.
+        N - Length (pts).  2^14 = 16384 by default.
+        input_ch - Input channel. 0 = "Signal Input 1"; 9 = "Aux Input 2"
+        '''
+        scope = self.scope
+        daq = self.daq
+
+        if freq not in self.freq_opts:
+            raise Exception('Frequency must be in: %s' %self.freq_opts)
+
+        f = self.freq_opts.index(freq)
+
+        scope.set('scopeModule/mode', 1)  # See p 49 Programming Manual:
+        scope.set('scopeModule/averager/weight', 1)  # number of averages
+
+        daq.setInt('/%s/scopes/0/time' %self.device_id, f)
+        daq.setInt('/%s/scopes/0/length' %self.device_id, N)  # number of points
+
+        daq.sync()
+
+        daq.setInt('/%s/scopes/0/single' %self.device_id, 1)
+        daq.setInt('/%s/scopes/0/channel' %self.device_id, 1)
+        daq.setInt('/%s/scopes/0/channels/0/inputselect' %self.device_id, input_ch)
+        daq.setInt('/dev3447/scopes/0/channels/0/bwlimit', 1)
+        # To average rather than decimate signal acquired at max sampling rate
+        # This avoids aliasing
+
+        daq.sync()
+
+        scope.set('scopeModule/clearhistory', 1)
+
+
+
+    def get_scope_trace(self, freq=60e6, N=16384, input_ch=0):
+        '''
+        Returns a tuple (array of time values, array of scope input values)
+        Parameters:
+        freq - sampling rate (Hz). Must be in MFLI.freq_opts.
+        N - Length (pts).  2^14 = 16384 by default.
+        input_ch - Input channel. 0 = "Signal Input 1"; 9 = "Aux Input 2"
+        '''
+        self._setup_scope(freq, N, input_ch)
+
+        scope = self.scope
+        daq = self.daq
+
+        try:  # In a try block so scope.finish() runs in finally
+            daq.setInt('/%s/scopes/0/enable' %self.device_id, 1)
+            daq.sync()
+
+            scope.execute()
+
+            while scope.progress() < 1:
+                time.sleep(0.1)
+
+            daq.setInt('/%s/scopes/0/enable' %self.device_id, 0)
+            rawdata=scope.read()
+        finally:
+            scope.finish()
+
+        data = rawdata[self.device_id]['scopes']['0']['wave'][0][0]
+
+        data_array = data['wave'][0].reshape(N)
+
+        chscl = data['channelscaling'][0]
+        if chscl != 1:
+            print('Warning: channel scaling is %f. \
+                You are probably using mode "0"' %chscl)
+            data_array *= chscl
+
+        dt = data['dt']
+
+        time_array = np.linspace(0, dt*N, N)
+
+        return time_array, data_array

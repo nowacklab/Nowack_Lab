@@ -2,12 +2,13 @@
 Instrument base classes.
 '''
 import visa
+from ..Utilities.save import Saver
 
-class Instrument:
+class Instrument(Saver):
     _label = 'instrument'
 
     def __getstate__(self):
-    	return self.__dict__
+    	return self.__dict__.copy()
 
     def __setstate__(self, state):
         '''
@@ -27,7 +28,14 @@ class VISAInstrument(Instrument):
         '''
         self.close()
 
-    def _init_visa(self, resource, termination='\n'):
+    def __getstate__(self):
+        d = super().__getstate__()
+        if '_visa_handle' in d:
+            d.pop('_visa_handle')
+        return d
+
+    def _init_visa(self, resource, termination='\n', parity=None,
+        data_bits=None, baud_rate=None):
         r'''
         Initialize the VISA connection.
         Pass in the resource name. This can be:
@@ -40,22 +48,32 @@ class VISAInstrument(Instrument):
         - Or many others...
             See https://pyvisa.readthedocs.io/en/stable/names.html
         termination: e.g. \r\n: read termination.
+        parity, data_bits, baud_rate: if not None, will set these properties for
+            the visa handle
         '''
         self._visa_handle = visa.ResourceManager().open_resource(resource)
         self._visa_handle.read_termination = termination
+
+        if parity is not None:
+            assert parity in [0,1]
+            parity = visa.constants.Parity(parity)
+        for var in ['parity', 'data_bits', 'baud_rate']:
+            if eval(var) is not None:
+                setattr(self._visa_handle, var, eval(var))
+
         if self._idn is not None:
-            idn = self.ask('*IDN?')
+            idn = self.query('*IDN?')
             if self._idn not in idn:
                 raise Exception('Instrument not recognized. Expected string %s in *IDN?: %s' %(self._idn, idn))
 
-    def ask(self, cmd, timeout=3000):
+    def query(self, cmd, timeout=3000):  # pyvisa 1.10 ask -> query
         '''
         Write and read combined operation.
         Default timeout 3000 ms. None for infinite timeout
         Strip terminating characters from the response.
         '''
         self._visa_handle.timeout = timeout
-        data = self._visa_handle.ask(cmd)
+        data = self._visa_handle.query(cmd)  # pyvisa 1.10 ask -> query
         return data.rstrip()
 
     def close(self):

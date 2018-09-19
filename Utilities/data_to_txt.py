@@ -9,15 +9,15 @@ From commandline, run "python data_to_txt.py <filename>"
 import sys, os
 import numpy as np
 
-from Nowack_Lab.Utilities.save import Measurement
+from Nowack_Lab.Utilities.save import Saver
 from Nowack_Lab.Utilities import utilities
 
 def data_to_txt(filename):
     '''
-    filename: path to .h5 or .json file from a Measurement
+    filename: path to .h5 or .json file from a Saver subclass
     '''
 
-    m = Measurement.load(filename)
+    m = Saver.load(filename)
     filename = os.path.splitext(filename)[0]
     with open(filename+'.txt', 'w') as f:
         # Walk through the dictionary
@@ -28,14 +28,14 @@ def data_to_txt(filename):
                     f.write('# %s\n' %key)
                     f.write(str(value.tolist()))
                     f.write('\n@ \n')
-                elif 'dict' in utilities.get_superclasses(value):
+                elif isinstance(value, dict):
                     f.write('## %s\n' %key)
                     walk(value)  # walk through the dictionary
                     f.write('@@\n')
                 # If the there is some other object
                 elif hasattr(value, '__dict__'):
-                    # Restrict saving Measurements.
-                    if 'Measurement' in utilities.get_superclasses(value):
+                    # Restrict saving Saver subclasses.
+                    if isinstance(value, Saver):
                         f.write('## %s\n' %key)
                         walk(value.__dict__)
                         f.write('@@\n')

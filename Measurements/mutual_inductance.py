@@ -1,6 +1,6 @@
 import time, os, numpy as np, matplotlib.pyplot as plt
 from ..Utilities import conversions
-from ..Utilities.save import Measurement
+from .measurement import Measurement
 from ..Utilities.plotting import plot_mpl
 from ..Utilities.utilities import AttrDict
 
@@ -17,6 +17,7 @@ class MutualInductance_sweep(Measurement):
                  rate = 100,
                  numsteps = 1000,
                  conversion = 1/14.4):
+        raise Exception('This is out of date and will not work.')
         super().__init__(instruments=instruments)
         self.fc_Is = np.array(fc_Is)
         self.sbias = np.array(sbias)
@@ -67,6 +68,7 @@ class MutualInductance2(Measurement):
                 numsteps = 1000,
                 title='',
                 conversion = 1/14.4):
+
         super().__init__(instruments=instruments)
         self.Is = np.array(Is)
         self.Rbias = Rbias

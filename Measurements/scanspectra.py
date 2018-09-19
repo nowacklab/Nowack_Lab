@@ -9,9 +9,9 @@ from IPython import display
 from numpy import ma
 from ..Utilities.plotting import plot_mpl
 from ..Instruments import piezos, montana, squidarray
-from ..Utilities.save import Measurement
+from .measurement import Measurement
 from ..Utilities import conversions
-from ..Procedures.daqspectrum import SQUIDSpectrum
+from ..Measurements.spectrum import SQUIDSpectrum
 from ..Utilities.utilities import AttrDict
 
 class Scanspectra(Measurement):

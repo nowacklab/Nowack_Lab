@@ -4,7 +4,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from .touchdown import Touchdown
 from ..Utilities.utilities import reject_outliers_plane, fit_plane
-from ..Utilities.save import Measurement
+from .measurement import Measurement
 from ..Utilities.plotting.plot_mpl import extents
 from ..Utilities.plotting.plotter import using_notebook_backend
 
@@ -196,17 +196,6 @@ class Planefit(Measurement):
         self.piezos.V = 0
         self.calculate_plane()
 
-    @classmethod
-    def load(cls, json_file=None, instruments={}, unwanted_keys=[]):
-        '''
-        Plane load method.
-        If no json_file specified, will load the last plane taken.
-        Useful if you lose the object while scanning.
-        '''
-        obj = super(Planefit, cls).load(json_file, instruments, unwanted_keys)
-        obj.instruments = instruments
-
-        return obj
 
     def move_and_update(self, x=0, y=0, z=0, ux=0, uy=0, disable_atto=True):
         '''
@@ -291,14 +280,13 @@ class Planefit(Measurement):
 
         return fig, ax
 
-    def save(self, savefig=True, **kwargs):
+    def save(self, **kwargs):
         '''
         Saves the planefit object to json.
-        Also saves the figure as a pdf, if wanted.
         '''
         self.ax = None
         self.ax_grid = None #FIXME change to dict to enable auto ignore in save
-        self._save(self.filename, savefig, **kwargs)
+        self._save(self.filename, **kwargs)
 
 
     def setup_plots(self):
@@ -380,4 +368,4 @@ class Planefit(Measurement):
                         'Move the attocubes and try again.')
         # Subtract old c, add new c
         self.Z -= (old_c - self.c)
-        self.save(savefig=False)
+        self.save()

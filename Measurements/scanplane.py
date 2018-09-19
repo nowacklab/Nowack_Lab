@@ -2,7 +2,7 @@ import time, os, matplotlib, matplotlib.pyplot as plt, numpy as np, winsound
 from scipy.interpolate import interp1d
 
 from ..Utilities import conversions
-from ..Utilities.save import Measurement
+from .measurement import Measurement
 from ..Utilities.utilities import AttrDict
 from ..Utilities.plotting.plot_mpl import extents
 
@@ -446,8 +446,4 @@ class Scanplane(Measurement):
 
 
 class Line(Measurement):
-    def __init__(self):
-        super().__init__()
-
-    def save(self, appendedpath='lines', **kwargs):
-        super().save(appendedpath=appendedpath, **kwargs)
+    subdirectory = 'lines'

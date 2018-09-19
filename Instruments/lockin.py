@@ -81,7 +81,7 @@ class SR830(VISAInstrument):
     @property
     def sensitivity(self):
         '''Get the lockin sensitivity'''
-        value = _sensitivity_options[int(self.ask('SENS?'))]
+        value = _sensitivity_options[int(self.query('SENS?'))]
         if 'I' in self.input_mode:
             value *= 1e-6 # if we're in a current mode
         self._sensitivity = value
@@ -99,12 +99,12 @@ class SR830(VISAInstrument):
         '''
 
         if value == 'up':
-            index = int(self.ask('SENS?')) + 1 # take current sensitivity and increase it
+            index = int(self.query('SENS?')) + 1 # take current sensitivity and increase it
             if index == len(_sensitivity_options):
                 index -= 1 # highest sensitivity
             value = _sensitivity_options[index]
         elif value == 'down':
-            index = int(self.ask('SENS?')) - 1
+            index = int(self.query('SENS?')) - 1
             if index == -1:
                 index += 1 # lowest sensitivity
             value = _sensitivity_options[index]
@@ -125,7 +125,7 @@ class SR830(VISAInstrument):
     @property
     def amplitude(self):
         '''Get the output amplitude'''
-        self._amplitude = float(self.ask('SLVL?'))
+        self._amplitude = float(self.query('SLVL?'))
         return self._amplitude
 
     @amplitude.setter
@@ -139,7 +139,7 @@ class SR830(VISAInstrument):
 
     @property
     def frequency(self):
-        self._frequency = float(self.ask('FREQ?'))
+        self._frequency = float(self.query('FREQ?'))
         return self._frequency
 
     @frequency.setter
@@ -148,7 +148,7 @@ class SR830(VISAInstrument):
 
     @property
     def input_mode(self):
-        self._input_mode = _input_modes[int(self.ask('ISRC?'))]
+        self._input_mode = _input_modes[int(self.query('ISRC?'))]
         return self._input_mode
 
     @input_mode.setter
@@ -161,7 +161,7 @@ class SR830(VISAInstrument):
         '''
         Get the detection harmonic
         '''
-        self._harmonic = int(self.ask('HARM?'))
+        self._harmonic = int(self.query('HARM?'))
         return self._harmonic
 
     @harmonic.setter
@@ -177,7 +177,7 @@ class SR830(VISAInstrument):
         '''
         Get the reference phase shift (degrees)
         '''
-        self._phase = float(self.ask('PHAS?'))
+        self._phase = float(self.query('PHAS?'))
         return self._phase
 
     @phase.setter
@@ -190,35 +190,35 @@ class SR830(VISAInstrument):
 
     @property
     def X(self):
-        self._X = float(self.ask('OUTP?1'))
+        self._X = float(self.query('OUTP?1'))
         if self._X == 0:
             self._X = self.sensitivity/1e12 # so we don't have zeros
         return self._X
 
     @property
     def Y(self):
-        self._Y = float(self.ask('OUTP?2'))
+        self._Y = float(self.query('OUTP?2'))
         if self._Y == 0:
             self._Y = self.sensitivity/1e12 # so we don't have zeros
         return self._Y
 
     @property
     def R(self):
-        self._R = float(self.ask('OUTP?3'))
+        self._R = float(self.query('OUTP?3'))
         if self._R == 0:
             self._R = self.sensitivity/1e12 # so we don't have zeros
         return self._R
 
     @property
     def theta(self):
-        self._theta = float(self.ask('OUTP?4'))
+        self._theta = float(self.query('OUTP?4'))
         return self._theta
 
     @property
     def time_constant(self):
         options = {self.time_constant_options[key]: key for key in self.time_constant_options.keys()}
-        self._time_constant = _time_constant_values[int(self.ask('OFLT?'))]
-        #return options[int(self.ask('OFLT?'))]
+        self._time_constant = _time_constant_values[int(self.query('OFLT?'))]
+        #return options[int(self.query('OFLT?'))]
         return self._time_constant
 
     @time_constant.setter
@@ -238,7 +238,7 @@ class SR830(VISAInstrument):
 
     @property
     def reference(self):
-        i = int(self.ask('FMOD?'))
+        i = int(self.query('FMOD?'))
         if i == 0:
             return 'external'
         else:
@@ -254,7 +254,7 @@ class SR830(VISAInstrument):
 
     @property
     def reserve(self):
-        i = int(self.ask('RMOD?'))
+        i = int(self.query('RMOD?'))
         self._reserve = _reserve_options[i]
         return self._reserve
 
@@ -271,16 +271,16 @@ class SR830(VISAInstrument):
 
     def auto_gain(self):
         self.write('AGAN')
-        self.ask('*STB?', None) # let it finish
+        self.query('*STB?', None) # let it finish
 
     def auto_phase(self):
         self.write('APHS')
-        self.ask('*STB?', None) # let it finish
+        self.query('*STB?', None) # let it finish
 
     def dc_coupling(self):
         self.write('ICPL1')
 
-    def fix_sensitivity(self, OL_thresh=1, UL_thresh=0):
+    def fix_sensitivity(self, OL_thresh=1, UL_thresh=0.1):
         '''
         Checks to see if the lockin is overloading or underloading (signal/sensivity < 0.1)
         and adjusts the sensitivity accordingly.
@@ -311,7 +311,7 @@ class SR830(VISAInstrument):
         table = []
         for name in ['sensitivity', 'amplitude', 'frequency', 'time_constant']:
             table.append([name, getattr(self, name)])
-        snapped = self.ask('SNAP?1,2,3,4')
+        snapped = self.query('SNAP?1,2,3,4')
         snapped = snapped.split(',')
         table.append(['X', snapped[0]])
         table.append(['Y', snapped[1]])
@@ -376,10 +376,10 @@ class SR830(VISAInstrument):
             return np.array(value/10*self.sensitivity) # will give actual output in volts, since output is scaled to 10 V == sensitivity
         return value/10*self.sensitivity
 
-    def sweep(self, Vstart, Vend, Vstep=0.01, sweep_rate=0.1):
+    def sweep(self, Vstart, Vend, Vstep=0.001, sweep_rate=0.1):
         '''
         Sweeps the lockin amplitude at given sweep rate in V/s (default 0.1).
-        Sweeps with a step size of 0.01 V by default.
+        Sweeps with a step size of 0.001 V by default.
         '''
         delay = Vstep/sweep_rate
         numsteps = abs(Vstart-Vend)/Vstep
