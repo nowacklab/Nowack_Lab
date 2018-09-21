@@ -91,7 +91,11 @@ class zurichInstrument(Instrument):
         return self._save_dict
 
     def convert_output(self, value):
-        return value
+        self.AUXOUTS_0_SCALE
+        if not np.isscalar(value):
+            value = np.array(value)
+            return np.array(value/self.AUXOUTS_0_SCALE)
+        return value/self.AUXOUTS_0_SCALE
 
     def setup(self, config):
             '''

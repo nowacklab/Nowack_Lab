@@ -219,7 +219,7 @@ class Sweep(Measurement):
                                 if self.saveasyougo:
                                     self.savedata.append(self.pathtosave
                                     + 'initialization: %s/iteration: %s/reverse/%s/'
-                                    % (str(n),str(k), r.name),returneddata),
+                                    % (str(n),str(k), r.name),returneddata,
                                                     slice= slice(point, point + 1))
                         else:
                             r(self.points - point - 1)
