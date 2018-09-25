@@ -27,7 +27,8 @@ class DaqSpectrum(Measurement):
             instruments={},
             measure_time=0.5,
             measure_freq=256000,
-            averages=30):
+            averages=30,
+            preamp_gain=1):
         '''
         Create a DaqSpectrum object
 
@@ -37,10 +38,11 @@ class DaqSpectrum(Measurement):
             channel
         measure_freq (int?): frequency that the DAQ measures the output channel
         averages (int): number of time traces averaged before computing the FFT
+        preamp_gain (float): gain factor from preamp
         '''
         super().__init__(instruments=instruments)
 
-        for arg in ['measure_time', 'measure_freq', 'averages']:
+        for arg in ['measure_time', 'measure_freq', 'averages', 'preamp_gain']:
             setattr(self, arg, eval(arg))
 
         self.timetraces_t = [None]*averages
@@ -60,7 +62,8 @@ class DaqSpectrum(Measurement):
 
     def fit_one_over_f(self, fmin=0, fmax=None, filters=[60], filters_bw=[10]):
         '''
-        Returns a fit to A/f^alpha over the frequency range [fmin, fmax].
+        Returns A, alpha fit parameters to A/f^alpha.
+        Linear fitting of a log-log plot over the frequency range [fmin, fmax].
         filter: A list of frequencies (Hz) to filter out for the fit.
         filter_bw: A list of bandwidths (Hz) corresponding to each filter frequency
         '''
@@ -104,6 +107,12 @@ class DaqSpectrum(Measurement):
         argmax = abs(self.f-fmax).argmin()
         return argmin, argmax
 
+    def get_Nfft(self):
+        '''
+        Number of points for the FFT. This is different between DAQ and Zurich.
+        '''
+        return np.round(self.measure_freq * self.measure_time / 2)
+
     def get_spectrum(self):
         '''
         Collect time traces from the DAQ and compute the FFT.
@@ -111,9 +120,8 @@ class DaqSpectrum(Measurement):
         Returns:
         Vn (np.ndarray): Square root of the power spectral density
         '''
-        Nfft = np.round(self.measure_freq * self.measure_time / 2)+1
-            # 7/12/2018 daq changed forced remove +1
-            # 7/26/2018 Needed to add +1 for Zurich. Check DAQ again.
+        Nfft = self.get_Nfft()
+
         psdAve = np.zeros(int(Nfft))
 
         for i in range(self.averages):
@@ -144,7 +152,7 @@ class DaqSpectrum(Measurement):
         if hasattr(self, 'preamp'):
             gain = self.preamp.gain
         else:
-            gain = 1
+            gain = self.preamp_gain
         V = received['dc'] / gain
         t = received['t']
         return t, V
@@ -207,7 +215,8 @@ class ZurichSpectrum(DaqSpectrum):
             instruments={},
             measure_freq=14.6e3,
             averages=30,
-            input_ch = 0):
+            input_ch = 0,
+            preamp_gain=1):
         '''
         Create a ZurichSpectrum object
 
@@ -216,13 +225,21 @@ class ZurichSpectrum(DaqSpectrum):
         measure_freq (float): sampling rate (Hz). Must be in MFLI.freq_opts
         averages (int): number of time traces averaged before computing the FFT
         input_ch - Input channel. 0 = "Signal Input 1"; 9 = "Aux Input 2"
+        preamp_gain - gain of preamp used in measurement
         '''
-        super().__init__(instruments, None, measure_freq, averages)
+        super().__init__(instruments, None, measure_freq, averages, preamp_gain)
 
-        if measure_freq not in self.zurich.freq_opts:
-            raise Exception('Frequency must be in: %s' %self.freq_opts)
+        if hasattr(self, 'zurich'):
+            if measure_freq not in self.zurich.freq_opts:
+                raise Exception('Frequency must be in: %s' %self.freq_opts)
         self.measure_time = 16384/measure_freq  # 16384 = 2^14 fixed number
         self.input_ch = input_ch
+
+    def get_Nfft(self):
+        '''
+        Number of points for the FFT. This is different between DAQ and Zurich.
+        '''
+        return np.round(self.measure_freq * self.measure_time / 2) + 1
 
     def get_time_trace(self):
         '''
