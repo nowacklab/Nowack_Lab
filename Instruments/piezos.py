@@ -7,9 +7,9 @@ import Nowack_Lab.Utilities.logging
 reload(Nowack_Lab.Utilities.logging)
 from Nowack_Lab.Utilities.logging import log
 
-import Nowack_Lab.Instrument.instrument
-reload(Nowack_Lab.Instrument.instrument)
-from Nowack_Lab.Instrument.instrument import Instrument
+import Nowack_Lab.Instruments.instrument
+reload(Nowack_Lab.Instruments.instrument)
+from Nowack_Lab.Instruments.instrument import Instrument
 
 try:
     import PyDAQmx as mx

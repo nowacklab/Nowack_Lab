@@ -1,12 +1,20 @@
-
 import numpy as np
 import matplotlib.pyplot as plt
-from ..Instruments import piezos, nidaq, montana
-import time, os
+import time
+import os
 from datetime import datetime
-from ..Utilities.save import Measurement
-from ..Utilities import conversions
-from ..Utilities.utilities import AttrDict
+from importlib import reload
+
+import Nowack_Lab.Utilities.save
+reload(Nowack_Lab.Utilities.save)
+from Nowack_Lab.Utilities.save import Measurement
+
+import Nowack_Lab.Utilities.conversions as conversions
+reload(conversions)
+
+import Nowack_Lab.Utilities.utilities
+reload(Nowack_Lab.Utilities.utilities)
+from Nowack_Lab.Utilities.utilities import AttrDict
 
 class Heightsweep(Measurement):
     _daq_inputs = ['dc','acx','acy','cap']

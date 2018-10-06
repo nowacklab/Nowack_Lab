@@ -9,9 +9,9 @@ try:
 except:
     print('PyANC350 not installed!')
 
-import Nowack_Lab.Instrument.instrument
-reload(Nowack_Lab.Instrument.instrument)
-from Nowack_Lab.Instrument.instrument import Instrument
+import Nowack_Lab.Instruments.instrument
+reload(Nowack_Lab.Instruments.instrument)
+from Nowack_Lab.Instruments.instrument import Instrument
 
 ''' *** Use the Attocube class, definition is at the bottom *** '''
 '''

@@ -12,9 +12,9 @@ import numpy as np
 import zhinst.utils
 from importlib import reload
 
-import Nowack_Lab.Instrument.instrument
-reload(Nowack_Lab.Instrument.instrument)
-from Nowack_Lab.Instrument.instrument import Instrument
+import Nowack_Lab.Instruments.instrument
+reload(Nowack_Lab.Instruments.instrument)
+from Nowack_Lab.Instruments.instrument import Instrument
 
 class gateVoltageError( Exception ):
     pass
