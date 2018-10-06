@@ -1,6 +1,8 @@
 import xarray as xr
 import numpy as np
 from importlib import reload
+import h5py
+import json
 
 class Xarray:
     '''
@@ -85,12 +87,13 @@ class Xarray:
                               'interrupt': sp.interrupt,
                               'fast_axis': sp.fast_axis,
                               'center': sp.center,
+                            'loadpath': fullpath,
                               }
                         )
         return ds
 
     @staticmethod
-    def scanspectra(fullpath, transposed=False):
+    def scanspectra(fullpath, transposed=False, reshape=False):
         '''
         '''
 
@@ -105,7 +108,15 @@ class Xarray:
 
         dims = ['y', 'x', 't'] if transposed else ['x', 'y', 't']
 
-        V = xr.DataArray(sp.V, dims=dims, 
+        if reshape:
+            print('reshaping')
+            sp_V = sp.V.reshape(sp_x.shape[0], sp_y.shape[0], sp.t.shape[0])
+            sp_psdAve = sp.psdAve.reshape(sp_x.shape[0], sp_y.shape[0], sp.f.shape[0])
+        else:
+            sp_V = sp.V
+            sp_psdAve = sp.psdAve
+
+        V = xr.DataArray(sp_V, dims=dims, 
                              coords={'x':sp_x, 'y':sp_y, 't':sp.t},
                              name='Voltage Time traces (V)',
                              attrs={'data units': 'Volts',
@@ -117,7 +128,7 @@ class Xarray:
 
         dims = ['y', 'x', 'f'] if transposed else ['x', 'y', 'f']
 
-        psdAve = xr.DataArray(sp.psdAve, dims=dims, 
+        psdAve = xr.DataArray(sp_psdAve, dims=dims, 
                              coords={'x':sp_x, 'y':sp_y, 'f':sp.f},
                              name='Voltage Time traces (V)',
                              attrs={'data units': 'Volts',
@@ -136,11 +147,20 @@ class Xarray:
                              'y units': 'Volts',
                              }
                          )
-        squidarray = Xarray.notNone(sp.squidarray, 
-                                    sp.plane.instruments['squidarray'],
-                                    sp.instruments['squidarray'])
-        preamp = Xarray.notNone(sp.preamp, sp.plane.instruments['preamp'],
-                                sp.instruments['preamp'])
+        try:
+            squidarray = Xarray.notNone(sp.squidarray, 
+                                        sp.plane.instruments['squidarray'],
+                                        sp.instruments['squidarray'])
+        except:
+            print('Cannot load squidarray')
+            squidarray={}
+        try:
+            preamp = Xarray.notNone(sp.preamp, sp.plane.instruments['preamp'],
+                                    sp.instruments['preamp'])
+        except:
+            print('Cannot load preamp')
+            preamp={}
+
         #lockin_current = Xarray.notNone(sp.lockin_current, 
         #                                sp.plane.instruments['lockin_current'],
         #                                sp.instruments['lockin_current'])
@@ -153,8 +173,8 @@ class Xarray:
 
         # make dataset
         ds = xr.Dataset({'V': V, 'psdAve':psdAve, 'z': Z, 
-                        'preamp':Xarray.toblankdataarray(preamp),
-                        'squidarray':Xarray.toblankdataarray(squidarray),
+                        'preamp':Xarray.toblankdataarray(preamp, 'preamp'),
+                        'squidarray':Xarray.toblankdataarray(squidarray, 'preamp'),
                         },
                         attrs={'filename': sp.filename,
                                'monitor_time': sp.monitor_time,
@@ -167,6 +187,7 @@ class Xarray:
         #                      'lockin_current': lockin_current,
         #                      'lockin_squid': lockin_squid,
         #                      'lockin_cap': lockin_cap
+                            'loadpath': fullpath,
                               }
                         )
         return ds
@@ -356,6 +377,7 @@ class Xarray:
                                'timestamp': atb.timestamp,
                                'time_elapsed_s': atb.time_elapsed_s,
                                'conversion': atb.conversion,
+                            'loadpath': fullpath,
                               }
                         )
         return ds
@@ -420,20 +442,118 @@ class Xarray:
                          'preamp':Xarray.toblankdataarray(blp.preamp, 
                                                           'preamp'),
                          'squidarray':Xarray.toblankdataarray(blp.squidarray, 
-                                                              'preamp'),
+                                                              'squidarray'),
                          },
                          attrs={'filename':  blp.filename,
                                 'timestamp': blp.timestamp,
                                 'monitortime': blp.monitortime,
                                 'samplerate': blp.samplerate,
                                 'testinputconv': blp.testinputconv,
+                                'loadpath': fullpath,
                                 }
                          )
         return ds
-                                
+
+    @staticmethod
+    def gmf_monitorattrs_1(fullpath):
+        [my_h5, my_json] = Xarray.dumbloader1(fullpath)
+
+        data = xr.DataArray(np.vstack([my_json['data']['X'],
+                                        my_json['data']['Y'],
+                                        my_json['data']['X_harm3'],
+                                        my_json['data']['Y_harm3'],
+                                        ]).T,
+                            dims=['T', 'data_params'],
+                            coords={'T': my_json['data']['T'],
+                                    'data_params': ['X', 'Y', 
+                                                    'X_harm3', 'Y_harm3'],
+                                   },
+                            name='Data (V)',
+                            attrs={'X units': 'Volts',
+                                   'Y units': 'Volts',
+                                   'X_harm3 units': 'Volts',
+                                   'Y_harm3 units': 'Volts',
+                                   'T units': 'Kelvin',
+                                   }
+                            )
+        ds = xr.Dataset( {'data': data,
+                          'preamp': Xarray.toblankdataarray(
+                                my_json['preamp']['py/state'], 'preamp'),
+                          'squidarray': Xarray.toblankdataarray(
+                                my_json['squidarray']['py/state'], 'squidarray'),
+                          },
+                          attrs={'filename': my_json['filename'],
+                                 'loadpath': fullpath,
+                                 'timestamp': my_json['timestamp'],
+                                 'time_elapsed_s': my_json['time_elapsed_s'],
+                                 'loadpath': fullpath,
+                                 }
+                          )
+        return ds
+
+    @staticmethod
+    def heightsweep(fullpath):
+        import Nowack_Lab.Procedures.heightsweep
+        reload(Nowack_Lab.Procedures.heightsweep)
+        from Nowack_Lab.Procedures.heightsweep import Heightsweep
+        hs = Heightsweep.load(fullpath)
+
+        v = xr.DataArray(np.vstack([
+                                    hs.Vup['acx'],
+                                    hs.Vup['acy'],
+                                    hs.Vup['cap'],
+                                    hs.Vup['dc'],
+                                    hs.Vdown['acx'][::-1],
+                                    hs.Vdown['acy'][::-1],
+                                    hs.Vdown['cap'][::-1],
+                                    hs.Vdown['dc'][::-1],
+                                    ]).T,
+                        dims=['z', 'v_params'],
+                        coords={'z': hs.Vup['z'],
+                                'v_params': ['acx_up', 'acy_up',
+                                             'cap_up', 'dc_up',
+                                             'acx_down', 'acy_down',
+                                             'cap_down', 'dc_down',
+                                             ]
+                                },
+                        attrs={
+                               'acx_up units': 'Volts',
+                               'acy_up units': 'Volts',
+                               'cap_up units': 'Volts',
+                               'dc_up units' : 'Volts',
+                               'acx_down units': 'Volts',
+                               'acy_down units': 'Volts',
+                               'cap_down units': 'Volts',
+                               'dc_down units' : 'Volts',
+                               'z units': 'Volts'
+                               }
+                        )
+        ds = xr.Dataset( {'v': v,
+                          'preamp': Xarray.toblankdataarray(
+                              hs.plane.instruments['preamp'], 'preamp'),
+                          'squidarray': Xarray.toblankdataarray(
+                              hs.plane.instruments['squidarray'],
+                              'squidarray'),
+                          'lockin_squid': Xarray.toblankdataarray(
+                              hs.lockin_squid, 'lockin_squid'),
+                          },
+                          attrs={
+                            'scan_rate': hs.scan_rate,
+                            'time_elapsed_s': hs.time_elapsed_s,
+                            'timestamp': hs.timestamp,
+                            'x': hs.x,
+                            'y': hs.y,
+                            'z0': hs.z0,
+                            'filename': hs.filename,
+                            'loadpath': fullpath,
+                            }
+                          )
+        return ds
+
+
+
 
         
-
     @staticmethod
     def notNone(a, b, c):
         if a is None and b is None:
@@ -446,4 +566,27 @@ class Xarray:
     def toblankdataarray(dictionary, name):
         return xr.DataArray([], dims=None, coords=None, name=name, 
                             attrs=dictionary)
+
+    @staticmethod
+    def dumbloader1(path):
+        file_h5 = h5py.File(path + '.h5', 'r') # access with file_h5['keyname'].value
+        with open(path + '.json', 'r') as f:
+            file_json = json.load(f)['py/state']
+
+        return [file_h5, file_json]
+
+    @staticmethod
+    def save(ds, filename):
+        ds.to_netcdf(filename, format='NETCDF4', engine='h5netcdf')
+
+    @staticmethod
+    def load(filename):
+        return xr.open_dataset(filename, engine='h5netcdf')
+
+    @staticmethod
+    def save_compressed(ds, filename):
+        comp = dict(zlib=True, complevel=9)
+        encoding = {var: comp for var in ds.data_vars}
+        ds.to_netcdf(filename, format='NETCDF4', engine='h5netcdf',
+                    encoding=encoding)
 
