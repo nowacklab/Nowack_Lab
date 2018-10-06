@@ -5,6 +5,7 @@ import matplotlib.font_manager as fm
 import matplotlib.ticker as ticker
 import numpy as np
 from statsmodels.nonparametric.smoothers_lowess import lowess
+from matplotlib.colors import LogNorm
 
 class dplot():
     @staticmethod
@@ -341,7 +342,8 @@ class dplot():
                      cmap='viridis', vmax=None, vmin=None, 
                      label=r'm$\Phi_0$'):
         im = ax.imshow(image, cmap=cmap, aspect=aspect, extent=extent,
-                        origin='lower', vmax=vmax, vmin=vmin)
+                        origin='lower', vmax=vmax, vmin=vmin, 
+                        norm=LogNorm(vmin=vmin, vmax=vmax))
 
         [cax, cbar] = dplot.makecbar(ax, im)
         cbar.set_label(label)
