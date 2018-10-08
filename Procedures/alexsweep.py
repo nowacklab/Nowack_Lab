@@ -26,10 +26,14 @@ class Recorder(Measurement):
             if self.gainobj:
                 toreturn = getattr(self.gainobj, self.gainprop
                                         )*getattr(self.obj ,self.prop)[self.key]
+            else:
+                toreturn =  getattr(self.obj ,self.prop)[self.key]
         else:
             if self.gainobj:
                 toreturn = getattr(self.gainobj, self.gainprop
                                         )*getattr(self.obj ,self.prop)
+            else:
+                toreturn =  getattr(self.obj ,self.prop)
         return toreturn
 
     def add_gain(self, obj, property):
