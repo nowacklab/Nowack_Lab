@@ -1,4 +1,4 @@
-import matplotlib.pyplot as plt, os, re, numpy as np
+import matplotlib.pyplot as plt, os, re, numpy as np, time
 from scipy import signal
 from .measurement import Measurement
 from ..Utilities.utilities import AttrDict
@@ -60,12 +60,14 @@ class DaqSpectrum(Measurement):
             self.plot()
 
 
-    def fit_one_over_f(self, fmin=0, fmax=None, filters=[60], filters_bw=[10]):
+    def fit_one_over_f(self, fmin=0, fmax=None, filters=[60], filters_bw=[10],
+        plot=True):
         '''
         Returns A, alpha fit parameters to A/f^alpha.
         Linear fitting of a log-log plot over the frequency range [fmin, fmax].
         filter: A list of frequencies (Hz) to filter out for the fit.
         filter_bw: A list of bandwidths (Hz) corresponding to each filter frequency
+        plot: if True, will plot the fit curve on the figure.
         '''
         argmin, argmax = self._get_argmin_argmax(fmin, fmax)
         f = self.f[argmin:argmax]
@@ -87,6 +89,10 @@ class DaqSpectrum(Measurement):
         # popt, pcov = curve_fit(one_over_f, f, Vn, p0=[1e-5,.5], bounds=([-np.inf, .4], [np.inf, .6]))
         # return popt
         m,b, _, _, _ = lr(np.log(f), np.log(Vn))
+
+        if plot and self.ax is not None:
+            self.ax['loglog'].loglog(np.exp(b)*self.f**(m))
+
         return np.exp(b), -m
 
     def get_average(self, fmin=0, fmax=None):
@@ -126,6 +132,14 @@ class DaqSpectrum(Measurement):
 
         for i in range(self.averages):
             t, V = self.get_time_trace()
+
+            # Divide by gain
+            if hasattr(self, 'preamp'):
+                gain = self.preamp.gain
+            else:
+                gain = self.preamp_gain
+            V /= gain
+
             self.timetraces_t[i] = t
             self.timetraces_V[i] = V
             self.f, psd = signal.periodogram(V, self.measure_freq,
@@ -148,12 +162,7 @@ class DaqSpectrum(Measurement):
                                     sample_rate=self.measure_freq
                                     )
         # Unpack data recieved from daq.
-        # Divide out any preamp gain applied.
-        if hasattr(self, 'preamp'):
-            gain = self.preamp.gain
-        else:
-            gain = self.preamp_gain
-        V = received['dc'] / gain
+        V = received['dc']
         t = received['t']
         return t, V
 
@@ -231,9 +240,13 @@ class ZurichSpectrum(DaqSpectrum):
 
         if hasattr(self, 'zurich'):
             if measure_freq not in self.zurich.freq_opts:
-                raise Exception('Frequency must be in: %s' %self.freq_opts)
+                raise Exception('Frequency must be in: %s' %self.zurich.freq_opts)
         self.measure_time = 16384/measure_freq  # 16384 = 2^14 fixed number
         self.input_ch = input_ch
+
+        self.zurich.daq.setInt('/dev3447/sigins/%i/autorange' %input_ch, 1)  # autorange input
+        time.sleep(5)  # wait for autoranging to complete
+
 
     def get_Nfft(self):
         '''
