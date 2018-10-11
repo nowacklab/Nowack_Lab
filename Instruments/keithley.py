@@ -202,7 +202,8 @@ class Keithley2400(VISAInstrument):
         if self.source != 'V':
             raise Exception('Cannot set source voltage if sourcing current!')
         if abs(value) > self.Vout_range:
-            raise Exception('Output voltage %s too large for range of %s' %(value, self.Vout_range))
+            self.Vout_range *= 1.1  # move up to the next voltage range.
+            # raise Exception('Output voltage %s too large for range of %s' %(value, self.Vout_range))
         self.write(':SOUR:VOLT:LEV %s' %value)
         self._Vout = value
         self.I # trigger a reading to update the screen, assuming we measure I
