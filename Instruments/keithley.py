@@ -37,6 +37,8 @@ class Keithley2400(VISAInstrument):
 
 
     def __getstate__(self):
+        if self._loaded:
+            return super().__getstate__() # Do not attempt to read new values
         self._save_dict = {
             'output_current': self._Iout,
             'output_current_range': self._Iout_range,
@@ -472,6 +474,8 @@ class KeithleyPPMS(Keithley2400):
         self.ten_V = ten_V
 
     def __getstate__(self):
+        if self._loaded:
+            return super().__getstate__() # Do not attempt to read new values
         return {
             'output': self.output,
         }

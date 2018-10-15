@@ -42,6 +42,8 @@ class Zurich(Instrument):
 
 
     def __getstate__(self):
+        if self._loaded:
+            return super().__getstate__() # Do not attempt to read new values
         self._save_dict = {'device_id': self.device_id,
                           'X': self.X,
                           'Y': self.Y,
@@ -51,10 +53,19 @@ class Zurich(Instrument):
 
 
     def __setstate__(self, state):
-        state['_X'] = state.pop('X')
-        state['_Y'] = state.pop('Y')
+        keys = [
+            ('_X', 'X'),
+            ('_Y', 'Y'),
+        ]
+
+        for new, old in keys:
+            try:
+                state[new] = state.pop(old)
+            except:
+                pass
 
         self.__dict__.update(state)
+        self._loaded = True
 
 
     @property

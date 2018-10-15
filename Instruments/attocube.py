@@ -66,6 +66,8 @@ class ANC350(Instrument):
             pass
 
     def __getstate__(self):
+        if self._loaded:
+            return super().__getstate__() # Do not attempt to read new values
         self._save_dict = {
             'x': self.x,
             'y': self.y,
@@ -100,6 +102,8 @@ class Positioner(Instrument):
 
 
     def __getstate__(self):
+        if self._loaded:
+            return super().__getstate__() # Do not attempt to read new values
         self._save_dict = {
             'capacitance': self._C,
             'position_tolerance': self._pos_tolerance,
@@ -125,13 +129,23 @@ class Positioner(Instrument):
 
 
     def __setstate__(self, state):
-        state['_V'] = state.pop('stepping_voltage')
-        state['_freq'] = state.pop('stepping_frequency')
-        state['_C'] = state.pop('capacitance')
-        state['_pos'] = state.pop('position')
-        state['_pos_tolerance'] = state.pop('position_tolerance')
+        keys = [
+            ('_V', 'stepping_voltage'),
+            ('_freq', 'stepping_frequency'),
+            ('_C', 'capacitance'),
+            ('_pos', 'position'),
+            ('_pos_tolerance', 'position_tolerance'),
+        ]
+
+        for new, old in keys:
+            try:
+                state[new] = state.pop(old)
+            except:
+                pass
 
         self.__dict__.update(state)
+        self._loaded = True
+
 
 
     @property

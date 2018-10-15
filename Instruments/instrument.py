@@ -6,6 +6,7 @@ from ..Utilities.save import Saver
 
 class Instrument(Saver):
     _label = 'instrument'
+    _loaded = False  # parameter to mark whether instrument was loaded
 
     def __getstate__(self):
     	return self.__dict__.copy()
@@ -16,6 +17,7 @@ class Instrument(Saver):
         directly into properties and write values directly to instrument.
         '''
         self.__dict__.update(state)
+        self._loaded = True
 
 
 class VISAInstrument(Instrument):

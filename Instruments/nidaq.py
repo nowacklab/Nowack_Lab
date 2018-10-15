@@ -36,6 +36,8 @@ class NIDAQ(Instrument):
 
 
     def __getstate__(self):
+        if self._loaded:
+            return super().__getstate__() # Do not attempt to read new values
         self._save_dict = {}
         # for chan in self._ins + self._outs:
         #     self._save_dict[chan] = getattr(self, chan).V
@@ -327,6 +329,8 @@ class Channel():
 
 
     def __getstate__(self):
+        if self._loaded:
+            return super().__getstate__() # Do not attempt to read new values
         self._save_dict = {}
         self._save_dict.update({
             '_V': self._V,

@@ -31,6 +31,8 @@ class SR5113(VISAInstrument):
 
 
     def __getstate__(self):
+        if self._loaded:
+            return super().__getstate__() # Do not attempt to read new values
         self._save_dict = {'gain': self.gain,
                           'filter': self.filter}
         return self._save_dict

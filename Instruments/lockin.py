@@ -49,6 +49,8 @@ class SR830(VISAInstrument):
         self._visa_handle.timeout = 3000 # default
 
     def __getstate__(self):
+        if self._loaded:
+            return super().__getstate__() # Do not attempt to read new values
         self._save_dict = {'sensitivity': self.sensitivity,
                           'frequency': self.frequency,
                           'amplitude': self.amplitude,
@@ -65,17 +67,26 @@ class SR830(VISAInstrument):
 
 
     def __setstate__(self, state):
-        state['_sensitivity'] = state.pop('sensitivity')
-        state['_frequency'] = state.pop('frequency')
-        state['_amplitude'] = state.pop('amplitude')
-        state['_time_constant'] = state.pop('time_constant')
-        state['_reserve'] = state.pop('reserve')
-        state['_X'] = state.pop('X')
-        state['_Y'] = state.pop('Y')
-        state['_R'] = state.pop('R')
-        state['_theta'] = state.pop('theta')
+        keys = [
+            ('_sensitivity', 'sensitivity'),
+            ('_frequency', 'frequency'),
+            ('_amplitude', 'amplitude'),
+            ('_time_constant', 'time_constant'),
+            ('_reserve', 'reserve'),
+            ('_X', 'X'),
+            ('_Y', 'Y'),
+            ('_R', 'R'),
+            ('_theta', 'theta'),
+        ]
+
+        for new, old in keys:
+            try:
+                state[new] = state.pop(old)
+            except:
+                pass
 
         self.__dict__.update(state)
+        self._loaded = True
 
 
     @property

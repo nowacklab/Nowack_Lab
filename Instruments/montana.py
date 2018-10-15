@@ -34,6 +34,8 @@ class Montana(Instrument):
         self.compressor_speed
 
     def __getstate__(self):
+        if self._loaded:
+            return super().__getstate__() # Do not attempt to read new values
         self._save_dict = {'temperature': self._temperature,
                           'stability': self._temperature_stability,
                           'compressor_speed': self._compressor_speed
@@ -45,11 +47,21 @@ class Montana(Instrument):
         '''
         For loading.
         '''
-        state['_temperature'] = state.pop('temperature')
-        state['_temperature_stability'] = state.pop('stability')
-        state['_compressor_speed'] = state.pop('compressor_speed')
+        keys = [
+            ('_temperature', 'temperature'),
+            ('_temperature_stability', 'stability'),
+            ('_compressor_speed', 'compressor_speed'),
+        ]
+
+        for new, old in keys:
+            try:
+                state[new] = state.pop(old)
+            except:
+                pass
 
         self.__dict__.update(state)
+        self._loaded = True
+
 
     @property
     def compressor_speed(self):
