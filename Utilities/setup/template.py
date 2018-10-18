@@ -13,7 +13,7 @@ ip = get_ipython()
 here = os.path.dirname(__file__)
 path = os.path.join(here, 'common_imports.py')
 
-ip.magic('run %s' %path)
+ip.magic('run \"%s\"' %path)
 
 # Comment out undesired import commands below
 from Nowack_Lab.Utilities import utilities, save, logging, conversions, anim, constants
