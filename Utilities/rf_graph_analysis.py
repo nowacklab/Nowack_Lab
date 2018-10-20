@@ -92,3 +92,73 @@ class RF_sweep_current_graph_analyzer:
         plt.ylabel("phase shift")
         plt.xlabel("current")
         plt.ylim(-90, 90)
+
+    @staticmethod
+    def plotdB(filename, rev=False):
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+        data = dataset.Dataset(filename)
+        if not rev:
+            current = np.linspace(data.get(filename + '/Istart')*1000,
+                        data.get(filename + '/Istop')*1000,
+                        data.get(filename + '/Isteps'))
+        else:
+            current = np.linspace(data.get(filename + '/Istop')*1000,
+                        data.get(filename + '/Istart')*1000,
+                        data.get(filename + '/Isteps'))
+        freq = np.linspace(data.get(filename + '/freqmin')/1e9,
+                    data.get(filename + '/freqmax')/1e9,
+                    data.get(filename + '/numpoints'))
+        Y,X = np.meshgrid(freq, current)
+        dB = RF_sweep_current.dB_data(filename, rev = rev)
+        im=ax.pcolor(X, Y, dB, cmap="inferno")
+        cbar = fig.colorbar(im)
+        ax.set_xlabel('field coil current (mA)')
+        ax.set_ylabel('frequency (GHz)')
+        if not rev:
+            ax.set_title(filename + "\nPower from VNA = " +
+                str(data.get(filename + '/power')) + " dBm")
+        else:
+            ax.set_title(filename + "\nSweep back in current" +
+                        "\nPower from VNA = " + str(data.get(filename + '/power'))
+                        + " dBm")
+        cbar.set_label('Attenuation [dB]')
+        if not rev:
+            graph_path = filename.replace(".hdf5", "db.png")
+        else:
+            graph_path = filename.replace(".hdf5", "db_rev.png")
+        fig.savefig(graph_path)
+
+    @staticmethod
+    def plotdB_currentx10(filename, rev=False):
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+        data = dataset.Dataset(filename)
+        if not rev:
+            current = np.linspace(data.get(filename + '/Istart')*10000,
+                        data.get(filename + '/Istop')*10000,
+                        data.get(filename + '/Isteps'))
+        else:
+            current = np.linspace(data.get(filename + '/Istop')*10000,
+                        data.get(filename + '/Istart')*10000,
+                        data.get(filename + '/Isteps'))
+        freq = np.linspace(data.get(filename + '/freqmin')/1e9,
+                    data.get(filename + '/freqmax')/1e9,
+                    data.get(filename + '/numpoints'))
+        Y,X = np.meshgrid(freq, current)
+        dB = RF_sweep_current.dB_data(filename, rev = rev)
+        im=ax.pcolor(X, Y, dB, cmap="inferno")
+        cbar = fig.colorbar(im)
+        ax.set_xlabel('field coil current (mA)')
+        ax.set_ylabel('frequency (GHz)')
+        if not rev:
+            ax.set_title(filename + "\nPower from VNA = " +
+                str(data.get(filename + '/power')) + " dBm")
+        else:
+            ax.set_title(filename + "\nSweep back in current" +
+                        "\nPower from VNA = " + str(data.get(filename + '/power'))
+                        + " dBm")
+        cbar.set_label('Attenuation [dB]')
+        if not rev:
+            graph_path = filename.replace(".hdf5", "db_currentx10.png")
+        else:
+            graph_path = filename.replace(".hdf5", "db_rev_currentx10.png")
+        fig.savefig(graph_path)
