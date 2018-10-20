@@ -9,7 +9,7 @@ from Nowack_Lab.Utilities import dataset
 from IPython.display import clear_output
 
 
-class hp_freq_sweep_linear():
+class hp_freq_sweep_linear_abs():
 
 	def __init__(self, freq_range, filepath, source_power = 15, notes = "No notes", plot=True):
 		'''freq_range should be range of Hz values'''
@@ -33,18 +33,18 @@ class hp_freq_sweep_linear():
 		self.arr_for_DC[:,0] = self.freq_range
 
 		for i in range(num_freqpoints):
-			time.sleep(.03)
+			time.sleep(.05)
 			freq_val = self.freq_range[i]
 			self.fxn_gen.freq = freq_val
 			DC_val = self.dq.ai0.V
 			if i % 10 == 0:
-				clear_output
+				clear_output()
 				print(DC_val)
-			self.arr_for_DC[i, 1] = DC_val
+			self.arr_for_DC[i, 1] = np.absolute(DC_val)
 
 		self.save_data(run_timestamp, self.arr_for_DC)
 		if self.plot:
-			hp_freq_sweep_linear.plot(self.filepath + '\\' + run_timestamp + "_hp_freq_sweep_linear.hdf5") # call the static plotting method
+			hp_freq_sweep_linear_abs.plot(self.filepath + '\\' + run_timestamp + "_hp_freq_sweep_linear_abs.hdf5") # call the static plotting method
 		#plt.plot(self.arr_for_DC[:, 0], self.arr_for_DC[:, 1])
 		#plt.xlabel('Frequency step (Hz)')
 		#plt.ylabel('DAQ DC reading (V)')
@@ -69,7 +69,7 @@ class hp_freq_sweep_linear():
 
 
 	def save_data(self, timestamp, arr):
-		name = timestamp + '_hp_freq_sweep_linear'
+		name = timestamp + '_hp_freq_sweep_linear_abs'
 		path = os.path.join(self.filepath, name + '.hdf5')
 		info = dataset.Dataset(path)
 		info.append(path + '/freq_range', self.freq_range)
@@ -78,7 +78,7 @@ class hp_freq_sweep_linear():
 		info.append(path + '/arr_for_DC', self.arr_for_DC)
 		info.append(path + '/notes', self.notes)
 
-class hp_freq_sweep_logarithmic():
+class hp_freq_sweep_logarithmic_abs():
 	def __init__(self, freq_range, filepath, source_power = 15, notes = "No notes", plot=True):
 		'''freq_range should be np.logspace range of Hz values'''
 		print("Remember to manually turn on source!")
@@ -101,18 +101,18 @@ class hp_freq_sweep_logarithmic():
 		self.arr_for_DC[:,0] = self.freq_range
 
 		for i in range(num_freqpoints):
-			time.sleep(.03)
+			time.sleep(.05)
 			freq_val = self.freq_range[i]
 			self.fxn_gen.freq = freq_val
 			DC_val = self.dq.ai0.V
 			if i % 10 == 0:
 				clear_output()
 				print(DC_val)
-			self.arr_for_DC[i, 1] = np.absolute(DC_val) 
+			self.arr_for_DC[i, 1] = np.absolute(DC_val)
 
 		self.save_data(run_timestamp, self.arr_for_DC)
 		if self.plot:
-			hp_freq_sweep_logarithmic.plot(self.filepath + '\\' + run_timestamp + "_hp_freq_sweep_logarithmic.hdf5") # call the static plotting method
+			hp_freq_sweep_logarithmic_abs.plot(self.filepath + '\\' + run_timestamp + "_hp_freq_sweep_logarithmic_abs.hdf5") # call the static plotting method
 
 	@staticmethod
 	def plot(some_filename):
@@ -132,7 +132,7 @@ class hp_freq_sweep_logarithmic():
 
 
 	def save_data(self, timestamp, arr):
-		name = timestamp + '_hp_freq_sweep_logarithmic'
+		name = timestamp + '_hp_freq_sweep_logarithmic_abs'
 		path = os.path.join(self.filepath, name + '.hdf5')
 		info = dataset.Dataset(path)
 		info.append(path + '/freq_range', self.freq_range)
