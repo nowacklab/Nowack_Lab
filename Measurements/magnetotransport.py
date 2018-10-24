@@ -13,19 +13,18 @@ class RvsB(RvsSomething):
     something='B'
     something_units = 'T'
 
-    def __init__(self, instruments = {}, Bend = 1, delay=1, sweep_rate=.1):
+    def __init__(self, instruments = {}, Bstart = 0, Bend = 1, delay=1, sweep_rate=.1):
         '''
         Sweep rate and field in T. Delay is in seconds. Rate is T/min
         '''
         super().__init__(instruments=instruments)
 
-        # self.Bstart = Bstart
+        self.Bstart = Bstart
         self.Bend = Bend
         self.delay = delay
         self.sweep_rate = sweep_rate
 
     def do(self, plot=True, auto_gain=False):
-        raise Exception('Got rid of Bstart. Check out code.')
         # Set initial field if not already there
         if abs(self.ppms.field - self.Bstart*10000) > 0.1: # different by more than 0.1 Oersted = 10 uT.
             self.ppms.field = self.Bstart*10000 # T to Oe
