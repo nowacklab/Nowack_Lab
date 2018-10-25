@@ -19,7 +19,7 @@ class Dataset():
         self.filename = filename
         print(self.filename)
 
-    def get(self, pathtoget,slice = False):
+    def get(self, pathtoget,slc = False):
         '''
         Gets the element of the hdf5 at path. Path must be a string of
         keys seperated by '/'. If path does not descend to a dataset in the h5,
@@ -49,8 +49,8 @@ class Dataset():
         loc = False
         if isinstance(f[pathtoget],h5py._hl.dataset.Dataset):
             #is the thing you asked for a dataset, or a group?
-            if slice:
-                toreturn = f[pathtoget][slice]
+            if slc:
+                toreturn = f[pathtoget][slc]
             else:
                 toreturn = f[pathtoget][...]
         elif isinstance(f[pathtoget],h5py._hl.group.Group):
@@ -65,7 +65,7 @@ class Dataset():
         f.close()
         return toreturn
 
-    def append(self, pathtowrite, datatowrite, slice = False):
+    def append(self, pathtowrite, datatowrite, slc = False):
         '''
         Adds new data to dataset at path. Data may be a string, number, numpy
         array, or a nested dict. If a nested dict, leaves must be strings,
@@ -87,9 +87,13 @@ class Dataset():
                 if not isinstance(obj, dict):
                     self._writetoh5(data = obj, path = h5path)
             self.dictvisititems(cleandatatowrite, _loadhdf5)
-        elif isinstance(cleandatatowrite, np.ndarray) and slice:
+        elif isinstance(cleandatatowrite, np.ndarray) and slc:
                     self._appenddatah5(self.filename, cleandatatowrite,
-                                                             pathtowrite,slice)
+                                                             pathtowrite,slc)
+        elif any([isinstance(cleandatatowrite, sometype) for sometype in
+                                                    self.allowedtypes]) and slc:
+                    self._appenddatah5(self.filename, [cleandatatowrite],
+                                                             pathtowrite,slc)
         else:
             self._writetoh5(data = cleandatatowrite, path = pathtowrite)
 
@@ -134,40 +138,40 @@ class Dataset():
                     recursivevisit(dictionary[key], function, keylist + [key])
         recursivevisit(dictionary, function, [])
 
-    def _appenddatah5(self, filename, numpyarray, pathtowrite, slice):
+    def _appenddatah5(self, filename, numpyarray, pathtowrite, slc):
         '''
         Adds data to an existing array in a h5 file. Can only overwrite nan's,
         such arrays should be instantiated with writetoh5
         '''
         f = h5py.File(filename,'r+')
         dataset = f[pathtowrite]
-        if np.shape(numpyarray) !=  np.shape(dataset[slice]):
+        if np.shape(numpyarray) !=  np.shape(dataset[slc]):
             f.close()
             raise Exception('Slice and data are not the same shape')
-        if np.all(np.isnan(dataset[slice])):
-            dataset[slice] = numpyarray
+        if np.all(np.isnan(dataset[slc])):
+            dataset[slc] = numpyarray
             f.close()
         else:
             shouldoverwrite = input('Data already written to ' + pathtowrite +
-                                    ' at location ' + str(slice) +
+                                    ' at location ' + str(slc) +
                                     '. Type OVERWRITE to overwrite, else, code'
                   ' creates a new array at antioverwrite_ + file and saves '
                                                               +'data + there')
             if shouldoverwrite == 'OVERWRITE':
-                dataset[slice] = numpyarray
+                dataset[slc] = numpyarray
                 f.close()
             else:
                 fao = h5py.File('antioverwrite_' + filename,'a')
                 try:
                     fao.create_dataset(pathtowrite, data = dataset)
-                    fao[pathtowrite][slice] = numpyarray
+                    fao[pathtowrite][slc] = numpyarray
                     fao.close()
                     f.close()
                 except:
                     fao.close()
                     f.close()
                     self._appenddatah5('antioverwrite_' + filename,
-                                        numpyarray, pathtowrite, slice)
+                                        numpyarray, pathtowrite, slc)
 
     def sanitize(self,data):
         '''

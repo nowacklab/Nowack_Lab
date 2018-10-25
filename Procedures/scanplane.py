@@ -56,7 +56,7 @@ class Scanplane(Measurement):
 
     def __init__(self, instruments={}, plane=None, span=[800, 800],
                  center=[0, 0], numpts=[20, 20],
-                 scanheight=15, scan_rate=120, raster=False):
+                 scanheight=15, scan_rate=120, scan_pause = 1, raster=False):
 
         super().__init__(instruments=instruments)
 
@@ -81,6 +81,7 @@ class Scanplane(Measurement):
         self.center = center
         self.numpts = numpts
         self.plane = plane
+        self.scan_pause = scan_pause
 
         self.V = AttrDict({
             chan: np.nan for chan in self._daq_inputs + ['piezo']
@@ -200,6 +201,7 @@ class Scanplane(Measurement):
 
             # Go to first point of scan
             self.piezos.sweep(self.piezos.V, Vstart)
+            time.sleep(self.scan_pause)
             #self.squidarray.reset()
             #time.sleep(0.5)
             # Begin the sweep
