@@ -8,3 +8,5 @@ G0 = e**2/h
 eps0 = 8.854187817e-12 #F/m
 mu0 = 4*np.pi*1e-7 # vacuum permeability, Henrys
 vF_graphene = 1e6 # Fermi velocity graphene, m/s
+kB = 1.38064852e-23 # Boltzmann constant, J/K
+kBeV = 8.6173303e-5 # Boltzmann constant, eV/K
