@@ -1,4 +1,5 @@
 import matplotlib, matplotlib.pyplot as plt, numpy as np
+from matplotlib.transforms import Bbox
 
 ## NOTE: Aspect handled differently in matplotlib 2.0. Don't need to set it this way!
 def aspect(ax, ratio, absolute=True):
@@ -137,6 +138,30 @@ def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='',
         aspect(ax, 1, absolute=False) # equal aspect ratio based on data scales
 
     return im
+
+def save_subplot(ax, *args, **kwargs):
+    '''
+    Save a subplot on axis ax.
+    args and kwargs are passed directly to fig.savefig
+    '''
+
+    def full_extent(ax, pad=0.0):
+        '''
+        Get the full extent of an axes, including axes labels, tick labels, and
+        titles.
+        '''
+        items = ax.get_xticklabels() + ax.get_yticklabels()
+        items += [ax.get_xaxis().get_label(), ax.get_yaxis().get_label()]
+        items += [ax, ax.title]
+
+        bbox = Bbox.union([item.get_window_extent() for item in items])
+
+        return bbox.expanded(1.0 + pad, 1.0 + pad)
+
+        extent = full_extent(ax).transformed(fig.dpi_scale_trans.inverted())
+
+        kwargs['bbox_inches'] = extent
+        fig.savefig(*args, **kwargs)
 
 def update2D(im, z, center_at_zero=False, equal_aspect=True):
     '''
