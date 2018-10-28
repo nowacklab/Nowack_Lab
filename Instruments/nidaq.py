@@ -51,7 +51,6 @@ class NIDAQ(Instrument):
 
         return self._save_dict
 
-
     def all(self):
         '''
         Returns a dictionary of all channel voltages.
@@ -315,7 +314,7 @@ class NIDAQ(Instrument):
         print('Zeroed DAQ outputs.')
 
 
-class Channel():
+class Channel(Instrument):
     _V = 0
     _conversion = 1 # build in conversion factor?
     def __init__(self, daq, name):
