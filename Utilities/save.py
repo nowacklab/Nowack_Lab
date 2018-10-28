@@ -197,6 +197,8 @@ class Saver(object):
                             print('Cannot find class definition {0}: '.format(
                                 classname) + 'using Saver object')
                             d['py/object'] = 'Nowack_Lab.Utilities.save.Saver'
+                        if 'daqspectrum' in d['py/object']: # legacy
+                            d['py/object'] = d['py/object'].replace('daq', '')
                 if isinstance(d[key], dict):
                     d[key] = walk(d[key])
             return d
