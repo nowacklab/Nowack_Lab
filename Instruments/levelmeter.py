@@ -17,6 +17,8 @@ class AMI1700(VISAInstrument):
 
 
     def __getstate__(self):
+        if self._loaded:
+            return super().__getstate__() # Do not attempt to read new values
         self._save_dict = {
             '_level': self.level()
         }

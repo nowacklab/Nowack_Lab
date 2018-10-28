@@ -120,6 +120,16 @@ class RvsB_BlueFors(RvsB):
 class RvsB_Phil(RvsB):
     instrument_list = ['magnet', 'lockin_V1', 'lockin_I']
 
+    def __init__(self, instruments = {}, Bend = 1, delay=1, sweep_rate=.1,
+                persistent=True):
+        '''
+        Sweep rate and field in T. Delay is in seconds. Rate is T/min
+        persistent: whether to enter persistent mode after the measurement
+        '''
+        super().__init__(instruments, Bend, delay, sweep_rate)
+        self.persistent = persistent
+
+
     def do(self, plot=True, auto_gain=False):
 
         if abs(self.magnet.Bmagnet-self.Bend) < 10e-6:
@@ -137,7 +147,8 @@ class RvsB_Phil(RvsB):
         while abs(self.magnet.Vmag-0.02) > 0.01:
             self.do_measurement(delay=self.delay, plot=plot, auto_gain=auto_gain)
 
-        self.magnet.enter_persistent_mode()
+        if self.persistent:
+            self.magnet.enter_persistent_mode()
 
 
 class RvsVg_B(RvsVg):

@@ -7,16 +7,19 @@ from ..Measurements.spectrum import ZurichSpectrum
 from ..Utilities.save import Saver
 
 class SpectrumSeries(Saver):
-    def __init__(self, Vtgs, Vbias, paths):
+    def __init__(self, Vtgs, Vbias, paths, gain=1):
         '''
         Parameters:
         Vtgs: array of topgate voltages (V)
         Vbias: current bias (uA)
         paths: list of paths of ZurichSpectrum objects
+        gain: gain factor to divide spectra by
         '''
         self.Vtgs = Vtgs
         self.Vbias = Vbias
         self.paths = paths
+        self.gain = gain
+
 
     def get_averages(self, fmin=0, fmax=None):
         '''
@@ -32,7 +35,8 @@ class SpectrumSeries(Saver):
         for j, Vtg in enumerate(self.Vtgs):
             self.zs = ZurichSpectrum.load(self.paths[j])
             zs = self.zs
-            Vav.append(np.array(zs.timetraces_V).mean())
+            zs.Vn /= self.gain
+            Vav.append(np.array(zs.timetraces_V).mean() / self.gain)
             Ibias.append(zs.kbias.input_current)
             Vn.append(zs.get_average(fmin, fmax))
 
@@ -52,6 +56,7 @@ class SpectrumSeries(Saver):
         for j, Vtg in enumerate(self.Vtgs):
             self.zs = ZurichSpectrum.load(self.paths[j])
             zs = self.zs
+            zs.Vn /= self.gain
             A, alpha = zs.fit_one_over_f(fmin, fmax, filters=[60], filters_bw=[10])
             As.append(A)
             alphas.append(alpha)
@@ -74,6 +79,7 @@ class SpectrumSeries(Saver):
         self.ax2.semilogy(self.Vtgs, self.Vn, 'C1')
         self.ax2.set_ylabel('Average spectral density (V/Hz$^{1/2}$)', color='C1')
         self.fig.tight_layout()
+
 
     def plot_single_spectrum(self, idx):
         '''

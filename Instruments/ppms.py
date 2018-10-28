@@ -74,13 +74,13 @@ class PPMS(Instrument):
             self.kill_server()
 
     def __getstate__(self):
+        if self._loaded:
+            return super().__getstate__() # Do not attempt to read new values
         d = {}
         for param in self._params:
             d[param] = getattr(self, param)
         return d
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
+        
 
     def _get_temperature(self, map23=True):
         '''

@@ -37,6 +37,8 @@ class Keithley2400(VISAInstrument):
 
 
     def __getstate__(self):
+        if self._loaded:
+            return super().__getstate__() # Do not attempt to read new values
         self._save_dict = {
             'output_current': self._Iout,
             'output_current_range': self._Iout_range,
@@ -202,7 +204,8 @@ class Keithley2400(VISAInstrument):
         if self.source != 'V':
             raise Exception('Cannot set source voltage if sourcing current!')
         if abs(value) > self.Vout_range:
-            raise Exception('Output voltage %s too large for range of %s' %(value, self.Vout_range))
+            self.Vout_range *= 1.1  # move up to the next voltage range.
+            # raise Exception('Output voltage %s too large for range of %s' %(value, self.Vout_range))
         self.write(':SOUR:VOLT:LEV %s' %value)
         self._Vout = value
         self.I # trigger a reading to update the screen, assuming we measure I
@@ -471,6 +474,8 @@ class KeithleyPPMS(Keithley2400):
         self.ten_V = ten_V
 
     def __getstate__(self):
+        if self._loaded:
+            return super().__getstate__() # Do not attempt to read new values
         return {
             'output': self.output,
         }

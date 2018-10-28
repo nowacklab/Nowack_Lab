@@ -59,6 +59,8 @@ class Piezos(Instrument):
             self.zero()
 
     def __getstate__(self):
+        if self._loaded:
+            return super().__getstate__() # Do not attempt to read new values
         self._save_dict = {"x": self.x,
                             "y": self.y,
                             "z": self.z,
@@ -71,10 +73,19 @@ class Piezos(Instrument):
 
     def __setstate__(self, state):
         state.pop('daq') # don't want to load the daq automatically
-        state['_max_sweep_rate'] = state.pop('max_sweep_rate')
-        state['_max_step_size'] = state.pop('max_step_size')
+        keys = [
+            ('_max_sweep_rate', 'max_sweep_rate'),
+            ('_max_step_size', 'sweep_step_size'),
+        ]
+
+        for new, old in keys:
+            try:
+                state[new] = state.pop(old)
+            except:
+                pass
         self.__dict__.update(state)
         # print('Daq not loaded in piezos! Load with load_daq(daq)!')
+        self._loaded = True
 
 
     @property
@@ -435,23 +446,34 @@ class Piezo(Instrument):
         self._max_step_size = max_step_size
 
     def __getstate__(self):
+        if self._loaded:
+            return super().__getstate__() # Do not attempt to read new values
         self._save_dict = { "label": self.label,
                             "gain": self.gain,
                             "Vmax": self.Vmax,
-                            "bipolar multiplier": self.bipolar,
+                            "bipolar_multiplier": self.bipolar,
                             "V": self.V,
-                            "max sweep rate": self._max_sweep_rate,
-                            "sweep step size": self._max_step_size
+                            "max_sweep_rate": self._max_sweep_rate,
+                            "sweep_step_size": self._max_step_size
                         }
         return self._save_dict
 
 
     def __setstate__(self, state):
-        state['bipolar'] = state.pop('bipolar multiplier')
-        state['_V'] = state.pop('V')
-        state['_max_sweep_rate'] = state.pop('max sweep rate')
-        state['_max_step_size'] = state.pop('sweep step size')
+        keys = [
+            ('bipolar', 'bipolar_multiplier'),
+            ('_V', 'V'),
+            ('_max_sweep_rate', 'max_sweep_rate'),
+            ('_max_step_size', 'sweep_step_size'),
+        ]
+
+        for new, old in keys:
+            try:
+                state[new] = state.pop(old)
+            except:
+                pass
         self.__dict__.update(state)
+        self._loaded = True
 
 
     @property

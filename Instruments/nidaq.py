@@ -36,6 +36,8 @@ class NIDAQ(Instrument):
 
 
     def __getstate__(self):
+        if self._loaded:
+            return super().__getstate__() # Do not attempt to read new values
         self._save_dict = {}
         # for chan in self._ins + self._outs:
         #     self._save_dict[chan] = getattr(self, chan).V
@@ -48,7 +50,6 @@ class NIDAQ(Instrument):
         })
 
         return self._save_dict
-
 
     def all(self):
         '''
@@ -313,7 +314,7 @@ class NIDAQ(Instrument):
         print('Zeroed DAQ outputs.')
 
 
-class Channel():
+class Channel(Instrument):
     _V = 0
     _conversion = 1 # build in conversion factor?
     def __init__(self, daq, name):
@@ -327,6 +328,8 @@ class Channel():
 
 
     def __getstate__(self):
+        if self._loaded:
+            return super().__getstate__() # Do not attempt to read new values
         self._save_dict = {}
         self._save_dict.update({
             '_V': self._V,

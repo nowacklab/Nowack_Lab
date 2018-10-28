@@ -33,6 +33,8 @@ class LakeshoreChannel(VISAInstrument):
 
 
     def __getstate__(self):
+        if self._loaded:
+            return super().__getstate__() # Do not attempt to read new values
         self._save_dict = {
             'Channel_number': self._num,
             'Channel_label': self._label,
@@ -51,20 +53,29 @@ class LakeshoreChannel(VISAInstrument):
 
 
     def __setstate__(self, state):
-        state['_num'] = state.pop('Channel_number')
-        state['_label'] = state.pop('Channel_label')
-        state['_enabled'] = state.pop('Channel_enabled?')
-        state['_scanned'] = state.pop('Channel_being_scanned?')
-        state['_P'] = state.pop('power')
-        state['_R'] = state.pop('resistance')
-        state['_T'] = state.pop('temperature')
-        state['_status'] = state.pop('status')
-        state['_dwell'] = state.pop('dwell_time')
-        state['_pause'] = state.pop('pause')
-        state['_curve_num'] = state.pop('curve_number')
-        state['_temp_coef'] = state.pop('temperature_coefficient_1pos_2neg')
+        keys = [
+            ('_num', 'Channel_number'),
+            ('_label', 'Channel_label'),
+            ('_enabled', 'Channel_enabled?'),
+            ('_scanned', 'Channel_being_scanned?'),
+            ('_P', 'power'),
+            ('_R', 'resistance'),
+            ('_T', 'temperature'),
+            ('_status', 'status'),
+            ('_dwell', 'dwell_time'),
+            ('_pause', 'pause'),
+            ('_curve_num', 'curve_number'),
+            ('_temp_coef', 'temperature_coefficient_1pos_2neg'),
+        ]
+
+        for new, old in keys:
+            try:
+                state[new] = state.pop(old)
+            except:
+                pass
 
         self.__dict__.update(state)
+        self._loaded = True
 
 
     def _get_inset(self):

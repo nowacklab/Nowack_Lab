@@ -96,6 +96,8 @@ class PFL102(Instrument):
         self.updateDigitalControl()
 
     def __getstate__(self):
+        if self._loaded:
+            return super().__getstate__() # Do not attempt to read new values
         self._save_dict = {"Array_bias": self._A_bias,
                            "Array_flux": self._A_flux,
                            "SQUID_bias": self._S_bias,
@@ -117,20 +119,29 @@ class PFL102(Instrument):
         '''
         NOTE: this will load the real instrument. Load with caution!
         '''
-        state['_A_bias'] = state.pop('Array_bias')
-        state['_A_flux'] = state.pop('Array_flux')
-        state['_S_bias'] = state.pop('SQUID_bias')
-        state['_S_flux'] = state.pop('SQUID_flux')
-        state['_arrayLocked'] = state.pop('Array_locked')
-        state['_feedbackResistor'] = state.pop('Feedback_resistor')
-        state['_integratorCapacitor'] = state.pop('Integrator_capacitor')
-        state['_offset'] = state.pop('Preamp_voltage_offset')
-        state['_sensitivity'] = state.pop('sensitivity')
-        state['_testInput'] = state.pop('Test_input')
-        state['_squidLocked'] = state.pop('SQUID_locked')
-        state['_testSignal'] = state.pop('Test_signal')
+        keys = [
+            ('_A_bias', 'Array_bias'),
+            ('_A_flux', 'Array_flux'),
+            ('_S_bias', 'SQUID_bias'),
+            ('_S_flux', 'SQUID_flux'),
+            ('_arrayLocked', 'Array_locked'),
+            ('_feedbackResistor', 'Feedback_resistor'),
+            ('_integratorCapacitor', 'Integrator_capacitor'),
+            ('_offset', 'Preamp_voltage_offset'),
+            ('_sensitivity', 'sensitivity'),
+            ('_testInput', 'Test_input'),
+            ('_squidLocked', 'SQUID_locked'),
+            ('_testSignal', 'Test_signal'),
+        ]
+
+        for new, old in keys:
+            try:
+                state[new] = state.pop(old)
+            except:
+                pass
 
         self.__dict__.update(state)
+        self._loaded = True
 
     ######### PROPERTY DEFINITIONS ###################
 
