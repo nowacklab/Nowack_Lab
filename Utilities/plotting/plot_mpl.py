@@ -139,7 +139,7 @@ def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='',
 
     return im
 
-def save_subplot(ax, *args, **kwargs):
+def save_subplot(fig, ax, *args, **kwargs):
     '''
     Save a subplot on axis ax.
     args and kwargs are passed directly to fig.savefig
@@ -158,10 +158,10 @@ def save_subplot(ax, *args, **kwargs):
 
         return bbox.expanded(1.0 + pad, 1.0 + pad)
 
-        extent = full_extent(ax).transformed(fig.dpi_scale_trans.inverted())
+    extent = full_extent(ax).transformed(fig.dpi_scale_trans.inverted())
 
-        kwargs['bbox_inches'] = extent
-        fig.savefig(*args, **kwargs)
+    kwargs['bbox_inches'] = extent
+    fig.savefig(*args, **kwargs)
 
 def update2D(im, z, center_at_zero=False, equal_aspect=True):
     '''
