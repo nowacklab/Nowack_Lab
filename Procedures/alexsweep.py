@@ -336,6 +336,18 @@ class Sweep(Measurement):
         self.points = points
         self.waiter = waiter
 
+class Current_Time(Measurement):
+    '''
+    Returns the current relative time to when it was initialized
+    '''
+
+    def __init__(self):
+        self.starttime = time.time()
+        self.name = 'Current Relative Time (Seconds)'
+
+    def __call__(self,n):
+        return time.time() - self.starttime
+
 class Time(Measurement):
     '''
     Creates a callable time object which can be used to delay execution
