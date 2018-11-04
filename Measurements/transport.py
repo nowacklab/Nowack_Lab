@@ -65,6 +65,7 @@ class RvsSomething(Measurement):
         self._num_lockins = num_lockins
         return self._num_lockins
 
+
     def do(self, duration=None, delay=1, num_avg = 1, delay_avg = 0, plot=True, auto_gain=False):
         '''
         Duration and delay both in seconds.
@@ -127,6 +128,16 @@ class RvsSomething(Measurement):
             self.R[j] = np.append(self.R[j], r)
 
         # Get temperature and field (if available)
+        self.get_temperature_field()
+
+        if plot:
+            self.plot()
+
+
+    def get_temperature_field(self):
+        '''
+        Get temperature and field measurements if available. Called in do_measurement
+        '''
         if hasattr(self, 'ppms'):
             self.B = np.append(self.B, self.ppms.field/10000) # Oe to T
         elif hasattr(self, 'magnet'):
@@ -142,9 +153,6 @@ class RvsSomething(Measurement):
             self.T = np.append(self.T, self.ppms.temperature)
         elif hasattr(self, 'lakeshore'):
             self.T = np.append(self.T, self.lakeshore.T[6])
-
-        if plot:
-            self.plot()
 
 
     def plot(self):
@@ -166,7 +174,7 @@ class RvsSomething(Measurement):
         Run the measurement. Sets up plot label then uses Measurement.run
         '''
         self.setup_label()
-        super().run(plot=plot, **kwargs)
+        Measurement.run(self, plot=plot, **kwargs)
 
 
     def setup_label(self):

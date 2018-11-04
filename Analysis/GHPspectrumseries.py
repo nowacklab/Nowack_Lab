@@ -30,6 +30,7 @@ class SpectrumSeries(Saver):
         '''
         Vav = []
         Ibias = []
+        Vbias = []
         Vn = []
 
         for j, Vtg in enumerate(self.Vtgs):
@@ -38,10 +39,12 @@ class SpectrumSeries(Saver):
             zs.Vn /= self.gain
             Vav.append(np.array(zs.timetraces_V).mean() / self.gain)
             Ibias.append(zs.kbias.input_current)
+            Vbias.append(zs.kbias.input_voltage)
             Vn.append(zs.get_average(fmin, fmax))
 
         self.Vav = np.array(Vav)
         self.Ibias = np.array(Ibias)
+        self.R2p = np.array(Vbias)/Ibias
         self.Vn = np.array(Vn)
 
 

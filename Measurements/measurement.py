@@ -86,7 +86,7 @@ class Measurement(Saver, Plotter):
 
         # The do.
         try:
-            done = self.do(plot, **kwargs)
+            done = self.do(plot=plot, **kwargs)
         except KeyboardInterrupt:
             print('interrupting kernel, please wait...\n')
             self.interrupt = True

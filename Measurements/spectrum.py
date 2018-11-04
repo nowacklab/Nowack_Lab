@@ -244,8 +244,7 @@ class ZurichSpectrum(DaqSpectrum):
         self.measure_time = 16384/measure_freq  # 16384 = 2^14 fixed number
         self.input_ch = input_ch
 
-        self.zurich.daq.setInt('/dev3447/sigins/%i/autorange' %input_ch, 1)  # autorange input
-        time.sleep(5)  # wait for autoranging to complete
+        self.zurich.autorange(input_ch)
 
 
     def get_Nfft(self):

@@ -1,5 +1,6 @@
 import re, time, numpy as np, matplotlib.pyplot as plt
 from .measurement import Measurement
+from .transport import RvsSomething, RvsT, RvsVg
 
 class DAQ_IV(Measurement):
     _daq_inputs = ['V1'] # e.g. V1, V2, ... provide an arbitrary number
@@ -213,3 +214,203 @@ class RvsT_Montana_Keithley(Measurement):
         self.ax.set_ylabel('Resistance (Ohm)')
 
         l = self.ax.legend(loc='best')
+
+class RvsSomething_DC(RvsSomething):
+    '''
+    Monitor R by taking DC voltage input of Zurich and dividing by a bias current
+    applied using a keithley.
+    This is a superclass for measuring resistance vs different things
+    (e.g. gate voltage, temperature, field...)
+    By default, this class measures vs. time (useful for timing subclasses!)
+
+    Make sure to change the name of the "something" you're measuring vs!
+
+    Tee off the voltage to do a two-point measurement
+    Run through a high impedance preamp then connect to Zurich aux 2
+    This will be recorded as R2p
+
+    Preamp may be used before the Zurich input. Specify preamp_gain manually.
+    '''
+    instrument_list = ['zurich', 'keithleybias']
+    something='time'
+    something_units = 's'
+    legendtitle=None
+
+    def __init__(self, instruments = {}, preamp_gain=1):
+        Measurement.__init__(self, instruments=instruments)
+
+        # Set up empty arrays
+        self.V = np.array([])
+        self.V2p = np.array([])
+        self.I = np.array([])
+        self.B = np.array([]) # if we can record field, let's do it.
+        self.T = np.array([]) # if we can record temperature
+
+        self.R = np.array([])
+        self.R2p = np.array([])
+        setattr(self, self.something, np.array([]))
+
+        self.preamp_gain = preamp_gain
+
+
+    def do_measurement(self, delay = 0, num_avg = 1, delay_avg = 0,
+                                plot=True, auto_gain=True):
+        '''
+        Take a resistance measurement. Usually this will happen in a loop.
+        Optional argument to set a delay before the measurement happens.
+        plot argument determines whether data is plotted or not
+        num_avg is the number of data points to be averaged
+        delay_avg is the time delay (seconds) between averages
+        auto_gain: automatically adjust lockin gain for small or OL signals
+            This adds a default delay of 5 seconds
+
+        Doesn't make a whole lot of sense to average for a measurement vs time,
+        but the averaging could be useful for a subclass.
+        '''
+
+        if delay > 0:
+            time.sleep(delay)
+
+        self.I = np.append(self.I, self.keithleybias.I)
+
+        if auto_gain:
+            self.zurich.autorange() # takes 5 seconds by default!!
+
+        # Take as many measurements as requested and average them
+        v = 0
+        v2p = 0
+        r = 0
+        r2p = 0
+        for i in range(num_avg):
+            t, V = self.zurich.get_scope_trace(self.zurich.freq_opts[10], input_ch=9) # aux in 2
+            v2p += V.mean()
+            r2p += v2p/self.I[-1]
+
+            t, V = self.zurich.get_scope_trace(self.zurich.freq_opts[10])
+            v += V.mean()
+            r += v/self.I[-1]
+            if i != num_avg-1: # no reason to sleep the last time!
+                time.sleep(delay_avg)
+        v /= num_avg
+        r /= num_avg
+        v2p /= num_avg
+        r2p /= num_avg
+
+        self.V = np.append(self.V, v / self.preamp_gain)
+        self.R = np.append(self.R, r / self.preamp_gain)
+        self.V2p = np.append(self.V2p, v2p)
+        self.R2p = np.append(self.R2p, r2p)
+
+
+        # Get temperature and field (if available)
+        self.get_temperature_field()
+
+        if plot:
+            self.plot()
+
+
+    def plot(self):
+        Measurement.plot(self)
+
+        self.line.set_xdata(getattr(self, self.something))
+        self.line.set_ydata(self.R)
+
+        self.line2p.set_xdata(getattr(self, self.something))
+        self.line2p.set_ydata(self.R2p)
+
+        self.ax.relim()
+        self.ax.autoscale_view(True,True,True)
+
+        self.fig.tight_layout()
+        self.fig.canvas.draw()
+
+
+    def setup_plots(self):
+        self.fig, self.ax = plt.subplots()
+        self.ax.set_xlabel('%s (%s)' %(self.something, self.something_units), fontsize=20)
+        self.ax.set_ylabel('R (Ohm)', fontsize=20)
+
+        ## plot all the resistances
+        line =  self.ax.plot(getattr(self, self.something), self.R)
+        self.line = line[0]
+
+        line2p = self.ax.plot(getattr(self, self.something), self.R2p)
+        self.line2p = line2p[0]
+
+        self.ax.set_title(self.filename)
+        self.fig.tight_layout()
+
+
+class RvsTime_DC(RvsSomething_DC):
+    '''
+    Alias for RvsSomething_DC
+    '''
+    pass
+
+
+class RvsT_DC(RvsSomething_DC, RvsT):
+    '''
+    DC version of RvsT
+    '''
+    instrument_list = ['ppms', 'zurich', 'keithleybias']
+    something = 'T'
+    something_units = 'K'
+
+    def __init__(self, instruments = {}, Tstart = 300, Tend = 10, delay=1,
+        sweep_rate=10, **kwargs):
+        '''
+        Sweep rate and temperature in K. Delay is in seconds. Rate is K/min
+        **kwargs for RvsSomething_DC
+        '''
+        RvsSomething_DC.__init__(self, instruments=instruments)
+
+        self.Tstart = Tstart
+        self.Tend = Tend
+        self.delay = delay
+        self.sweep_rate = sweep_rate
+
+class RvsVg_DC(RvsSomething_DC, RvsVg):
+    '''
+    DC version of RvsVg
+    '''
+    instrument_list = ['keithley', 'zurich', 'keithleybias']
+    something = 'Vg'
+    something_units = 'V'
+
+    def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1,
+        delay=1, fine_range=None, **kwargs):
+        '''
+        Vstart: starting voltage (V)
+        Vend: ending voltage (V)
+        Vstep: voltage step size (V)
+        delay: time delay between measurements (sec)
+        fine_range: [Vmin, Vmax], a list of two voltages that define a range
+        in which we will take N times as many data points. N=5.
+        Note that Vmin is closer to Vstart and Vmax is closer to Vend,
+        regardless of sweep direction.
+
+        **kwargs for RvsSomething_DC
+        '''
+        RvsSomething_DC.__init__(self, instruments=instruments, **kwargs)
+
+        self.Vstart = Vstart
+        self.Vend = Vend
+        self.Vstep = Vstep
+        self.delay = delay
+
+        if fine_range is None:
+            self.Vg_values = np.linspace(Vstart, Vend, round(abs(Vend-Vstart)/Vstep)+1)
+        else:  # Use more points if a fine range specified
+            Vmin = fine_range[0]
+            Vmax = fine_range[1]
+            numpts_sm = round(abs(Vmin-Vstart)/Vstep)+1  # sm = "start min"
+            numpts_mm = round(abs(Vmin-Vmax)/Vstep*10)+1  # mm = "min max"
+            numpts_me = round(abs(Vmax-Vend)/Vstep)+1  # me = "max end"
+            self.Vg_values = np.concatenate((
+                    np.linspace(Vstart, Vmin, numpts_sm, endpoint=False),
+                    np.linspace(Vmin, Vmax, numpts_mm, endpoint=False),
+                    np.linspace(Vmax, Vend, numpts_me)
+                )
+            )
+
+        self.Ig = np.array([])

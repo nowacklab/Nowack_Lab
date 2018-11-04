@@ -96,6 +96,11 @@ class Zurich(Instrument):
         return self.get_setting(param)[0]
 
 
+    def autorange(self, input_ch=0, sleep_time=5):
+        self.daq.setInt('/%s/sigins/%i/autorange' %(self.device_id, input_ch), 1)  # autorange input
+        time.sleep(sleep_time)  # wait for autoranging to complete
+
+
     def get(self, param):
         '''
         Get a parameter from the lockin.
@@ -104,6 +109,7 @@ class Zurich(Instrument):
 
         return self.daq.getSample('/%s/demods/%i/sample' %(self.device_id, demod_num))[param]
         # self.in_channel
+
 
     def get_setting(self, param):
         '''
@@ -186,7 +192,7 @@ class MFLI(Zurich):
             scope.execute()
 
             while scope.progress() < 1:
-                time.sleep(0.1)
+                time.sleep(0.01)
 
             daq.setInt('/%s/scopes/0/enable' %self.device_id, 0)
             rawdata=scope.read()

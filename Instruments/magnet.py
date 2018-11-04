@@ -283,7 +283,7 @@ class AMI430(VISAInstrument):
         self.p_switch = False
 
 
-    def wait(self, timeout=1800, interval=0.1):
+    def wait(self, timeout=180000, interval=0.1):
         '''
         Wait for holding.
         '''
