@@ -163,6 +163,25 @@ def save_subplot(fig, ax, *args, **kwargs):
     kwargs['bbox_inches'] = extent
     fig.savefig(*args, **kwargs)
 
+
+def set_size(w, h, ax=None, mm=False):
+    '''
+    Resize a set of axes to (w,h) given in inches
+    mm: if True, (w,h) in mm
+    '''
+    if mm:
+        w /= 25.4
+        h /= 25.4
+    if not ax: ax=plt.gca()
+    l = ax.figure.subplotpars.left
+    r = ax.figure.subplotpars.right
+    t = ax.figure.subplotpars.top
+    b = ax.figure.subplotpars.bottom
+    figw = float(w)/(r-l)
+    figh = float(h)/(t-b)
+    ax.figure.set_size_inches(figw, figh)
+
+
 def update2D(im, z, center_at_zero=False, equal_aspect=True):
     '''
     Update image data of a 2D plot.
