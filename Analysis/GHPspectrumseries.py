@@ -38,8 +38,12 @@ class SpectrumSeries(Saver):
             zs = self.zs
             zs.Vn /= self.gain
             Vav.append(np.array(zs.timetraces_V).mean() / self.gain)
-            Ibias.append(zs.kbias.input_current)
-            Vbias.append(zs.kbias.input_voltage)
+            try:
+                Ibias.append(zs.kbias.input_current)
+                Vbias.append(zs.kbias.input_voltage)
+            except:
+                Ibias.append(zs.keithleybias.input_current)
+                Vbias.append(zs.keithleybias.input_voltage)
             Vn.append(zs.get_average(fmin, fmax))
 
         self.Vav = np.array(Vav)
