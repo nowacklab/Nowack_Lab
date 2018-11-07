@@ -87,7 +87,7 @@ class Dataset():
                 if not isinstance(obj, dict):
                     self._writetoh5(data = obj, path = h5path)
             self.dictvisititems(cleandatatowrite, _loadhdf5)
-        elif isinstance(cleandatatowrite, np.ndarray) and slc:
+        elif isinstance(cleandatatowrite, (np.ndarray, list)) and slc:
                     self._appenddatah5(self.filename, cleandatatowrite,
                                                              pathtowrite,slc)
         elif any([isinstance(cleandatatowrite, sometype) for sometype in

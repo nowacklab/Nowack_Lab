@@ -11,43 +11,54 @@ class Recorder(Measurement):
     '''
     Records a single parameter. Purpose is to add name functionality and
     wrap in a "sweepable" package. Calling the recorder runs it,
-    and returns the data.
+    and returns the data. Returned data may be:
+
+    a) a dictionary with elements of types b) or c)
+    b) a float, int or complex
+    c) a nd.array or nd.arrayable list of floats complex or ints of arbitrary
+        dimensions.
     '''
     def __init__(self, obj, prop, name, key = False):
         self.obj = obj
         self.prop = prop
         self.name = name
         self.key = key
-        self.gainobj = False
-        self.gainprop = False
+        self.preamp = False
+        if not hasattr(obj, "__getstate__"):
+            print('Passed object does not have a getstate. Instrument '
+                                            + 'config will not be saved!')
+            self.savestate = False
+        else:
+            self.savestate = True
+
 
     def __call__(self, n):
         if self.key:
-            if self.gainobj:
-                toreturn = getattr(self.gainobj, self.gainprop
-                                        )*getattr(self.obj ,self.prop)[self.key]
-            else:
-                toreturn =  getattr(self.obj ,self.prop)[self.key]
+            returneddata = getattr(self.obj ,self.prop)[self.key]
         else:
-            if self.gainobj:
-                toreturn = getattr(self.gainobj, self.gainprop
-                                        )*getattr(self.obj ,self.prop)
-            else:
-                toreturn =  getattr(self.obj ,self.prop)
-        return toreturn
+            returneddata = getattr(self.obj ,self.prop)
+        return returneddata
 
-    def add_gain(self, obj, property):
+    def add_preamp(self, preamp):
         '''
-        Corrects number by x = x/g for gain g, which must be the property of object
-        Automatically adds "already divided by gain" to the end of the name.
+        Associates a preamp with the measurement, ensuring its state is
+        saved and that it is recorded that its gain modifies the recorded data
+        The saved data will still be the exact returned values from the
+        instrument, all mathematical correction for the gain must happen
+        in post processing.
         '''
-        try:
-            float(getattr(obj, property))
-        except:
-            raise Exception('Property is not a float or does not exist!')
-        self.gainobj = obj
-        self.gainprop = property
-        self.name = self.name + ' already divided by gain'
+
+        self.preamp = preamp
+
+    def _getconfig(self):
+        config = {'Property recorded' : self.prop,
+                  'Key used': self.key}
+
+        if self.savestate:
+            config['Instrument Configuration'] = self.obj.__getstate__()
+        if self.preamp:
+            config['Preamplified'] = self.preamp.__getstate__()
+        return config
 
 
 class Active(Measurement):
@@ -63,6 +74,12 @@ class Active(Measurement):
         self.array = array
         self.name = name
         self.delay = delay
+        if not hasattr(obj, "__getstate__"):
+            print('Passed object does not have a getstate. Instrument '
+                                            + 'config will not be saved!')
+            self.savestate = False
+        else:
+            self.savestate = True
 
     def __call__(self, n):
         setattr(self.obj, self.prop, self.array[n])
@@ -72,6 +89,14 @@ class Active(Measurement):
         except:
             pass
 
+    def _getconfig(self):
+        print('ran config')
+        config = {'Values swept over' : self.array,
+                                                'Property swept': self.prop,}
+        if self.savestate:
+            config['Instrument Configuration'] = self.obj.__getstate__()
+        return config
+
 class Sweep(Measurement):
     '''
     Executes a 1D sweep. Data is always indexed vs point number, time indexes
@@ -80,12 +105,11 @@ class Sweep(Measurement):
 
     def __init__(self, name, pathtosave = '/', bi = True, runcount = 1,
                  pausebeforesweep = 0, saveasyougo = False, saveatend = True,
-                 svr = False):
+                 svr = False, saveconfig = True):
 
         if saveatend and saveasyougo:
             raise Exception('only one saving method allowed!')
         self.repeaters = []
-        self.sweeps_data = []
         self.name = name
         self.ns = []
         self.bi = bi
@@ -98,12 +122,14 @@ class Sweep(Measurement):
         elif svr:
             self.savedata = svr
         self.saveatend = saveatend
+        self.saveconfig = saveconfig
 
     def _setupsave(self, init, iter):
         '''
         Sets up saving of data
         '''
         sweep_data = {}
+        sweep_data['config'] = {}
         if self.bi:
             directions = ['forward', 'reverse']
         else:
@@ -112,36 +138,53 @@ class Sweep(Measurement):
             sweep_data[direction] = {}
             for r in self.repeaters:
                 if hasattr(r,"name"):
+                    print(r.name)
+                    if self.saveconfig and hasattr(r, "_getconfig"):
+                        cur_config =  r._getconfig()
+                        self.savedata.append(self.pathtosave +
+                        'initialization: %s/iteration: %s/params/%s/'
+                        %(str(init),str(iter), r.name), cur_config)
+                        sweep_data['config'][r.name] = cur_config
                     if isinstance(r, Sweep):
                         sweep_data[direction][r.name]={}
                         if self.saveasyougo:
                             self.savedata.append(self.pathtosave +
                             'initialization: %s/iteration: %s/%s/%s/'
                             % (str(init),str(iter), direction, r.name), {})
-                    elif isinstance(r(0),dict):
-                        sweep_data[direction][r.name]={}
-                        for key in r(0).keys():
-                            sweep_data[direction][r.name
-                                ][key] = np.full(self.points, np.nan)
-                            if self.saveasyougo:
-                                self.savedata.append(self.pathtosave +
-                                'initialization: %s/iteration: %s/%s/%s/%s'
-                                %(str(init),str(iter), direction, r.name,
-                                        str(key)), np.full(self.points, np.nan))
                     else:
-                        sweep_data[direction][r.name]=(
-                                        np.full(self.points, np.nan))
-                        if self.saveasyougo:
-                            self.savedata.append(self.pathtosave
-                                    + 'initialization: %s/iteration: %s/%s/%s/'
+                        testdata = r(0)
+                        if isinstance(testdata,dict):
+                            sweep_data[direction][r.name]={}
+                            for key in testdata.keys():
+                                arrayedtestdata = np.asarray(testdata[key])
+                                sweep_data[direction][r.name
+                                    ][key] = np.full((self.points,) +
+                                    arrayedtestdata.shape, np.nan)
+                                if self.saveasyougo:
+                                    self.savedata.append(self.pathtosave +
+                                    'initialization: %s/iteration: %s/%s/%s/%s'
+                                    %(str(init),str(iter), direction, r.name,
+                                            str(key)), np.full((self.points,)
+                                            + arrayedtestdata.shape, np.nan))
+                        else:
+                            arrayedtestdata = np.asarray(testdata)
+                            sweep_data[direction][r.name]=(
+                                np.full((self.points,)
+                             + arrayedtestdata.shape, np.nan))
+                            if self.saveasyougo:
+                                self.savedata.append(self.pathtosave
+                                        + 'initialization: %s/iteration: %s/%s/%s/'
                                     % (str(init),str(iter), direction, r.name),
-                                                  np.full(self.points, np.nan))
+                                                 np.full((self.points,)
+                                              + arrayedtestdata.shape, np.nan))
         return sweep_data
 
     def __call__(self, n):
         '''
         Runs the sweep, appending the sweep data to self.sweeps_data.
         '''
+        #procedural instrument saving. Experimental. Still save by hand as well.
+
         sweep_data = {}
         for k in range(self.runcount):
             sweep_data["iteration: " + str(k)] = {}
@@ -183,14 +226,14 @@ class Sweep(Measurement):
                                     self.savedata.append(self.pathtosave +
                                     'initialization: %s/iteration: %s/forward/%s/%s'
                             %(str(n),str(k), r.name, str(key)),
-                            returneddata[key], slc= slice(point, point + 1))
+                            [returneddata[key]], slc= slice(point, point + 1))
                         else:
                             sweep_data["iteration: " + str(k)]['forward'][
                                                     r.name][point] =  returneddata
                             if self.saveasyougo:
                                 self.savedata.append(self.pathtosave
                                 + 'initialization: %s/iteration: %s/forward/%s/'
-                                % (str(n),str(k), r.name),returneddata,
+                                % (str(n),str(k), r.name), [returneddata],
                                                 slc= slice(point, point + 1))
                     else:
                         r(point)
@@ -238,38 +281,6 @@ class Sweep(Measurement):
             self.savedata.append(self.pathtosave + 'initialization: %s/'
                                                         % str(n), sweep_data)
             #self.save()
-        return sweep_data
-
-    def setupsave(direction, init, iter):
-        '''
-        Sets up saving of data
-        '''
-        sweep_data = {}
-        for r in self.repeaters:
-            if hasattr(r,"name"):
-                if isinstance(r, Sweep):
-                    sweep_data[r.name]={}
-                    if self.saveasyougo:
-                        self.savedata.append(self.pathtosave +
-                        'initialization: %s/iteration: %s/%s/%s/'
-                        % (str(init),str(iter), direction, r.name), {})
-                elif isinstance(r(0),dict):
-                    for key in r(0).keys():
-                        sweep_data[r.name
-                            ][key] = np.full(self.points, np.nan)
-                    if self.saveasyougo:
-                        self.savedata.append(self.pathtosave +
-                        'initialization: %s/iteration: %s/%s/%s/%s'
-                        %(str(init),str(iter), direction, r.name, str(key)),
-                                                  np.full(self.points, np.nan))
-                else:
-                    sweep_data[r.name]=(
-                                    np.full(self.points, np.nan))
-                    if self.saveasyougo:
-                        self.savedata.append(self.pathtosave
-                                + 'initialization: %s/iteration: %s/%s/%s/'
-                % (str(init),str(iter), direction, r.name), np.full(self.points,
-                                                                        np.nan))
         return sweep_data
 
     def run(self):
@@ -387,6 +398,9 @@ class Time(Measurement):
             pass
         return self.seconds()
 
+    def _getconfig(self):
+        return {'Times delayed until' : self.times}
+
 class Delayer(Measurement):
     '''
     Delays execution for a fixed amount of time
@@ -399,6 +413,8 @@ class Delayer(Measurement):
         starttime = time.time()
         while(time.time() - starttime<self.delay):
             pass
+    def _getconfig(self):
+        return {'Delay length' : self.delay}
 
 
 class Wait(Measurement):
@@ -416,6 +432,12 @@ class Wait(Measurement):
 
         self.name = name
         self.obj = obj
+        if not hasattr(obj, "__getstate__"):
+            print('Passed object does not have a getstate. Instrument '
+                                            + 'config will not be saved!')
+            self.savestate = False
+        else:
+            self.savestate = True
         self.prop = prop
         self.values = values
         self.elem = elem
@@ -425,6 +447,7 @@ class Wait(Measurement):
         self.timetoaccept = timetoaccept
         self.interval = interval
         self.start_time_in_range = False
+
 
     def reset(self):
         '''
@@ -472,3 +495,14 @@ class Wait(Measurement):
                 print('Done')
                 break
         return time.time() - tstart
+
+    def _getconfig(self):
+        config = {'Measured Property' : self.values, 'Key of measured item':
+        self.elem,
+      'Valence of test (-1 less than, 1 greater than, 0 within tolerance)':
+        self.valence, 'Tolerance of test, in as measured units' :
+        self.tolerance, 'Timeout (s)': self.timeout, 'Time to accept (s)' :
+        self.timetoaccept, 'Sampling interval (s)' :self.interval}
+        if self.savestate:
+            config['Instrument Configuration'] = self.obj.__getstate__()
+        return config
