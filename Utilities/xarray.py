@@ -3,6 +3,9 @@ import numpy as np
 from importlib import reload
 import h5py
 import json
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+from matplotlib.collections import LineCollection
 
 class Xarray:
     '''
@@ -93,7 +96,7 @@ class Xarray:
         return ds
 
     @staticmethod
-    def scanspectra(fullpath, transposed=False, reshape=False):
+    def scanspectra(fullpath, transposed=False, reshape=False, times=False):
         '''
         '''
 
@@ -147,6 +150,20 @@ class Xarray:
                              'y units': 'Volts',
                              }
                          )
+        if times:
+            ts = xr.DataArray(np.array(sp.times).reshape(sp_y.shape[0], sp_x.shape[0]), dims=dims,
+                             coords={'x':sp_x, 'y':sp_y},
+                             name='Seconds since Epoch when each scanspectra started (s)',
+                             attrs={'data units': 'Volts',
+                                    'x units': 'Volts',
+                                    'y units': 'Volts',
+                                    }
+                             )
+        else:
+            ts=0
+
+                                
+
         try:
             squidarray = Xarray.notNone(sp.squidarray, 
                                         sp.plane.instruments['squidarray'],
@@ -175,6 +192,7 @@ class Xarray:
         ds = xr.Dataset({'V': V, 'psdAve':psdAve, 'z': Z, 
                         'preamp':Xarray.toblankdataarray(preamp, 'preamp'),
                         'squidarray':Xarray.toblankdataarray(squidarray, 'preamp'),
+                        'starttimes':ts,
                         },
                         attrs={'filename': sp.filename,
                                'monitor_time': sp.monitor_time,
@@ -551,9 +569,6 @@ class Xarray:
         return ds
 
 
-
-
-        
     @staticmethod
     def notNone(a, b, c):
         if a is None and b is None:
@@ -576,6 +591,200 @@ class Xarray:
         return [file_h5, file_json]
 
     @staticmethod
+    def SQUID_Mod_FastIV_1(path):
+        from Nowack_Lab.Procedures.squidIV2 import SQUID_Mod_FastIV
+        modiv = SQUID_Mod_FastIV.load(path)
+
+        mod_v = modiv.mod_Vs
+        mod_i = modiv.mod_Is
+        iv_v  = modiv.iv_Vs
+        iv_i  = modiv.iv_Is
+
+        Vmeas = xr.DataArray(modiv.Vmeas[0,:,:,:],
+                            dims = ['mod_i', 'direction', 'iv_i'],
+                            coords={
+                                'direction': ['increasing_v', 'decreasing_v'],
+                                'mod_i': mod_i,
+                                'iv_i': iv_i,
+                                'mod_v': ( ('mod_i'), mod_v),
+                                'iv_v': ( ('iv_i'), iv_v),
+                                'mod_i_uA': ( ('mod_i'), mod_i*1e6),
+                                'iv_i_uA': ( ('iv_i'), iv_i*1e6),
+                                },
+                            name='Measured Voltages of IV of SQUID',
+                            attrs={'data units': 'Volts',
+                                   'mod_v units': 'Volts',
+                                   'iv_v units': 'Volts',
+                                   'mod_i units': 'Amps',
+                                   'iv_i units': 'Amps',
+                                   }
+                            )
+
+        Vsrc = xr.DataArray(modiv.Vsrc[0,:,:,:,:],
+                            dims = ['mod_i', 'direction', 'iv_i', 'voltageprobes'],
+                            coords={
+                                'direction': ['increasing_v', 'decreasing_v'],
+                                'mod_i': mod_i,
+                                'iv_i': iv_i,
+                                'mod_v': ( ('mod_i'), mod_v),
+                                'iv_v': ( ('iv_i'), iv_v),
+                                'voltageprobes': ['fc', 'mod', 'iv'],
+                                'mod_i_uA': ( ('mod_i'), mod_i*1e6),
+                                'iv_i_uA': ( ('iv_i'), iv_i*1e6),
+                                },
+                            name='Measured Voltages of IV of SQUID',
+                            attrs={'data units': 'Volts',
+                                   'mod_v units': 'Volts',
+                                   'iv_v units': 'Volts',
+                                   'mod_i units': 'Amps',
+                                   'iv_i units': 'Amps',
+                                   }
+                            )
+        ds = xr.Dataset({'Vmeas': Vmeas,
+                         'Vsrc':  Vsrc,
+                         'preamp':Xarray.toblankdataarray(modiv.preamp, 
+                                                          'preamp'),
+                         },
+                         attrs={
+                             'filename': modiv.filename,
+                             'daqout_R0': modiv.daqout_R0,
+                             'daqout_R1': modiv.daqout_R1,
+                             'daqout_R2': modiv.daqout_R2,
+                             'iv_R': modiv.iv_R,
+                             'mod_R': modiv.mod_R,
+                             'samplerate': modiv.samplerate,
+                             'time_elapsed_s': modiv.time_elapsed_s,
+                             'timestamp': modiv.timestamp,
+                             'loadpath':path,
+                             }
+                         )
+        return ds
+
+    @staticmethod
+    def SQUID_Mod_FastMod_1(path):
+        from Nowack_Lab.Procedures.squidIV2 import SQUID_Mod_FastMod
+        modiv = SQUID_Mod_FastMod.load(path)
+
+        mod_v = modiv.mod_Vs
+        mod_i = modiv.mod_Is
+        iv_v  = modiv.iv_Vs
+        iv_i  = modiv.iv_Is
+
+        Vmeas = xr.DataArray(modiv.Vmeas[0,:,:,:],
+                            dims = ['iv_i', 'direction', 'mod_i'],
+                            coords={
+                                'direction': ['increasing_v', 'decreasing_v'],
+                                'mod_i': mod_i,
+                                'iv_i': iv_i,
+                                'mod_v': ( ('mod_i'), mod_v),
+                                'iv_v': ( ('iv_i'), iv_v),
+                                'mod_i_uA': ( ('mod_i'), mod_i*1e6),
+                                'iv_i_uA': ( ('iv_i'), iv_i*1e6),
+                                },
+                            name='Measured Voltages of IV of SQUID',
+                            attrs={'data units': 'Volts',
+                                   'mod_v units': 'Volts',
+                                   'iv_v units': 'Volts',
+                                   'mod_i units': 'Amps',
+                                   'iv_i units': 'Amps',
+                                   }
+                            )
+
+        Vsrc = xr.DataArray(modiv.Vsrc[0,:,:,:,:],
+                            dims = ['iv_i', 'direction', 'mod_i', 'voltageprobes'],
+                            coords={
+                                'direction': ['increasing_v', 'decreasing_v'],
+                                'mod_i': mod_i,
+                                'iv_i': iv_i,
+                                'mod_v': ( ('mod_i'), mod_v),
+                                'iv_v': ( ('iv_i'), iv_v),
+                                'voltageprobes': ['fc', 'mod', 'iv'],
+                                'mod_i_uA': ( ('mod_i'), mod_i*1e6),
+                                'iv_i_uA': ( ('iv_i'), iv_i*1e6),
+                                },
+                            name='Measured Voltages of IV of SQUID',
+                            attrs={'data units': 'Volts',
+                                   'mod_v units': 'Volts',
+                                   'iv_v units': 'Volts',
+                                   'mod_i units': 'Amps',
+                                   'iv_i units': 'Amps',
+                                   }
+                            )
+        ds = xr.Dataset({'Vmeas': Vmeas,
+                         'Vsrc':  Vsrc,
+                         'preamp':Xarray.toblankdataarray(modiv.preamp, 
+                                                          'preamp'),
+                         },
+                         attrs={
+                             'filename': modiv.filename,
+                             'daqout_R0': modiv.daqout_R0,
+                             'daqout_R1': modiv.daqout_R1,
+                             'daqout_R2': modiv.daqout_R2,
+                             'iv_R': modiv.iv_R,
+                             'mod_R': modiv.mod_R,
+                             'samplerate': modiv.samplerate,
+                             'time_elapsed_s': modiv.time_elapsed_s,
+                             'timestamp': modiv.timestamp,
+                             'loadpath':path,
+                             }
+                         )
+        return ds
+
+    @staticmethod
+    def daqspectrum(path):
+        from Nowack_Lab.Procedures.daqspectrum import DaqSpectrum
+        spec = DaqSpectrum.load(path)
+
+
+        V = xr.DataArray(spec.V,
+                            dims = ['t'],
+                            coords={ 't': spec.t, },
+                            name='Measured Voltages',
+                            attrs={'data units': 'Volts',
+                                   't units': 'seconds',
+                                   }
+                            )
+        psd = xr.DataArray(spec.psd,
+                            dims=['f'],
+                            coords={'f':spec.f},
+                            name='Power Spectral Density',
+                            attrs={'data units': 'Volts',
+                                   'f units': 'Hz',
+                                   }
+                            )
+        asd = xr.DataArray(spec.psdAve,
+                            dims=['f'],
+                            coords={'f':spec.f},
+                            name='Amplitude Spectral Density',
+                            attrs={'data units': 'Volts',
+                                   'f units': 'Hz',
+                                   }
+                            )
+
+
+        ds = xr.Dataset({'V': V,
+                         'psd':psd,
+                         'asd':asd,
+                         'preamp':Xarray.toblankdataarray(spec.preamp, 
+                                                          'preamp'),
+                         'squidarray':Xarray.toblankdataarray(
+                                            spec.squidarray, 
+                                            'squidarray'),
+                         },
+                         attrs={
+                             'filename': spec.filename,
+                             'measure_freq': spec.measure_freq,
+                             'measure_time': spec.measure_time,
+                             'time_elapsed_s': spec.time_elapsed_s,
+                             'timestamp': spec.timestamp,
+                             'loadpath':path,
+                             'unitsperV': spec.conversion,
+                             'unit': spec.units,
+                             }
+                         )
+        return ds
+
+    @staticmethod
     def save(ds, filename):
         ds.to_netcdf(filename, format='NETCDF4', engine='h5netcdf')
 
@@ -589,4 +798,97 @@ class Xarray:
         encoding = {var: comp for var in ds.data_vars}
         ds.to_netcdf(filename, format='NETCDF4', engine='h5netcdf',
                     encoding=encoding)
+
+
+    @staticmethod
+    def plotlines(fig, ax, dataarray, x, y, hue, c=None, **kwargs):
+        '''
+        params:
+        ~~~~~~
+        ax        (matplotlib axes)
+        dataarray (xarray dataarray) that you want to plot
+        x         (string) name of parameter of dataarray to be 
+                           plotted on x axis
+        y         (string) name of parameter of dataarray to be 
+                           plotted on y axis
+        hue       (string) name of parameter of dataarray to be 
+                           plotted as hue, color of line
+        c         (ndarray or None) relative value for each line
+                            that determins the color plotted.  If
+                            None, even spacing between lines
+
+
+        returns:
+        ~~~~~~~
+        [LineCollection, colorbar]
+
+        **kwargs are passed straight to matplotlib.collections.LineCollections
+        Interesting ones include:
+            cmap
+            linestyles,
+            norm,
+            lw, (linewidth)
+        '''
+
+        #if isinstance(cmap, str):
+        #    cmap = getattr(mpl.cm, cmap)
+        print(x,y,hue)
+        
+        if c==None:
+            c = np.asarray(getattr(dataarray, hue).values)
+            
+        
+        ax.set_xlim([getattr(dataarray,x).min(), getattr(dataarray,x).max()])
+        ax.set_ylim([getattr(dataarray,y).min(), getattr(dataarray,y).max()])
+
+        line_segments = [np.column_stack(
+                            [getattr(dataarray.isel({hue:h}),x),
+                             getattr(dataarray.isel({hue:h}),y),
+                             ])
+                         for h in range(getattr(dataarray,hue).shape[0])]
+
+        lc = LineCollection(line_segments, **kwargs)
+        lc.set_array(np.asarray(c))
+
+        ax.add_collection(lc)
+
+        cbar = fig.colorbar(lc)
+        cbar.set_label(hue)
+
+        ax.set_xlabel(x)
+        ax.set_ylabel(y)
+
+        return [lc,cbar]
+
+    @staticmethod
+    def fftsmooth(dataarray, dim_sm, dim_itr, index):
+        '''
+        dataarray must be 2D
+        '''
+        da = dataarray.copy()
+        for i in range(getattr(da, dim_itr).shape[0]):
+            rft = np.fft.rfft(da[{dim_itr: i}])
+            rft[index:] = 0
+            da[{dim_itr:i}] = np.fft.irfft(rft)
+
+        return da
+
+    @staticmethod
+    def remove_jumps_mean(dataarray, dim_sm='sbias', dim_mean='test_i', jumpsize=1):
+        '''
+        unravels a dataarray that jumps a phi_0 in places
+        '''
+        da = dataarray
+        da_diff = da.mean(dim_mean).diff(dim_sm)
+        offset = np.zeros(len(getattr(da, dim_sm)))
+        offsetcurr = 0
+        for i in range(len(getattr(da, dim_sm))-1):
+            if da_diff[{dim_sm: i}] <= -jumpsize: #if at a down jump
+                offsetcurr -= da_diff[{dim_sm:i}] #add an up jump to all data pts in the future
+            elif da_diff[{dim_sm:i}] >= jumpsize: #if at an up jump
+                offsetcurr -= da_diff[{dim_sm:i}] #remove an up jump
+
+            offset[i+1] = offsetcurr
+
+        return xr.DataArray(offset, dims=[dim_sm], coords={dim_sm:getattr(da, dim_sm)})
 
