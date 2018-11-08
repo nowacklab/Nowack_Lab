@@ -6,6 +6,7 @@ from IPython.display import clear_output
 import sys
 from ..Utilities.dataset import Dataset
 from ..Utilities.datasaver import Saver
+from datetime import datetime
 
 class Recorder(Measurement):
     '''
@@ -338,15 +339,22 @@ class Sweep(Measurement):
 
 class Current_Time(Measurement):
     '''
-    Returns the current relative time to when it was initialized
+    if lt (local time) is False, returns time since epoch.
+    If lt is true, returns local time in YYYYMMDDHHSS format
     '''
 
-    def __init__(self):
-        self.starttime = time.time()
-        self.name = 'Current Relative Time (Seconds)'
-
+    def __init__(self, lt = False):
+        self.lt = lt
+        if not lt:
+            self.name = 'Current Time since epoch (Seconds)'
+        else:
+            self.name = 'Current local time (YYYYMMDDHHMMSS)'
     def __call__(self,n):
-        return time.time() - self.starttime
+        if self.lt:
+            now = datetime.now()
+            return now.strftime('%Y%m%d%H%M%S')
+        else:
+            return time.time()
 
 class Time(Measurement):
     '''
