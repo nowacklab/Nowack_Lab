@@ -329,7 +329,8 @@ class Saver(object):
                     if type(value) is np.ndarray:
                         # Save the numpy array as a dataset
                         d = group.create_dataset(key, value.shape,
-                            compression = 'gzip', compression_opts=9)
+                            compression = 'gzip', compression_opts=9,
+                            dtype=np.dtype('float64'))
                         d.set_fill_value = np.nan
                         d[...] = value
 
