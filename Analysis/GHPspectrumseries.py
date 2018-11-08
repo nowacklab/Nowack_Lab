@@ -31,6 +31,7 @@ class SpectrumSeries(Saver):
         Vav = []
         Ibias = []
         Vbias = []
+        V2ps = []
         Vn = []
 
         for j, Vtg in enumerate(self.Vtgs):

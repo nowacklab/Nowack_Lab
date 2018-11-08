@@ -126,7 +126,7 @@ class RvsB_Phil(RvsB):
         Sweep rate and field in T. Delay is in seconds. Rate is T/min
         persistent: whether to enter persistent mode after the measurement
         '''
-        super().__init__(instruments, Bend, delay, sweep_rate)
+        RvsB.__init__(self, instruments, Bend, delay, sweep_rate)
         self.persistent = persistent
 
 

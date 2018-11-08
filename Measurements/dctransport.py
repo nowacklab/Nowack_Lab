@@ -1,6 +1,7 @@
 import re, time, numpy as np, matplotlib.pyplot as plt
 from .measurement import Measurement
 from .transport import RvsSomething, RvsT, RvsVg
+from .magnetotransport import RvsB_Phil
 
 class DAQ_IV(Measurement):
     _daq_inputs = ['V1'] # e.g. V1, V2, ... provide an arbitrary number
@@ -230,6 +231,7 @@ class RvsSomething_DC(RvsSomething):
     This will be recorded as R2p
 
     Preamp may be used before the Zurich input. Specify preamp_gain manually.
+    NOTE the preamp_gain parameter only affects the signal received from the Zurich's normal inputs.
     '''
     instrument_list = ['zurich', 'keithleybias']
     something='time'
@@ -340,6 +342,24 @@ class RvsSomething_DC(RvsSomething):
         self.ax.set_title(self.filename)
         self.fig.tight_layout()
 
+class RvsB_Phil_DC(RvsSomething_DC, RvsB_Phil):
+    '''
+    DC version of RvsB_Phil
+    '''
+    instrument_list = ['zurich', 'keithleybias', 'magnet']
+    something = 'B'
+    something_units = 'T'
+
+    def __init__(self, instruments = {}, Bend = 1, delay=1, sweep_rate=.1,
+                persistent=True, **kwargs):
+        '''
+        Sweep rate and field in T. Delay is in seconds. Rate is T/min
+        persistent: whether to enter persistent mode after the measurement
+        '''
+        RvsB_Phil.__init__(self, instruments, Bend, delay, sweep_rate)
+        RvsSomething_DC.__init__(self, instruments, **kwargs)
+        self.persistent = persistent
+
 
 class RvsTime_DC(RvsSomething_DC):
     '''
@@ -362,7 +382,7 @@ class RvsT_DC(RvsSomething_DC, RvsT):
         Sweep rate and temperature in K. Delay is in seconds. Rate is K/min
         **kwargs for RvsSomething_DC
         '''
-        RvsSomething_DC.__init__(self, instruments=instruments)
+        RvsSomething_DC.__init__(self, instruments=instruments, **kwargs)
 
         self.Tstart = Tstart
         self.Tend = Tend
