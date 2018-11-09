@@ -69,7 +69,7 @@ class Active(Measurement):
     gettable class will return its gotten value after setting. Delays code by
     .1 ms to allow properties time to change.
     '''
-    def __init__(self, obj, prop, name, array, delay = 1e-2):
+    def __init__(self, obj, prop, name, array, delay = 1e-3):
         self.prop = prop
         self.obj = obj
         self.array = array
@@ -163,24 +163,24 @@ class Sweep(Measurement):
                                 arrayedtestdata = np.asarray(testdata[key])
                                 sweep_data[direction][r.name
                                     ][key] = np.full((self.points,) +
-                                    arrayedtestdata.shape, np.nan)
+                                    arrayedtestdata.shape, np.float64(np.nan))
                                 if self.saveasyougo:
                                     self.savedata.append(self.pathtosave +
                                     'initialization: %s/iteration: %s/%s/%s/%s'
                                     %(str(init),str(iter), direction, r.name,
                                             str(key)), np.full((self.points,)
-                                            + arrayedtestdata.shape, np.nan))
+                                + arrayedtestdata.shape, np.float64(np.nan)))
                         else:
                             arrayedtestdata = np.asarray(testdata)
                             sweep_data[direction][r.name]=(
                                 np.full((self.points,)
-                             + arrayedtestdata.shape, np.nan))
+                             + arrayedtestdata.shape, np.float64(np.nan)))
                             if self.saveasyougo:
                                 self.savedata.append(self.pathtosave
                                         + 'initialization: %s/iteration: %s/%s/%s/'
                                     % (str(init),str(iter), direction, r.name),
                                                  np.full((self.points,)
-                                              + arrayedtestdata.shape, np.nan))
+                                 + arrayedtestdata.shape, np.float64(np.nan)))
         return sweep_data
 
     def __call__(self, n):
@@ -230,15 +230,16 @@ class Sweep(Measurement):
                                     self.savedata.append(self.pathtosave +
                                     'initialization: %s/iteration: %s/forward/%s/%s'
                             %(str(n),str(k), r.name, str(key)),
-                            [returneddata[key]], slc= slice(point, point + 1))
+                            returneddata[key],
+                                                slc= slice(point, point + 1))
                         else:
                             sweep_data["iteration: " + str(k)]['forward'][
                                                     r.name][point] =  returneddata
                             if self.saveasyougo:
                                 self.savedata.append(self.pathtosave
                                 + 'initialization: %s/iteration: %s/forward/%s/'
-                                % (str(n),str(k), r.name), [returneddata],
-                                                slc= slice(point, point + 1))
+                                % (str(n),str(k), r.name), returneddata,
+                                                   slc= slice(point, point + 1))
                     else:
                         r(point)
             if self.bi:

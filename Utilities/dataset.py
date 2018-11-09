@@ -87,14 +87,12 @@ class Dataset():
                 if not isinstance(obj, dict):
                     self._writetoh5(data = obj, path = h5path)
             self.dictvisititems(cleandatatowrite, _loadhdf5)
-        elif isinstance(cleandatatowrite, (np.ndarray, list)) and slc:
+        elif isinstance(cleandatatowrite, (np.ndarray, list) +
+                                            tuple(self.allowedtypes))  and slc:
                     self._appenddatah5(self.filename, cleandatatowrite,
                                                              pathtowrite,slc)
-        elif any([isinstance(cleandatatowrite, sometype) for sometype in
-                                                    self.allowedtypes]) and slc:
-                    self._appenddatah5(self.filename, [cleandatatowrite],
-                                                             pathtowrite,slc)
         else:
+            print(datatowrite)
             self._writetoh5(data = cleandatatowrite, path = pathtowrite)
 
 
@@ -145,10 +143,16 @@ class Dataset():
         '''
         f = h5py.File(filename,'r+')
         dataset = f[pathtowrite]
-        if np.shape(numpyarray) !=  np.shape(dataset[slc]):
+        newshape = np.shape(numpyarray)
+        oldstuff = dataset[slc]
+        oldshape = np.shape(np.squeeze(oldstuff))
+        if newshape !=  oldshape:
             f.close()
-            raise Exception('Slice and data are not the same shape')
-        if np.all(np.isnan(dataset[slc])):
+            print(numpyarray)
+            print(oldstuff)
+            raise Exception('Slice shape '+ str(oldshape) +
+             ' does not match data shape ' + str(newshape))
+        elif np.all(np.isnan(oldstuff)):
             dataset[slc] = numpyarray
             f.close()
         else:
