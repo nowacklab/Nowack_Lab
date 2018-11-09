@@ -10,11 +10,11 @@ def set_experiment_data_path():
 
     ## Set experiment data path
     try:
-        print('Current experiment: %s' %save.get_experiment_data_dir())
         paths = Saver.getsavepaths()
         print('Current experimental save paths:')
         for key in paths.keys():
             print(paths[key]['exppath'])
+        print('Current experiment: %s' %save.get_experiment_data_dir())
 
     except:
         pass

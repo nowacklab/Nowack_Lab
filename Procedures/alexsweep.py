@@ -135,17 +135,20 @@ class Sweep(Measurement):
             directions = ['forward', 'reverse']
         else:
             directions = ['forward']
+        for r in self.repeaters:
+            if self.saveconfig and hasattr(r, "_getconfig"):
+                if self.saveasyougo or self.saveatend:
+                    cur_config =  r._getconfig()
+                    self.savedata.append(self.pathtosave +
+                    'initialization: %s/iteration: %s/params/%s/'
+                    %(str(init),str(iter), r.name), cur_config)
+                else:
+                    sweep_data['config'][r.name] = cur_config
         for direction in directions:
             sweep_data[direction] = {}
             for r in self.repeaters:
                 if hasattr(r,"name"):
                     print(r.name)
-                    if self.saveconfig and hasattr(r, "_getconfig"):
-                        cur_config =  r._getconfig()
-                        self.savedata.append(self.pathtosave +
-                        'initialization: %s/iteration: %s/params/%s/'
-                        %(str(init),str(iter), r.name), cur_config)
-                        sweep_data['config'][r.name] = cur_config
                     if isinstance(r, Sweep):
                         sweep_data[direction][r.name]={}
                         if self.saveasyougo:
