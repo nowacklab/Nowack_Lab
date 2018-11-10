@@ -205,7 +205,7 @@ class MutualInductance(Measurement):
 
 
 class ArraylessMI(Measurement):
-    '''
+    """
     ### NEEDS CLEANUP ###
 
     Map out the response of the SQUID in the mod current / field coil current
@@ -222,7 +222,7 @@ class ArraylessMI(Measurement):
 
     example:
 
-    '''
+    """
     instrument_list = ['daq', 'preamp']
     _daq_inputs = ['squid_out']
     _daq_outputs = ['squid_bias', 'mod_source', 'field_source']
@@ -245,9 +245,9 @@ class ArraylessMI(Measurement):
                          np.nan)
 
     def do(self):
-        '''
+        """
         Perform the MI measurement
-        '''
+        """
         # Bias the SQUID to the desired working point
         _,_ = self.daq.sweep(
             {'squid_bias': self.daq.outputs['squid_bias'].V},

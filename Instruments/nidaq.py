@@ -16,12 +16,12 @@ from ..Utilities import logging
 from .instrument import Instrument
 
 class NIDAQ(Instrument):
-    '''
+    """
     For remote operation of the NI DAQ-6363.
     Slightly simplified version of Guen's squidpy driver;
     does not import/inherit anything from squidpy.
     Uses package Instrumental from Mabuchi lab at Stanford
-    '''
+    """
     _label = 'daq'
 
     def __init__(self, zero=False, dev_name='Dev1', input_range=10, output_range=10):
@@ -62,9 +62,9 @@ class NIDAQ(Instrument):
 
     def accel_function(self, start,end, numpts):
         """ Does an x**2-like ramp. Code looks weird but test it if you want! ^_^ """
-        '''
+        """
         NO THIS IS ACTUALLY CRAP DON'T USE THIS <-- LOL
-        '''
+        """
         if start == end:
             return [start]*numpts*2 # just return array of the same value
         part1arg = np.linspace(start, (end-start)/2+start, numpts)
@@ -75,9 +75,9 @@ class NIDAQ(Instrument):
 
 
     def all(self):
-        '''
+        """
         Returns a dictionary of all channel voltages.
-        '''
+        """
         voltages = {}
         for chan in self._ins + self._outs:
             voltages[chan] =  getattr(self, chan).V
@@ -86,7 +86,7 @@ class NIDAQ(Instrument):
 
     @property
     def inputs(self):
-        '''
+        """
         Getter:
         Makes a dictionary with keys = input channel labels, values = input channel objects
         To get the voltage of a channel by using the label, you would do something like:
@@ -96,7 +96,7 @@ class NIDAQ(Instrument):
         Setter:
         Set a bunch of input channel labels at once. d is a dictionary with keys = input channel labels, values = input channel real names
         e.g. {'squid': 'ai0'}
-        '''
+        """
         self._inputs = {}
         for label, name in self.input_names.items():
             self._inputs[label] = getattr(self, name)
@@ -105,10 +105,10 @@ class NIDAQ(Instrument):
 
     @inputs.setter
     def inputs(self, d):
-        '''
+        """
         Set a bunch of input channel labels at once. d is a dictionary with keys = input channel labels, values = input channel real names
         e.g. {'squid': 'ai0'} or {'squid': 0}
-        '''
+        """
         for label, name in d.items():
             if type(name) is int:
                 name = 'ai%i' %name
@@ -117,9 +117,9 @@ class NIDAQ(Instrument):
 
     @property
     def input_names(self):
-        '''
+        """
         Returns a dictionary mapping input channel labels (keys) to the real channel names (values).
-        '''
+        """
         self._input_names = {}
         for chan in self._ins:
             self._input_names[getattr(self, chan).label] = chan
@@ -128,7 +128,7 @@ class NIDAQ(Instrument):
 
     @property
     def outputs(self):
-        '''
+        """
         Getter:
         Makes a dictionary with keys = output channel labels, values = output channel objects
         To set the voltage of a channel by using the label, you would do something like:
@@ -137,7 +137,7 @@ class NIDAQ(Instrument):
         Setter:
         Set a bunch of output channel labels at once. d is a dictionary with keys = output channel labels, values = output channel real names
         e.g. {'piezo x': 'ao0'}
-        '''
+        """
         self._outputs = {}
         for label, name in self.output_names.items():
             self._outputs[label] = getattr(self, name)
@@ -146,10 +146,10 @@ class NIDAQ(Instrument):
 
     @outputs.setter
     def outputs(self, d):
-        '''
+        """
         Set a bunch of output channel labels at once. d is a dictionary with keys = output channel labels, values = output channel real names
         e.g. {'piezo x': 'ao0'} or {'piezo x': 0}
-        '''
+        """
         for label, name in d.items():
             if type(name) is int:
                 name = 'ao%i' %name
@@ -158,10 +158,10 @@ class NIDAQ(Instrument):
 
     @property
     def output_names(self):
-        '''
+        """
         Returns a dictionary mapping output channel labels (keys) to the
         real channel names (values).
-        '''
+        """
         self._output_names = {}
         for chan in self._outs:
             self._output_names[getattr(self, chan).label] = chan
@@ -169,7 +169,7 @@ class NIDAQ(Instrument):
 
 
     def monitor(self, chan_in, duration, sample_rate=100):
-        '''
+        """
         Monitor any number of channels for a given duration.
 
         Example:
@@ -181,7 +181,7 @@ class NIDAQ(Instrument):
 
         Returns:
             dict: Voltages and measurement times for each channel
-        '''
+        """
         if np.isscalar(chan_in):
             chan_in = [chan_in]
 
@@ -198,13 +198,13 @@ class NIDAQ(Instrument):
 
 
     def send_receive(self, data, chan_in=None, sample_rate=100):
-        '''
+        """
         Send data to daq outputs and receive data on input channels.
         Data should be a dictionary with keys that are output channel labels or names
         and values can be float, list, or np.ndarray.
         Arrays should be equally sized for all output channels.
         chan_in is a list of all input channel labels or names you wish to monitor.
-        '''
+        """
 
 
         # Make everything a numpy array
@@ -286,12 +286,12 @@ class NIDAQ(Instrument):
 
 
     def sweep(self, Vstart, Vend, chan_in=None, sample_rate=100, numsteps=1000):
-        '''
+        """
         Sweeps between voltages specified in Vstart and Vend, dictionaries with
         output channel labels or names as keys. (e.g. Vstart={'ao1':3, 'piezo z':4})
         Specify the input channels you want to monitor by passing in input channel labels or names.
         Returns (output voltage dictionary, input voltage dictionary)
-        '''
+        """
 
         output_data = {}
         for k in Vstart.keys():
@@ -302,9 +302,9 @@ class NIDAQ(Instrument):
         return output_data, received
 
     def singlesweep(self, outputchan, endpt, chan_in=None, sample_rate=100, numsteps=1000):
-        '''
+        """
         Sweeps outputchan from current voltage to endpt
-        '''
+        """
         return self.sweep(
                 Vstart = {outputchan: self.outputs[outputchan].V},
                 Vend   = {outputchan: endpt},
@@ -323,10 +323,10 @@ class Channel():
     _V = 0
     _conversion = 1 # build in conversion factor?
     def __init__(self, daq, name):
-        '''
+        """
         daq = NIDAQ from Instrumental library
         name = channel name (ai# or ao#)
-        '''
+        """
         self._daq = daq
         self.label = name # default label
         self._name = name # channel name ('ao#' or 'ai#'). Should not change.
@@ -373,9 +373,9 @@ class OutputChannel(Channel):
 
 
 if __name__ == '__main__':
-    '''
+    """
     Out of date 11/3/2016
-    '''
+    """
     nidaq = NIDAQ()
 
     out_data = []

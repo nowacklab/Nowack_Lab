@@ -7,9 +7,9 @@ class RF_sweep_current:
     # so may be worth having the class WithoutDAQ_ThreeParam_Sweep (esp. for plotting fxns)
     # and having these RF_sweep_<some parameter> classes extend WithoutDAQ_ThreeParam_Sweep
 
-    '''
+    """
     Initiates a RF_sweep_current object with parameters about the sweep.
-    '''
+    """
     def __init__(self, k_Istart, k_Istop, k_Isteps, v_freqmin, v_freqmax, v_power, v_avg_factor, v_numpoints,
                  filepath, v_smoothing_state=0, v_smoothing_factor=1, notes="No notes",hysteresis=False,
                  plot=False):

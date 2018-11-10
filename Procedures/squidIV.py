@@ -132,11 +132,11 @@ class SquidIV(Measurement):
     notes = ''
 
     def __init__(self, instruments={}, rate=9):
-        '''
+        """
         Example: SquidIV({'daq': daq, 'preamp': preamp}, 0, 0, None, 90)
         To make an empty object, then just call SquidIV(). You can do this if
         you want to plot previously collected data.
-        '''
+        """
         super().__init__()
 
         self.two_preamps = False
@@ -174,7 +174,7 @@ class SquidIV(Measurement):
 
 
     def calc_ramp(self, smooth=False):
-        '''
+        """
             For given ramp step size and ramp span, calculate the actual
             ramp voltages.  Takes in no additional arguments.
 
@@ -186,7 +186,7 @@ class SquidIV(Measurement):
             Changes:
                 self.numpts
                 self.Vbias
-        '''
+        """
         if smooth:
             # fill me in rachel
             self.numpts = int(self.Irampspan/self.Irampstep)
@@ -214,14 +214,14 @@ class SquidIV(Measurement):
            Irampspan = 200e-6, Irampstep = 0.5e-6, Irampcenter = 0,
            preampgain = 5000, preampfilter = (.3,100),
            smooth=False, checkParam = True, notes = True):
-        '''
+        """
         Execute me ... FIXME
 
         Inputs:
 
         Outputs:
             None
-        '''
+        """
 
 
         self.rate = rate # Hz # measurement rate of the daq

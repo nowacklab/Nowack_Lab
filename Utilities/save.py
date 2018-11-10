@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from . import utilities
 
 
-'''
+"""
 How saving and loading works:
 1) Walks through object's __dict__, subdictionaries, and subobjects, picks out
 numpy arrays, and saves them in a hirearchy in HDF5. Dictionaries are
@@ -26,7 +26,7 @@ to None, and the object is saved to JSON.
 3a) First, the JSON file is loaded to set up the dictionary hierarchy.
 3b) Second, we walk through the HDF5 file (identifying objects and dictionaries
 as necessary) and populate the numpy arrays.
-'''
+"""
 
 
 class Measurement:
@@ -41,10 +41,10 @@ class Measurement:
         self._load_instruments(instruments)
 
     def __getstate__(self):
-        '''
+        """
         Returns a dictionary of everything we want to save to JSON.
         This excludes numpy arrays which are saved to HDF5
-        '''
+        """
         def walk(d):
             d = d.copy() # make sure we don't modify original dictionary
             variables = list(d.keys()) # list of all the variables in the dictionary
@@ -82,17 +82,17 @@ class Measurement:
 
 
     def __setstate__(self, state):
-        '''
+        """
         Default method for loading from JSON.
         `state` is a dictionary.
-        '''
+        """
         self.__dict__.update(state)
 
     def _load_hdf5(self, filename, unwanted_keys = []):
-        '''
+        """
         Loads data from HDF5 files. Will walk through the HDF5 file and populate
         the object's dictionary and subdictionaries (already loaded by JSON)
-        '''
+        """
         with h5py.File(filename, 'r') as f:
             def walk(d, f):
                 for key in f.keys():
@@ -134,9 +134,9 @@ class Measurement:
 
 
     def _load_instruments(self, instruments={}):
-        '''
+        """
         Loads instruments from a dictionary.
-        '''
+        """
         for instrument in instruments:
             setattr(self, instrument, instruments[instrument])
             if instrument == 'daq':
@@ -151,16 +151,16 @@ class Measurement:
     @staticmethod
     def _load_json(json_file, unwanted_keys = []):
         import Nowack_Lab.Procedures.planefit
-        '''
+        """
         Loads an object from JSON.
-        '''
+        """
         with open(json_file, encoding='utf-8') as f:
             obj_dict = json.load(f)
 
         def walk(d):
-            '''
+            """
             Walk through dictionary to prune out Instruments
-            '''
+            """
             for key in list(d.keys()): # convert to list because dictionary changes size
                 #print(key)
                 #print(key)
@@ -197,7 +197,7 @@ class Measurement:
 
     def _save(self, filename=None, savefig=True, ignored = [], appendedpath='',
                 localpath='', remotepath = '', savepath = False):
-        '''
+        """
         Saves data. numpy arrays are saved to one file as hdf5, everything else
         is saved to JSON
 
@@ -224,7 +224,7 @@ class Measurement:
 
         If you specify a full path, the object will save to that path locally
         and to [get_data_server_path()]/[get_computer_name()]/other/[hirearchy past root directory]
-        '''
+        """
 
         # Saving to the experiment-specified directory
         if filename is None:
@@ -313,13 +313,13 @@ class Measurement:
 
 
     def _save_hdf5(self, filename, ignored = []):
-        '''
+        """
         Save numpy arrays to h5py. Walks through the object's dictionary
         and any subdictionaries and subobjects, picks out numpy arrays,
         and saves them in the hierarchical HDF5 format.
 
         A subobject is designated by a ! at the beginning of the varaible name.
-        '''
+        """
 
         with h5py.File(filename+'.h5', 'w') as f:
             # Walk through the dictionary
@@ -352,11 +352,11 @@ class Measurement:
 
 
     def _save_json(self, filename):
-        '''
+        """
         Saves an object to JSON. Specify a custom filename,
         or use the `filename` variable under that object.
         Through __getstate__, ignores any numpy arrays when saving.
-        '''
+        """
         if not exists(filename+'.json'):
             obj_string = jsp.encode(self)
             obj_dict = json.loads(obj_string)
@@ -364,22 +364,22 @@ class Measurement:
                 json.dump(obj_dict, f, sort_keys=True, indent=4)
 
     def do(self):
-        '''
+        """
         Do the main part of the measurement. Write this function for subclasses.
         run() wraps this function to enable keyboard interrupts.
         run() also includes saving and elapsed time logging.
-        '''
+        """
         pass
 
 
     @classmethod
     def load(cls, filename=None, instruments={}, unwanted_keys=[]):
-        '''
+        """
         Basic load method. Calls _load_json, not loading instruments, then loads from HDF5, then loads instruments.
         Overwrite this for each subclass if necessary.
         Pass in an array of the names of things you don't want to load.
         By default, we won't load any instruments, but you can pass in an instruments dictionary to load them.
-        '''
+        """
 
         if filename is None: # tries to find the last saved object; not guaranteed to work
             try:
@@ -408,9 +408,9 @@ class Measurement:
         return obj
 
     def make_timestamp_and_filename(self):
-        '''
+        """
         Makes a timestamp and filename from the current time.
-        '''
+        """
         now = datetime.now()
         self.timestamp = now.strftime("%Y-%m-%d %I:%M:%S %p")
         self.filename = now.strftime('%Y-%m-%d_%H%M%S')
@@ -418,15 +418,15 @@ class Measurement:
 
 
     def plot(self):
-        '''
+        """
         Update all plots.
-        '''
+        """
         if self.fig is None:
             self.setup_plots()
 
 
     def run(self, plot=True, save_appendedpath='', **kwargs):
-        '''
+        """
         Wrapper function for do() that catches keyboard interrrupts
         without leaving open DAQ tasks running. Allows scans to be
         interrupted without restarting the python instance afterwards
@@ -435,7 +435,7 @@ class Measurement:
             plot: boolean; to plot or not to plot?
 
         Check the do() function for additional available kwargs.
-        '''
+        """
         self.interrupt = False
         self._save_appendedpath = save_appendedpath
         done = None
@@ -473,16 +473,16 @@ class Measurement:
         return done
 
     def save(self, filename=None, savefig=True, **kwargs):
-        '''
+        """
         Basic save method. Just calls _save. Overwrite this for each subclass.
-        '''
+        """
         self._save(filename, savefig=True, **kwargs)
 
 
     def setup_plots(self):
-        '''
+        """
         Set up all plots.
-        '''
+        """
         self.fig, self.ax = plt.subplots() # example: just one figure
 
 
@@ -505,9 +505,9 @@ def get_computer_name():
 
 
 def get_experiment_data_dir():
-    '''
+    """
     Finds the most recently modified (current) experiment data directory. (Not the full path)
-    '''
+    """
 
     latest_subdir = max(glob.glob(os.path.join(get_local_data_path(), '*/')), key=os.path.getmtime)
 
@@ -525,9 +525,9 @@ def get_experiment_data_dir():
 
 
 def get_data_server_path():
-    '''
+    """
     Returns full path of the data server's main directory, formatted based on OS.
-    '''
+    """
     if platform.system() == 'Windows':
         return r'\\SAMBASHARE\labshare\data'
     elif platform.system() == 'Darwin': # Mac
@@ -539,9 +539,9 @@ def get_data_server_path():
 
 
 def get_local_data_path():
-    '''
+    """
     Returns full path of the local data directory.
-    '''
+    """
     return os.path.join(
                 os.path.expanduser('~'),
                 'data',
@@ -551,9 +551,9 @@ def get_local_data_path():
 
 
 def get_remote_data_path():
-    '''
+    """
     Returns full path of the remote data directory.
-    '''
+    """
     return os.path.join(
                 get_data_server_path(),
                 get_computer_name(),
@@ -562,9 +562,9 @@ def get_remote_data_path():
 
 
 def get_todays_data_dir():
-    '''
+    """
     Returns name of today's data directory.
-    '''
+    """
     experiment_path = get_experiment_data_dir()
     now = datetime.now()
     todays_data_path = os.path.join(experiment_path, now.strftime('%Y-%m-%d'))
@@ -585,11 +585,11 @@ def get_todays_data_dir():
 
 
 def set_experiment_data_dir(description=''):
-    '''
+    """
     Run this when you start a new experiment (e.g. a cooldown).
     Makes a new directory in the data folder corresponding to your computer
     with the current date and a description of the experiment.
-    '''
+    """
     now = datetime.now()
     now_fmt = now.strftime('%Y-%m-%d')
 
@@ -607,9 +607,9 @@ def set_experiment_data_dir(description=''):
 
 
 def _md5(filename):
-    '''
+    """
     Calculates an MD5 checksum for the given file
-    '''
+    """
     hash_md5 = hashlib.md5()
     with open(filename, 'rb') as f:
         for chunk in iter(lambda: f.read(4096), b''):

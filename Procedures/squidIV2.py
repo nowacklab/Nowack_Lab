@@ -13,7 +13,7 @@ from Nowack_Lab.Utilities.save import Measurement
 
 
 class SQUID_IV(Measurement):
-    ''' Take Squid IV'''
+    """ Take Squid IV"""
     _daq_inputs = ['iv']
     _daq_outputs = ['iv']
     instrument_list = ['daq','preamp']
@@ -29,7 +29,7 @@ class SQUID_IV(Measurement):
                  iv_Rbias = 2000,
                  samplerate = 1000,
                  ):
-        '''
+        """
         Make a SQUID IV
 
         Arguments:
@@ -37,7 +37,7 @@ class SQUID_IV(Measurement):
             iv_Is       (nparray): currents to set, approximate
             iv_Rbias    (float): resistance of cold+warm bias on IV
             samplerate  (float): samples/s for measurement
-        '''
+        """
         super().__init__(instruments=instruments)
         
         self.iv_Rbias  = iv_Rbias
@@ -57,7 +57,7 @@ class SQUID_IV(Measurement):
             )
 
     def do(self, hysteresis=True, safe=True, plot=True, removeplot=False):
-        '''
+        """
         Run measurement
 
         Arguments:
@@ -65,7 +65,7 @@ class SQUID_IV(Measurement):
             safe        (boolean): sweep to first voltage, then to zero at end?
             plot        (boolean): should I plot?
             removeplot  (boolean): close plot upon completion?
-        '''
+        """
         # Sweep to the first voltage if running safe
         if safe: 
             _,_ = self.daq.singlesweep(self._daq_outputs[0], self.iv_Vs[0], 
@@ -144,9 +144,9 @@ class SQUID_IV(Measurement):
 
 
     def plot_resistance(self, hysteresis=True):
-        '''
+        """
         Trying to use filter to plot resistance.  Does not work
-        '''
+        """
         self.ax_res = self.ax.twinx()
         s = self.Vsrc_up/self.iv_Rbias/1e-6
         spacing = abs(s[0]-s[1])
@@ -173,14 +173,14 @@ class SQUID_IV(Measurement):
         self.ax_res.legend()
 
     def plot_resistance_spline(self, s=1e-8):
-        '''
+        """
         Model IV with cubic spline with precision s.  
         Plots spline and derivative (resistance)
 
         Arguments:
             s (float): precision of fit, similar to max 
                        total least-squares error of fit
-        '''
+        """
         try:
             self.ax_res.cla()
         except:
@@ -238,7 +238,7 @@ class SQUID_Mod(Measurement):
                  mod_Rbias = 2000,
                  samplerate = 1000,
                  ):
-        '''
+        """
         SQUID_Mod: Create an object take squid modulations
 
         Arguments:
@@ -249,7 +249,7 @@ class SQUID_Mod(Measurement):
             mod_Rbias   (float): bias resistor for Mod
             samplerate  (float): samples/s sampling rate
 
-        '''
+        """
         super().__init__(instruments=instruments)
         self.mod_Is     = mod_Is
         self.iv_Is      = iv_Is
@@ -342,10 +342,10 @@ class SQUID_Mod(Measurement):
                          fontsize=8, ha='left', va='top', family='monospace')
 
     def max_modulation(self, ax=None):
-        '''
+        """
         Find the iv current that maximizes the squid response as a function
         of modulation current.  Plot it
-        '''
+        """
         maxmod = 0
         current = 0
         for i,ivcurrent in zip(range(len(self.iv_Is)), self.iv_Is):
@@ -378,7 +378,7 @@ class SQUID_FCIV(SQUID_IV):
                  fc_Rbias = 2000,
                  samplerate = 1000,
                  ):
-        '''
+        """
         Make a SQUID IV
 
         Arguments:
@@ -386,7 +386,7 @@ class SQUID_FCIV(SQUID_IV):
             fc_Is       (nparray): currents to set, approximate
             fc_Rbias    (float): resistance of cold+warm bias on IV
             samplerate  (float): samples/s for measurement
-        '''
+        """
         super().__init__(instruments=instruments,
                          iv_Is = fc_Is,
                          iv_Rbias = fc_Rbias,
@@ -417,11 +417,11 @@ class SQUID_FC(SQUID_Mod):
                  mod_Rbias = 2000,
                  samplerate = 1000,
                  ):
-        '''
+        """
         SQUID_FC: Create an object take squid fieldcoil sweeps
 
         Arguments:
-        '''
+        """
         super().__init__(instruments=instruments,
                          iv_Is = fc_Is,
                          mod_Is = mod_Is,
@@ -463,7 +463,7 @@ class SQUID_SAA_FC(Measurement):
         pass
 
 class SQUID_IV_MOD(SQUID_IV):
-    '''For constant squid current bias, sweep modulation'''
+    """For constant squid current bias, sweep modulation"""
     _daq_inputs = ['iv']
     _daq_outputs = ['mod']
     instrument_list = ['daq','preamp']
@@ -503,7 +503,7 @@ class SQUID_Mod_FastMod(SQUID_Mod):
                  mod_Rbias = 2000,
                  samplerate = 1000,
                  ):
-        '''
+        """
         SQUID_Mod_FastMod: Create an object take squid modulations
 
         ****Work In Progress****
@@ -518,7 +518,7 @@ class SQUID_Mod_FastMod(SQUID_Mod):
             mod_Rbias   (float): bias resistor for Mod
             samplerate  (float): samples/s sampling rate
 
-        '''
+        """
         super().__init__(instruments=instruments,
                          iv_Is = mod_Is,
                          mod_Is = iv_Is,
@@ -538,10 +538,10 @@ class ThreeParam_Sweep(Measurement):
     _daq_inputs = ['iv']
     _daq_outputs = ['fc', 'mod', 'iv']
     instrument_list = ['daq', 'preamp']
-    '''
+    """
     Inherit this class to do fast parameter sweeps for in depth 
     mod coil sweeps and field coil sweeps
-    '''
+    """
 
     def __init__(self, instruments=[],
                 daqout_I0s = [],
@@ -552,7 +552,7 @@ class ThreeParam_Sweep(Measurement):
                 daqout_R2 = 2400,
                 samplerate = 10000,
                 ):
-        '''
+        """
         Generic three paramter sweep on daq for squid iv (mod2d, fc2d)
         
         Arguments:
@@ -582,7 +582,7 @@ class ThreeParam_Sweep(Measurement):
                        2 [increasing V, decreasing V],
                        len(daqout_I2s), 
                        3 [daqout_V0, daqout_V1, daqout_V2])
-        '''
+        """
         super().__init__(instruments=instruments)
         self.samplerate = samplerate
         self.daqout_I0s = np.array(daqout_I0s)
@@ -778,7 +778,7 @@ class SQUID_Mod_FastIV(ThreeParam_Sweep):
     _daq_inputs = ['iv']
     _daq_outputs = ['fc', 'mod', 'iv']
     instrument_list = ['daq', 'preamp']
-    '''
+    """
     Creates mod 2D plot quickly.  
     No plotting until the end.
     Saves all data in numpy arrays in a 
@@ -786,7 +786,7 @@ class SQUID_Mod_FastIV(ThreeParam_Sweep):
     by ThreeParam_Sweep.
 
     Sweeps IV fast, mod slow
-    '''
+    """
 
     def __init__(self, instruments=[],
                 mod_Is = [],
@@ -846,7 +846,7 @@ class SQUID_Mod_FastIV(ThreeParam_Sweep):
         self.fig.tight_layout()
 
 class SQUID_Mod_FastMod(ThreeParam_Sweep):
-    '''
+    """
     Creates mod 2D plot quickly.  
     No plotting until the end.
     Saves all data in numpy arrays in a 
@@ -854,7 +854,7 @@ class SQUID_Mod_FastMod(ThreeParam_Sweep):
     by ThreeParam_Sweep.
 
     Sweeps mod fast, iv slow
-    '''
+    """
     _daq_inputs = ['iv']
     _daq_outputs = ['fc', 'iv', 'mod']
     instrument_list = ['daq', 'preamp']

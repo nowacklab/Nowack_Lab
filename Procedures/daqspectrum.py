@@ -116,10 +116,10 @@ class DaqSpectrum(Measurement):
         return [signal.blackmanharris(n, False), n]
 
     def makepsd(self, freqspace):
-        '''
+        """
         Updates self.f, self.psd for welch method if you desire a frequency 
         spacing between calculated spectral densities to be freqspace
-        '''
+        """
         [window, nperseg] = self._makewindow(freqspace)
         [self.f, self.psd] = signal.welch(self.V, fs=self.measure_freq, 
                                           window=window, nperseg=nperseg)
@@ -212,9 +212,9 @@ class DaqSpectrum(Measurement):
             self.preamp_OL();
 
     def preamp_OL(self):
-        '''
+        """
         Try to fix overloading preamp
-        '''
+        """
         if self.preamp_dccouple_override: #cannot change dccouple
             self._preamp_OL_changegain();
         else:
@@ -235,10 +235,10 @@ class DaqSpectrum(Measurement):
         self.preamp_OL = False;
 
     def _preamp_OL_changegain(self):
-        '''
+        """
         Lower preamp gain until no longer overloading
         Waits 10 s (max AC couple time constant) if ac coupled
-        '''
+        """
         GAIN = np.array([1,2,3,4,5,10,25,50,100,250]);
         while self.preamp.is_OL() and self.preamp.gain > 1:
             thisgainindex = np.abs(GAIN-self.preamp.gain).argmin();
@@ -252,10 +252,10 @@ class DaqSpectrum(Measurement):
                 time.sleep(12) # >10, in case slow communication
 
     def findmeanstd(self):
-        '''
+        """
         returns mean and std in units after conversion
         rejects outliers
-        '''
+        """
         [f, psdAve] = keeprange(self.f, [self.psdAve*self.conversion], 
                                 m0=10, mend=1000)
         [f, psdAve] = reject_outliers_spectrum(f, psdAve)
@@ -284,10 +284,10 @@ class TwoSpectrum(DaqSpectrum):
         self.t = received['t']
 
     def makepsd(self, freqspace):
-        '''
+        """
         Updates self.f, self.psd for welch method if you desire a frequency 
         spacing between calculated spectral densities to be freqspace
-        '''
+        """
         [window, nperseg] = self._makewindow(freqspace)
         [self.f1, self.psd1] = signal.welch(self.V1, fs=self.measure_freq, 
                                           window=window, nperseg=nperseg)
@@ -339,8 +339,8 @@ class AnnotatedSpectrum(DaqSpectrum):
         annotate_saa    = True,
         **kwargs
     ):
-        '''
-        '''
+        """
+        """
         super().__init__(*args, annotate_notes=True, **kwargs)
         self.notes = notes;
         self.CAP_I = CAP_I;
@@ -366,9 +366,9 @@ class AnnotatedSpectrum(DaqSpectrum):
 
 
     def plot(self, *args, **kwargs):
-        '''
+        """
         Overloaded plot to force the generation of notes
-        '''
+        """
         # Stupid order because I want the notes to be changed before any one
         # has a chance to plot anything
         self.notes = self.notes + (

@@ -109,7 +109,7 @@ class RFSweepCurrentDAQ:
     """Class for sweeping current with DAQ (and bias resistor) and recording
     data from the VNA8722ES at each current step"""
 
-    '''Initiates a RF_sweep_current_daq object with parameters about the sweep'''
+    """Initiates a RF_sweep_current_daq object with parameters about the sweep"""
 
     def __init__(self, Rbias, Ibias_start, Ibias_stop, Ibias_steps, v_freqmin, v_freqmax,
                  v_power, filepath, DAQ_range=1, v_avg_factor=2, v_numpoints=1601, v_smoothing_state=0,
@@ -165,7 +165,7 @@ class RFSweepCurrentDAQ:
         # first find the necessary voltage values
         Ibias_range = np.linspace(self.Ibias_start, self.Ibias_stop, self.Ibias_steps)
         Vbias_range = self.Rbias * Ibias_range  # These are the voltage settings to use
-        '''TODO finish stuff here; should use np.linspace'''
+        """TODO finish stuff here; should use np.linspace"""
 
         # set up DAQ "current source" settings
         self.daq.ao0.V = self.Ibias_start*self.Rbias
@@ -381,7 +381,7 @@ class RFSweepCurrentDAQREV:
     data from the VNA8722ES at each current step
     MEASURES S12 INSTEAD OF S21 - be careful! Because VNA not quite working other way"""
 
-    '''Initiates a RF_sweep_current_daq object with parameters about the sweep'''
+    """Initiates a RF_sweep_current_daq object with parameters about the sweep"""
 
     def __init__(self, Rbias, Ibias_start, Ibias_stop, Ibias_steps, v_freqmin, v_freqmax,
                  v_power, filepath, DAQ_range=1, v_avg_factor=2, v_numpoints=1601, v_smoothing_state=0,
@@ -437,7 +437,7 @@ class RFSweepCurrentDAQREV:
         # first find the necessary voltage values
         Ibias_range = np.linspace(self.Ibias_start, self.Ibias_stop, self.Ibias_steps)
         Vbias_range = self.Rbias * Ibias_range  # These are the voltage settings to use
-        '''TODO finish stuff here; should use np.linspace'''
+        """TODO finish stuff here; should use np.linspace"""
 
         # set up DAQ "current source" settings
         self.daq.ao0.V = self.Ibias_start*self.Rbias
@@ -657,9 +657,9 @@ class RFSweepCurrent:
     # so may be worth having the class WithoutDAQ_ThreeParam_Sweep (esp. for plotting fxns)
     # and having these RF_sweep_<some parameter> classes extend WithoutDAQ_ThreeParam_Sweep
 
-    '''
+    """
     Initiates a RF_sweep_current object with parameters about the sweep.
-    '''
+    """
     def __init__(self, k_Istart, k_Istop, k_Isteps, v_freqmin, v_freqmax, v_power, v_avg_factor, v_numpoints,
                  filepath, v_smoothing_state=0, v_smoothing_factor=1, notes="No notes",hysteresis=False,
                  plot=False):
@@ -818,7 +818,7 @@ class RFSweepCurrent:
                            data.get(filename + '/freqmax')/1e9,
                            data.get(filename + '/numpoints'))
         y, x = np.meshgrid(freq, current)
-        dB = RFSweepCurrent.dB_data(filename, rev = rev)
+        dB = RFSweepCurrent.dB_data(filename, rev=rev)
         im = ax.pcolor(x, y, dB, cmap="inferno")
         cbar = fig.colorbar(im)
         ax.set_xlabel('field coil current (mA)')

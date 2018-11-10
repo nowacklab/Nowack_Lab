@@ -121,7 +121,7 @@ class Scanplane(Measurement):
         self.fast_axis = 'x'
 
     def do(self, fast_axis='x', surface=False):
-        '''
+        """
         Routine to perform a scan over a plane.
 
         Keyword arguments:
@@ -130,7 +130,7 @@ class Scanplane(Measurement):
 
             surface: If False sweep out lines over the sufrace. If True,
             piezos.sweep_surface is used during the scan
-        '''
+        """
         self.fast_axis = fast_axis
 
         # Check if points in the scan are within the voltage limits of
@@ -276,9 +276,9 @@ class Scanplane(Measurement):
         self.piezos.V = 0
 
     def plot(self):
-        '''
+        """
         Update all plots.
-        '''
+        """
         super().plot()
 
         # Update the line plot
@@ -308,9 +308,9 @@ class Scanplane(Measurement):
         self.fig.canvas.flush_events()
 
     def setup_plots(self):
-        '''
+        """
         Set up all plots.
-        '''
+        """
         # Use the aspect ratio of the image set subplot size.
         # The aspect ratio is Xspan/Yspan
         aspect = self.span[0] / self.span[1]
@@ -413,10 +413,10 @@ class Scanplane(Measurement):
         self.fig_cuts.canvas.draw()
 
     def plot_line(self):
-        '''
+        """
         Update the data in the linecut plot.
 
-        '''
+        """
         clabels = ['DC Flux ($\Phi_o$)',
                    'Capacitance (F)',
                    'AC X ($\Phi_o$)',
@@ -444,9 +444,9 @@ class Scanplane(Measurement):
         self.fig_cuts.canvas.flush_events()
 
     def save_line(self, i, Vstart):
-        '''
+        """
         Saves each line individually to JSON.
-        '''
+        """
         line = Line()
         line.scan_filename = self.filename
         line.idx = i

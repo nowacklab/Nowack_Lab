@@ -12,7 +12,7 @@ from IPython.display import clear_output
 class hp_freq_sweep_linear_abs():
 
 	def __init__(self, freq_range, filepath, source_power = 15, notes = "No notes", plot=True):
-		'''freq_range should be range of Hz values'''
+		"""freq_range should be range of Hz values"""
 		print("Remember to manually turn on source!")
 		self.fxn_gen = functiongenerator(7)
 		self.dq = NIDAQ()
@@ -80,7 +80,7 @@ class hp_freq_sweep_linear_abs():
 
 class hp_freq_sweep_logarithmic_abs():
 	def __init__(self, freq_range, filepath, source_power = 15, notes = "No notes", plot=True):
-		'''freq_range should be np.logspace range of Hz values'''
+		"""freq_range should be np.logspace range of Hz values"""
 		print("Remember to manually turn on source!")
 		self.fxn_gen = functiongenerator(7)
 		self.dq = NIDAQ()
@@ -143,7 +143,7 @@ class hp_freq_sweep_logarithmic_abs():
 
 class constant_freq_change_flux():
 	def __init__(self, frequency, source_power, filepath, Ibias_range, bias_resistor_value, preamp_gain, notes="No notes", plot=True):
-		'''frequency in Hz. Ibias_range: np.linspace(start_current(amps), stop_current, number of points)'''
+		"""frequency in Hz. Ibias_range: np.linspace(start_current(amps), stop_current, number of points)"""
 		if abs(max(Ibias_range)) > 10e-3:
 			print("Check Ibias range values: do not send too much current thru field coil")
 		print("Make sure bias resistor is connected (do not blow up squid)")

@@ -18,9 +18,9 @@ class PCI100(Instrument):
 
 
     def connect(self):
-        '''
+        """
         Connect to the PCI100 for the StarCryo SQUID array
-        '''
+        """
         try:
             rm = visa.ResourceManager()
             self.instrument = rm.open_resource(str(self._visaResource))
@@ -29,9 +29,9 @@ class PCI100(Instrument):
             print("Cannot connect to STAR Cryoelectronics SQUID interface")
 
     def send(self, command):
-        '''
+        """
         Sends a command to the PCI from the computer, will relay information to the PFL
-        '''
+        """
         self.connect()
         try:
             self.instrument.write(command)
@@ -40,9 +40,9 @@ class PCI100(Instrument):
         self.close()
 
     def close(self):
-        '''
+        """
         Close PCI connection
-        '''
+        """
         self.instrument.close()
         del(self.instrument) # do this for JSON
 
@@ -112,9 +112,9 @@ class PFL102(Instrument):
         return self._save_dict
 
     def __setstate__(self, state):
-        '''
+        """
         NOTE: this will load the real instrument. Load with caution!
-        '''
+        """
         state['_A_bias'] = state.pop('Array bias')
         state['_A_flux'] = state.pop('Array flux')
         state['_S_bias'] = state.pop('SQUID bias')
@@ -322,9 +322,9 @@ class PFL102(Instrument):
 
     @staticmethod
     def load(json_file=None, visaResource='COM3'):
-        '''
+        """
         Load last saved parameters for the array from a file.
-        '''
+        """
         if json_file is None:
             json_file = os.path.join(os.path.dirname(__file__),'squidarray_params.json')
         with open(json_file, encoding='utf-8') as f:
@@ -360,18 +360,18 @@ class PFL102(Instrument):
 
 
     def save(self):
-        '''
+        """
         Saves current parameters to squidarray_params.json for future loading.
-        '''
+        """
         obj_string = jsp.encode(self)
         obj_dict = json.loads(obj_string)
         with open(self.param_filename, 'w', encoding='utf-8') as f:
             json.dump(obj_dict, f, sort_keys=True, indent=4)
 
     def send(self, data, registername):
-        '''
+        """
         Prepare data to send to PCI
-        '''
+        """
         if registername == 'DR':
             register = 0b01010000 # digital control register # register == "opcode"
         elif registername == 'FR':
@@ -468,9 +468,9 @@ class SquidArray(PFL102):
         self._visaResource = visaResource;
 
     def tune(self):
-        '''
+        """
         Walks you through tuning and locking array/squid
-        '''
+        """
         input("Turn test signal on. Ramp, 3.5 Vpp, 100 Hz. Press enter to continue.")
         clear_output()
         self.unlock()
@@ -620,8 +620,8 @@ class SquidArray(PFL102):
 
     def autotune(self, daq, channame, tuneparam, 
                  setpoint=0, threshold=.01, meas_dur=.1, exittime=60, P=1):
-        '''
-        '''
+        """
+        """
         ave = np.mean(daq.monitor(channame, meas_dur, 256000)[channame])
         starttime = time.time()
         hitlimit = False
@@ -655,7 +655,7 @@ class SquidArray(PFL102):
 
     def autotune_sflux(self, daq, channame, 
                        threshold = .01, meas_dur = .1, exittime=60, P=10):
-        '''
+        """
         Tune squid flux so response is at zero.  Maybe useful between scans
 
         Inputs:
@@ -663,7 +663,7 @@ class SquidArray(PFL102):
         channame
         threshold
         meas_dur
-        '''
+        """
         istuned     = False
         hastuned    = False
         starttime   = time.time()

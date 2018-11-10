@@ -1,4 +1,4 @@
-'''
+"""
 squidimage.py
 
 author: Katja Nowack
@@ -6,7 +6,7 @@ date: 2016-11-26
 
 This module contains a range of functions used for processing images for current
 inversion using fast Fourier transforms
-'''
+"""
 
 import numpy as np
 from scipy.interpolate import interp2d
@@ -32,7 +32,7 @@ def crop(image, cx, cy):
 
 
 def pad_with_zeros(image, px = None, py = None):
-    '''
+    """
     input:
         px, py: how many pixels with zero added to left and right and up and
         down
@@ -43,7 +43,7 @@ def pad_with_zeros(image, px = None, py = None):
         padded image, size Ly+2*py, Lx+2*px
     TO DO:
         allow px, py to be 2D to enable non-symmetric cropping
-    '''
+    """
     Ly, Lx = image.shape
     if px is None:
         px = int(round(Lx/2))
@@ -59,7 +59,7 @@ def pad_with_zeros(image, px = None, py = None):
 
 
 def pad_with_fading(image,px = None, py = None):
-    '''
+    """
     input:
         px, py: how many pixels added to left and right and up and
         down
@@ -71,7 +71,7 @@ def pad_with_fading(image,px = None, py = None):
         padded image, size Ly+2*py, Lx+2*px
     TO DO:
         allow px, py to be 2D to enable non-symmetric cropping
-    '''
+    """
 
     Ly, Lx = image.shape
     if px is None:
@@ -93,7 +93,7 @@ def pad_with_fading(image,px = None, py = None):
     return image_padded
 
 def center_max_on_larger_grid(image,Lx_new,Ly_new):
-    '''
+    """
     input:
         Lx_new, Ly_new: dimension of the new image
 
@@ -103,7 +103,7 @@ def center_max_on_larger_grid(image,Lx_new,Ly_new):
     TO DO:
         give error messages, if Lx_new, Ly_new are too small
         assign default to Lx_new, Ly_new
-    '''
+    """
     Ly, Lx = image.shape
     #first find the psoition of the maximum in the image
     pos_max = np.argmax(image)
@@ -117,13 +117,13 @@ def center_max_on_larger_grid(image,Lx_new,Ly_new):
 
     return new_image
 def interpolate_on_new_grid(image,Nx_new,Ny_new):
-    '''
+    """
     input:
         Nx_new, Ny_new: dimension of the new image in number of pixels
     return:
         image with size Nx_new, Ny_new that contains the input image extrapolated on the new grid
         assumption is that the size of the image in real units of length (e.g. um) stays the same
-    '''
+    """
 
     Ly, Lx = image.shape
     x = np.linspace(0, Lx-1, Lx)

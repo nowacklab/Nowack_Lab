@@ -21,12 +21,12 @@ class Geophone_calibrate(Measurement):
 
     def __init__(self, instruments={}, Rs=340, sample_rate=1000, maxV = .2, numpts = 8191, 
             inputfnct = 'heaviside'):
-        '''
+        """
         Arguments:
         Rs(float): resistor used as divider with geophone
         sample_rate(float): rate of measurement in Hz.  Total time
                             of measurement is 8191/sample_rate
-        '''
+        """
         super().__init__(instruments=instruments)
         self.Rs = Rs
         self.sample_rate = sample_rate
@@ -143,8 +143,8 @@ class Geophone_sr5113(Measurement):
                  preamp_diff_mode=False,
                  conversion=31.5 # V/ (m/s)
                  ):
-        '''
-        '''
+        """
+        """
         super().__init__(instruments=instruments)
         self.instruments = instruments
         self.measure_time = measure_time
@@ -180,9 +180,9 @@ class Geophone_sr5113(Measurement):
         #self.plot()
 
     def rewelch(self, freqspace):
-        '''
+        """
         changes the frequency bins
-        '''
+        """
         self.daqspectrum.makepsd(freqspace)
         self.psd = self.daqspectrum.psd
         self.f   = self.daqspectrum.f
@@ -223,9 +223,9 @@ class Geophone_sr5113(Measurement):
 
 
 class GeophoneAccelerometer(Geophone_sr5113):
-    '''
+    """
     Compare geophone and accelerometer
-    '''
+    """
     _daq_inputs = ['dc', 'dc2']
     _instrument_list = ['daq', 'preamp']
     def __init__(self, nonpreamp_gain, *args, 
@@ -233,13 +233,13 @@ class GeophoneAccelerometer(Geophone_sr5113):
                 instruments={},
                 **kwargs
                 ):
-        '''
+        """
         Compares geophones and accelerometer.
 
         Inputs:
         nonpreamp_gain (float): the gain on the accelerometer box
         accelerometerconv (float): conversion factor,  V/(m/s/s)
-        '''
+        """
         super().__init__(*args, instruments=instruments, **kwargs)
         self.nonpreamp_gain = nonpreamp_gain
         self.accelerometerconv = accelerometerconv
@@ -264,16 +264,16 @@ class GeophoneAccelerometer(Geophone_sr5113):
         self.plot()
 
     def rewelch(self, freq):
-        '''
+        """
         Change frequency bins and populate the local attributes
-        '''
+        """
         self.spectra.makepsd(freq)
         self._populate()
 
     def _populate(self):
-        '''
+        """
         Populate local geophone and accelerometer attributes
-        '''
+        """
         [self.geo_acc, self.geo_vel, self.geo_pos] = self.geo.convert(
                                            self.spectra.psdAve1, 
                                            self.spectra.f1)
@@ -292,9 +292,9 @@ class GeophoneAccelerometer(Geophone_sr5113):
         self.ax = list(self.ax.flatten())
 
     def clearplot(self):
-        '''
+        """
         Clear all axes
-        '''
+        """
         self.ax[0].cla()
         self.ax[1].cla()
         self.ax[2].cla()
@@ -318,20 +318,20 @@ class GeophoneAccelerometer(Geophone_sr5113):
         self.ax[1].legend()
 
     def max2(self, sety1, sety2, setx, targetx):
-        '''
+        """
         Returns the value of sety1, sety2 that has the highest
         value from the first value in the array to the index
         where targetx occurs in setx
-        '''
+        """
         maxi = np.abs((setx-targetx)).argmin()
         return max(sety1[0:maxi+1].max(), sety2[0:maxi+1].max())
 
     def min2(self, sety1, sety2, setx, targetx):
-        '''
+        """
         Returns the value of sety1, sety2 that has the lowest
         value from the first value in the array to the index
         where targetx occurs in setx
-        '''
+        """
         mini = np.abs((setx-targetx)).argmin()
         return min(sety1[0:mini+1].min(), sety2[0:mini+1].min())
 

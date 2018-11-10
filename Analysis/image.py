@@ -11,7 +11,7 @@ class Image:
     ax = None
 
     def __init__(self, data, real_size=None, pixel_size=None, data_units = None, units='um'):
-        '''
+        """
         Class containing information and properties useful for image processing.
         input:
             data: 2D numpy array of image data
@@ -22,7 +22,7 @@ class Image:
             Nx, Ny: number of pixels
             Lx, Ly: real size of image (in specified units)
             dx, dy: pixel size (in specified units)
-        '''
+        """
         self.data_original = data.copy()
         self.data = data
         self.Nx, self.Ny = data.shape[::-1] # i, j = y, x
@@ -90,13 +90,13 @@ class Image:
         self._Ly = self._dy*self.Ny
 
     def center_max(self):
-        '''
+        """
         Shifts the contents of an array so that its maximum value is located at the center.
         Why do we want to do this?
             If the point spread function is not centered, the deconvolution will be shifted.
 
         Pads an array using a faded padding, then slices the array to center the maximum.
-        '''
+        """
         pos_max = np.unravel_index(np.argmax(self.data), self.data.shape) # index of max as a tuple
         shift = [int(self.data.shape[i]/2) - pos_max[i] for i in range(2)] # tuple telling us how many indices to shif the array
         pad_width = [(0,0),(0,0)] # [(l,r),(u,d)]
@@ -113,9 +113,9 @@ class Image:
 
 
     def deconvolute(self, PSF, kxmax=1, kymax=1, restore_PSF=True):
-        '''
+        """
         Deconvolute a known point spread function.
-        '''
+        """
         ## Get this image and the PSF ready
         self.pad() # default = double in size symmetrically and fade
 
@@ -162,23 +162,23 @@ class Image:
 
 
     def deconvolve(self, *args, **kwargs):
-        '''
+        """
         For those who prefer grammatical accuracy :)
-        '''
+        """
         self.deconvolute(*args, **kwargs)
 
 
     def match_size(self, image):
-        '''
+        """
         Change size of image to match another image.
-        '''
+        """
         pass
 
 
     def invert_current(self, PSF=None, z=1.0):
-        '''
+        """
         Algorithm to do basic current inversion. If not given a PSF, will try to invert current without deconvoluting the PSF.
-        '''
+        """
         mu_0 = 4*np.pi*1e-7
 
         ## Get this image and the PSF ready
@@ -245,7 +245,7 @@ class Image:
         self.jx, self.jy = jx.real, jy.real
 
     def pad(self, lr = None, ud=None, mode='linear_ramp'):
-        '''
+        """
         input:
             lr, ud: how many pixels added to (left, right) and (up, down)
                 e.g. lr = (50,60) pads 50 to the left, 60 to the right
@@ -255,7 +255,7 @@ class Image:
         Default will pad by half the image size resulting in an image twice as
         large as the original
         Final image size Ny+2*py, Nx+2*px
-        '''
+        """
         if lr is None:
             lr = int(self.Nx/2)
         if ud is None:
@@ -268,9 +268,9 @@ class Image:
         self.data = np.pad(self.data, (ud, lr), mode=mode)
 
     def pad_to_match(self, image):
-        '''
+        """
         Pad this image to match the real dimensions of another image
-        '''
+        """
         if image.Lx < self.Lx or image.Ly < self.Ly:
             raise Exception('Can\'t match an image smaller than the current one!')
         lr = int((image.Lx - self.Lx)/self.dx/2) # difference between sizes divided by pixel size gives number of pixels
@@ -278,9 +278,9 @@ class Image:
         self.pad(lr, ud, mode='constant')
 
     def plot(self, ax=None, var='data'):
-        '''
+        """
         Set var = 'jx', 'jy' to plot current
-        '''
+        """
         self.ax = ax
         if ax is None:
             fig, self.ax = plt.subplots()
@@ -290,9 +290,9 @@ class Image:
         plt.colorbar(im)
 
     def resample(self, num_pixels_new):
-        '''
+        """
         Change the pixel size to give a different number of pixels but maintain the same real size of the image
-        '''
+        """
         assert type(num_pixels_new[0]) is int
         assert type(num_pixels_new[1]) is int
 
@@ -318,30 +318,30 @@ class Image:
 
 
     def resize(self, size_new):
-        '''
+        """
         Change the real image size. Useful if scaling or converting units
-        '''
+        """
         self.Lx, self.Ly = size_new
 
     def restore(self):
-        '''
+        """
         Restore original image data
-        '''
+        """
         self.data = self.data_original
         self.dx = self._dx_original
         self.dy = self._dy_original
 
     def scale(self, factor):
-        '''
+        """
         Scale the real image size by a multiplicative factor.
-        '''
+        """
         self.Lx *= factor
         self.Ly *= factor
 
     def unpad(self):
-        '''
+        """
         Crops a processed image symmetrically to the size of the original.
-        '''
+        """
         self.data = self.data[round(self.Ny/4):round(-self.Ny/4), round(self.Nx/4):round(-self.Nx/4)]
         try:
             self.jx = self.jx[round(self.Ny/4):round(-self.Ny/4), round(self.Nx/4):round(-self.Nx/4)]
@@ -351,20 +351,20 @@ class Image:
 
 
 def match_PSF_to_image(PSF, image):
-    '''
+    """
     Takes a PSF, centers it, and changes the number of pixels to match a given image.
-    '''
+    """
     pos_max = np.unravel_index(np.argmax(PSF), PSF.shape)
 
     return PSF
 
 def hanning_2D(x, y, xmax, ymax):
-    '''
+    """
     Creates a Hanning window as a 2D matrix.
     Multiply this window to a matrix in Fourier space to filter out high-frequency components.
     x, y: 1D arrays
     xmax, ymax: cutoffs
-    '''
+    """
     X, Y = np.meshgrid(x, y)
     R = np.sqrt(X**2/xmax**2 + Y**2/ymax**2)
     H = np.sqrt(1+np.cos(np.pi*R))

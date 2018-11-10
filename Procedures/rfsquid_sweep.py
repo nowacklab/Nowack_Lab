@@ -17,7 +17,7 @@ from ..Instruments.VNA import VNA8722ES
 from ..Instruments import Keithley2400
 
 class WithoutDAQ_ThreeParam_Sweep:
-    '''Sweep field coil current and measured frequency using VNA and keithley2400'''
+    """Sweep field coil current and measured frequency using VNA and keithley2400"""
     def __init__(self):
         pass
 
@@ -66,8 +66,8 @@ class WithoutDAQ_ThreeParam_Sweep:
 
 """
 class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
-    ''' At different current steps, measure frequency response
-    Using class SQUID_Mod_FastIV(ThreeParam_Sweep) as example'''
+    """ At different current steps, measure frequency response
+    Using class SQUID_Mod_FastIV(ThreeParam_Sweep) as example"""
     instrument_list = ['VNA', 'keithley']  # probably not necessary
 
     # _XLABEL = r'$I_{squid}$ ($\mu A$)'
@@ -92,12 +92,12 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
         self.arr_2 = None  # store an array to plot
 
     def do(self, hysteresis=False, plot=False):
-        '''
+        """
         Run measurement
         Arguments:
             hysteresis (boolean): sweep current up and down?
             plot (boolean): should I plot?
-        '''
+        """
         # TODO: implement hysteresis (back) sweep
         # TODO: is this plotting stuff very different from just calling pyplot functions?
         assert not hysteresis, "Hysteretic measurement not implemented yet"

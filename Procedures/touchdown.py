@@ -23,7 +23,7 @@ _CAPACITANCE_THRESHOLD = 1  # fF
 _ATTO_TOWARDS_SAMPLE = -1
 
 def piecewise_linear(x, x0, y0, m1, m2):
-        '''A continuous piecewise linear function
+        """A continuous piecewise linear function
 
         Args
         x (array-like): the domain of the function.
@@ -33,7 +33,7 @@ def piecewise_linear(x, x0, y0, m1, m2):
         m2 (float): the slope of the function for x > x0.
 
         Returns
-        '''
+        """
         return np.piecewise(x,
                             [x < x0],
                             [lambda x: m1*x + y0 - m1*x0,
@@ -82,7 +82,7 @@ class Touchdown(Measurement):
     start_offset = 0
 
     def __init__(self, instruments={}, planescan=False, Vz_max=None, runonce=False):
-        '''Approach the sample to the SQUID while recording the capacitance 
+        """Approach the sample to the SQUID while recording the capacitance
         of the cantelever in a lockin measurement to detect touchdown.
 
         Arguments:
@@ -98,7 +98,7 @@ class Touchdown(Measurement):
 
         Required daq ouputs:
         'x', 'y', 'z'
-        '''
+        """
         super().__init__(instruments=instruments)
 
         if instruments:
@@ -119,7 +119,7 @@ class Touchdown(Measurement):
         self.runonce=runonce
 
     def _init_arrays(self):
-        ''' Generate arrays of NaN with the correct length for the touchdown'''
+        """ Generate arrays of NaN with the correct length for the touchdown"""
         self.numsteps = int(2 * self.Vz_max / self.z_piezo_step)
         self.V = np.linspace(-self.Vz_max, self.Vz_max, self.numsteps)
 
@@ -135,10 +135,10 @@ class Touchdown(Measurement):
         self.rs = np.array([np.nan] * self.numsteps)
 
     def check_balance(self, V_unbalanced=2e-6):
-        '''
+        """
         Checks the balance of the capacitance bridge.
         Voltage must be less than V_unbalanced.
-        '''
+        """
         # Read daq voltage and convert to real lockin voltage
         Vcap = self.daq.inputs['cap'].V
         Vcap = self.lockin_cap.convert_output(Vcap)
@@ -151,7 +151,7 @@ class Touchdown(Measurement):
                 raise Exception('quit by user')
 
     def check_touchdown(self):
-        '''Checks for a touchdown.
+        """Checks for a touchdown.
 
         If the last numfit points are monotically increasing and the 
         capacitance increases by an ammount larger than 
@@ -160,7 +160,7 @@ class Touchdown(Measurement):
 
         Returns:
         bool : True when touchdown is detected
-        '''
+        """
         # i is the index of last data point taken
         i = np.where(~np.isnan(self.C))[0][-1]  
         # Check that enough data has been collected to do a linear fit
@@ -181,7 +181,7 @@ class Touchdown(Measurement):
         return False            
 
     def configure_lockin(self):
-        '''Set up lockin_cap amplifier for a touchdown.'''
+        """Set up lockin_cap amplifier for a touchdown."""
         self.lockin_cap.amplitude = 1
         self.lockin_cap.frequency = 26759  # prime number
         self.lockin_cap.set_out(1, 'R')
@@ -193,13 +193,13 @@ class Touchdown(Measurement):
         self.lockin_cap.auto_phase
 
     def _reset_cap_and_corr(self):
-        '''
+        """
         Helper function for do():
         Copied directly from do() at 2017-05-30 by dhl88
         to make code prettier
 
         Reset capacitance and correlation coefficient values
-        '''
+        """
         self.C = np.array([np.nan] * self.numsteps)
         self.rs = np.array([np.nan] * self.numsteps)
         self.Cx = np.array([np.nan] * self.numsteps)
@@ -215,7 +215,7 @@ class Touchdown(Measurement):
 
 
     def _record_cap(self, i):
-        '''
+        """
         Helper function for do():
         Copied directly from do() at 2017-05-30 by dhl88
         to make code prettier
@@ -226,7 +226,7 @@ class Touchdown(Measurement):
         4) set capacitance offset (using Cap if not the first point)
         5) record X,Y,theta capacitance
 
-        '''
+        """
         # Get capacitance
         if self.C0 == None:
             # Wait for the lockin reading to stabalize
@@ -249,7 +249,7 @@ class Touchdown(Measurement):
         self.theta[i] = self.daq.inputs['theta'].V
 
     def _replace_inf(self, i):
-        '''
+        """
         Helper Function for do():
         Copied directly from do() at 2017-05-30 by dhl88
         to make code prettier
@@ -258,7 +258,7 @@ class Touchdown(Measurement):
         The data for this touchdown at lower piezo voltages must be replaced
         with something.  We choose ... dhl88 is not sure why we do this each
         time (for every i) but is leaving it alone because it works...
-        '''
+        """
         # gotta cheat and take care of the infs by making them the same
         # as the first real data point... this is because we skipped them
         if self.C[0] == np.inf: # set at beginning of loop
@@ -268,7 +268,7 @@ class Touchdown(Measurement):
                         self.C[j] = self.C[i] # replace
 
     def _cntr_td_w_atto(self, slow_scan, Vtd, start):
-        '''
+        """
         Helper function for do():
         Copied directly from do() at 2017-05-30 by dhl88
         to make code prettier
@@ -283,7 +283,7 @@ class Touchdown(Measurement):
         to the best guess as to where the scanner should be.
 
         Returns [slow_scan, start]
-        '''
+        """
         # Specify a percentage of the peizo range that the
         # touchdown must fall within.
         if slow_scan:
@@ -313,7 +313,7 @@ class Touchdown(Measurement):
         return [slow_scan, start]
 
     def _move_attocubes(self):
-        '''
+        """
         Helper function for do():
         Copied directly from do() at 2017-05-30 by dhl88
         to make code prettier
@@ -326,7 +326,7 @@ class Touchdown(Measurement):
         6) if capacitance is overloading, backoff
 
         returns start = -self.Vz_max
-        '''
+        """
         # before moving attos, make sure we're far away from the sample!
         self.piezos.z.V = -self.Vz_max
 
@@ -367,7 +367,7 @@ class Touchdown(Measurement):
 
         return start;
     def do(self, start=None, user=False):
-        '''
+        """
         Does the touchdown.
         Timestamp is determined at the beginning of this function.
         Can specify a voltage from which to start the sweep
@@ -376,7 +376,7 @@ class Touchdown(Measurement):
         start (float) -- Starting position (in voltage) of Z peizo.
         user (bool) -- If True, the user is asked to determine the
         touchdown voltage from the capacitance vs. position plot.
-        '''
+        """
 
         Vtd = None
         slow_scan = False
@@ -502,7 +502,7 @@ class Touchdown(Measurement):
 
     
     def get_td_v(self):
-        '''Determine the touchdown voltage
+        """Determine the touchdown voltage
         
         Fit a continuous piecewise linear function to the capacitance trace. The
         point where the function transitions between the two lines is recorded
@@ -510,14 +510,14 @@ class Touchdown(Measurement):
 
         Returns
         p (array): Best fit parameters x0, y0, m1 and m2 (see piecewise_linear)
-        '''
+        """
         C = self.C[~np.isnan(self.C)]
         V = self.V[~np.isnan(self.C)]
         p, e = curve_fit(piecewise_linear, V, C)
         return p, e
 
     def get_touchdown_voltage(self):
-        '''
+        """
         Determines the touchdown voltage.
 
         1. Finds the best fit for the touchdown curve fitting from i to 
@@ -526,7 +526,7 @@ class Touchdown(Measurement):
         the best i. Considers minimizing slope in determining good 
         approach fit.
         3. Returns the intersection of these two lines.
-        '''
+        """
         try:
             # Find the location of the first nan (i.e. the last point taken)
             i3 = np.where(np.isnan(self.C))[0][0]
@@ -605,10 +605,10 @@ class Touchdown(Measurement):
         self.fig.canvas.draw()
 
     def save(self, savefig=True, **kwargs):
-        '''
+        """
         Saves the touchdown object.
         Also saves the figure as a pdf, if wanted.
-        '''
+        """
 
         filename_in_extras = os.path.join(get_local_data_path(),
                                           get_todays_data_dir(),
@@ -643,7 +643,7 @@ class Touchdown(Measurement):
 
 
     def gridplot(self, axes):
-        '''Compact plot of touchdown for use when taking planes'''
+        """Compact plot of touchdown for use when taking planes"""
         C = self.C[~np.isnan(self.C)]
         V = self.V[~np.isnan(self.C)]
         axes.plot(V, C, '.', color='k', markersize=2)

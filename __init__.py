@@ -39,7 +39,7 @@ def import_packages():
     ## Importing commonly used packages
     from IPython import get_ipython
     ip = get_ipython()
-    ip.run_code('''
+    ip.run_code("""
     import numpy as np
     import matplotlib.pyplot as plt
     from imp import reload
@@ -73,7 +73,7 @@ def import_packages():
     from Nowack_Lab.Instruments.lockin import SR830
     from Nowack_Lab.Instruments.ppms import PPMS
     #from Nowack_Lab.Fun.callme import call
-    ''');
+    """);
 
 if (DisableInits.disable_all_inits is False):
     # Workaround for scipy altering KeyboardInterrupt behavior

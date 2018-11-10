@@ -23,14 +23,14 @@ class gateVoltageError( Exception ):
 #    def check(self):
 
 class HF2LI(Instrument):
-    '''
+    """
     Creates a Zurich HF2Li object, to control a zurich lock in amplifier
-    '''
+    """
     _label = 'Zurich HF2LI'
 
     def __init__(self, server_address = 'localhost', server_port = 8005 ,
                 device_serial = ''):
-        '''
+        """
         Creates the HF2LI object. By choosing server address, can connection
         to HF2LI on remote (local network) computer.
 
@@ -47,7 +47,7 @@ class HF2LI(Instrument):
                             hf2li. If empty string or does not exist,
                             uses first avaliable ZI.
 
-        '''
+        """
         # Accesses the DAQServer at the instructed address and port.
         self.daq = zhinst.ziPython.ziDAQServer(server_address, server_port)
         # Gets the list of ZI devices connected to the Zurich DAQServer
@@ -81,7 +81,7 @@ class HF2LI(Instrument):
                 setattr(HF2LI, nameofattr, property(fget=eval("lambda self: self.daq.getSample('%s')" %elem)))
 
     def setup(self, config):
-            '''
+            """
             Pass in a dictionary with the desired configuration. If an element
             is ommited from the dictionary, no change. Dictionary will be
             compared to a check array. To determine formatting, structure your
@@ -112,7 +112,7 @@ class HF2LI(Instrument):
                             'dc':[bool], 'voltagegain': [int, [1,10]],
                             'offset':[float]}
                           }
-            '''
+            """
             zCONFIG = []
             checkarray = {'sigin': {'ac': [bool], 'range': [float, 1e-4, 2],
                                                                 'diff':[bool]},

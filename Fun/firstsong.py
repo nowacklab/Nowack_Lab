@@ -1,10 +1,10 @@
-'''
+"""
 This is the first song written for the keithley
-'''
-'''
+"""
+"""
 rev
 1/4/2011 - LNT - init
-'''
+"""
 import Keithley2400music
 from time import sleep
 keith=Keithley2400music.BasicGPIB()
@@ -20,9 +20,9 @@ A4 = 440.000
 B4 = 493.883
 C5 = 523.251
 
-'''
+"""
 This is "Camp Down Races"
-'''
+"""
 ############################################################
 keith.e1(G4,tempo,ts)
 keith.e1(G4,tempo,ts)

@@ -9,9 +9,9 @@ from ..Procedures.daqspectrum import AnnotatedSpectrum
 
 
 class Vibration(Measurement):
-    '''
+    """
     Record spectra for vibration analysis
-    '''
+    """
 
     instrument_list=['daq',
                      'lockin_cap',
@@ -30,8 +30,8 @@ class Vibration(Measurement):
                  measure_freq=256000,
                  averages=6
                 ):
-        '''
-        '''
+        """
+        """
         super().__init__(instruments=instruments)
 
         for arg in ['plane',
@@ -52,8 +52,8 @@ class Vibration(Measurement):
     #            }
         
     def do(self):
-        '''
-        '''
+        """
+        """
         self.freqs   = []
         self.psdaves = []
         self.filenames=[]
@@ -129,13 +129,13 @@ class Vibration(Measurement):
 
             
     def setup_plots(self):
-        '''
-        '''
+        """
+        """
         pass
 
     def plot(self):
-        '''
-        '''
+        """
+        """
         self.fig,self.ax = plt.subplots()
         image = self.ax.imshow(self.dc/self.gain*self.conversion,origin='lower',
                             extent=[self.X.min(), self.X.max(),

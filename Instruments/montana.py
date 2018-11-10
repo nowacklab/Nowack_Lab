@@ -38,9 +38,9 @@ class Montana(Instrument):
 
 
     def __setstate__(self, state):
-        '''
+        """
         For loading.
-        '''
+        """
         state['_temperature'] = state.pop('temperature')
         state['_temperature_stability'] = state.pop('stability')
 
@@ -79,9 +79,9 @@ class Montana(Instrument):
         return self._temperature_stability
 
     def ask(self, *args, to_float = True):
-        '''
+        """
         Sends many commands to Montana. If one command, returns one value. Else returns a dictionary with keys = commands, values = responses
-        '''
+        """
         self.connect()
         responses = {}
         for command in args:
@@ -104,9 +104,9 @@ class Montana(Instrument):
         print(resp)
 
     def connect(self):
-        '''
+        """
         Opens connection to Montana
-        '''
+        """
         inp = 'asdfasd'
         self.cryo.Connect()
         if not self.cryo.CheckConnection():
@@ -117,9 +117,9 @@ class Montana(Instrument):
 
 
     def exit(self):
-        '''
+        """
         Closes connection to Montana
-        '''
+        """
         self.cryo.Exit()
         time.sleep(0.05) # slight delay to prevent issues with trying to connect again in quick succession
 

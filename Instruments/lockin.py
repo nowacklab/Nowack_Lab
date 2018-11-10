@@ -8,9 +8,9 @@ import visa
 
 
 class SR830(Instrument):
-    '''
+    """
     Instrument driver for SR830, modified from Guen's squidpy driver
-    '''
+    """
     # Static final variables (immutible class variables)
     _label = 'lockin'
     time_constant_options = {
@@ -60,9 +60,9 @@ class SR830(Instrument):
         self._visa_handle.timeout = 3000 # default
 
     def __del__(self):
-        '''
+        """
         Destroy the object and close the visa handle
-        '''
+        """
         self.close()
 
     def __getstate__(self):
@@ -97,7 +97,7 @@ class SR830(Instrument):
 
     @property
     def sensitivity(self):
-        '''Get the lockin sensitivity'''
+        """Get the lockin sensitivity"""
         value = self._sensitivity_options[int(self.ask('SENS?'))]
         if 'I' in self.input_mode:
             value *= 1e-6 # if we're in a current mode
@@ -107,13 +107,13 @@ class SR830(Instrument):
 
     @sensitivity.setter
     def sensitivity(self, value):
-        '''
+        """
         Set the sensitivity.
 
         You can also set this equal to 'up' or 'down' to increment/decrement the sensitivity.
 
         Note that if in current mode, the sensitivities are in terms of current.
-        '''
+        """
 
         if value == 'up':
             index = int(self.ask('SENS?')) + 1 # take current sensitivity and increase it
@@ -141,13 +141,13 @@ class SR830(Instrument):
 
     @property
     def amplitude(self):
-        '''Get the output amplitude'''
+        """Get the output amplitude"""
         self._amplitude = float(self.ask('SLVL?'))
         return self._amplitude
 
     @amplitude.setter
     def amplitude(self, value):
-        '''Set the amplitude.'''
+        """Set the amplitude."""
         if value < 0.004:
             value = 0.004
         if value > 5:
@@ -175,33 +175,33 @@ class SR830(Instrument):
 
     @property
     def harmonic(self):
-        '''
+        """
         Get the detection harmonic
-        '''
+        """
         self._harmonic = int(self.ask('HARM?'))
         return self._harmonic
 
     @harmonic.setter
     def harmonic(self, value):
-        '''
+        """
         Set the detection harmonic
-        '''
+        """
         assert type(value) is int
         self.write('HARM %i' %value)
 
     @property
     def phase(self):
-        '''
+        """
         Get the reference phase shift (degrees)
-        '''
+        """
         self._phase = float(self.ask('PHAS?'))
         return self._phase
 
     @phase.setter
     def phase(self, value):
-        '''
+        """
         Set the reference phase shift (degrees)
-        '''
+        """
         phase = (phase + 180) % 360 - 180 # restrict from -180 to 180
         self.write('PHAS %f' %value)
 
@@ -287,9 +287,9 @@ class SR830(Instrument):
         return lias;
 
     def ask(self, cmd, timeout=3000):
-        '''
+        """
         Default timeout 3000 ms. None for infinite timeout
-        '''
+        """
         self._visa_handle.timeout = timeout
         return self._visa_handle.ask(cmd);
 
@@ -311,7 +311,7 @@ class SR830(Instrument):
         self.write('ICPL1')
 
     def fix_sensitivity(self, OL_thresh=1, UL_thresh=0.1):
-        '''
+        """
         Checks to see if the lockin is overloading or underloading (signal/sensivity < 0.1)
         and adjusts the sensitivity accordingly.
 
@@ -320,7 +320,7 @@ class SR830(Instrument):
         change senstivity.
 
         Accepts thresholds for the overload and underload conditions.
-        '''
+        """
         while self.is_OL(OL_thresh):
             sens_before = self.sensitivity
             self.sensitivity = 'up'
@@ -356,13 +356,13 @@ class SR830(Instrument):
         self._visa_handle.write('OUTX 1') #1=GPIB
 
     def is_OL(self, thresh=1):
-        '''
+        """
         Looks at the magnitude and x and y components to determine whether or not we are overloading the lockin.
         There is a status byte that you can read that will supposedly tell you this as well, but it wasn't working reliably.
 
         Set the threshold for changing the gain. Note that each sensitivity does allow
         inputs to be slightly higher than the nominal sensitivity.
-        '''
+        """
         m = max(abs(np.array([self.R, self.X, self.Y]))/self.sensitivity)
         if m > thresh:
             return True
@@ -370,11 +370,11 @@ class SR830(Instrument):
             return False
 
     def is_UL(self, thresh=1e-2):
-        '''
+        """
         Looks at the magnitude of the larger of the x and y components to determine
         whether or not the lockin is "underloading". This is defined by the given
         threshold, which is by default signal/sensitivity < 0.01
-        '''
+        """
         m = max(abs(np.array([self.R, self.X, self.Y]))/self.sensitivity)
         if m < thresh:
             return True
@@ -415,10 +415,10 @@ class SR830(Instrument):
         self.close()
 
     def sweep(self, Vstart, Vend, Vstep=0.01, sweep_rate=0.1):
-        '''
+        """
         Sweeps the lockin amplitude at given sweep rate in V/s (default 0.1).
         Sweeps with a step size of 0.01 V by default.
-        '''
+        """
         delay = Vstep/sweep_rate
         numsteps = abs(Vstart-Vend)/Vstep
         V = np.linspace(Vstart, Vend, numsteps)
@@ -430,11 +430,11 @@ class SR830(Instrument):
         self._visa_handle.write(cmd)
 
     def zero(self, sweep_rate=0.1):
-        '''
+        """
         Zeroes the lockin amplitude at given sweep rate in V/s.
         Sweeps down to minimum amplitude, which is 0.004 V.
         Sweeps with a step size of 0.01 V.
-        '''
+        """
         Vstep = 0.01
         self.sweep(self.amplitude, 0, Vstep, sweep_rate)
 

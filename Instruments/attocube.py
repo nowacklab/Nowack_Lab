@@ -9,31 +9,31 @@ except:
     print('PyANC350 not installed!')
 from .instrument import Instrument
 
-''' *** Use the Attocube class, definition is at the bottom *** '''
-'''
+""" *** Use the Attocube class, definition is at the bottom *** """
+"""
 Careful! Can only initialize one attocube Object at a time.
-'''
+"""
 
 class ANC350(Instrument):
-    '''
+    """
     For remote operation of the Attocubes with the ANC350.
     Control each attocube using the "Positioner" object created.
     e.g. atto.x.V = 50
          atto.x.pos = 4000
          atto.x.move(100)
          atto.x.step(-100)
-    '''
+    """
     _label = 'atto'
     _stages = ['x','y','z'] # order of axis controllers
     _pos_lims = [20000, 20000, 20000] # um (temporary until LUT calibrated)
     _instances = []
 
     def __init__(self, montana=None):
-        '''
+        """
         Pass montana = montana.Montana().
         This will check the temperature to see if it is safe to go to 60 V.
         Else, we stay at 45 V.
-        '''
+        """
 
         ## Use self._instances to keep track of instances of the attocube class
         ## This is necessary to delete the ANC before we make a new one.
@@ -90,7 +90,7 @@ class ANC350(Instrument):
 
 class Positioner(Instrument):
     def __init__(self, anc, num, V_lim=70, pos_lim=20000, pos_tolerance=1, label=None):
-        '''
+        """
         Creates an Attocube positioner object.
         anc = A PyANC350v4.Positioner object that communciates with the ANC350
         num = Axis index. Axis numbers labeled on the ANC are num + 1
@@ -98,7 +98,7 @@ class Positioner(Instrument):
         freq = stepping frequency (Hz)
         V_lim = stepping voltage limit (70 V is max for the instrument)
         label = 'x', 'y', or 'z'
-        '''
+        """
         self.anc = anc
         self.num = num
         self.label = label
@@ -150,9 +150,9 @@ class Positioner(Instrument):
 
     @property
     def C(self):
-        '''
+        """
         Measure capacitance of positioner
-        '''
+        """
         time.sleep(0.1) # capacitance was locking up, maybe this helps?
         print('Measuring capacitance of positioner %s...' %self.label)
         try:
@@ -164,9 +164,9 @@ class Positioner(Instrument):
 
     @property
     def V(self):
-        '''
+        """
         Measure or set stepping voltage of positioner
-        '''
+        """
         self._V  = self.anc.getAmplitude(self.num)
         return self._V
 
@@ -181,9 +181,9 @@ class Positioner(Instrument):
 
     @property
     def freq(self):
-        '''
+        """
         Measure or set stepping frequency of positioner
-        '''
+        """
         self._freq = self.anc.getFrequency(self.num)
         return self._freq
 
@@ -196,9 +196,9 @@ class Positioner(Instrument):
 
     @property
     def pos(self):
-        '''
+        """
         Measures or sets the position of the positioner (in um)
-        '''
+        """
         self._pos = round(self.anc.getPosition(self.num)*1e6, 2) # convert m to um
         return self._pos
 
@@ -225,9 +225,9 @@ class Positioner(Instrument):
 
     @property
     def pos_tolerance(self):
-        '''
+        """
         Measure or set position tolerance of positioner. Actually does write a value, but this code doesn't use that feature of the controller.
-        '''
+        """
 
         return self._pos_tolerance
 
@@ -237,29 +237,29 @@ class Positioner(Instrument):
         self._pos_tolerance = value
 
     def check_voltage(self):
-        '''
+        """
         Makes sure stepping voltage is lower than the limit
-        '''
+        """
         if self.V > self.V_lim:
             self.V = self.V_lim
             print("Axis %s voltage was too high, set to %f" %(self.label, self.V_lim))
 
     def move(self, dist):
-        '''
+        """
         Moves positioner a specified distance (um).
         Distance can be positive or negative.
         e.g. atto.move(-100)
-        '''
+        """
         new_pos = dist + self.pos
         if new_pos > self.pos_lim or new_pos < 0:
             raise Exception('Moving %f m would make positioner %s out of range!' %(dist, self.label))
         self.pos = new_pos
 
     def step(self, numsteps):
-        '''
+        """
         Moves a desired number of steps (can be positive or negative)
         e.g. atto.z.step(-100)
-        '''
+        """
         self.check_voltage()
 
         if numsteps < 0:
@@ -278,19 +278,19 @@ class Positioner(Instrument):
 
 
     def update_anc(self):
-        '''
+        """
         Saves current parameters to the ANC350 memory. Will be recalled on startup.
-        '''
+        """
         self.anc.saveParams()
 
 
 class ANC300(Instrument): #open loop controller, we don't use this anymore
-    '''
+    """
     THIS CONTROLLER NOT USED AS OF ~August 2016
     For remote operation of the Attocubes. Order of axes is X, Y, Z (controllers 1,2,3 are in that order).
 
     To test: up/down fanciness with negative signs. I think it works, but not 100%
-    '''
+    """
     _stages = ['x','y','z']
     _modes = ['gnd','cap','stp']
 
@@ -383,16 +383,16 @@ class ANC300(Instrument): #open loop controller, we don't use this anymore
         return self._cap
 
     def close(self):
-        '''
+        """
         Closes telnet connection
-        '''
+        """
         self._tn.close()
 
 
     def connect(self):
-        '''
+        """
         Connects to ANC300 Attocube Controller via LAN. If for some reason communication does not work, first check for IP 192.168.69.3 in cmd using arp -a, then troubleshoot using cygwin terminal: telnet 192.168.69.3 7230
-        '''
+        """
         self._tn = telnetlib.Telnet(host, port, 5) # timeout 5 seconds
         self._tn.read_until(b"Authorization code: ") #skips to pw entry
         self._tn.write(b'123456'+ b'\n') #default password
@@ -476,10 +476,10 @@ class ANC300(Instrument): #open loop controller, we don't use this anymore
 
 
 class ANC350_like300(Instrument):
-    '''
+    """
     THIS CLASS NOT USED AS OF August 2016
     For remote operation of the Attocubes with the ANC350. Adapted directly from ANC300. Order of axes is X, Y, Z (controllers 1,2,3 are in that order).
-    '''
+    """
     _stages = ['x','y','z']
     _modes = ['gnd','cap','stp']
 

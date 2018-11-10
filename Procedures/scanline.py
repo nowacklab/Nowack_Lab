@@ -84,9 +84,9 @@ class Scanline(Measurement):
             self.piezos.V = 0
 
     def plot(self):
-        '''
+        """
         Set up all plots.
-        '''
+        """
         super().plot()
 
         for chan in self._daq_inputs:

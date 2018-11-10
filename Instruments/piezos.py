@@ -9,11 +9,11 @@ except:
     print('PyDAQmx not imported in piezos.py!')
 
 class Piezos(Instrument):
-    '''
+    """
     Piezo benders on the scanner.
     Signal sent to NIDAQ goes through Nanonis HVA4 High Voltage Amplifier.
     Sweeps between voltages smoothly.
-    '''
+    """
     _label = 'piezos'
     # DAQ channel labels expected by this class
     _daq_outputs = ['x','y','z']
@@ -31,11 +31,11 @@ class Piezos(Instrument):
                         # 0.2 is a nice number
 
     def __init__(self, daq=None, zero = False):
-        '''
+        """
         e.g. pz = piezos.Piezos(daq=daq, zero = True)
             daq: the nidaq.NIDAQ() object
             zero: whether to zero the daq or not
-        '''
+        """
         self._daq = daq
         if daq is None:
             print('Daq not loaded... piezos will not work until you give them a daq!')
@@ -77,12 +77,12 @@ class Piezos(Instrument):
 
     @property
     def V(self):
-        '''
+        """
         Voltage property. Set and read any number of piezo voltages.
             pz.V
             pz.V = {'z':150, 'y':100}
             pz.V = 0 will zero all piezos
-        '''
+        """
         for p in self._piezos:
             self._V[p] = getattr(self,p).V
         return self._V
@@ -105,16 +105,16 @@ class Piezos(Instrument):
 
 
     def load_daq(self, daq):
-        '''
+        """
         If piezos object loaded without a daq, give it a daq.
-        '''
+        """
         self._daq = daq
         for p in self._piezos:
             getattr(self,p)._daq = daq
 
 
     def sweep(self, Vstart, Vend, chan_in=None, sweep_rate=180, meas_rate=900):
-        '''
+        """
         Sweeps piezos from a starting voltage (dictionary) to an ending voltage
          (dictionary).
          specify the channels you want to monitor as a list
@@ -125,7 +125,7 @@ class Piezos(Instrument):
          This sets a typical minimum output rate of 180/.2 = 900 Hz.
          Sampling faster will decrease the step size.
          Lowering the sweep rate open ups smaller measure rates
-        '''
+        """
         # Make copies of start and end dictionaries so we can mess them up
         Vstart = Vstart.copy()
         Vend = Vend.copy()
@@ -200,7 +200,7 @@ class Piezos(Instrument):
         return output_data, received
 
     def sweep_surface(self, voltages, chan_in=None, sweep_rate=180, meas_rate=900):
-        '''
+        """
         Sweeps piezos using arrays given in a voltage dictionary.
         This function will take that dictionary and interpolate to a different
          number of steps. This number is determined by figuring out the total
@@ -214,7 +214,7 @@ class Piezos(Instrument):
          This sets a typical minimum output rate of 180/.2 = 900 Hz.
          Sampling faster will decrease the step size.
          Lowering the sweep rate open ups smaller measure rates
-        '''
+        """
         voltages = voltages.copy() # so we don't modify voltages
 
         Vstart = {}
@@ -291,7 +291,7 @@ class Piezos(Instrument):
         self.V = 0
 
     def HVALookup(self,readArray,chan_1,chan_2):
-        '''
+        """
         Calculates gain from AO and A1 channels on HVA bitstream. Channel
         numbers start with zero
 
@@ -302,7 +302,7 @@ class Piezos(Instrument):
         convention
 
         returns the gain calculated
-        '''
+        """
         if readArray[chan_1] == 1:
             if readArray[chan_2] == 1:
                 output = 40
@@ -317,13 +317,13 @@ class Piezos(Instrument):
 
 
     def checkHVAStatus(self):
-        '''
+        """
         Checks high voltage amplifier for overheat and high temp as well as
         checking if all parameters equal those in code
 
         Raises exceptions for mismatches in code and hardware, or if there is
         fault condition in the HVA.
-        '''
+        """
         arraySize = 16; # Length of serial word
         sampsPerChanToAcquire = arraySize + 1
         readArray = np.ones(arraySize, dtype=np.uint8)
@@ -449,9 +449,9 @@ class Piezo(Instrument):
 
     @property
     def V(self):
-        '''
+        """
         Voltage property. Set or read piezo voltage
-        '''
+        """
         try:
             # Convert daq volts to piezo volts
             self._V = self._daq.outputs[self.label].V*self.gain*self.bipolar
@@ -467,10 +467,10 @@ class Piezo(Instrument):
 
 
     def apply_gain(self, value):
-        '''
+        """
         Converts DAQ volts to piezo volts by multiplying a voltage by the
         gain and bipolar factor
-        '''
+        """
         if np.isscalar(value):
             return value*self.gain*self.bipolar
         else:
@@ -478,10 +478,10 @@ class Piezo(Instrument):
 
 
     def remove_gain(self, value):
-        '''
+        """
         Converts piezo volts to DAQ volts by dividing a voltage by the
         gain and bipolar factor
-        '''
+        """
         if np.isscalar(value):
             return value/self.gain/self.bipolar
         else:
@@ -489,10 +489,10 @@ class Piezo(Instrument):
 
 
     def check_lim(self, V):
-        '''
+        """
         checks voltage list V = [...] to see if it is out of range for the
         piezo
-        '''
+        """
         if np.isscalar(V):
             Vtemp = [V]
         else:
@@ -505,7 +505,7 @@ class Piezo(Instrument):
 
 
     def sweep(self, Vstart, Vend, chan_in=None, sweep_rate=180, meas_rate=900):
-        '''
+        """
         Sweeps piezos linearly from a starting voltage to an ending voltage.
         Specify a list of input channels you want to monitor.
          Maximum allowed step size will be the step size for the piezo that has
@@ -515,7 +515,7 @@ class Piezo(Instrument):
          This sets a typical minimum output rate of 180/.2 = 900 Hz.
          Sampling faster will decrease the step size.
          Lowering the sweep rate open ups smaller measure rates
-        '''
+        """
         # Sweep to Vstart first if we aren't already there.
         # Self.V calls this function, but recursion should only go one
         # level deep.

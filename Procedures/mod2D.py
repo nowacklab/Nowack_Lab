@@ -17,11 +17,11 @@ class Mod2D(Measurement):
     instrument_list = SquidIV.instrument_list
 
     def __init__(self, instruments={}, rate=900):
-        '''
+        """
         Example: Mod2D({'daq': daq, 'preamp': preamp}, 'ao0','ai0','ao1', rate=900).
         To make an empty object, then just call Mod2D().
         You can do this if you want to plot previously collected data.
-        '''
+        """
         super().__init__(instruments=instruments)
 
         self.IV = SquidIV(instruments, rate=rate)
@@ -99,9 +99,9 @@ class Mod2D(Measurement):
 
 
     def plot(self):
-        '''
+        """
         Plot the 2D mod image
-        '''
+        """
         super().plot()
         V = np.ma.masked_where(np.isnan(self.V), self.V) # hide Nans
         plot_mpl.update2D(self.im, V, equal_aspect=False)
@@ -109,9 +109,9 @@ class Mod2D(Measurement):
 
 
     def setup_plots(self):
-        '''
+        """
         Set up the figure. 2D mod image and last IV trace.
-        '''
+        """
         self.ax = AttrDict()
         self.fig, (self.ax['IV'], self.ax['2D']) = plt.subplots(2,1,figsize=(7,7),gridspec_kw = {'height_ratios':[1, 3]})
         self.ax['IV'].set_title(self.filename+'\n'+self.notes)

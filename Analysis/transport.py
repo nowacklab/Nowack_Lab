@@ -2,7 +2,7 @@ import numpy as np
 from ..Utilities.constants import e, h
 
 def mean_free_path(n=None, rho=None, mu=None):
-    '''
+    """
     Calculate mean free path (in micron) of a 2D system, given at least two of:
     - carrier density, n, in cm^-2
     - longitudinal resistivity, rho, in Ohm/square
@@ -10,7 +10,7 @@ def mean_free_path(n=None, rho=None, mu=None):
 
     Lmfp = h/(2e^2*rho*sqrt(pi*n))
 
-    '''
+    """
     if n is None:
         assert rho is not None
         assert mu is not None

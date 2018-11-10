@@ -2,23 +2,23 @@ from .instrument import VISAInstrument
 import numpy as np
 
 class LakeshoreChannel(VISAInstrument):
-    '''
+    """
     Channel objected for the LakeShore Model 372 AC Resistance bridge.
     The LakeShore372 class defined below contains up to 8 channel objects
     representing each of the input channels on the instrument.
-    '''
+    """
     _label = 'LakeshoreChannel'
     _num = 0
     _strip = '\r'
     _insets = ['enabled', 'dwell', 'pause', 'curve_num', 'temp_coef']
 
     def __init__(self, visa_handle, num, label):
-        '''
+        """
         Arguments:
             visa_handle: VISA handle created for the LakeShore372
             num: Channel number.
             label: Channel label.
-        '''
+        """
         self._visa_handle = visa_handle
         self._num = num
         self._label = label
@@ -68,11 +68,11 @@ class LakeshoreChannel(VISAInstrument):
 
 
     def _get_inset(self):
-        '''
+        """
         Returns all the parameters returned by the INSET? query.
         These are channel settings in an array:
             [enabled/disabled, dwell, pause, curve number, tempco]
-        '''
+        """
         inset = self.ask('INSET? %i' %self._num)
         inset = [int(x) for x in inset.split(',')]
         inset[0] = bool(inset[0]) # make enabled True/False
@@ -84,7 +84,7 @@ class LakeshoreChannel(VISAInstrument):
     def _set_inset(self, enabled = None, dwell = None, pause = None,
                     curve_num = None, temp_coef = None
         ):
-        '''
+        """
         Set any number of channel settings uing the INSET command.
         For each keyword argument, None indicates not to change that setting.
 
@@ -94,7 +94,7 @@ class LakeshoreChannel(VISAInstrument):
             pause (float): Change pause time (3-200 s)
             curve_num (int 0-59): Which curve the channel uses. 0 = no curve.
             temp_coef (int): Temp. coefficient used if no curve; 1 = -, 2 = +
-        '''
+        """
         inset = self._get_inset()
         args = [enabled, dwell, pause, curve_num, temp_coef]
 
@@ -108,9 +108,9 @@ class LakeshoreChannel(VISAInstrument):
 
     @property
     def P(self):
-        '''
+        """
         Get the power (W) of this input channel.
-        '''
+        """
         if self.status == 'OK':
             self._P = float(self.ask('RDGPWR? %i' %self._num))
         else:
@@ -119,9 +119,9 @@ class LakeshoreChannel(VISAInstrument):
 
     @property
     def R(self):
-        '''
+        """
         Get the resistance (R) of this input channel.
-        '''
+        """
         if self.status == 'OK':
             self._R = float(self.ask('RDGR? %i' %self._num))
         else:
@@ -130,10 +130,10 @@ class LakeshoreChannel(VISAInstrument):
 
     @property
     def scanned(self):
-        '''
+        """
         Is this particular channel being scanned?
         Returns True/False
-        '''
+        """
         # SCAN? returns ##,#. The first number is channel being scanned
         scan = self.ask('SCAN?')
         scan = int(scan.split(',')[0])
@@ -141,20 +141,20 @@ class LakeshoreChannel(VISAInstrument):
         return self._scanned
 
     def scan(self, autoscan=True):
-        '''
+        """
         Start scanning this channel.
 
         autoscan: whether to automatically loop through channels
-        '''
+        """
         self.write('SCAN %i,%i' %(self._num, autoscan))
 
     @property
     def status(self):
-        '''
+        """
         Get the status the input channel.
         Status messages are standard to LakeShore, except "OK" means there are
         no status messages.
-        '''
+        """
         msgs = [
             'T. UNDER',
             'T. OVER',
@@ -179,9 +179,9 @@ class LakeshoreChannel(VISAInstrument):
 
     @property
     def T(self):
-        '''
+        """
         Get the temperature (K) reading of input channels as a dictionary.
-        '''
+        """
         if self.status == 'OK':
             self._T = float(self.ask('RDGK? %i' %self._num))
         else:
@@ -190,9 +190,9 @@ class LakeshoreChannel(VISAInstrument):
 
 
 class Lakeshore372(VISAInstrument):
-    '''
+    """
     Driver to communicate with LakeShore Model 372 AC Resistance Bridge & Temperature Controller for the BlueFors dilution refrigerator
-    '''
+    """
     _label = 'Lakeshore Model 372'
     _strip = '\r'
     _channel_names = {
@@ -232,9 +232,9 @@ class Lakeshore372(VISAInstrument):
 
 
     def _get_param(self, param):
-        '''
+        """
         Get a parameter from all channels, returned as a dictionary.
-        '''
+        """
         setattr(self, '_' + param,
             {c: getattr(getattr(self, 'chan%i' %c), param)
                 for c in self._channel_names}
@@ -242,18 +242,18 @@ class Lakeshore372(VISAInstrument):
         return getattr(self, '_' + param)
 
     def _set_param(self, param, d):
-        '''
+        """
         Set the same parameter for all channels with a dictionary
-        '''
+        """
         for c in d.keys():
             getattr(self, '_' + param)[c] = d[c]
             setattr(getattr(self, 'chan%i' %c), param, d[c])
 
 
     def enable_all(self):
-        '''
+        """
         Enable all channels.
-        '''
+        """
         enabled_now = self.enabled
         self.enabled = {c: True for c in self._channel_names.keys()
                 if enabled_now[c] is False # to speed things up
@@ -261,39 +261,39 @@ class Lakeshore372(VISAInstrument):
 
 
     def enable_only(self, channel):
-        '''
+        """
         Enable only the designated channel.
         All other channels will be disabled.
 
         channel: the channel number to be enabled.
-        '''
+        """
         d = {c: False for c in self._channel_names.keys()}
         d[channel] = True
         self.enabled = d
 
 
     def scan(self, channel, autoscan=True):
-        '''
+        """
         Start scanning a particular channel.
 
         channel: channel number to scan
         autoscan: whether to automatically loop through channels
-        '''
+        """
         getattr(self, 'chan%i' %self._num).scan(autoscan)
 
     @property
     def pid_setpoint(self):
-        '''
+        """
         Get setpoint for PID
-        '''
+        """
         return float(self.ask('SETP? 0')) #0 is sample heater
 
     @pid_setpoint.setter
     def pid_setpoint(self, setpoint):
-        '''
+        """
         Set setpoint for PID.  Should be float.  In preferred units
         of the setpoint.  Kelvin, unless changed
-        '''
+        """
         self.write('SETP 0,{0}'.format(float(setpoint)))
 
     _MODE_LOOKUP = {

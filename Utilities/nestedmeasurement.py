@@ -27,7 +27,7 @@ class NestedMeasurement(Measurement):
                        saveinfolder = True,
                        saveinsamefolder = True
                        ):
-        '''
+        """
         inputs:
         measurement_constructor: list of measurement constructors
         measurement_constructor_args: list of arguments for measurement
@@ -46,7 +46,7 @@ class NestedMeasurement(Measurement):
         log_fncts: functions performed for logging, first argument is the 
                     measurement obj
         log_fncts_args: arguments to those functions
-        '''
+        """
         self.m_c = measurement_constructor
         self.m_c_args = measurement_constructor_args
         self.m_c_kwargs = measurement_constructor_kwargs

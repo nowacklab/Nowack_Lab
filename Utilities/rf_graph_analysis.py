@@ -13,8 +13,8 @@ from Nowack_Lab.Instruments.keithley import Keithley2400
 from Nowack_Lab.Procedures.rf_sweep import *
 
 class RF_sweep_current_graph_analyzer:
-    '''Contains (static) methods for inspecting/analyzing/replotting graphs
-    from datasets produced by RF_sweep_current'''
+    """Contains (static) methods for inspecting/analyzing/replotting graphs
+    from datasets produced by RF_sweep_current"""
 
     @staticmethod
     def plotPhase(filename, rev=False):

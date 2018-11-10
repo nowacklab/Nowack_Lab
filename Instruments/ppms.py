@@ -4,7 +4,7 @@ from .instrument import Instrument
 import select
 
 class PPMS(Instrument):
-    r'''
+    r"""
     For remote operation of the Quantum Design PPMS.
     Makes use of PyQDInstrument (https://github.com/guenp/PyQDInstrument)
     Make sure to run PyQDInstrument.run_server() in an IronPython console on a machine that can connect to the PPMS control PC's QDInstrument_Server.exe program.
@@ -15,7 +15,7 @@ class PPMS(Instrument):
         pqi.run_server('192.168.0.103', 50009, '192.168.0.100', 11000)
     Attributes represent the system control parameters:
     'temperature', 'temperature_rate', 'temperature_approach', 'field', 'field_rate', 'field_approach', 'field_mode', 'temperature_status', 'field_status', 'chamber'
-    '''
+    """
     def __init__(self, host, port, s=None):
         if s == None:
             self._s = connect_socket(host, port)
@@ -75,7 +75,7 @@ def ask_socket(s, cmd, startbytes=0):
 
 def ask_socket_raw(s, cmd):
     import time
-    '''query socket and return response'''
+    """query socket and return response"""
     #empty socket buffer
     while socket_poll(s):
         s.recv(1024)

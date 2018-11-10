@@ -4,11 +4,11 @@ import math
 
 ## NOTE: Aspect handled differently in matplotlib 2.0. Don't need to set it this way!
 def aspect(ax, ratio, absolute=True):
-    '''
+    """
     Sets an absolute (or relative) aspect ratio for the given axes using the axis limits.
     Absolute will make the box aspect ratio equal to the one given, regardless of axis limits.
     Relative will set the aspect ratio based on the data scales.
-    '''
+    """
     xvals,yvals = ax.get_xlim(), ax.get_ylim()
 
     xrange = xvals[1]-xvals[0]
@@ -21,9 +21,9 @@ def aspect(ax, ratio, absolute=True):
 
 
 def clim(im, l, u):
-    '''
+    """
     Sets colorbar limits for the specified image and redraws it.
-    '''
+    """
     cb = im.colorbar
     im.set_clim(l,u)
     cb.set_clim(l,u)
@@ -31,7 +31,7 @@ def clim(im, l, u):
 
 
 def cubehelix(g=1.0, s=0.5, r=-1.0, h=1.5):
-    '''
+    """
     Returns a "cubehelix", brightness-adjusted colormap.
     Help from https://gist.github.com/gazzar/11369614.
     See examples here http://www.mrao.cam.ac.uk/~dag/CUBEHELIX/cubewedges.html
@@ -40,7 +40,7 @@ def cubehelix(g=1.0, s=0.5, r=-1.0, h=1.5):
     s: start color
     r: number of rgb rotations in color made from start to end
     h: hue (adjust saturation)
-    '''
+    """
     import matplotlib as mpl
     from matplotlib.colors import LinearSegmentedColormap
     cdict = mpl._cm.cubehelix(g, s, r, h)
@@ -56,14 +56,14 @@ def plotline(ax, x, y, z):
 ## For moving forward, this function should take care of all the non-obvious stuff (e.g. don't need set_xlabel)
 def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='',
            ylabel='', clabel='', fontsize=20, equal_aspect=True):
-    '''
+    """
     Plots a 2D heatmap on axes ax using plt.imshow.
     x,y must be a meshgrid with default indexing, or lists.
     z has to be the same shape.
     Masks Nones and will plot as white.
     Can specify title and axis labels here as well
     Fontsize kwarg will affect title and all labels
-    '''
+    """
 
     ## Format axes
     ## NOTE: REMOVE
@@ -106,11 +106,11 @@ def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='',
     return im
 
 def update2D(im, z, center_at_zero=False, equal_aspect=True):
-    '''
+    """
     Update image data of a 2D plot.
     Pass in the image returned by plot2D.
     Can choose to center the colorbar at zero.
-    '''
+    """
     ## Convert image to a masked numpy array
     z = np.array(z, dtype=np.float) # Will convert Nones to nans
     zm = np.ma.masked_where(np.isnan(z), z)

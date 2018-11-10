@@ -3,12 +3,12 @@ from .plotting.plot_mpl import clim
 from . import conversions
 
 def scan_gif(scan_list):
-    '''
+    """
     Make a gif from a series of scans.
     Colorscale will use the lowest lower bound and the highest upper bound.
     This will (hopefully) ensure that we can see features on all scans.
     scan_list = A list of files to load
-    '''
+    """
     from ..Procedures.scanplane import Scanplane
 
     scans = []

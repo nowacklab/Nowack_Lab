@@ -5,12 +5,12 @@ import math
 from Nowack_Lab.Utilities.dataset import Dataset
 
 def plot_live(filename, xkey, xlabel, funcs, updatetime = .1, depth = False):
-    '''
+    """
     Each element of funcs must be a 3 element list, where the first element is
     a list of keys for arguments of the second element, a function which returns
     a single number. The third element shall be a string, to be put on the
     y-axis.
-    '''
+    """
     plt.ion()
     fig, axs = plt.subplots(len(funcs),1, sharex = True,figsize = (8,8))
     lines = [ax.plot([])[0] for ax in axs]

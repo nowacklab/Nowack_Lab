@@ -4,7 +4,7 @@ import plotly.tools as tls
 pyo.init_notebook_mode(connected=True)
 
 def plot2D_plotly(x, y, z, cmap='RdBu', title='', xlabel='', ylabel='', clabel='', fontsize=20):
-    '''
+    """
     NOT YET COMPLETE... maybe never will be.
     
     Plots a 2D heatmap on axes ax using plt.imshow.
@@ -13,7 +13,7 @@ def plot2D_plotly(x, y, z, cmap='RdBu', title='', xlabel='', ylabel='', clabel='
     Masks Nones and will plot as white.
     Can specify title and axis labels here as well ^.^
     Fontsize kwarg will affect title and all labels
-    '''
+    """
 
     heatmap = go.Heatmap(
         x=x,

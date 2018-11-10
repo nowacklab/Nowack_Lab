@@ -15,10 +15,10 @@ class SR5113(Instrument):
     #Put the gains as class variable tuples
 
     def __init__(self, port='COM1'):
-        '''
+        """
         Driver for the Signal Recovery 5113 preamplifier.
         e.g. preamp = SR5113('COM1')
-        '''
+        """
         if type(port) is int:
             port = 'COM%i' %port
         self.connect(port)
@@ -109,16 +109,16 @@ class SR5113(Instrument):
             self._gain = value
 
     def close(self):
-        '''
+        """
         Closes connection to preamp
-        '''
+        """
         self._inst.close()
 
 
     def connect(self, port):
-        '''
+        """
         Connects to preamp via serial port
-        '''
+        """
         rm = visa.ResourceManager()
         self._inst = rm.open_resource(port)
 
@@ -137,16 +137,16 @@ class SR5113(Instrument):
             return False
 
     def dc_coupling(self, dc=True):
-        '''
+        """
         Sets the preamp ac/dc coupling
-        '''
+        """
         self.write('CP%i' %(dc)) # 0 = ac, 1=dc
 
     def is_dc_coupled(self):
-        '''
+        """
         Reads the ac/dc coupling.  Returns true if dc coupled and false
         if ac coupled.
-        '''
+        """
         msg = self.write('CP?', read=True);
         if int(msg) == 1:
             return True;
@@ -178,7 +178,7 @@ class SR5113(Instrument):
         self.write('TC%i' %(tensec)) # 0 = 1s, 1 = 10s
 
     def write(self, cmd, read=False):
-        '''
+        """
         Will write commands to SR5113 preamp via serial port.
         If expect a value back, then set read=True.
         Figured this out by trial and error.
@@ -186,7 +186,7 @@ class SR5113(Instrument):
         last read command will be empty (*\n).
         Middle command will contain response.
         e.g. preamp.write('ID', True)
-        '''
+        """
 
         time.sleep(0.1) # Make sure we've had enough time to make connection.
         self._inst.write(cmd+'\r')

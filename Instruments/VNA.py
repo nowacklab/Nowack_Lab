@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 class VNA8722ES(Instrument):
     _label = 'VNA_ES'
-    '''Instrument driver for HP 8722ES Vector Network Analyzer'''
+    """Instrument driver for HP 8722ES Vector Network Analyzer"""
 # TODO: more safety precautions re: VNA source power and amplifier/squid limitations
     _power_state = None
     _power = None
@@ -104,7 +104,7 @@ class VNA8722ES(Instrument):
     def powerstate(self, value):
         """Set power to on/off 1/0"""
         val = int(value)
-        assert val in [1,0], "powerstate must be 1 or 0"
+        assert val in [1, 0], "powerstate must be 1 or 0"
         if val == 1:
             self.write('SOUP1')
             print('Turning on VNA source power')
@@ -121,7 +121,7 @@ class VNA8722ES(Instrument):
 
     @power.setter
     def power(self, value):
-        '''Set the power (dBm)'''
+        """Set the power (dBm)"""
         assert type(value) is float or int
         if value > -5 or value < -80:
             raise Exception('Power should be between -10 and -80 dBm')
@@ -160,9 +160,9 @@ class VNA8722ES(Instrument):
 
     @sweepmode.setter
     def sweepmode(self, value):
-        '''
+        """
         Set the sweep mode
-        '''
+        """
         if value == 'LIN':
             value = 'LINFREQ'
             self.sweeptime = 1
@@ -182,17 +182,17 @@ class VNA8722ES(Instrument):
 
     @property
     def minfreq(self):
-        '''
+        """
         Get the min frequency
-        '''
+        """
         self._minfreq = float(self.ask('STAR?'))
         return self._minfreq
 
     @minfreq.setter
     def minfreq(self, value):
-        '''
+        """
         Set min frequency
-        '''
+        """
         assert type(value) is float or int, "frequency must be float or int"
         self.write('STAR %f' % value)
         self._minfreq = value
@@ -218,7 +218,7 @@ class VNA8722ES(Instrument):
 
     @numpoints.setter
     def numpoints(self, value):
-        '''Set the number of points in sweep (and wait for clean sweep)'''
+        """Set the number of points in sweep (and wait for clean sweep)"""
         vals = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
         assert value in vals, "must be in " + str(vals)
         self.write('OPC?;POIN %f;' % value)
@@ -264,7 +264,7 @@ class VNA8722ES(Instrument):
 
     @averaging_state.setter
     def averaging_state(self, value):
-        '''Set averaging to on/off 1/0'''
+        """Set averaging to on/off 1/0"""
         val = int(value)
         if val == 1:
             self.write('AVEROON')
@@ -276,13 +276,13 @@ class VNA8722ES(Instrument):
 
     @property
     def averaging_factor(self):
-        '''Get averaging factor'''
+        """Get averaging factor"""
         self._averaging_factor = int(float(self.ask('AVERFACT?')))
         return self._averaging_factor
 
     @averaging_factor.setter
     def averaging_factor(self, value):
-        '''Set averaging factor, in [0, 999]'''
+        """Set averaging factor, in [0, 999]"""
         assert isinstance(value, int) and value >= 0 and value <= 999, "Averaging factor should be int in [0, 999]"
         self.write('AVERFACT%s' % value)
 
@@ -298,7 +298,7 @@ class VNA8722ES(Instrument):
 
     @smoothing_state.setter
     def smoothing_state(self, value):
-        '''Set smoothing to on/off 1/0'''
+        """Set smoothing to on/off 1/0"""
         val = int(value)
         assert val in [1, 0], "smoothing state should be 1 or 0 on/off"
         self.write('SMOOO%d' %val)
@@ -312,9 +312,9 @@ class VNA8722ES(Instrument):
 
     @smoothing_factor.setter
     def smoothing_factor(self, value):
-        '''Set smoothing factor'''
-        assert value >=.05 and value <20, "value must be between .05 and 20 (%)"
-        self.write('SMOOAPER %f' %value)
+        """Set smoothing factor"""
+        assert value >= .05 and value < 20, "value must be between .05 and 20 (%)"
+        self.write('SMOOAPER %f' % value)
         self._smoothing_factor = value
 
     @property
@@ -335,7 +335,8 @@ class VNA8722ES(Instrument):
         nplist = ['S11', 'S21', 'S12', 'S22']
         assert value in nplist, "Network parameter should be one of " + str(nplist)
         if value == 'S12' or value == 'S22':
-            #raise Exception('Don\'t send current thru amplifer backwards (just for cold amplifer testing, remove this in code if situation changes)')
+            # raise Exception('Don\'t send current thru amplifer backwards (just for cold amplifer testing,
+            # remove this in code if situation changes)')
             print("Make sure you are not sending current thru something wrong way - double-check connections")
         self.write(value)
 
@@ -351,14 +352,13 @@ class VNA8722ES(Instrument):
         self.sleep_until_finish_averaging()
 
         rm = visa.ResourceManager()
-        '''Important:not actually initializing another instance of this class (i.e. VNA class) because that would temporarily
-        set power too high when factory resets.'''
+        """Important:not actually initializing another instance of this class (i.e. VNA class) because that would temporarily
+        set power too high when factory resets."""
         instrument_for_saving = rm.get_instrument('GPIB0::16')
         instrument_for_saving.write('OUTPFORM')  # todo description from programming guide
         rawdata = instrument_for_saving.read(termination='~')  # i.e. character that will never be found in the raw data
         split_rawdata = rawdata.split('\n')     # split into lines, with two values each
                                                 # programming guide shows which display format allows which data type read
-
 
         dB_array = np.empty((1, self._numpoints))  # 1xn empty array (row vector)
 

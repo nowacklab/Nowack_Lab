@@ -240,15 +240,15 @@ class ArrayTune(Measurement):
         return conversion
 
     def setup_plots(self):
-        '''
+        """
         purposely left empty to prevent creating a figure if 
         squid fails to lock
-        '''
+        """
         pass
 
     def plot(self):
-        '''
-        '''
+        """
+        """
         self.fig, self.ax = plt.subplots(1,3,figsize=(12,4))
         # Plot the charactaristic
         self.ax[0].plot(self.char[1]*self.testsignalconv, self.char[2])
@@ -292,9 +292,9 @@ class ArrayTune(Measurement):
 
 
     def run_spectrum(self, save_appendedpath=''):
-        '''
+        """
         Run a squid spectrum
-        '''
+        """
         self.squidarray.sensitivity = "High" #Essential, for some reason
         self.preamp.gain = 1
         self.preamp.filter = (1, 100000)
@@ -312,9 +312,9 @@ class ArrayTune(Measurement):
         self.spectrum.run(welch=True, save_appendedpath = save_appendedpath)
 
     def run_mi(self, save_appendedpath=''):
-        '''
+        """
         Run a mutual inductance
-        '''
+        """
         self.squidarray.sensitivity = "Medium"
         self.squidarray.reset()
         self.preamp.filter = (1, 300)
@@ -389,7 +389,7 @@ class ArrayTune(Measurement):
         self._save(filename, savefig=True, **kwargs)
 
     def findconversion(self, dur=.1, stepsize=1):
-        '''
+        """
         Find the squid phi_0/V using the saa reset
 
         Parameters:
@@ -403,7 +403,7 @@ class ArrayTune(Measurement):
         False or out
             out = [the phi_0/V to make phi_0 jump at med,
                    the flux bias point necessary to make the jump]
-        '''
+        """
         istuned = self.tune_squid()
         if not istuned:
             return [False, self.saaconversion, -1]
@@ -415,7 +415,7 @@ class ArrayTune(Measurement):
         return self._findconversion('S_flux', sfluxlim, stepsize, dur)
 
     def _findconversion(self, attrname, maxattrval, stepsize=1, dur=.1):
-        '''
+        """
         To find the phi_0/v, one must have a locked device (squid or saa)
         and increment some parameter (s_flux, a_flux) until you see a 
         jump.
@@ -435,7 +435,7 @@ class ArrayTune(Measurement):
         False or out
             out = [the phi_0/V to make phi_0 jump at med,
                    the flux bias point necessary to make the jump]
-        '''
+        """
 
 
         self.squidarray.testSignal='Off'
@@ -456,9 +456,9 @@ class ArrayTune(Measurement):
         return [False, self.saaconversion, -1]
     
     def analyze_char(self, saasig_range = .05):
-        '''
+        """
         Analyze the characteristic
-        '''
+        """
         # sort the characteristics by the test signal
         order = np.argsort(self.char[1])
         self.char_testsig = self.char[1][order]
@@ -511,7 +511,7 @@ class BestLockPoint(Measurement):
                  samplerate=256000,
                  testinputconv = 10 # uA/V
                  ):
-        '''
+        """
         BestLockPoint: Quickly find the region in the squid bias-squid flux 
         parameter space where the squid will lock with low noise
 
@@ -532,7 +532,7 @@ class BestLockPoint(Measurement):
                                but can be altered by changing the resistors in 
                                the PFL-102
 
-        '''
+        """
         
         super(BestLockPoint, self).__init__(instruments=instruments)
         self.monitortime = monitortime
@@ -541,23 +541,23 @@ class BestLockPoint(Measurement):
         self.testinputconv = testinputconv
 
     def do(self):
-        '''
+        """
         Find best lock points
-        '''
+        """
         self.findbestlocpoints_record()
         self.findbestlocpoints_analyze()
         self.plot()
 
     def setup_plots(self):
-        '''
+        """
         Setup plots
-        '''
+        """
         self.fig, self.ax = plt.subplots(2,2, figsize=(12,9))
         self.ax = list(self.ax.flatten())
 
     @staticmethod
     def vmax_xsigma_p(data, sigmas):
-        '''
+        """
         Calculate the highest value within sigmas sigmas.
 
         Parameters:
@@ -570,19 +570,19 @@ class BestLockPoint(Measurement):
         Returns:
         --------
         out (float): numpy.mean(data) + sigma*numpy.std(data)
-        '''
+        """
         return np.nanmean(data) + sigmas*np.nanstd(data)
 
     @staticmethod
     def vmax_xsigma_n(data, sigmas):
-        '''
+        """
         See vmax_xsigma_n but - instead of +
 
         Returns:
         --------
         out (float): numpy.mean(data) - sigma*numpy.std(data)
 
-        '''
+        """
         return np.nanmean(data) - sigmas*np.nanstd(data)
 
     def plot(self):
@@ -614,10 +614,10 @@ class BestLockPoint(Measurement):
 
 
     def plot_1(self, ax, data, extent, label, vmax,vmin,cmap):
-        '''
+        """
         Helper for plot. Plots a single imshow of the given data
 
-        '''
+        """
         im = ax.imshow(data, extent=extent, aspect='auto', 
                       origin='lower',vmax=vmax, vmin=vmin,
                       cmap=cmap)
@@ -630,9 +630,9 @@ class BestLockPoint(Measurement):
 
 
     def plot_goodness(self, vmax):
-        '''
+        """
         Plot gradient/err with given vmax to enhance contrast
-        '''
+        """
         fig,ax = plt.subplots()
         extent = (self.bestloc_testsort_test[0][0], 
                   self.bestloc_testsort_test[0][-1],
@@ -645,7 +645,7 @@ class BestLockPoint(Measurement):
 
     @staticmethod
     def plotline(obj, index):
-        '''
+        """
         Plots a single line (constant Sbias) for the given index
 
         Parameters:
@@ -653,7 +653,7 @@ class BestLockPoint(Measurement):
         obj (BestPlotLines or equivalent)
 
         index (int): which index number to plot
-        '''
+        """
         xs = obj.testinputconv * obj.bestloc_testsort_test[index]
 
         fig,ax = plt.subplots(4,1, sharex=True, figsize=(5,9))
@@ -688,17 +688,17 @@ class BestLockPoint(Measurement):
 
     @staticmethod
     def plotline_current(obj, current):
-        '''
+        """
         plotline but you can choose a current (in uA) instead of an index
-        '''
+        """
         return BestLockPoint.plotline(obj, np.argmin(np.abs(obj.sbiasList-current)))
     
 
     def findbestlocpoints_record(self):
-        '''
+        """
         Record data to find the best lock point
         Called by do.  You should not call this normally.
-        '''
+        """
         monitortime = self.monitortime
         numsamples = self.numsamples
         samplerate = self.samplerate
@@ -742,7 +742,7 @@ class BestLockPoint(Measurement):
                                   savgol_winlen_grad=201,
                                   savgol_polyorder_grad=5,
                                   std_winlen=16):
-        '''
+        """
         Analyze the data taken.  Constructs gradients, means, error.
 
         Parameters:
@@ -765,7 +765,7 @@ class BestLockPoint(Measurement):
         none
 
         Creates bestloc_mean, bestloc_grad, bestloc_absgrad_over_err
-        '''
+        """
         [self.bestloc_mean,
          self.bestloc_grad,
          self.bestloc_err,
@@ -805,7 +805,7 @@ class BestLockPoint(Measurement):
                                   savgol_winlen_grad=201,
                                   savgol_polyorder_grad=5,
                                   std_winlen=16):
-        '''
+        """
         Constructs gradients, means, error of saasig for applied testsig
 
         Parameters:
@@ -838,7 +838,7 @@ class BestLockPoint(Measurement):
         --------
         out = [mean, gradient, error, abs(gradient) / error]
 
-        '''
+        """
         if len(testsig.shape) > 2:
             raise ValueError('testsig has dimension > 2')
 
@@ -883,14 +883,14 @@ class ArrayTuneBatch(Measurement):
                  save_appendedpath = '',
                  conversion=1/1.44,
                  debug=False):
-        '''
+        """
         Test a squid automatically with a SAA 
 
         Work in progress
 
         live plotting only plots the first element of sflux, all of 
         sbias and aflux
-        '''
+        """
         
         super(ArrayTuneBatch, self).__init__(instruments=instruments)
 
@@ -985,9 +985,9 @@ class ArrayTuneBatch(Measurement):
 
     def _tunesave(self, index_sb, index_af, index_sf, 
                   sbias, aflux, sflux, first=False):
-        '''
+        """
         Create arraytune, run it, and save it if it is good
-        '''
+        """
 
         at = ArrayTune(self.instruments, 
                        squid_bias=sbias, 
@@ -1174,10 +1174,10 @@ class ArrayTuneBatch(Measurement):
 
                     
     def findconversion(self, stepsize=5, dur=.001):
-        '''
+        """
         Finds the conversion (phi_0/V) for all the points in
         arraytunebatch.  Not very useful.
-        '''
+        """
         self.caltrue       = np.zeros((len(self.sbias), len(self.aflux)))
         self.saaconversion = np.full((len(self.sbias), len(self.aflux)), np.nan)
         self.conv_sflux    = np.full((len(self.sbias), len(self.aflux)), np.nan)
@@ -1205,9 +1205,9 @@ class ArrayTuneBatch(Measurement):
                     self.conv_sflux[ix][iy]  = conv_sflux
 
     def plotconversion(self):
-        '''
+        """
         Plots the conversions
-        '''
+        """
         fig, axs = plt.subplots(1,2)
         for data,cbarlabel,ax,cmap in zip(
                 [self.saaconversion, self.conv_sflux], 

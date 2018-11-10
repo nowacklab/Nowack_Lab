@@ -21,9 +21,9 @@ from ..Utilities.utilities import AttrDict
 
 
 class Planefit(Measurement):
-    '''
+    """
     Take touchdowns in a grid to define a plane.
-    '''
+    """
     instrument_list = ['piezos', 'montana', 'atto']
 
     a = np.nan
@@ -32,7 +32,7 @@ class Planefit(Measurement):
 
     def __init__(self, instruments={}, span=[400, 400], center=[0, 0],
                  numpts=[4, 4], Vz_max=None, runonce=False):
-        '''
+        """
         Take touchdowns in a grid to determine the slope of the sample
         surface.
 
@@ -63,7 +63,7 @@ class Planefit(Measurement):
         Examples:
         plane = Planefit(instruments, span=[100, 200], center=[50, 50]
         plane.run(edges_only = True)
-        '''
+        """
         super().__init__(instruments=instruments)
 
         self.instruments = instruments
@@ -91,10 +91,10 @@ class Planefit(Measurement):
         self.Z = np.nan * self.X  # makes array of nans same size as grid
 
     def calculate_plane(self, no_outliers=True):
-        '''
+        """
         Calculates the plane parameters a, b, and c.
         z = ax + by + c
-        '''
+        """
         # Remove outliers
         if no_outliers:
             Z = reject_outliers_plane(self.Z)
@@ -104,13 +104,13 @@ class Planefit(Measurement):
         self.a, self.b, self.c = fit_plane(self.X, self.Y, Z)
 
     def do(self, edges_only=False):
-        '''
+        """
         Do the planefit.
 
         Args:
         edges_only (bool): If True touchdowns are taken only around the
         edges of the grid.
-        '''
+        """
         # make sure we won't scan outside X, Y piezo ranges!
         self.piezos.x.check_lim(self.X)
         self.piezos.y.check_lim(self.Y)
@@ -220,9 +220,9 @@ class Planefit(Measurement):
         return obj
 
     def plane(self, x, y, recal=False):
-        '''
+        """
         Given points x and y, calculates a point z on the plane.
-        '''
+        """
         return self.a * x + self.b * y + self.c
         
 
@@ -270,10 +270,10 @@ class Planefit(Measurement):
         return fig, axes
         
     def save(self, savefig=True, **kwargs):
-        '''
+        """
         Saves the planefit object to json.
         Also saves the figure as a pdf, if wanted.
-        '''
+        """
         logging.log('Plane saved. a=%.4f, b=%.4f, c=%.4f' %
                     (self.a, self.b, self.c))
 
@@ -297,16 +297,16 @@ class Planefit(Measurement):
                               self.atto.z.pos))
     
     def surface(self, x, y):
-        '''
+        """
         Does an interpolation on the surface to give an array of z values
         for x, y points specified by arrays.
-        '''
+        """
         from scipy.interpolate import interp2d
         f = interp2d(self.X[0, :], self.Y[:, 0], self.Z)
         return f(x, y)
 
     def update_c(self, Vx=0, Vy=0, start=None, move_attocubes=False):
-        '''
+        """
         Does a single touchdown to update the offset of the plane.
         
         After the touchdown the corners of thep plane are checked
@@ -318,7 +318,7 @@ class Planefit(Measurement):
         Vy (float): Y piezo voltage for the thouchdown
         start (float): Z piezo voltage where touchdown sweep starts
         move_attocubes (bool): If False attocube motion is disabled
-        '''
+        """
         super().__init__(instruments=self.instruments)
 
         old_c = self.c

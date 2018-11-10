@@ -1,23 +1,23 @@
-'''
+"""
 This file is a collection of classes which allow
 musical control of the keithley sourcemeters.
 Please warn your labmates before use.
-'''
-'''
+"""
+"""
 rev
 1/4/2011 - LNT - init.  while waiting for my
 	active directory profile to load on the
 	lab computer, i decided to write a program
 	to make the sourcemeter play music
-'''
+"""
 # includes
 from time import sleep
 import visa
 
-'''
+"""
 This class provides a basic communication and control
 interface to the keithley sourcemeter
-'''
+"""
 class BasicGPIB():
 	def __init__(self, portNum=23):
         # assume GPIB
@@ -26,10 +26,10 @@ class BasicGPIB():
         # self._visa_handle.read_termination = '\n'
 		# self.raw = instrument('GPIB::' + str(self._GPIBaddr_) + '::INSTR')
 
-	'''
+	"""
 	These routines are redundant but provide easier and more robust
 	access to the pyvisa routines
-	'''
+	"""
 	def write(self,data):
 		self.raw.write(data + '\n')	# adds the newline (needed by some)
 
@@ -42,10 +42,10 @@ class BasicGPIB():
 		sleep(0.001)				# wait 1ms (arbitrary)
 		return self.raw.read()		# read result (if any)
 
-	'''
+	"""
 	These routines provide easier programming access to
 	common keithley tasks
-	'''
+	"""
 	def reset(self):
 		self.write('*RST')			# send the standard GPIB reset
 		sleep(15)					# wait 15s for effect
@@ -68,11 +68,11 @@ class BasicGPIB():
 	def beepOn(self):
 		self.write(':SYST:BEEP:STAT ON')
 
-	'''
+	"""
 	Mapping of musical notes onto keithley frequency range with useful time signatures
 	tempo: beats per minute
 	ts: time signature (tells which note gets a full beat)
-	'''
+	"""
 	# an 'A' quarter note
 	def qA(self,tempo,ts):
 		sust=ts*4.0*60.0/tempo		# make sure tempo is a float!

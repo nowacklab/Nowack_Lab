@@ -9,9 +9,9 @@ from ..Instruments.lakeshore import Lakeshore372
 
 
 class Bluefors_vs_T(Measurement):
-    '''
+    """
     Log some parameter repsect to temperature in bluefors
-    '''
+    """
 
     instrument_list=['lakeshore']
 
@@ -19,9 +19,9 @@ class Bluefors_vs_T(Measurement):
         super().__init__(instruments=instruments)
 
 class R_vs_T(Bluefors_vs_T):
-    '''
+    """
     Log resistances vs bluefors temperature using two lockins
-    '''
+    """
 
     instrument_list=['lockin_I', 'lockin_V', 'lakeshore']
 
@@ -31,7 +31,7 @@ class R_vs_T(Bluefors_vs_T):
                  meas_dur = 43200,  # duration in secs
                  timestep = 10,     # time between samples in sec
                 ):
-        '''
+        """
         Log resistance vs bluefors temperature with 2 lockins.
         Made for a 4 point resistance measurement with SR830s
 
@@ -43,7 +43,7 @@ class R_vs_T(Bluefors_vs_T):
 
         returns:
             none
-        '''
+        """
         super().__init__(instruments=instruments)
 
         for arg in ['lakeshore_channel',
@@ -53,8 +53,8 @@ class R_vs_T(Bluefors_vs_T):
             setattr(self,arg,eval(arg))
         
     def do(self):
-        '''
-        '''
+        """
+        """
         # disable other channels so can update fast!
         prev_lakeshore_settings = self.lakeshore.getchsettings()
         self.lakeshore.disable_others(self.lakeshore_channel)
@@ -107,8 +107,8 @@ class R_vs_T(Bluefors_vs_T):
         del self.lakeshore.__dict__['_visa_handle']
             
     def setup_plots(self):
-        '''
-        '''
+        """
+        """
         self.fig = plt.figure(figsize=(12,6))
         self.ax = AttrDict()
         self.ax['X'] = self.fig.add_subplot(121)
@@ -136,9 +136,9 @@ class R_vs_T(Bluefors_vs_T):
                                              linestyle='-')[0]
 
     def plot(self, plotindex=0):
-        '''
+        """
         Live plotting
-        '''
+        """
 
         # update plot
         self._points['X'].set_xdata(self.temperature[:plotindex])
@@ -155,9 +155,9 @@ class R_vs_T(Bluefors_vs_T):
         self.fig.canvas.draw()
 
 class R_vs_T_dc(Bluefors_vs_T):
-    '''
+    """
     Log resistances vs bluefors temperature DC
-    '''
+    """
 
     instrument_list=['preamp', 'lakeshore', 'keithley']
 
@@ -169,7 +169,7 @@ class R_vs_T_dc(Bluefors_vs_T):
                  dcbiascurrents = [1e-3],
                  rampptsleep = .01
                 ):
-        '''
+        """
 
         arguments:
             instruments:    instrument dictionary.  requires 
@@ -177,7 +177,7 @@ class R_vs_T_dc(Bluefors_vs_T):
 
         returns:
             none
-        '''
+        """
         super().__init__(instruments=instruments)
 
         for arg in ['lakeshore_channel',
@@ -189,10 +189,10 @@ class R_vs_T_dc(Bluefors_vs_T):
             setattr(self,arg,eval(arg))
         
     def do(self, daqchannel=''):
-        '''
+        """
         daqchannel is an Nowack_Lab.Instruments.nidaq.InputChannel 
         like daq.ai7
-        '''
+        """
         # disable other channels so can update fast!
         #prev_lakeshore_settings = self.lakeshore.getchsettings()
         self.lakeshore.enable_only(self.lakeshore_channel)
@@ -255,8 +255,8 @@ class R_vs_T_dc(Bluefors_vs_T):
         self.lakeshore.enable_all()
 
     def setup_plots(self):
-        '''
-        '''
+        """
+        """
         pass
 #        self.fig, self.ax = plt.subplots()
 #        
@@ -275,9 +275,9 @@ class R_vs_T_dc(Bluefors_vs_T):
 #                                             linestyle='-')[0]
 
     def plot(self, plotindex=0):
-        '''
+        """
         Live plotting
-        '''
+        """
         pass
 #        # update plot
 #        self._points.set_xdata(np.mean(self.Ts[plotindex]))
