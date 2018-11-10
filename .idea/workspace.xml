@@ -2,11 +2,10 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="e66dbb36-0de2-458a-91dc-087f5a6696f9" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Instruments/VNA.py" afterPath="$PROJECT_DIR$/Instruments/VNA.py" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Instruments/VNA.py" beforeDir="false" afterPath="$PROJECT_DIR$/Instruments/VNA.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
-    <option name="TRACKING_ENABLED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -15,62 +14,72 @@
   <component name="CreatePatchCommitExecutor">
     <option name="PATCH_PATH" value="" />
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="default_target" />
+  <component name="FUSProjectUsageTrigger">
+    <session id="721832116">
+      <usages-collector id="statistics.lifecycle.project">
+        <counts>
+          <entry key="project.closed" value="1" />
+          <entry key="project.open.time.0" value="1" />
+          <entry key="project.open.time.3" value="1" />
+          <entry key="project.opened" value="2" />
+        </counts>
+      </usages-collector>
+      <usages-collector id="statistics.file.extensions.edit">
+        <counts>
+          <entry key="dummy" value="10" />
+          <entry key="py" value="618" />
+        </counts>
+      </usages-collector>
+      <usages-collector id="statistics.file.types.edit">
+        <counts>
+          <entry key="PLAIN_TEXT" value="10" />
+          <entry key="Python" value="618" />
+        </counts>
+      </usages-collector>
+      <usages-collector id="statistics.file.extensions.open">
+        <counts>
+          <entry key="py" value="9" />
+        </counts>
+      </usages-collector>
+      <usages-collector id="statistics.file.types.open">
+        <counts>
+          <entry key="Python" value="9" />
+        </counts>
+      </usages-collector>
+    </session>
+  </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="rf_sweep.py" pinned="false" current-in-tab="false">
+      <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/Procedures/rf_sweep.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="431">
-              <caret line="431" column="10" lean-forward="false" selection-start-line="431" selection-start-column="10" selection-end-line="431" selection-end-column="10" />
+            <state relative-caret-position="667">
+              <caret line="483" column="67" selection-start-line="483" selection-start-column="67" selection-end-line="483" selection-end-column="67" />
               <folding>
-                <element signature="e#563#4066#0" expanded="false" />
-                <element signature="e#563#640#1" expanded="false" />
-                <element signature="e#846#1795#0" expanded="false" />
-                <marker date="1532042802376" expanded="true" signature="17577:18285" ph="..." />
+                <element signature="e#0#18#0" expanded="true" />
+                <element signature="e#937#1897#0" />
+                <element signature="e#1925#3412#0" />
+                <element signature="e#3465#4186#0" />
+                <element signature="e#12460#12917#0" />
+                <element signature="e#12984#13787#0" />
+                <element signature="e#13855#15458#0" />
+                <element signature="e#15497#27513#0" />
+                <element signature="e#20910#20995#0" />
+                <element signature="e#21034#21119#0" />
+                <element signature="e#25925#27513#0" />
+                <element signature="e#27542#36512#0" />
+                <element signature="e#29072#32955#0" />
+                <element signature="e#33912#35857#0" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="plot_simple_frequency.py" pinned="false" current-in-tab="false">
-        <entry file="file://$USER_HOME$/PycharmProjects/rf_squid/plot_simple_frequency.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="2070">
-              <caret line="142" column="7" lean-forward="false" selection-start-line="142" selection-start-column="7" selection-end-line="142" selection-end-column="7" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="VNA.py" pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/Instruments/VNA.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="288">
-              <caret line="216" column="29" lean-forward="false" selection-start-line="216" selection-start-column="29" selection-end-line="216" selection-end-column="29" />
-              <folding>
-                <element signature="e#8564#8831#0" expanded="false" />
-                <element signature="e#9096#9292#0" expanded="false" />
-                <element signature="e#9654#9855#0" expanded="false" />
-                <element signature="e#10115#10302#0" expanded="false" />
-                <element signature="e#10811#11153#0" expanded="false" />
-                <element signature="e#11186#12641#0" expanded="false" />
-                <element signature="e#11186#11353#1" expanded="false" />
-                <element signature="e#11693#11861#1" expanded="false" />
-                <element signature="e#12490#12617#0" expanded="false" />
-                <element signature="e#12677#13529#0" expanded="false" />
-                <element signature="e#12677#12843#1" expanded="false" />
-                <element signature="e#13369#13502#0" expanded="false" />
-                <element signature="e#13565#14698#0" expanded="false" />
-                <element signature="e#13565#13809#1" expanded="false" />
-                <element signature="e#14469#14671#0" expanded="false" />
-                <element signature="e#14760#15391#0" expanded="false" />
-                <element signature="e#15456#16187#0" expanded="false" />
-                <element signature="e#15895#16160#0" expanded="false" />
-                <element signature="e#16242#16459#0" expanded="false" />
-                <element signature="e#16508#16961#0" expanded="false" />
-                <element signature="e#16769#16961#0" expanded="false" />
-              </folding>
+            <state relative-caret-position="293">
+              <caret line="338" column="108" selection-start-line="338" selection-start-column="108" selection-end-line="338" selection-end-column="108" />
             </state>
           </provider>
         </entry>
@@ -89,6 +98,14 @@
       <find>sweeptime</find>
       <find>@property</find>
       <find>float(self.ask</find>
+      <find>max(abs</find>
+      <find>power</find>
+      <find>averaging_restart</find>
+      <find>save_re</find>
+      <find>sleep_</find>
+      <find>print</find>
+      <find>don'</find>
+      <find>don</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -98,81 +115,73 @@
     <option name="CHANGED_PATHS">
       <list>
         <option value="$USER_HOME$/PycharmProjects/rf_squid/plot_simple_frequency.py" />
-        <option value="$PROJECT_DIR$/Procedures/rf_sweep.py" />
+        <option value="$PROJECT_DIR$/Procedures/rfsquid_sweep.py" />
         <option value="$PROJECT_DIR$/Instruments/VNA.py" />
+        <option value="$PROJECT_DIR$/Procedures/rf_sweep.py" />
       </list>
     </option>
   </component>
   <component name="ProjectFrameBounds">
-    <option name="x" value="100" />
-    <option name="y" value="647" />
-    <option name="width" value="936" />
-    <option name="height" value="1028" />
+    <option name="x" value="960" />
+    <option name="width" value="960" />
+    <option name="height" value="1040" />
+  </component>
+  <component name="ProjectInspectionProfilesVisibleTreeState">
+    <entry key="Project Default">
+      <profile-state>
+        <expanded-state>
+          <State />
+          <State>
+            <id>Spelling</id>
+          </State>
+        </expanded-state>
+        <selected-state>
+          <State>
+            <id>SpellCheckingInspection</id>
+          </State>
+        </selected-state>
+      </profile-state>
+    </entry>
   </component>
   <component name="ProjectView">
-    <navigator currentView="ProjectPane" proportions="" version="1">
-      <flattenPackages />
-      <showMembers />
-      <showModules />
-      <showLibraryContents />
-      <hideEmptyPackages />
-      <abbreviatePackageNames />
-      <autoscrollToSource />
-      <autoscrollFromSource />
-      <sortByType />
-      <manualOrder />
+    <navigator proportions="" version="1">
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
       <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="Nowack_Lab" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="Nowack_Lab" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="Nowack_Lab" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="Nowack_Lab" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="Procedures" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="Nowack_Lab" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="Nowack_Lab" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="Instruments" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
+          <expand>
+            <path>
+              <item name="Nowack_Lab" type="b2602c69:ProjectViewProjectNode" />
+              <item name="Nowack_Lab" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="Nowack_Lab" type="b2602c69:ProjectViewProjectNode" />
+              <item name="Nowack_Lab" type="462c0819:PsiDirectoryNode" />
+              <item name="Procedures" type="462c0819:PsiDirectoryNode" />
+            </path>
+          </expand>
+          <select />
         </subPane>
       </pane>
-      <pane id="Scratches" />
     </panes>
   </component>
   <component name="PropertiesComponent">
-    <property name="last_opened_file_path" value="$USER_HOME$/PycharmProjects/rf_squid/plot_simple_frequency.py" />
-    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="settings.editor.selected.configurable" value="Errors" />
+  </component>
+  <component name="RunDashboard">
+    <option name="ruleStates">
+      <list>
+        <RuleState>
+          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
+        </RuleState>
+        <RuleState>
+          <option name="name" value="StatusDashboardGroupingRule" />
+        </RuleState>
+      </list>
+    </option>
   </component>
   <component name="RunManager">
     <configuration default="true" type="BashConfigurationType" factoryName="Bash">
@@ -184,35 +193,6 @@
       <option name="PARAMETERS" value="" />
       <module name="" />
       <envs />
-      <method />
-    </configuration>
-    <configuration default="true" type="PythonConfigurationType" factoryName="Python">
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <module name="Nowack_Lab" />
-      <option name="SCRIPT_NAME" value="" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <method />
-    </configuration>
-    <configuration default="true" type="Tox" factoryName="Tox">
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs />
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <module name="Nowack_Lab" />
       <method />
     </configuration>
     <configuration default="true" type="tests" factoryName="Attests">
@@ -234,95 +214,6 @@
       <option name="USE_PATTERN" value="false" />
       <method />
     </configuration>
-    <configuration default="true" type="tests" factoryName="Doctests">
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs />
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <module name="Nowack_Lab" />
-      <option name="SCRIPT_NAME" value="" />
-      <option name="CLASS_NAME" value="" />
-      <option name="METHOD_NAME" value="" />
-      <option name="FOLDER_NAME" value="" />
-      <option name="TEST_TYPE" value="TEST_SCRIPT" />
-      <option name="PATTERN" value="" />
-      <option name="USE_PATTERN" value="false" />
-      <method />
-    </configuration>
-    <configuration default="true" type="tests" factoryName="Nosetests">
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs />
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <module name="Nowack_Lab" />
-      <option name="SCRIPT_NAME" value="" />
-      <option name="CLASS_NAME" value="" />
-      <option name="METHOD_NAME" value="" />
-      <option name="FOLDER_NAME" value="" />
-      <option name="TEST_TYPE" value="TEST_SCRIPT" />
-      <option name="PATTERN" value="" />
-      <option name="USE_PATTERN" value="false" />
-      <option name="PARAMS" value="" />
-      <option name="USE_PARAM" value="false" />
-      <method />
-    </configuration>
-    <configuration default="true" type="tests" factoryName="Unittests">
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs />
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <module name="Nowack_Lab" />
-      <option name="SCRIPT_NAME" value="" />
-      <option name="CLASS_NAME" value="" />
-      <option name="METHOD_NAME" value="" />
-      <option name="FOLDER_NAME" value="" />
-      <option name="TEST_TYPE" value="TEST_SCRIPT" />
-      <option name="PATTERN" value="" />
-      <option name="USE_PATTERN" value="false" />
-      <option name="PUREUNITTEST" value="true" />
-      <option name="PARAMS" value="" />
-      <option name="USE_PARAM" value="false" />
-      <method />
-    </configuration>
-    <configuration default="true" type="tests" factoryName="py.test">
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs />
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <module name="Nowack_Lab" />
-      <option name="SCRIPT_NAME" value="" />
-      <option name="CLASS_NAME" value="" />
-      <option name="METHOD_NAME" value="" />
-      <option name="FOLDER_NAME" value="" />
-      <option name="TEST_TYPE" value="TEST_SCRIPT" />
-      <option name="PATTERN" value="" />
-      <option name="USE_PATTERN" value="false" />
-      <option name="testToRun" value="" />
-      <option name="keywords" value="" />
-      <option name="params" value="" />
-      <option name="USE_PARAM" value="false" />
-      <option name="USE_KEYWORD" value="false" />
-      <method />
-    </configuration>
-  </component>
-  <component name="ShelveChangesManager" show_recycled="false">
-    <option name="remove_strategy" value="false" />
   </component>
   <component name="SvnConfiguration">
     <configuration />
@@ -338,184 +229,98 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="100" y="647" width="936" height="1028" extended-state="0" />
+    <frame x="960" y="0" width="960" height="1040" extended-state="0" />
     <editor active="true" />
     <layout>
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.17735043" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
-      <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
-      <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
-      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
-      <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
-      <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
-      <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
-      <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
-      <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
-      <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
-      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32948583" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
-      <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.18112798" />
+      <window_info id="Structure" order="1" weight="0.25" />
+      <window_info id="Favorites" order="2" side_tool="true" />
+      <window_info anchor="bottom" id="Message" order="0" />
+      <window_info anchor="bottom" id="Find" order="1" weight="0.32855567" />
+      <window_info anchor="bottom" id="Run" order="2" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
+      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="bottom" id="TODO" order="6" />
+      <window_info anchor="bottom" id="Version Control" order="7" />
+      <window_info anchor="bottom" id="Terminal" order="8" />
+      <window_info anchor="bottom" id="Event Log" order="9" side_tool="true" />
+      <window_info anchor="bottom" id="Python Console" order="10" />
+      <window_info anchor="right" id="Commander" order="0" weight="0.4" />
+      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
     </layout>
   </component>
   <component name="VcsContentAnnotationSettings">
     <option name="myLimit" value="2678400000" />
   </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <option name="time" value="4" />
-    </breakpoint-manager>
-    <watches-manager />
-  </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/Procedures/rf_sweep.py">
+    <entry file="file://$USER_HOME$/PycharmProjects/rf_squid/plot_simple_frequency.py" />
+    <entry file="file://$PROJECT_DIR$/Procedures/scanline.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        <state>
           <folding>
-            <element signature="e#563#4066#0" expanded="false" />
-            <element signature="e#563#640#1" expanded="false" />
-            <element signature="e#846#1795#0" expanded="false" />
-            <marker date="1532042802376" expanded="true" signature="17577:18285" ph="..." />
+            <element signature="e#0#18#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Procedures/rf_sweep.py">
+    <entry file="file://$PROJECT_DIR$/Procedures/navigation.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        <state>
           <folding>
-            <element signature="e#563#4066#0" expanded="false" />
-            <element signature="e#563#640#1" expanded="false" />
-            <element signature="e#846#1795#0" expanded="false" />
-            <marker date="1532042802376" expanded="true" signature="17577:18285" ph="..." />
+            <element signature="e#0#29#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Instruments/VNA.py">
+    <entry file="file://$PROJECT_DIR$/Procedures/mod2D.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="5805">
-          <caret line="395" column="16" lean-forward="false" selection-start-line="395" selection-start-column="16" selection-end-line="395" selection-end-column="16" />
+        <state relative-caret-position="34">
+          <caret line="2" lean-forward="true" selection-start-line="2" selection-end-line="2" />
           <folding>
-            <element signature="e#8564#8831#0" expanded="false" />
-            <element signature="e#9096#9292#0" expanded="false" />
-            <element signature="e#9654#9855#0" expanded="false" />
-            <element signature="e#10115#10302#0" expanded="false" />
-            <element signature="e#10811#11153#0" expanded="false" />
-            <element signature="e#11186#12641#0" expanded="false" />
-            <element signature="e#11186#11353#1" expanded="false" />
-            <element signature="e#11693#11861#1" expanded="false" />
-            <element signature="e#12490#12617#0" expanded="false" />
-            <element signature="e#12677#13529#0" expanded="false" />
-            <element signature="e#12677#12843#1" expanded="false" />
-            <element signature="e#13369#13502#0" expanded="false" />
-            <element signature="e#13565#14698#0" expanded="false" />
-            <element signature="e#13565#13809#1" expanded="false" />
-            <element signature="e#14469#14671#0" expanded="false" />
-            <element signature="e#14760#15391#0" expanded="false" />
-            <element signature="e#15456#16187#0" expanded="false" />
-            <element signature="e#15895#16160#0" expanded="false" />
-            <element signature="e#16242#16459#0" expanded="false" />
-            <element signature="e#16508#16961#0" expanded="false" />
-            <element signature="e#16769#16961#0" expanded="false" />
+            <element signature="e#242#269#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Procedures/rf_sweep.py">
+    <entry file="file://$PROJECT_DIR$/Procedures/rfsquid_sweep.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        <state relative-caret-position="998">
+          <caret line="367" column="3" selection-start-line="367" selection-start-column="3" selection-end-line="367" selection-end-column="3" />
           <folding>
-            <element signature="e#563#4066#0" expanded="false" />
-            <element signature="e#563#640#1" expanded="false" />
-            <element signature="e#846#1795#0" expanded="false" />
-            <marker date="1532042802376" expanded="true" signature="17577:18285" ph="..." />
+            <element signature="e#67#85#0" expanded="true" />
+            <marker date="1541480009930" expanded="true" signature="14846:14855" ph="..." />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/Instruments/VNA.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="5805">
-          <caret line="395" column="16" lean-forward="false" selection-start-line="395" selection-start-column="16" selection-end-line="395" selection-end-column="16" />
-          <folding>
-            <element signature="e#8564#8831#0" expanded="false" />
-            <element signature="e#9096#9292#0" expanded="false" />
-            <element signature="e#9654#9855#0" expanded="false" />
-            <element signature="e#10115#10302#0" expanded="false" />
-            <element signature="e#10811#11153#0" expanded="false" />
-            <element signature="e#11186#12641#0" expanded="false" />
-            <element signature="e#11186#11353#1" expanded="false" />
-            <element signature="e#11693#11861#1" expanded="false" />
-            <element signature="e#12490#12617#0" expanded="false" />
-            <element signature="e#12677#13529#0" expanded="false" />
-            <element signature="e#12677#12843#1" expanded="false" />
-            <element signature="e#13369#13502#0" expanded="false" />
-            <element signature="e#13565#14698#0" expanded="false" />
-            <element signature="e#13565#13809#1" expanded="false" />
-            <element signature="e#14469#14671#0" expanded="false" />
-            <element signature="e#14760#15391#0" expanded="false" />
-            <element signature="e#15456#16187#0" expanded="false" />
-            <element signature="e#15895#16160#0" expanded="false" />
-            <element signature="e#16242#16459#0" expanded="false" />
-            <element signature="e#16508#16961#0" expanded="false" />
-            <element signature="e#16769#16961#0" expanded="false" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$USER_HOME$/PycharmProjects/rf_squid/plot_simple_frequency.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2070">
-          <caret line="142" column="7" lean-forward="false" selection-start-line="142" selection-start-column="7" selection-end-line="142" selection-end-column="7" />
-          <folding />
+        <state relative-caret-position="293">
+          <caret line="338" column="108" selection-start-line="338" selection-start-column="108" selection-end-line="338" selection-end-column="108" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/Procedures/rf_sweep.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="431">
-          <caret line="431" column="10" lean-forward="false" selection-start-line="431" selection-start-column="10" selection-end-line="431" selection-end-column="10" />
+        <state relative-caret-position="667">
+          <caret line="483" column="67" selection-start-line="483" selection-start-column="67" selection-end-line="483" selection-end-column="67" />
           <folding>
-            <element signature="e#563#4066#0" expanded="false" />
-            <element signature="e#563#640#1" expanded="false" />
-            <element signature="e#846#1795#0" expanded="false" />
-            <marker date="1532042802376" expanded="true" signature="17577:18285" ph="..." />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/Instruments/VNA.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="288">
-          <caret line="216" column="29" lean-forward="false" selection-start-line="216" selection-start-column="29" selection-end-line="216" selection-end-column="29" />
-          <folding>
-            <element signature="e#8564#8831#0" expanded="false" />
-            <element signature="e#9096#9292#0" expanded="false" />
-            <element signature="e#9654#9855#0" expanded="false" />
-            <element signature="e#10115#10302#0" expanded="false" />
-            <element signature="e#10811#11153#0" expanded="false" />
-            <element signature="e#11186#12641#0" expanded="false" />
-            <element signature="e#11186#11353#1" expanded="false" />
-            <element signature="e#11693#11861#1" expanded="false" />
-            <element signature="e#12490#12617#0" expanded="false" />
-            <element signature="e#12677#13529#0" expanded="false" />
-            <element signature="e#12677#12843#1" expanded="false" />
-            <element signature="e#13369#13502#0" expanded="false" />
-            <element signature="e#13565#14698#0" expanded="false" />
-            <element signature="e#13565#13809#1" expanded="false" />
-            <element signature="e#14469#14671#0" expanded="false" />
-            <element signature="e#14760#15391#0" expanded="false" />
-            <element signature="e#15456#16187#0" expanded="false" />
-            <element signature="e#15895#16160#0" expanded="false" />
-            <element signature="e#16242#16459#0" expanded="false" />
-            <element signature="e#16508#16961#0" expanded="false" />
-            <element signature="e#16769#16961#0" expanded="false" />
+            <element signature="e#0#18#0" expanded="true" />
+            <element signature="e#937#1897#0" />
+            <element signature="e#1925#3412#0" />
+            <element signature="e#3465#4186#0" />
+            <element signature="e#12460#12917#0" />
+            <element signature="e#12984#13787#0" />
+            <element signature="e#13855#15458#0" />
+            <element signature="e#15497#27513#0" />
+            <element signature="e#20910#20995#0" />
+            <element signature="e#21034#21119#0" />
+            <element signature="e#25925#27513#0" />
+            <element signature="e#27542#36512#0" />
+            <element signature="e#29072#32955#0" />
+            <element signature="e#33912#35857#0" />
           </folding>
         </state>
       </provider>

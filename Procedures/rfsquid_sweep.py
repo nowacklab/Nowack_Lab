@@ -8,13 +8,13 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.signal import savgol_filter
 
 # Nowack_Lab imports
-import Nowack_Lab.Utilities.save
-reload(Nowack_Lab.Utilities.save)
-from Nowack_Lab.Utilities.save import Measurement
-import Nowack_Lab.Utilities.dataset
-from Nowack_Lab.Utilities.dataset import Dataset
-from Nowack_Lab.Instruments import VNA8722ES
-from Nowack_Lab.Instruments import Keithley2400
+from ..Utilities.save import *
+# reload(Nowack_Lab.Utilities.save)
+from ..Utilities.save import Measurement
+from ..Utilities.dataset import *
+from ..Utilities.dataset import Dataset
+from ..Instruments.VNA import VNA8722ES
+from ..Instruments import Keithley2400
 
 class WithoutDAQ_ThreeParam_Sweep:
     '''Sweep field coil current and measured frequency using VNA and keithley2400'''
@@ -64,6 +64,7 @@ class WithoutDAQ_ThreeParam_Sweep:
     def plot_amplitude():
         pass
 
+"""
 class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
     ''' At different current steps, measure frequency response
     Using class SQUID_Mod_FastIV(ThreeParam_Sweep) as example'''
@@ -363,3 +364,5 @@ class RF_sweep_current(WithoutDAQ_ThreeParam_Sweep):
         cbar = plt.colorbar(im, cax=cax)
 
         return [ax, cbar]
+
+"""

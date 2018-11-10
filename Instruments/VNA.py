@@ -136,9 +136,9 @@ class VNA8722ES(Instrument):
 
     @property
     def sweepmode(self):
-        '''
+        """
         Get the sweep mode
-        '''
+        """
         options = {
         "": "LIN",
         "": "LOG",
@@ -335,7 +335,8 @@ class VNA8722ES(Instrument):
         nplist = ['S11', 'S21', 'S12', 'S22']
         assert value in nplist, "Network parameter should be one of " + str(nplist)
         if value == 'S12' or value == 'S22':
-            raise Exception('Don\'t send current thru amplifer backwards (just for cold amplifer testing, remove this in code if situation changes)')
+            #raise Exception('Don\'t send current thru amplifer backwards (just for cold amplifer testing, remove this in code if situation changes)')
+            print("Make sure you are not sending current thru something wrong way - double-check connections")
         self.write(value)
 
     def save_dB(self):
