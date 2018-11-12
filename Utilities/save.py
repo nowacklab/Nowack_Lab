@@ -190,15 +190,22 @@ class Saver(object):
                     try:
                         exec(classname)  # see if class is in the namespace
                     except:
-                        if 'Procedures' in classname:
-                            d['py/object'] = classname.replace('Procedures',
-                                    'Measurements')  # for legacy loading
-                        else:
-                            print('Cannot find class definition {0}: '.format(
-                                classname) + 'using Saver object')
-                            d['py/object'] = 'Nowack_Lab.Utilities.save.Saver'
-                        if 'daqspectrum' in d['py/object']: # legacy
-                            d['py/object'] = d['py/object'].replace('daq', '')
+                        try:  # Does it exist in the module? Trust the code below
+                            split = classname.rsplit('.', maxsplit=1)
+                            lsplit = split[0][::-1].rsplit('.', maxsplit=1)[0][::-1]
+                            exec_str = 'from ..%s import %s' %(lsplit, split[1])
+                            exec(exec_str)
+                        except Exception as e:
+                            # print(e)
+                            if 'Procedures' in classname:
+                                d['py/object'] = classname.replace('Procedures',
+                                        'Measurements')  # for legacy loading
+                            else:
+                                print('Cannot find class definition {0}: '.format(
+                                    classname) + 'using Saver object')
+                                d['py/object'] = 'Nowack_Lab.Utilities.save.Saver'
+                            if 'daqspectrum' in d['py/object']: # legacy
+                                d['py/object'] = d['py/object'].replace('daq', '')
                 if isinstance(d[key], dict):
                     d[key] = walk(d[key])
             return d
@@ -341,10 +348,10 @@ class Saver(object):
 
                     # If some other object
                     elif hasattr(value, '__dict__'):
-                        if isinstance(value, Saver):  # only Savers
+                        # if isinstance(value, Saver):  # only Savers
                             # mark object by "!" and make a new group
-                            new_group = group.create_group('!'+key)
-                            walk(value.__dict__, new_group)  # walk through obj
+                        new_group = group.create_group('!'+key)
+                        walk(value.__dict__, new_group)  # walk through obj
 
             walk(self.__dict__, f)
 

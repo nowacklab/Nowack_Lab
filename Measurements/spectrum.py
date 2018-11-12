@@ -77,7 +77,7 @@ class DaqSpectrum(Measurement):
             freq0 = filters[i]
             freq = freq0
             j=1
-            while freq < fmax:
+            while freq < f[-1]:
                 # harmonics
                 freq = freq0 * j
                 j += 1
@@ -111,6 +111,8 @@ class DaqSpectrum(Measurement):
             fmax  = self.f.max()
         argmin = abs(self.f-fmin).argmin()
         argmax = abs(self.f-fmax).argmin()
+        if argmin == 0:  # Do not want to return zero frequency
+            argmin = 1
         return argmin, argmax
 
     def get_Nfft(self):
