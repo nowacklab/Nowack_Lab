@@ -1,16 +1,18 @@
 """ Use to get DAQ voltage as function of reflected squid power and circuit drive power"""
-import os, time, datetime, numpy as np, matplotlib.pyplot as plt
+import os, time, numpy as np, matplotlib.pyplot as plt
+from datetime import datetime
 from ..Instruments.VNA import VNA8722ES
 from ..Instruments.nidaq import NIDAQ
 from ..Instruments.HP8657B import functiongenerator
 from ..Utilities.dataset import Dataset
+from IPython.display import clear_output
 
 
 class MixerCircuitTester:
     def __init__(self, power_start, power_stop, power_numpoints,
                  freq_start, freq_stop, freq_numpoints,
                  preamp_gain, filepath, daq_input_label='ai0'):
-
+        print("MAY NEED TO MANUALLY PUT IN GPIB ADDRESSES -- SHOULD CHANGE THAT TO INIT IN CODE")
         self.power_start = power_start
         self.power_stop = power_stop
         self.power_numpoints = power_numpoints
@@ -24,7 +26,7 @@ class MixerCircuitTester:
         self.filepath = filepath
 
         self.vna = VNA8722ES()
-        self.fxngen = functiongenerator(17)
+        self.fxngen = functiongenerator(7)
         self.daq = NIDAQ()
         self.daq_input_label = daq_input_label
 
@@ -35,6 +37,10 @@ class MixerCircuitTester:
         self.vna.power = self.power_range[0]
         self.vna.numpoints = 3
         self.vna.powerstate = 1
+
+        self.fxngen.freq = float(self.freq_start)/2
+        self.vna.minfreq = self.freq_start
+        self.vna.maxfreq = self.freq_start
 
         data_arr = np.zeros((self.power_numpoints, self.freq_numpoints))
 
@@ -47,17 +53,24 @@ class MixerCircuitTester:
                 thisfreq = self.freq_range[f]
                 self.vna.minfreq = thisfreq
                 self.vna.maxfreq = thisfreq
-
+                clear_output()
+                print("changing fxngen freq")
+                print("power step ", i)
+                print("frequency step ", f)
                 self.fxngen.freq = float(thisfreq)/2
                 time.sleep(.5)
 
-                daq_data = self.daq.monitor([self.daq_input_label], 1, 1000)
+                daq_monitor_time = 1
+                daq_data = self.daq.monitor([self.daq_input_label], daq_monitor_time, 1000)
+                time.sleep(1.1*daq_monitor_time)
                 daq_data_average = np.mean(daq_data[self.daq_input_label])
                 normalized_daq_data_average = daq_data_average/float(self.preamp_gain)
 
                 data_arr[i, f] = normalized_daq_data_average
 
+        self.vna.powerstate = 0
         self.save(timestamp, data_arr)
+        MixerCircuitTester.plot(self.filepath + '\\' + timestamp + '_mixer_characterization.hdf5')
 
     def save(self, timestamp, array):
         name = timestamp + '_mixer_characterization'
@@ -87,7 +100,8 @@ class MixerCircuitTester:
         cbar = fig.colorbar(im)
         ax.set_xlabel('power, dbm')
         ax.set_ylabel('frequency, Hz')
-        ax.set_title(filename + ' preamp gain ', data.get(filename + '/preamp_gain'))
-        cbar.set_label('DAQ voltage normalized by preamp gain')
+        preamp_gain = data.get(filename + '/preamp_gain')
+        ax.set_title(filename + ' preamp gain ' + str(preamp_gain))
+        cbar.set_label('DAQ voltage normalized by preamp_gain, preamp_gain = ' + str(preamp_gain))
         graph_path = filename.replace(".hdf5", "graph.png")
         fig.savefig(graph_path)
