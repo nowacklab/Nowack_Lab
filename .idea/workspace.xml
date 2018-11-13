@@ -22,8 +22,8 @@
             <file pinned="false" current-in-tab="false">
               <entry file="file://$PROJECT_DIR$/Instruments/VNA.py">
                 <provider selected="true" editor-type-id="text-editor">
-                  <state relative-caret-position="290">
-                    <caret line="343" column="32" selection-start-line="343" selection-start-column="32" selection-end-line="343" selection-end-column="32" />
+                  <state relative-caret-position="291">
+                    <caret line="391" column="17" selection-start-line="391" selection-start-column="8" selection-end-line="391" selection-end-column="17" />
                     <folding>
                       <element signature="e#1046#2580#0" />
                       <element signature="e#1046#1093#0" />
@@ -43,8 +43,8 @@
                       <element signature="e#8175#8267#0" />
                       <element signature="e#8322#8460#0" />
                       <element signature="e#8536#8803#0" />
+                      <element signature="e#11277#12732#0" />
                       <element signature="e#12768#13620#0" />
-                      <element signature="e#13656#14789#0" />
                       <element signature="e#14851#15482#0" />
                     </folding>
                   </state>
@@ -54,16 +54,35 @@
             <file pinned="false" current-in-tab="true">
               <entry file="file://$PROJECT_DIR$/Procedures/rf_sweep.py">
                 <provider selected="true" editor-type-id="text-editor">
-                  <state relative-caret-position="-2807">
-                    <caret line="45" column="30" lean-forward="true" selection-start-line="45" selection-start-column="30" selection-end-line="45" selection-end-column="30" />
+                  <state relative-caret-position="750">
+                    <caret line="213" lean-forward="true" selection-start-line="213" selection-end-line="213" />
                     <folding>
                       <element signature="e#0#18#0" expanded="true" />
+                      <element signature="e#3423#4144#0" />
                       <element signature="e#4176#16772#0" />
+                      <element signature="e#4674#6712#0" />
+                      <element signature="e#6740#10346#0" />
+                      <element signature="e#10411#11993#0" />
+                      <element signature="e#12059#12537#0" />
+                      <element signature="e#12606#13063#0" />
+                      <element signature="e#13130#13933#0" />
+                      <element signature="e#14001#15604#0" />
+                      <element signature="e#15675#16772#0" />
+                      <element signature="e#16806#29557#0" />
+                      <element signature="e#19456#23131#0" />
                       <element signature="e#23196#24778#0" />
                       <element signature="e#24844#25322#0" />
                       <element signature="e#25391#25848#0" />
                       <element signature="e#25915#26718#0" />
                       <element signature="e#26786#28389#0" />
+                      <element signature="e#29585#29708#1" />
+                      <element signature="e#29713#29819#0" />
+                      <element signature="e#30009#30093#1" />
+                      <element signature="e#30347#31486#0" />
+                      <element signature="e#31514#31553#1" />
+                      <element signature="e#41631#50601#0" />
+                      <marker date="1542132885650" expanded="true" signature="4344:8995" ph="..." />
+                      <marker date="1542132885650" expanded="true" signature="7035:7044" ph="..." />
                     </folding>
                   </state>
                 </provider>
@@ -86,14 +105,14 @@
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
-          <entry key="dummy" value="10" />
-          <entry key="py" value="6267" />
+          <entry key="dummy" value="25" />
+          <entry key="py" value="8442" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
-          <entry key="PLAIN_TEXT" value="10" />
-          <entry key="Python" value="6267" />
+          <entry key="PLAIN_TEXT" value="25" />
+          <entry key="Python" value="8442" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.open">
@@ -127,12 +146,13 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/Procedures/mixer_circuit_characterization.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="459">
-              <caret line="81" column="36" selection-start-line="81" selection-start-column="36" selection-end-line="81" selection-end-column="36" />
+            <state relative-caret-position="777">
+              <caret line="120" lean-forward="true" selection-start-line="120" selection-end-line="120" />
               <folding>
                 <element signature="e#91#145#0" expanded="true" />
-                <marker date="1541883293935" expanded="true" signature="414:2625" ph="..." />
-                <marker date="1541883293935" expanded="true" signature="3058:3067" ph="..." />
+                <element signature="e#3532#4250#0" />
+                <marker date="1542043169619" expanded="true" signature="491:2702" ph="..." />
+                <marker date="1542043169619" expanded="false" signature="3135:3144" ph="..." />
               </folding>
             </state>
           </provider>
@@ -206,6 +226,8 @@
       <find>powerstate</find>
       <find>24</find>
       <find>ax.set</find>
+      <find>@power</find>
+      <find>save_re_i</find>
       <find>datetime</find>
     </findStrings>
     <replaceStrings>
@@ -223,9 +245,9 @@
         <option value="$PROJECT_DIR$/Instruments/simple_daq_plotting.py" />
         <option value="$PROJECT_DIR$/Procedures/simple_daq_plotting.py" />
         <option value="$PROJECT_DIR$/Instruments/HP8657B.py" />
-        <option value="$PROJECT_DIR$/Procedures/rf_sweep.py" />
         <option value="$PROJECT_DIR$/Instruments/VNA.py" />
         <option value="$PROJECT_DIR$/Procedures/mixer_circuit_characterization.py" />
+        <option value="$PROJECT_DIR$/Procedures/rf_sweep.py" />
       </list>
     </option>
   </component>
@@ -470,10 +492,40 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/Instruments/HP8657B.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="170">
+          <caret line="10" lean-forward="true" selection-start-line="10" selection-end-line="10" />
+          <folding>
+            <element signature="e#0#11#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/measurements_justin_temp/hp_freq_sweep.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="136">
+          <caret line="8" selection-start-line="8" selection-end-line="8" selection-end-column="40" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Procedures/mixer_circuit_characterization.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="777">
+          <caret line="120" lean-forward="true" selection-start-line="120" selection-end-line="120" />
+          <folding>
+            <element signature="e#91#145#0" expanded="true" />
+            <element signature="e#3532#4250#0" />
+            <marker date="1542043169619" expanded="true" signature="491:2702" ph="..." />
+            <marker date="1542043169619" expanded="false" signature="3135:3144" ph="..." />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/Instruments/VNA.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="290">
-          <caret line="343" column="32" selection-start-line="343" selection-start-column="32" selection-end-line="343" selection-end-column="32" />
+        <state relative-caret-position="291">
+          <caret line="391" column="17" selection-start-line="391" selection-start-column="8" selection-end-line="391" selection-end-column="17" />
           <folding>
             <element signature="e#1046#2580#0" />
             <element signature="e#1046#1093#0" />
@@ -493,54 +545,44 @@
             <element signature="e#8175#8267#0" />
             <element signature="e#8322#8460#0" />
             <element signature="e#8536#8803#0" />
+            <element signature="e#11277#12732#0" />
             <element signature="e#12768#13620#0" />
-            <element signature="e#13656#14789#0" />
             <element signature="e#14851#15482#0" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Instruments/HP8657B.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="170">
-          <caret line="10" lean-forward="true" selection-start-line="10" selection-end-line="10" />
-          <folding>
-            <element signature="e#0#11#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/measurements_justin_temp/hp_freq_sweep.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="136">
-          <caret line="8" selection-start-line="8" selection-end-line="8" selection-end-column="40" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/Procedures/rf_sweep.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-2807">
-          <caret line="45" column="30" lean-forward="true" selection-start-line="45" selection-start-column="30" selection-end-line="45" selection-end-column="30" />
+        <state relative-caret-position="750">
+          <caret line="213" lean-forward="true" selection-start-line="213" selection-end-line="213" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
+            <element signature="e#3423#4144#0" />
             <element signature="e#4176#16772#0" />
+            <element signature="e#4674#6712#0" />
+            <element signature="e#6740#10346#0" />
+            <element signature="e#10411#11993#0" />
+            <element signature="e#12059#12537#0" />
+            <element signature="e#12606#13063#0" />
+            <element signature="e#13130#13933#0" />
+            <element signature="e#14001#15604#0" />
+            <element signature="e#15675#16772#0" />
+            <element signature="e#16806#29557#0" />
+            <element signature="e#19456#23131#0" />
             <element signature="e#23196#24778#0" />
             <element signature="e#24844#25322#0" />
             <element signature="e#25391#25848#0" />
             <element signature="e#25915#26718#0" />
             <element signature="e#26786#28389#0" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/Procedures/mixer_circuit_characterization.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="459">
-          <caret line="81" column="36" selection-start-line="81" selection-start-column="36" selection-end-line="81" selection-end-column="36" />
-          <folding>
-            <element signature="e#91#145#0" expanded="true" />
-            <marker date="1541883293935" expanded="true" signature="414:2625" ph="..." />
-            <marker date="1541883293935" expanded="true" signature="3058:3067" ph="..." />
+            <element signature="e#29585#29708#1" />
+            <element signature="e#29713#29819#0" />
+            <element signature="e#30009#30093#1" />
+            <element signature="e#30347#31486#0" />
+            <element signature="e#31514#31553#1" />
+            <element signature="e#41631#50601#0" />
+            <marker date="1542132885650" expanded="true" signature="4344:8995" ph="..." />
+            <marker date="1542132885650" expanded="true" signature="7035:7044" ph="..." />
           </folding>
         </state>
       </provider>

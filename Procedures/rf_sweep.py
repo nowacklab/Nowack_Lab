@@ -19,13 +19,13 @@ from ..Instruments.keithley import Keithley2400
 from IPython.display import clear_output
 
 
-class RF_take_spectra:
+class RFTakeSpectrum:
     """
-    Take a single spectrum (attenuation as function of frequency)
+    Take a single spectrum (gain/attenuation as function of frequency)
     """
     def __init__(self, v_freqmin, v_freqmax, v_power, v_avg_factor, v_numpoints,
-                filepath, v_smoothing_state=0 ,v_smoothing_factor=1,
-                notes="No notes" ,plot=False):
+                 filepath, v_smoothing_state=0, v_smoothing_factor=1,
+                 notes="No notes", plot=False, network_param='S21'):
 
         # Set object variables
         self.v_freqmax = v_freqmax
@@ -38,6 +38,7 @@ class RF_take_spectra:
         self.v_smoothing_factor = v_smoothing_factor
         self.notes = notes
         self.plot = plot
+        self.v_networkparam = network_param
 
         self.valid_numpoints = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
         self.v_numpoints = v_numpoints
@@ -57,7 +58,7 @@ class RF_take_spectra:
         Run measurement
         """
         # Set up VNA settings
-        self.v1.networkparam = 'S21'  # Set to measure forward transmission
+        self.v1.networkparam = self.v_networkparam  # Set to measure forward transmission
         self.v1.power = self.v_power
         self.v1.powerstate = 1  # turn vna source power on
         self.v1.averaging_state = 1  # Turn averaging on
@@ -103,6 +104,112 @@ class RF_take_spectra:
         info.append(path + '/re_im/data', re_im)
         info.append(path + '/re_im/description', "shape [Data, Re Im]")
         info.append(path + '/notes', self.notes)
+
+
+class PowerFrequencySweep:
+    """ Heatmap: power on one axis, frequency on other axis, gain/db is heat/color"""
+    def __init__(self, v_freqmin, v_freqmax, v_powermin, v_powermax, v_powersteps, filepath, v_avg_factor=3,
+                 v_numpoints=1601, v_smoothing_state=0, v_smoothing_factor=1, notes="No notes", network_param='S21',
+                 plot=True):
+        self.v_freqmin = v_freqmin
+        self.v_freqmax = v_freqmax
+        self.v_powermin = v_powermin
+        self.v_powermax = v_powermax
+        self.v_powersteps = v_powersteps
+        self.filepath = filepath
+        self.v_avg_factor = v_avg_factor
+        self.v_smoothing_state = v_smoothing_state
+        self.v_smoothing_factor = v_smoothing_factor
+        self.notes = notes
+        self.network_param = network_param
+        self.plot = plot
+
+        self.valid_numpoints = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
+        self.v_numpoints = v_numpoints
+
+        if v_numpoints not in self.valid_numpoints:
+            index = (np.abs(self.valid_numpoints - v_numpoints)).argmin()
+            closest_valid_numpoint = self.valid_numpoints[index]
+            print("%f is not a valid point number. Setting to %d instead." % (v_numpoints, closest_valid_numpoint))
+            self.v_numpoints = closest_valid_numpoint
+        else:
+            self.v_numpoints = v_numpoints
+
+        self.v1 = VNA8722ES(16)  # initialize VNA (Instrument object)
+
+    def do(self):
+        """
+        Run measurement
+        """
+        # Set up VNA settings
+        self.v1.networkparam = self.v_network_param  # Set to measure forward transmission
+        self.v1.power = self.v_powermin
+        self.v1.powerstate = 1  # turn vna source power on
+        self.v1.averaging_state = 1  # Turn averaging on
+        self.v1.averaging_factor = self.v_avg_factor
+        self.v1.maxfreq = self.v_freqmax
+        self.v1.minfreq = self.v_freqmin
+        self.v1.sweepmode = "LIN"
+        self.v1.numpoints = self.v_numpoints  # set num freq pnts for VNA
+        self.v1.smoothing_state = self.v_smoothing_state  # turn smoothing on
+        self.v1.smoothing_factor = self.v_smoothing_factor
+
+        # creates a timestamp that will be in the h5 file name for this run
+        now = datetime.now()
+        timestamp = now.strftime('%Y-%m-%d_%H%M%S')
+
+        re_im = np.empty((self.v_powersteps, 2, self.v_numpoints))
+
+        powers_list = np.linspace(self.v_powermin, self.v_powermax, self.v_powersteps)
+        for index in range(self.v_powersteps):
+            self.v1.power = powers_list[index]
+            re_im[index] = self.v1.save_Re_Im()
+
+        self.v1.powerstate = 0
+
+        if self.plot:
+            PowerFrequencySweep.plotdB(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5")
+
+    def save_data(self, timestamp, re_im):
+        name = timestamp + '_rf_sweep'
+        path = os.path.join(self.filepath, name + '.hdf5')
+        info = dataset.Dataset(path)
+        info.append(path + '/freqmin', self.v_freqmin)
+        info.append(path + '/freqmax', self.v_freqmax)
+        info.append(path + '/powermin', self.v_powermin)
+        info.append(path + '/powermax', self.v_powermax)
+        info.append(path + '/powersteps', self.v_powersteps)
+        info.append(path + '/avg_factor', self.v_avg_factor)
+        info.append(path + '/numpoints', self.v_numpoints)
+        info.append(path + '/smoothing_state', self.v_smoothing_state)
+        info.append(path + '/smoothing_factor', self.v_smoothing_factor)
+        info.append(path + '/re_im/data', re_im)
+        info.append(path + '/re_im/description', "shape [Current, Data, Re Im]")
+        info.append(path + '/notes', self.notes)
+        info.append(path + '/network_param', self.network_param)
+
+    @staticmethod
+    def plotdB(filename):
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+        data = dataset.Dataset(filename)
+        power = np.linspace(data.get(filename + '/powermin'),
+                                  data.get(filename + '/powermax'),
+                                  data.get(filename + '/powersteps'))
+        freq = np.linspace(data.get(filename + '/freqmin') / 1e9,
+                           data.get(filename + '/freqmax') / 1e9,
+                           data.get(filename + '/numpoints'))
+        y, x = np.meshgrid(freq, power)
+        dB = PowerFrequencySweep.dB_data(filename)
+        im = ax.pcolor(x, y, dB, cmap="viridis")
+        cbar = fig.colorbar(im)
+        ax.set_xlabel('field coil current (mA)')
+        ax.set_ylabel('frequency (GHz)')
+        ax.set_title(filename + "\nNotes: " +
+                         str(data.get(filename + '/notes')))
+
+        cbar.set_label('Gain [dB]')
+        graph_path = filename.replace(".hdf5", "db.png")
+        fig.savefig(graph_path)
 
 
 class RFSweepCurrentDAQ:
@@ -376,6 +483,7 @@ class RFSweepCurrentDAQ:
         info.append(path + '/notes', self.notes)
         info.append(path + '/hysteresis', self.hysteresis)
 
+
 class RFSweepCurrentDAQREV:
     """Class for sweeping current with DAQ (and bias resistor) and recording
     data from the VNA8722ES at each current step
@@ -648,6 +756,8 @@ class RFSweepCurrentDAQREV:
         info.append(path + '/re_im_rev/description', "shape [Current, Data, Re Im]")
         info.append(path + '/notes', self.notes)
         info.append(path + '/hysteresis', self.hysteresis)
+
+
 class RFSweepCurrent:
 
     """Class for sweeping current with the Keithley2400 and recording
@@ -732,7 +842,7 @@ class RFSweepCurrent:
         timestamp = now.strftime('%Y-%m-%d_%H%M%S')
 
         # initialize empty array to store data in TODO: change from empty to NAN?
-        re_im = np.empty((self.k_Isteps, 2,self.v_numpoints))
+        re_im = np.empty((self.k_Isteps, 2, self.v_numpoints))
         if self.hysteresis:
             re_im_rev = np.empty((self.k_Isteps, 2, self.v_numpoints))
 

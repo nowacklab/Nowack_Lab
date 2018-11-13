@@ -9,6 +9,7 @@ from IPython.display import clear_output
 
 
 class MixerCircuitTester:
+    """ SHOULD NOT BE USED - this test should not give meaningful results"""
     def __init__(self, power_start, power_stop, power_numpoints,
                  freq_start, freq_stop, freq_numpoints,
                  preamp_gain, filepath, daq_input_label='ai0'):
@@ -105,3 +106,15 @@ class MixerCircuitTester:
         cbar.set_label('DAQ voltage normalized by preamp_gain, preamp_gain = ' + str(preamp_gain))
         graph_path = filename.replace(".hdf5", "graph.png")
         fig.savefig(graph_path)
+
+class SimpleTakeDAQVoltage:
+    def __init__(self, daq_monitor_time, daq_input_label='ai0'):
+        self.daq = NIDAQ()
+        self.daq_monitor_time = daq_monitor_time
+        self.daq_input_label = daq_input_label
+
+    def do(self):
+        daq_data = self.daq.monitor([self.daq_input_label], self.daq_monitor_time, 1000)
+        time.sleep(1.1 * self.daq_monitor_time)
+        daq_data_average = np.mean(daq_data[self.daq_input_label])
+        print(daq_data_average)
