@@ -48,8 +48,9 @@ class Saver():
 
 
 
-    def __init__(self, name = ''):
-        filestowrite = self.generatefullfilenameandpath(name = name)
+    def __init__(self, name = '', addtimestamp = True):
+        filestowrite = self.generatefullfilenameandpath(name = name,
+                                                    addtimestamp=addtimestamp)
         self.datasets = {}
         for key in filestowrite.keys():
             self.datasets[key] = Dataset(filestowrite[key])
@@ -59,7 +60,7 @@ class Saver():
         for key in paths.keys():
             figure.savefig(paths[key]['exppath'] + '\\' + make_timestamp +
                                                             'figure_' + name)
-    def generatefullfilenameandpath(self, name = ''):
+    def generatefullfilenameandpath(self, name = '', addtimestamp = True):
         '''
         Returns a dict of filenames with full paths, generated from the
         get savepaths method
@@ -69,9 +70,13 @@ class Saver():
         '''
         paths = self.__class__.getsavepaths()
         filenames = {}
+        if addtimestamp:
+            timecomp = self.__class__.make_timestamp()
+        else:
+            timecomp = ''
         for key in paths.keys():
             filenames[key] = (paths[key]['exppath']
-                                    +  '\\' + self.__class__.make_timestamp()
+                                    +  '\\' + timecomp
                                     + name + '.hdf5')
         return filenames
 

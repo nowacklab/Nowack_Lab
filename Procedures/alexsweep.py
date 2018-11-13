@@ -23,6 +23,7 @@ class Recorder(Measurement):
         self.obj = obj
         self.prop = prop
         self.name = name
+        self.returns = True
         self.key = key
         self.preamp = False
         if not hasattr(obj, "__getstate__"):
@@ -73,6 +74,7 @@ class Active(Measurement):
         self.prop = prop
         self.obj = obj
         self.array = array
+        self.returns = True
         self.name = name
         self.delay = delay
         if not hasattr(obj, "__getstate__"):
@@ -115,6 +117,7 @@ class Sweep(Measurement):
         self.ns = []
         self.bi = bi
         self.runcount = runcount
+        self.returns = True
         self.saveasyougo = saveasyougo
         self.pathtosave = pathtosave
         self.pausebeforesweep = pausebeforesweep
@@ -135,19 +138,28 @@ class Sweep(Measurement):
             directions = ['forward', 'reverse']
         else:
             directions = ['forward']
-        for r in self.repeaters:
-            if self.saveconfig and hasattr(r, "_getconfig"):
-                if self.saveasyougo or self.saveatend:
-                    cur_config =  r._getconfig()
-                    self.savedata.append(self.pathtosave +
-                    'initialization: %s/iteration: %s/params/%s/'
-                    %(str(init),str(iter), r.name), cur_config)
-                else:
-                    sweep_data['config'][r.name] = cur_config
+            repeaterorder = []
+        if self.saveconfig:
+            for r in self.repeaters:
+                repeaterorder.append(r.name)
+                if hasattr(r, "_getconfig"):
+                    if self.saveasyougo or self.saveatend:
+                        cur_config =  r._getconfig()
+                        self.savedata.append(self.pathtosave +
+                        'initialization: %s/iteration: %s/params/%s/'
+                        %(str(init),str(iter), r.name), cur_config)
+                    else:
+                        sweep_data['config'][r.name] = cur_config
+            if self.saveasyougo or self.saveatend:
+                self.savedata.append(self.pathtosave +
+                'initialization: %s/iteration: %s/params/repeater order/'
+                %(str(init),str(iter)), repeaterorder)
+            else:
+                sweep_data['config']['repeater order'] = repeaterorder
         for direction in directions:
             sweep_data[direction] = {}
             for r in self.repeaters:
-                if hasattr(r,"name"):
+                if r.returns:
                     print(r.name)
                     if isinstance(r, Sweep):
                         sweep_data[direction][r.name]={}
@@ -213,7 +225,7 @@ class Sweep(Measurement):
                 for r in self.repeaters:
                     if(self.waiter and self.waiter.test(n)):
                         break
-                    if hasattr(r,"name"):
+                    if r.returns:
                         returneddata = r(point)
                         if isinstance(r, Sweep):
                             sweep_data["iteration: " + str(k)]['forward'][
@@ -251,7 +263,7 @@ class Sweep(Measurement):
                     for r in self.repeaters:
                         if(self.waiter and self.waiter.test(n)):
                             break
-                        if hasattr(r,"name"):
+                        if r.returns:
                             returneddata = r(self.points - point - 1)
                             if isinstance(r, Sweep):
                                 sweep_data["iteration: " + str(k)]['reverse'][
@@ -360,6 +372,7 @@ class Current_Time(Measurement):
 
     def __init__(self, lt = False):
         self.lt = lt
+        self.returns = True
         if not lt:
             self.name = 'Current Time since epoch (Seconds)'
         else:
@@ -382,6 +395,7 @@ class Time(Measurement):
         self.hasbeencalled = False
         self.times = times
         self.name = 'time'
+        self.returns = True
     def restart(self, n):
         '''
         Resets the zero of time to the next time seconds or waittime is called
@@ -418,8 +432,10 @@ class Delayer(Measurement):
     Delays execution for a fixed amount of time
     '''
 
-    def __init__(self, delay):
+    def __init__(self, delay, multidelayorder = 1):
         self.delay = delay
+        self.name = 'Delayer, delays for ' + str(delay) + ' sec'
+        self.returns = False
 
     def __call__(self, n):
         starttime = time.time()
@@ -443,6 +459,7 @@ class Wait(Measurement):
                                                         timetoaccept = 1e-3):
 
         self.name = name
+        self.returns = True
         self.obj = obj
         if not hasattr(obj, "__getstate__"):
             print('Passed object does not have a getstate. Instrument '

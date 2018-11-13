@@ -80,7 +80,7 @@ class zurichInstrument(Instrument):
                                                                         %elem)))
             else:
                 #If it is a high speed streaming node, use getsample.
-                setattr(HF2LI, nameofattr, property(fget=eval(
+                setattr(self.__class__, nameofattr, property(fget=eval(
                 "lambda self: {'x': self.daq.getSample('%s')['x'][0]," % elem
                             + "'y':self.daq.getSample('%s')['y'][0]}" % elem)))
     def __getstate__(self):
