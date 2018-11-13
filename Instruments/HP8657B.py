@@ -1,9 +1,10 @@
-import visa
-import numpy as np
-import time
-from .instrument import Instrument, VISAInstrument
+# import visa
+# import numpy as np
+# import time
+from .instrument import VISAInstrument
 
-class functiongenerator(VISAInstrument):
+
+class FunctionGenerator(VISAInstrument):
     _label = 'HP8657'
     """
     Instrument driver for HP 8657 2GHz signal generator

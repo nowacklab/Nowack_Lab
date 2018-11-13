@@ -73,7 +73,6 @@ class NIDAQ(Instrument):
         part2 = end-(part2arg-end)**2/((end-start)/2)**2*(end-start)/2
         return list(part1)+list(part2[1:])
 
-
     def all(self):
         """
         Returns a dictionary of all channel voltages.
@@ -82,7 +81,6 @@ class NIDAQ(Instrument):
         for chan in self._ins + self._outs:
             voltages[chan] =  getattr(self, chan).V
         return voltages
-
 
     @property
     def inputs(self):
@@ -102,7 +100,6 @@ class NIDAQ(Instrument):
             self._inputs[label] = getattr(self, name)
         return self._inputs
 
-
     @inputs.setter
     def inputs(self, d):
         """
@@ -114,7 +111,6 @@ class NIDAQ(Instrument):
                 name = 'ai%i' %name
             getattr(self, name).label = label
 
-
     @property
     def input_names(self):
         """
@@ -124,7 +120,6 @@ class NIDAQ(Instrument):
         for chan in self._ins:
             self._input_names[getattr(self, chan).label] = chan
         return self._input_names
-
 
     @property
     def outputs(self):
@@ -143,7 +138,6 @@ class NIDAQ(Instrument):
             self._outputs[label] = getattr(self, name)
         return self._outputs
 
-
     @outputs.setter
     def outputs(self, d):
         """
@@ -155,7 +149,6 @@ class NIDAQ(Instrument):
                 name = 'ao%i' %name
             getattr(self, name).label = label
 
-
     @property
     def output_names(self):
         """
@@ -166,7 +159,6 @@ class NIDAQ(Instrument):
         for chan in self._outs:
             self._output_names[getattr(self, chan).label] = chan
         return self._output_names
-
 
     def monitor(self, chan_in, duration, sample_rate=100):
         """
@@ -196,7 +188,6 @@ class NIDAQ(Instrument):
 
         return received
 
-
     def send_receive(self, data, chan_in=None, sample_rate=100):
         """
         Send data to daq outputs and receive data on input channels.
@@ -205,7 +196,6 @@ class NIDAQ(Instrument):
         Arrays should be equally sized for all output channels.
         chan_in is a list of all input channel labels or names you wish to monitor.
         """
-
 
         # Make everything a numpy array
         data = data.copy() # so we don't modify original data
@@ -230,7 +220,6 @@ class NIDAQ(Instrument):
             value = value * u.V
 
             data[key] = value
-
 
         # Make sure there's at least one input channel (or DAQmx complains)
         if chan_in is None:

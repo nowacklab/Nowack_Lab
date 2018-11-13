@@ -1,17 +1,16 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import os, time, math
-
-from importlib import reload
-from scipy.interpolate import UnivariateSpline
-from ..Utilities.plotting import plot_mpl
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from scipy.signal import savgol_filter
+import os, time
 from datetime import datetime
+
+# from importlib import reload
+# from scipy.interpolate import UnivariateSpline
+# from ..Utilities.plotting import plot_mpl
+# from mpl_toolkits.axes_grid1 import make_axes_locatable
+# from scipy.signal import savgol_filter
 
 # Nowack_Lab imports
 from ..Utilities import dataset
-from ..Utilities.dataset import Dataset
 from ..Instruments.VNA import VNA8722ES
 from ..Instruments.nidaq import NIDAQ
 from ..Instruments.keithley import Keithley2400
@@ -107,7 +106,8 @@ class RFTakeSpectrum:
 
 
 class PowerFrequencySweep:
-    """ Heatmap: power on one axis, frequency on other axis, gain/db is heat/color"""
+    """ Heatmap: power on one axis, frequency on other axis, gain/db is heat/color
+    E.g. will use for copper powder filter characterization"""
     def __init__(self, v_freqmin, v_freqmax, v_powermin, v_powermax, v_powersteps, filepath, v_avg_factor=3,
                  v_numpoints=1601, v_smoothing_state=0, v_smoothing_factor=1, notes="No notes", network_param='S21',
                  plot=True):
@@ -121,7 +121,7 @@ class PowerFrequencySweep:
         self.v_smoothing_state = v_smoothing_state
         self.v_smoothing_factor = v_smoothing_factor
         self.notes = notes
-        self.network_param = network_param
+        self.v_network_param = network_param
         self.plot = plot
 
         self.valid_numpoints = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
@@ -167,12 +167,15 @@ class PowerFrequencySweep:
 
         self.v1.powerstate = 0
 
+        self.save_data(timestamp, re_im)
+
         if self.plot:
-            PowerFrequencySweep.plotdB(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5")
+            PowerFrequencySweep.plotdB(self.filepath + "\\" + timestamp + "_PowerFrequencySweep.hdf5")
 
     def save_data(self, timestamp, re_im):
-        name = timestamp + '_rf_sweep'
+        name = timestamp + '_PowerFrequencySweep'
         path = os.path.join(self.filepath, name + '.hdf5')
+        print("Saving to path: " + path)
         info = dataset.Dataset(path)
         info.append(path + '/freqmin', self.v_freqmin)
         info.append(path + '/freqmax', self.v_freqmax)
@@ -186,10 +189,11 @@ class PowerFrequencySweep:
         info.append(path + '/re_im/data', re_im)
         info.append(path + '/re_im/description', "shape [Current, Data, Re Im]")
         info.append(path + '/notes', self.notes)
-        info.append(path + '/network_param', self.network_param)
+        info.append(path + '/network_param', self.v_network_param)
 
     @staticmethod
     def plotdB(filename):
+        print("test abacasdfadsf")
         fig, ax = plt.subplots(1, 1, figsize=(10, 6))
         data = dataset.Dataset(filename)
         power = np.linspace(data.get(filename + '/powermin'),
@@ -198,18 +202,30 @@ class PowerFrequencySweep:
         freq = np.linspace(data.get(filename + '/freqmin') / 1e9,
                            data.get(filename + '/freqmax') / 1e9,
                            data.get(filename + '/numpoints'))
-        y, x = np.meshgrid(freq, power)
+        x, y = np.meshgrid(freq, power)
         dB = PowerFrequencySweep.dB_data(filename)
-        im = ax.pcolor(x, y, dB, cmap="viridis")
+        im = ax.pcolor(x, y, dB, cmap="viridis", vmin=-100, vmax=-10)
         cbar = fig.colorbar(im)
-        ax.set_xlabel('field coil current (mA)')
-        ax.set_ylabel('frequency (GHz)')
+        ax.set_ylabel('VNA power (dBm)')
+        ax.set_xlabel('VNA frequency (GHz)')
         ax.set_title(filename + "\nNotes: " +
                          str(data.get(filename + '/notes')))
 
         cbar.set_label('Gain [dB]')
         graph_path = filename.replace(".hdf5", "db.png")
         fig.savefig(graph_path)
+
+    @staticmethod
+    def dB_data(filename):
+        data = dataset.Dataset(filename)
+        re_im_info = data.get(filename + '/re_im/data')
+        attenuation = np.empty((data.get(filename + '/powersteps'),
+                                int(data.get(filename + '/numpoints'))))
+        n = 0
+        for array in re_im_info:
+            attenuation[n] = VNA8722ES.Re_Im_to_dB(array)
+            n += 1
+        return attenuation
 
 
 class RFSweepCurrentDAQ:
@@ -876,19 +892,19 @@ class RFSweepCurrent:
 
         # plot TODO: only plots forward attenuation atm
         if self.plot:
-            RFSweepCurrent.plotdB(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5")
+            RFSweepCurrent.plot_db(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5")
             if self.hysteresis:
-                RFSweepCurrent.plotdB(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5", rev=False)
+                RFSweepCurrent.plot_db(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5", rev=False)
 
     def setup_plots_1(self):
-        self.fig, self.ax = plt.subplots(1,1, figsize=(10,6))
+        self.fig, self.ax = plt.subplots(1, 1, figsize=(10, 6))
 
     def setup_plots_2(self):
-        self.fig, self.ax = plt.subplots(2,1, figsize=(10,6))
+        self.fig, self.ax = plt.subplots(2, 1, figsize=(10, 6))
         self.ax = list(self.ax)
 
     def setup_plots_4(self):
-        self.fig, self.ax = plt.subplots(2,2, figsize=(10,6))
+        self.fig, self.ax = plt.subplots(2, 2, figsize=(10, 6))
         self.ax = list(self.ax)
 
     def save_data(self, timestamp, re_im, re_im_rev = None):
@@ -913,7 +929,7 @@ class RFSweepCurrent:
         info.append(path + '/hysteresis', self.hysteresis)
 
     @staticmethod
-    def plotdB(filename, rev=False):
+    def plot_db(filename, rev=False):
         fig, ax = plt.subplots(1, 1, figsize=(10, 6))
         data = dataset.Dataset(filename)
         if not rev:

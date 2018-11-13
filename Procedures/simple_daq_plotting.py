@@ -1,8 +1,9 @@
 # just updates DAQ input voltage data
-import numpy as np
-import matplotlib.pyplot as plt
-import time
+# import numpy as np
+# import matplotlib.pyplot as plt
+# mport time
 from ..Instruments.nidaq import *
+
 
 class daq_plotter:
     def __init__(self, total_time=5, timestep=.01):
@@ -13,15 +14,15 @@ class daq_plotter:
 
     def do(self):
         arr = np.zeros((self.numpoints, 1))
-        for i in range(self.numpoints):
+        for j in range(self.numpoints):
             time.sleep(self.timestep)
-            arr[i] = self.dq.ai0.V
+            arr[j] = self.dq.ai0.V
         plt.ylim(-10, 10)
         print(np.mean(arr))
         plt.plot(arr)
 
 
-class plot_tester:
+class PlotTester:
     def __init__(self):
         pass
 

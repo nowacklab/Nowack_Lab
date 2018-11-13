@@ -1,5 +1,8 @@
 """ Use to get DAQ voltage as function of reflected squid power and circuit drive power"""
-import os, time, numpy as np, matplotlib.pyplot as plt
+import os
+import time
+import numpy as np
+import matplotlib.pyplot as plt
 from datetime import datetime
 from ..Instruments.VNA import VNA8722ES
 from ..Instruments.nidaq import NIDAQ
@@ -106,6 +109,7 @@ class MixerCircuitTester:
         cbar.set_label('DAQ voltage normalized by preamp_gain, preamp_gain = ' + str(preamp_gain))
         graph_path = filename.replace(".hdf5", "graph.png")
         fig.savefig(graph_path)
+
 
 class SimpleTakeDAQVoltage:
     def __init__(self, daq_monitor_time, daq_input_label='ai0'):
