@@ -1,7 +1,7 @@
 from matplotlib.colors import LinearSegmentedColormap as LSC
 import numpy as np
 
-colors = dict(
+color_dict = dict(
     blue = (0.230, 0.299, 0.754),
     red = (0.706, 0.016, 0.150),
     purple = (0.436, 0.308, 0.631),
@@ -9,7 +9,8 @@ colors = dict(
     green = (0.085, 0.532, 0.201),
     blue2 = (0.217, 0.525, 0.910),
     tan = (0.677, 0.492, 0.093),
-    red2 = (0.758, 0.214, 0.233)
+    red2 = (0.758, 0.214, 0.233),
+    grey = '#7F7F7F'
 )
 
 
@@ -17,21 +18,27 @@ def diverging(color1, color2, centercolor=(.865, .865, .865)):
     '''
     Creates a diverging LinearSegmentedColormap from color1 to centercolor to color2.
     All colors specified as RGB tuples.
-    centercolor can be 'w' or 'k' as well for white and black. By default it's a convenient grey.
+    centercolor can be 'w' or 'k' as well for white and black, or an integer grey value.
+    By default it's a convenient grey of 0.865
     '''
     if centercolor == 'w':
         centercolor = (1,1,1)
     elif centercolor == 'k':
         centercolor = (0,0,0)
+    elif type(centercolor) is float:
+        centercolor = (centercolor,)*3
 
     colors = [color1, centercolor, color2]
     cmap = LSC.from_list('cmap', colors, N=10000)
     return cmap
 
-PurpleOrange = diverging(colors['purple'], colors['orange'])
-GreenPurple = diverging(colors['green'], colors['purple'])
-BlueTan = diverging(colors['blue2'], colors['tan'])
-GreenRed = diverging(colors['green'], colors['red2'])
+PurpleOrange = diverging(color_dict['purple'], color_dict['orange'])
+GreenPurple = diverging(color_dict['green'], color_dict['purple'])
+BlueTan = diverging(color_dict['blue2'], color_dict['tan'])
+TanOrange = diverging(color_dict['tan'], color_dict['orange'])
+GreenRed = diverging(color_dict['green'], color_dict['red2'])
+GreenOrange = diverging(color_dict['green'], color_dict['orange'])
+BlueOrange = diverging(color_dict['blue2'], color_dict['orange'], 0.75)
 
 # From list
 _iridescent = ['#FEFEB9', '#FCF7D5', '#F5F3C1', '#EAF0B5', '#DDECBF', '#D0E7CA',
