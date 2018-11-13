@@ -80,7 +80,7 @@ class PPMS(Instrument):
         for param in self._params:
             d[param] = getattr(self, param)
         return d
-        
+
 
     def _get_temperature(self, map23=True):
         '''
@@ -197,6 +197,18 @@ class PPMS(Instrument):
         #     print('Killed IronPython server with PID %s' %self._pid)
         # else:
         #     print('Failed killing IronPython server with PID %s' %self._pid)
+
+
+    def wait_for_field(self):
+        '''
+        Wait for field sweep to finish.
+        '''
+        print('Waiting for field sweep to finish.')
+        while self.field_status not in ('Iterating', 'Charging'):
+            time.sleep(2) # wait until the field starts changing
+
+        while self.field_status in ('Iterating', 'Charging'):
+            time.sleep(2) # wait until the field is done changing
 
 
 def connect_socket(HOST, PORT):
