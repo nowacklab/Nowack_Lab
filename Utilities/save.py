@@ -348,10 +348,10 @@ class Saver(object):
 
                     # If some other object
                     elif hasattr(value, '__dict__'):
-                        # if isinstance(value, Saver):  # only Savers
+                        if isinstance(value, Saver):  # only Savers
                             # mark object by "!" and make a new group
-                        new_group = group.create_group('!'+key)
-                        walk(value.__dict__, new_group)  # walk through obj
+                            new_group = group.create_group('!'+key)
+                            walk(value.__dict__, new_group)  # walk through obj
 
             walk(self.__dict__, f)
 
