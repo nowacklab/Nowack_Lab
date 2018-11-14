@@ -389,7 +389,7 @@ class VNA8722ES(Instrument):
             phase_array[0, i] = float(split_line[0])  # split_line[1] not used in phase case
         return phase_array
 
-    def save_Re_Im(self):
+    def save_re_im(self):
         """Return real and imaginary parts of VNA response in (2D) np array by querying VNA through GPIB commands
         shape of array: 2x(number of frequency sweep points)
         first row: real parts

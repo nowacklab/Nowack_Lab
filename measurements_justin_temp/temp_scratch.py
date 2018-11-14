@@ -93,7 +93,7 @@ class RF_sweep_current:
                 print("Current source step #" + str(step+1) + " out of " + str(self.k_Isteps))
             self.k3.Iout += I_stepsize    # increment current
             self.v1.averaging_restart()  # restart averaging
-            re_im[index] = self.v1.save_Re_Im()
+            re_im[index] = self.v1.save_re_im()
             index += 1
 
         # sweep backwards in current
@@ -104,7 +104,7 @@ class RF_sweep_current:
                     print("Current source step #" + str(step+1) + " out of " + str(self.k_Isteps))
                 self.k3.Iout = self.k3.Iout - I_stepsize  # increment current
                 self.v1.averaging_restart()  # restart averaging
-                re_im_rev[index] = self.v1.save_Re_Im()
+                re_im_rev[index] = self.v1.save_re_im()
                 index += 1
             self.save_data(timestamp, re_im, re_im_rev=re_im_rev)
         else:

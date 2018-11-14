@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from ..Instruments.VNA import VNA8722ES
 from ..Instruments.nidaq import NIDAQ
-from ..Instruments.HP8657B import functiongenerator
+from ..Instruments.HP8657B import FunctionGenerator
 from ..Utilities.dataset import Dataset
 from IPython.display import clear_output
 
@@ -30,7 +30,7 @@ class MixerCircuitTester:
         self.filepath = filepath
 
         self.vna = VNA8722ES()
-        self.fxngen = functiongenerator(7)
+        self.fxngen = FunctionGenerator(7)
         self.daq = NIDAQ()
         self.daq_input_label = daq_input_label
 

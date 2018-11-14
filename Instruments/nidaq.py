@@ -264,9 +264,9 @@ class NIDAQ(Instrument):
 
         for chan, value in received.items():
             if chan == min_chan:
-                received[chan] = np.delete(value, 0) #removes first data point, which is wrong
+                received[chan] = np.delete(value, 0) # removes first data point, which is wrong
             else:
-                received[chan] = np.delete(value,-1) #removes last data point, a duplicate
+                received[chan] = np.delete(value,-1) # removes last data point, a duplicate
         for chan, value in received.items():
             if chan not in input_labels and chan is not 't':
                 received[getattr(self, chan).label] = received.pop(chan) # change back to the given channel labels if different from the real channel names

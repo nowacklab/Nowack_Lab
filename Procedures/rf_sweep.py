@@ -80,7 +80,7 @@ class RFTakeSpectrum:
         vna_power = self.v1.ask('POWE?')
         print(power_range)
         print(vna_power)
-        re_im = self.v1.save_Re_Im()  # get real and imaginary parts
+        re_im = self.v1.save_re_im()  # get real and imaginary parts
         self.save_data(timestamp, re_im)  # save data to h5
 
         self.v1.powerstate = 0  # turn off VNA source power
@@ -127,6 +127,9 @@ class PowerFrequencySweep:
         self.valid_numpoints = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
         self.v_numpoints = v_numpoints
 
+        self.fig = None
+        self.ax = None
+
         if v_numpoints not in self.valid_numpoints:
             index = (np.abs(self.valid_numpoints - v_numpoints)).argmin()
             closest_valid_numpoint = self.valid_numpoints[index]
@@ -163,7 +166,7 @@ class PowerFrequencySweep:
         powers_list = np.linspace(self.v_powermin, self.v_powermax, self.v_powersteps)
         for index in range(self.v_powersteps):
             self.v1.power = powers_list[index]
-            re_im[index] = self.v1.save_Re_Im()
+            re_im[index] = self.v1.save_re_im()
 
         self.v1.powerstate = 0
 
@@ -334,7 +337,7 @@ class RFSweepCurrentDAQ:
                 print("Current source step #" + str(step + 1) + " out of " + str(self.Ibias_steps))
             self.daq.ao0.V += V_stepsize  # increment voltage/current
             self.vna.averaging_restart()
-            re_im[index] = self.vna.save_Re_Im()
+            re_im[index] = self.vna.save_re_im()
             index += 1
 
         # sweep backward in current
@@ -345,7 +348,7 @@ class RFSweepCurrentDAQ:
                     print("Current source step #" + str(step + 1) + " out of " + str(self.Ibias_steps))
                 self.daq.ao0.V += -V_stepsize
                 self.vna.averaging_restart()
-                re_im_rev[index] = self.vna.save_Re_Im()
+                re_im_rev[index] = self.vna.save_re_im()
                 index += 1
             self.save_data(timestamp, re_im, re_im_rev=re_im_rev)
         else:
@@ -356,10 +359,10 @@ class RFSweepCurrentDAQ:
 
         if self.plot:
             RFSweepCurrentDAQ.plotdB(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5")
-            RFSweepCurrentDAQ.plotPhase(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5")
+            RFSweepCurrentDAQ.plot_phase(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5")
             if self.hysteresis:
                 RFSweepCurrentDAQ.plotdB(self.filepath+"\\" + timestamp + "_rf_sweep.hdf5")
-                RFSweepCurrentDAQ.plotPhase(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5")
+                RFSweepCurrentDAQ.plot_phase(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5")
 
     @staticmethod
     def plotdB(filename, rev=False):
@@ -427,7 +430,7 @@ class RFSweepCurrentDAQ:
         return phase
 
     @staticmethod
-    def plotdB1D(filename, rev=False):
+    def plotdB1D(filename):
         """Plot and save single VNA freq sweep. x-axis is frequency, y-axis is dB"""
         fig, ax = plt.subplots(1, 1, figsize=(10, 6))
         data = dataset.Dataset(filename)
@@ -444,7 +447,7 @@ class RFSweepCurrentDAQ:
         fig.savefig(graph_path)
 
     @staticmethod
-    def plotPhase(filename, rev=False):
+    def plot_phase(filename, rev=False):
         fig, ax = plt.subplots(1, 1, figsize=(10, 6))
         data = dataset.Dataset(filename)
         if not rev:
@@ -608,7 +611,7 @@ class RFSweepCurrentDAQREV:
                 print("DAQ voltage sourcing: ", str(self.daq.ao0.V))
             self.daq.ao0.V += V_stepsize  # increment voltage/current
             self.vna.averaging_restart()
-            re_im[index] = self.vna.save_Re_Im()
+            re_im[index] = self.vna.save_re_im()
             index += 1
 
         # sweep backward in current
@@ -619,7 +622,7 @@ class RFSweepCurrentDAQREV:
                     print("Current source step #" + str(step + 1) + " out of " + str(self.Ibias_steps))
                 self.daq.ao0.V += -V_stepsize
                 self.vna.averaging_restart()
-                re_im_rev[index] = self.vna.save_Re_Im()
+                re_im_rev[index] = self.vna.save_re_im()
                 index += 1
             self.save_data(timestamp, re_im, re_im_rev=re_im_rev)
         else:
@@ -630,10 +633,10 @@ class RFSweepCurrentDAQREV:
 
         if self.plot:
             RFSweepCurrentDAQ.plotdB(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5")
-            RFSweepCurrentDAQ.plotPhase(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5")
+            RFSweepCurrentDAQ.plot_phase(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5")
             if self.hysteresis:
                 RFSweepCurrentDAQ.plotdB(self.filepath+"\\" + timestamp + "_rf_sweep.hdf5")
-                RFSweepCurrentDAQ.plotPhase(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5")
+                RFSweepCurrentDAQ.plot_phase(self.filepath + "\\" + timestamp + "_rf_sweep.hdf5")
 
     @staticmethod
     def plotdB(filename, rev=False):
@@ -718,7 +721,7 @@ class RFSweepCurrentDAQREV:
         fig.savefig(graph_path)
 
     @staticmethod
-    def plotPhase(filename, rev=False):
+    def plot_phase(filename, rev=False):
         fig, ax = plt.subplots(1, 1, figsize=(10, 6))
         data = dataset.Dataset(filename)
         if not rev:
@@ -869,7 +872,7 @@ class RFSweepCurrent:
                 print("Current source step #" + str(step+1) + " out of " + str(self.k_Isteps))
             self.k3.Iout += I_stepsize    # increment current
             self.v1.averaging_restart()  # restart averaging
-            re_im[index] = self.v1.save_Re_Im()
+            re_im[index] = self.v1.save_re_im()
             index += 1
 
         # sweep backwards in current
@@ -880,7 +883,7 @@ class RFSweepCurrent:
                     print("Current source step #" + str(step+1) + " out of " + str(self.k_Isteps))
                 self.k3.Iout = self.k3.Iout - I_stepsize  # increment current
                 self.v1.averaging_restart()  # restart averaging
-                re_im_rev[index] = self.v1.save_Re_Im()
+                re_im_rev[index] = self.v1.save_re_im()
                 index += 1
             self.save_data(timestamp, re_im, re_im_rev=re_im_rev)
         else:
@@ -1133,7 +1136,7 @@ class RFCWSweepPower:
                     print("Current source step #" + str(step+1) + " out of " + str(self.k_Isteps))
                 self.k3.Iout += I_stepsize    # increment current
                 self.v1.averaging_restart()  # restart averaging
-                re_im[powerIndex][step] = self.v1.save_Re_Im()
+                re_im[powerIndex][step] = self.v1.save_re_im()
 
         # sweep backwards in current
         if self.hysteresis:
@@ -1148,7 +1151,7 @@ class RFCWSweepPower:
                         print("Current source step #" + str(step+1) + " out of " + str(self.k_Isteps))
                     self.k3.Iout = self.k3.Iout - I_stepsize  # increment current
                     self.v1.averaging_restart()  # restart averaging
-                    re_im_rev[powerIndex][step] = self.v1.save_Re_Im()
+                    re_im_rev[powerIndex][step] = self.v1.save_re_im()
 
         if self.hysteresis:
             self.save_data(timestamp, re_im, re_im_rev=re_im_rev)
