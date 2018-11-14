@@ -1,13 +1,20 @@
 from ctypes import cdll
 import atexit
 import sys, os
+from importlib import reload
 try:
     import clr
 except:
     print('clr not imported')
-from tabulate import tabulate
+try:
+    from tabulate import tabulate
+except:
+    print('[Montana] Warning! Cannot import tabulate')
 import time
-from .instrument import Instrument
+
+import Nowack_Lab.Instrument.instrument
+reload(Nowack_Lab.Instrument.instrument)
+from Nowack_Lab.Instrument.instrument import Instrument
 
 class Montana(Instrument):
     _label = 'montana'

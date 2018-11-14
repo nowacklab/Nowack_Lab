@@ -55,13 +55,6 @@ class R_vs_T(Bluefors_vs_T):
     def do(self):
         '''
         '''
-        # disable other channels so can update fast!
-        prev_lakeshore_settings = self.lakeshore.getchsettings()
-        self.lakeshore.disable_others(self.lakeshore_channel)
-
-        # store lakeshore channel settings
-        self.lakeshoreparams = self.lakeshore.getchsettings()
-
         # setup scan
         self.starttime  = datetime.now()
         self.endtime    = self.starttime + timedelta(seconds=self.meas_dur)
@@ -154,6 +147,44 @@ class R_vs_T(Bluefors_vs_T):
         self.fig.tight_layout()
         self.fig.canvas.draw()
 
+class R_vs_T_ac(Bluefors_vs_T):
+    instrument_list = ['lakeshore', 'lockin']
+    def __init__(self,
+                 instruments,
+                 current,
+                 gain,
+                 duration = 10000,
+                 timestep=10):
+        super().__init__(instruments=instruments)
+        self.duration = duration
+        self.timestep = timestep
+        self.current = current
+        self.gain = gain
+        self.T = []
+        self.Vx = []
+        self.Vy = []
+
+    def do(self):
+        start = time.time()
+        try:
+            print("starting")
+            while ((time.time() - start) < self.duration):
+                time.sleep(self.timestep)
+                self.Vx.append(self.lockin.X)
+                self.Vy.append(self.lockin.Y)
+                self.T.append(self.lakeshore.chan6.T)
+        except KeyboardInterrupt:
+            print("interrupting.")
+            
+        self.Vx = np.array(self.Vx) / self.gain
+        self.Vy = np.array(self.Vy) / self.gain
+        self.T = np.array(self.T)
+        self.R = self.Vx / self.current
+        
+                 
+                 
+                 
+        
 class R_vs_T_dc(Bluefors_vs_T):
     '''
     Log resistances vs bluefors temperature DC

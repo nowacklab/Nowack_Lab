@@ -2,11 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from importlib import reload
 from scipy.interpolate import UnivariateSpline
-from ..Utilities.plotting import plot_mpl
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.signal import savgol_filter
 
-# Nowack_Lab imports
+import Nowack_Lab.Utilities.plotting
+reload(Nowack_Lab.Utilities.plotting)
+from Nowack_Lab.Utilities.plotting import plot_mpl
+
 import Nowack_Lab.Utilities.save
 reload(Nowack_Lab.Utilities.save)
 from Nowack_Lab.Utilities.save import Measurement

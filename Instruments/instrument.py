@@ -2,7 +2,10 @@
 For the future? Instrument base class that all instruments belong to.
 '''
 
-import visa
+try:
+    import visa
+except:
+    print('[Instrument] Warning! Cannot import Visa')
 
 class Instrument:
     _label = 'instrument'

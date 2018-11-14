@@ -3,11 +3,15 @@ import atexit
 import time
 import telnetlib
 import re
+from importlib import reload
 try:
     from pyanc350v4 import Positioner as ANC350Pos
 except:
     print('PyANC350 not installed!')
-from .instrument import Instrument
+
+import Nowack_Lab.Instruments.instrument
+reload(Nowack_Lab.Instruments.instrument)
+from Nowack_Lab.Instruments.instrument import Instrument
 
 ''' *** Use the Attocube class, definition is at the bottom *** '''
 '''

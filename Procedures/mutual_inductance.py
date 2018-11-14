@@ -1,8 +1,24 @@
-import time, os, numpy as np, matplotlib.pyplot as plt
-from ..Utilities import conversions
-from ..Utilities.save import Measurement
-from ..Utilities.plotting import plot_mpl
-from ..Utilities.utilities import AttrDict
+import time
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+from importlib import reload
+
+import Nowack_Lab.Utilities.conversions as conversions
+reload(conversions)
+
+import Nowack_Lab.Utilities.save
+reload(Nowack_Lab.Utilities.save)
+from Nowack_Lab.Utilities.save import Measurement
+
+
+import Nowack_Lab.Utilities.plotting
+reload(Nowack_Lab.Utilities.plotting)
+from Nowack_Lab.Utilities.plotting import plot_mpl
+
+import Nowack_Lab.Utilities.utilities
+reload(Nowack_Lab.Utilities.utilities)
+from Nowack_Lab.Utilities.utilities import AttrDict
 
 class MutualInductance_sweep(Measurement):
     instrument_list = ['daq', 'squidarray']

@@ -1,22 +1,36 @@
+
 import numpy as np
 from numpy.linalg import lstsq
-from .planefit import Planefit
 import time, os
 from datetime import datetime
 from scipy.interpolate import interp1d as interp
 import matplotlib.pyplot as plt
-from IPython import display
 from numpy import ma
-from ..Utilities.plotting import plot_mpl
-from ..Instruments import piezos, montana, squidarray
-from ..Utilities.save import Measurement
-from ..Utilities import conversions
-from ..Procedures.daqspectrum import SQUIDSpectrum
-from ..Utilities.utilities import AttrDict
+from importlib import reload
+
+import Nowack_Lab.Utilities.plotting
+reload(Nowack_Lab.Utilities.plotting)
+from Nowack_Lab.Utilities.plotting import plot_mpl
+
+import Nowack_Lab.Utilities.save
+reload(Nowack_Lab.Utilities.save)
+from Nowack_Lab.Utilities.save import Measurement
+
+import Nowack_Lab.Procedures.daqspectrum
+reload(Nowack_Lab.Procedures.daqspectrum)
+from Nowack_Lab.Procedures.daqspectrum import SQUIDSpectrum
+
+import Nowack_Lab.Utilities.utilities
+reload(Nowack_Lab.Utilities.utilities)
+from Nowack_Lab.Utilities.utilities import AttrDict
+
+import Nowack_Lab.Procedures.planefit
+reload(Nowack_Lab.Procedures.planefit)
+from Nowack_Lab.Procedures.planefit import Planefit
 
 class Scanspectra(Measurement):
     _daq_inputs = ['dc'] # DAQ channel labels expected by this class
-    instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto','daq']
+    instrument_list = ['piezos','squidarray','preamp','lockin_squid','lockin_cap','atto','daq']
 
     Vavg = AttrDict({
         chan: np.nan for chan in _daq_inputs
@@ -44,14 +58,14 @@ class Scanspectra(Measurement):
         x = np.linspace(center[0]-span[0]/2, center[0]+span[0]/2, numpts[0])
         y = np.linspace(center[1]-span[1]/2, center[1]+span[1]/2, numpts[1])
 
-        self.X, self.Y = np.meshgrid(x, y)
+        self.X, self.Y = np.meshgrid(x, y, indexing='ij') # self.X.shape = (len(x), len(y))
         try:
             self.Z = self.plane.plane(self.X, self.Y) - self.scanheight
         except:
             print('plane not loaded... no idea where the surface is without a plane!')
 
         self.psdAve = []
-        self.V = []
+        self.V = np.full( self.X.shape + (self.monitortime * self.sample_rate,), np.nan)
 
     def do(self):
         self.setup_preamp()
@@ -62,9 +76,8 @@ class Scanspectra(Measurement):
             self.piezos.z.check_lim(self.Z[i,:])
             
         # Move to each point on the grid and take a spectrum
-        for i in range(self.X.shape[0]):
-            for j in range(self.Y.shape[1]):
-                #print(self.X[i,j], self.Y[i,j])
+        for j in range(self.Y.shape[0]):
+            for i in range(self.X.shape[1]):
                 self.piezos.V = {'x': self.X[i,j], 'y': self.Y[i,j], 'z': self.Z[i,j]}
                 self.squidarray.reset()
                 time.sleep(0.5)
@@ -75,18 +88,15 @@ class Scanspectra(Measurement):
                                          self.num_averages)
                 spectrum.do()
                 self.psdAve.append(spectrum.psdAve)
-                self.V.append(spectrum.V)
+                self.V[i,j] = spectrum.V
                 plt.close()
         # All spectra are identical - save the frequencies and times only once
         self.f = spectrum.f
         self.t = spectrum.t
         # Reshape lists into numpy arrays
-        self.psdAve = np.array(self.psdAve).reshape(self.numpts[0], 
-                                                    self.numpts[1],
+        self.psdAve = np.array(self.psdAve).reshape(self.X.shape[0], 
+                                                    self.Y.shape[1],
                                                     -1)
-        self.V = np.array(self.V).reshape(self.numpts[0],
-                                          self.numpts[1],
-                                          -1)
 
     def setup_preamp(self):
         self.preamp.dc_coupling()

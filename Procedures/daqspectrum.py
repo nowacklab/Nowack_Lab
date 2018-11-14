@@ -4,10 +4,7 @@ import numpy as np
 from datetime import datetime
 import os
 import re
-from ..Instruments import nidaq, preamp
-from ..Utilities.save import Measurement
-from ..Utilities.utilities import AttrDict
-from ..Utilities import conversions
+import time
 
 from importlib import reload
 
@@ -15,8 +12,14 @@ import Nowack_Lab.Utilities.utilities
 reload(Nowack_Lab.Utilities.utilities)
 from Nowack_Lab.Utilities.utilities import reject_outliers_spectrum
 from Nowack_Lab.Utilities.utilities import keeprange
-import time
+from Nowack_Lab.Utilities.utilities import AttrDict
 
+import Nowack_Lab.Utilities.conversions as conversions
+reload(conversions)
+
+import Nowack_Lab.Utilities.save
+reload(Nowack_Lab.Utilities.save)
+from Nowack_Lab.Utilities.save import Measurement
 
 
 class DaqSpectrum(Measurement):

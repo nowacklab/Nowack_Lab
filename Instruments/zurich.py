@@ -8,25 +8,21 @@ Needs: zhinst, numpy, .instrument, time and _future_
 
 from __future__ import print_function
 import time
-from .instrument import Instrument
 import numpy as np
 import zhinst.utils
+from importlib import reload
+
+import Nowack_Lab.Instruments.instrument
+reload(Nowack_Lab.Instruments.instrument)
+from Nowack_Lab.Instruments.instrument import Instrument
 
 class gateVoltageError( Exception ):
     pass
-
-#class CheckArray(object):
-#    def __init__(self, *args):
-#        """
-#        """
-#
-#    def check(self):
-
-class HF2LI(Instrument):
+class zurichInstrument(Instrument):
     '''
-    Creates a Zurich HF2Li object, to control a zurich lock in amplifier
+    Creates a Zurich object, to control a zurich lock in amplifier. Do
+    not call this class, call it's subclasses.
     '''
-    _label = 'Zurich HF2LI'
 
     def __init__(self, server_address = 'localhost', server_port = 8005 ,
                 device_serial = ''):
@@ -58,7 +54,7 @@ class HF2LI(Instrument):
             # Sets class variable device_id to the serial number
             self.device_id = device_serial
             # Tells the user that the ZI they asked for was found
-            print('Using Zurich HF2LI with serial %s' % self.device_id)
+            print('Using Zurich lock-in with serial %s' % self.device_id)
 
         # Checks if you actually asked for a specific serial
         elif device_serial != '' :
@@ -69,16 +65,28 @@ class HF2LI(Instrument):
         else:
             # Sets device_id to the first avaliable. Prints SN.
             self.device_id = zhinst.utils.autoDetect(self.daq)
+        #Sets the default name of the zurich object. It can, of course,
+        #be changed later.
         self.name = 'zurich ' + self.device_id
+        #Retrieve all the nodes on the zurich
         allNodes = self.daq.listNodes(self.device_id, 0x07)
+        #Index through nodes
         for elem in allNodes:
+            #generates the name of the attribute, simply replacing the
+            # / of the the zurich path with underscores. Removes the "dev1056"
             nameofattr = elem.replace('/','_')[9:]
+            # Checks that the node is not a special high speed streaming node
             if not 'SAMPLE' == elem[-6:]:
-                setattr(HF2LI, nameofattr, property(
+                #Sets an attribute of the class, specifically a property
+                #with getters and setters going to elem
+                setattr(self.__class__, nameofattr, property(
                fget=eval("lambda self: self.daq.getDouble('%s')" %elem),
-               fset=eval("lambda self, value: self.daq.setDouble('%s', value)" %elem)))
+               fset=eval("lambda self, value: self.daq.setDouble('%s', value)"
+                                                                        %elem)))
             else:
-                setattr(HF2LI, nameofattr, property(fget=eval("lambda self: self.daq.getSample('%s')" %elem)))
+                #If it is a high speed streaming node, use getsample.
+                setattr(HF2LI, nameofattr, property(fget=eval(
+                                "lambda self: self.daq.getSample('%s')" %elem)))
 
     def setup(self, config):
             '''
@@ -197,3 +205,7 @@ class HF2LI(Instrument):
                     raise Exception('type not handled!')
             return config_as_set_changed
             #return zCONFIG
+class HF2LI(zurichInstrument):
+      pass
+class MFLI(zurichInstrument):
+      pass

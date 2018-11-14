@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.optimize import curve_fit
 
 class Geophone(object):
     '''
@@ -27,3 +28,35 @@ class Geophone(object):
         pos = psd_V / self.__class__.c_pos(f, self.conversion)
 
         return [acc, vel, pos]
+
+class Geophone_cal(object):
+    '''
+    Fit params and functions for fitting geophone calibration data
+    '''
+
+    def __init__(self, Rs):
+        self.arg0 = [4.5, 2, 380, .1, 33**2/.023]
+        self.Zi = 10e9
+        self.Rs = Rs
+
+    def _Ze(self, f, f0, Q0, Rt, Lt, Z12sqOvMo):
+        return Rt + 2j * np.pi * f * Lt + Z12sqOvMo * (2j * np.pi * f)/(
+                (2 * np.pi*f0)**2 * (1 - (f/f0)**2 + (1j/Q0)* (f/f0)))
+
+    def _Zsp(self, Rs, Zi):
+        return Rs*Zi/(Rs + Zi) 
+
+    def _Zep(self, Ze, Zi):
+        return Ze*Zi/(Ze + Zi) 
+
+    def rho(self, f, f0, Q0, Rt, Lt, Z12sqOvMo):
+        Ze = self._Ze(f, f0, Q0, Rt, Lt, Z12sqOvMo)
+        Zep = self._Zep(Ze, self.Zi)
+        return np.abs(Zep/(Zep + self._Zsp(self.Rs, self.Zi)))
+
+    def calfit(self, f, dft):
+        return self._calfit(f, dft, self.arg0)
+
+    def _calfit(self, f, dft, p0):
+        popt, pcov = curve_fit(self.rho, f, dft, p0=p0)
+        return popt, pcov

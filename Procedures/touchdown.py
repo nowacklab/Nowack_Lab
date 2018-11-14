@@ -6,10 +6,26 @@ import time
 import os
 import matplotlib.pyplot as plt
 import numpy as np
-from ..Instruments import nidaq, preamp, montana
-from ..Utilities.save import Measurement, get_todays_data_dir, get_local_data_path
-from ..Utilities import conversions, logging
-from ..Utilities.utilities import AttrDict
+from importlib import reload
+
+import Nowack_Lab.Utilities.save
+reload(Nowack_Lab.Utilities.save)
+from Nowack_Lab.Utilities.save import Measurement
+from Nowack_Lab.Utilities.save import get_todays_data_dir
+from Nowack_Lab.Utilities.save import get_local_data_path
+
+import Nowack_Lab.Utilities.conversions as conversions
+reload(conversions)
+
+import Nowack_Lab.Utilities.conversions as logging
+reload(logging)
+
+import Nowack_Lab.Utilities.utilities
+reload(Nowack_Lab.Utilities.utilities)
+from Nowack_Lab.Utilities.utilities import AttrDict
+
+
+
 
 # TODO:
 #   - add timestamp to all saved plots
@@ -141,7 +157,7 @@ class Touchdown(Measurement):
         '''
         # Read daq voltage and convert to real lockin voltage
         Vcap = self.daq.inputs['cap'].V
-        Vcap = self.lockin_cap.convert_output(Vcap)
+        Vcap = self.lockin_cap.convert_output(Vcap, "R")
 
         if Vcap > V_unbalanced:
             inp = input(
@@ -236,7 +252,7 @@ class Touchdown(Measurement):
         Vcap = self.daq.inputs['cap'].V
 
         # convert to a real capacitance
-        Vcap = self.lockin_cap.convert_output(Vcap)
+        Vcap = self.lockin_cap.convert_output(Vcap, "R")
         Cap = Vcap * conversions.V_to_C
 
         if self.C0 == None:
@@ -342,7 +358,7 @@ class Touchdown(Measurement):
         if (msg is 'q'):
             raise KeyboardInterrupt;
         if (msg is 'm'):
-            self.atto.z.move(self.attoshift)
+            pass
         else:
             pass
 

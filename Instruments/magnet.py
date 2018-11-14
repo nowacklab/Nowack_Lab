@@ -1,8 +1,17 @@
-import visa
+try:
+    import visa
+except:
+    print('[attocube] Warning: Cannot import visa')
+
 import time
 import numpy as np
 import re
-from .instrument import Instrument, VISAInstrument
+from importlib import reload
+
+import Nowack_Lab.Instruments.instrument
+reload(Nowack_Lab.Instruments.instrument)
+from Nowack_Lab.Instruments.instrument import Instrument
+from Nowack_Lab.Instruments.instrument import VISAInstrument
 
 _BMAX = {'x': 1, 'y': 1, 'z': 6} # T
 _IMAX = {'x': 50.73, 'y': 50.63, 'z': 50.76} # A
