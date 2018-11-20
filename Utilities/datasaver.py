@@ -3,6 +3,11 @@ import numpy as np
 from datetime import datetime
 import json
 import os
+
+from importlib import reload
+
+import Nowack_Lab.Utilities.dataset
+reload(Nowack_Lab.Utilities.dataset)
 from Nowack_Lab.Utilities.dataset import Dataset
 
 class Saver():
