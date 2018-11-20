@@ -338,8 +338,8 @@ class Measurement:
                     # If a numpy array is found
                     if type(value) is np.ndarray:
                         # Save the numpy array as a dataset
-                        d = group.create_dataset(key, value.shape,
-                            compression = 'gzip', compression_opts=9, data=value)
+                        d = group.create_dataset(key, value.shape, data=value,
+                            compression = 'gzip', compression_opts=9)
                         #d.set_fill_value = np.nan
                         # Fill the dataset with the corresponding value
                         #d[...] = value
