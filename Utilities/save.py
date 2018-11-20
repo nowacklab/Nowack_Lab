@@ -154,7 +154,7 @@ class Measurement:
 
 
     @staticmethod
-    def _load_json(json_file, unwanted_keys = []):
+    def _load_json(json_file, unwanted_keys = [], dowalk=True):
         import Nowack_Lab.Procedures.planefit
         '''
         Loads an object from JSON.
@@ -183,7 +183,8 @@ class Measurement:
                     d[key] = walk(d[key])
             return d
 
-        obj_dict = walk(obj_dict)
+        if dowalk:
+            obj_dict = walk(obj_dict)
 
         # If the class of the object is custom defined in __main__ or in a
         # different branch, then just load it as a Measurement.
@@ -195,8 +196,23 @@ class Measurement:
             obj_dict['py/object'] = 'Nowack_Lab.Utilities.save.Measurement'
 
         # Decode with jsonpickle
-        obj_string = json.dumps(obj_dict)
-        obj = jsp.decode(obj_string)
+        try:
+            obj_string = json.dumps(obj_dict)
+            obj = jsp.decode(obj_string)
+        except:
+            print('Json loading error... Fallback to no walk')
+            # Why did this solve the problem? If I include all of the instruments,
+            # and not artificially remove them, jsonpickle knows what to do.
+            # The list index out of range error occurs when you artificially
+            # remove an entry that is referenced by py/id
+            #
+            # This is probably a worse fix than in master at 2018-11-20
+            if dowalk:
+                obj = Measurement._load_json(json_file, 
+                    unwanted_keys=unwanted_keys, dowalk=False)
+            else:
+                print('Already no walk.  I cannot do anything')
+                raise
 
         return obj
 
