@@ -338,7 +338,6 @@ class RvsT_Montana(RvsSomething):
 
     def do(self, plot=True):
         while self.montana.temperature['platform'] > self.Tend:
-            self.T = np.append(self.T, self.montana.temperature['platform'])
             self.do_measurement(delay=self.delay, plot=plot)
 
 
