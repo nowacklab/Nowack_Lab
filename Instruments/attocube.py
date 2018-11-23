@@ -97,7 +97,7 @@ class Positioner(Instrument):
 
         self.V = V_lim
         self.freq
-        self.C # should run this now to collect capacitances for logging purposes.
+        self.C() # should run this now to collect capacitances for logging purposes.
         self.pos
 
 
@@ -148,7 +148,6 @@ class Positioner(Instrument):
 
 
 
-    @property
     def C(self):
         '''
         Measure capacitance of positioner
