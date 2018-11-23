@@ -8,7 +8,7 @@ from ..Utilities import conversions
 from ..Utilities.utilities import AttrDict
 
 class Heightsweep(Measurement):
-    _daq_inputs = ['dc','acx','acy']
+    _daq_inputs = ['dc','cap', 'acx','acy']
     _conversions = AttrDict({
         # Assume high; changed in init when array loaded
         'dc': conversions.Vsquid_to_phi0['High'],
@@ -22,6 +22,10 @@ class Heightsweep(Measurement):
 
 
     def __init__(self, instruments = {}, plane=None, x=0, y=0, zstart=0, zend=None, scan_rate=60):
+        '''
+        Measure while sweeping the z piezo away from the sample, starting at zstart piezo volts below the plane and ending at zend
+        If zend is None, sweep to maximum piezo voltage
+        '''
         super().__init__(instruments=instruments)
 
         self.plane = plane
@@ -50,7 +54,7 @@ class Heightsweep(Measurement):
         except:
             pass
 
-    def do(self):
+    def do(self, **kwargs):
 
         self.temp_start = self.montana.temperature['platform']
 
@@ -84,14 +88,20 @@ class Heightsweep(Measurement):
 
 
     def setup_plots(self):
-        self.fig = plt.figure()
-        self.fig.subplots_adjust(hspace=1.2)
+        self.fig = plt.figure(figsize=(5,10))
         self.ax = AttrDict({})
 
-        self.ax['dc'] = self.fig.add_subplot(311)
-        self.ax['acx'] = self.fig.add_subplot(312)
-        self.ax['acy'] = self.fig.add_subplot(313)
+        self.ax['dc'] = self.fig.add_subplot(411)
+        self.ax['cap'] = self.fig.add_subplot(412)
+        self.ax['acx'] = self.fig.add_subplot(413)
+        self.ax['acy'] = self.fig.add_subplot(414)
+
+        self.ax['acy'].set_xlabel(r'$V_z^{samp} - V_z (V)$')
+        self.ax['dc'].set_title('%s\nat (%.2f V, %.2f V)' %(self.filename, self.x, self.y))
 
         for label, ax in self.ax.items():
-            ax.set_xlabel(r'$V_z^{samp} - V_z (V)$')
-            ax.set_title('%s\n%s (V) at (%.2f, %.2f)' %(self.filename, label, self.x, self.y))
+            ax.set_ylabel('%s (V)' %label)
+            if label != 'acy':
+                ax.set_xticks([])
+
+        self.fig.subplots_adjust(hspace=0)

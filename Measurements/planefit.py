@@ -96,7 +96,7 @@ class Planefit(Measurement):
 
         self.a, self.b, self.c = fit_plane(self.X, self.Y, Z)
 
-    def do(self, edges_only=False):
+    def do(self, edges_only=False, **kwargs):
         '''
         Do the planefit.
 
@@ -197,7 +197,8 @@ class Planefit(Measurement):
         self.calculate_plane()
 
 
-    def move_and_update(self, x=0, y=0, z=0, ux=0, uy=0, disable_atto=True):
+    def move_and_update(self, x=0, y=0, z=0, ux=0, uy=0, disable_atto=True,
+                        check_plane=True):
         '''
         Move the attocubes by a specified distance and then update the plane.
 
@@ -205,6 +206,7 @@ class Planefit(Measurement):
         x (y, z) - positive or negative distance to move in x (y, z) direction (~um)
         ux (uy) - x (y) coordinate at which to update the plane (piezo V)
         disable_atto - disable atto during touchdown to prevent crashing?
+        check_plane - If True, checks to see whether the new plane lies within the full range of the Z piezo
         '''
         self.piezos.z.V = -self.piezos.z.Vmax
         if x != 0:
@@ -214,7 +216,7 @@ class Planefit(Measurement):
         if z != 0:
             self.atto.z.move(z)
 
-        self.update_c(ux, uy, disable_atto=disable_atto)
+        self.update_c(ux, uy, disable_atto=disable_atto, check_plane=check_plane)
 
 
     def plane(self, x, y):
@@ -330,7 +332,7 @@ class Planefit(Measurement):
         self.fig.tight_layout(pad=5)
 
 
-    def update_c(self, Vx=0, Vy=0, start=None, disable_atto=True):
+    def update_c(self, Vx=0, Vy=0, start=None, disable_atto=True, check_plane=True):
         '''
         Does a single touchdown to update the offset of the plane.
 
@@ -340,9 +342,10 @@ class Planefit(Measurement):
 
         Args:
         Vx (float): X piezo voltage for the touchdown
-        Vy (float): Y piezo voltage for the thouchdown
+        Vy (float): Y piezo voltage for the touchdown
         start (float): Z piezo voltage where touchdown sweep starts
         disable_atto (bool): If True, attocube motion is disabled
+        check_plane (bool): If True, checks to see whether the new plane lies within the full range of the Z piezo
         '''
         self.make_timestamp_and_filename()
 
@@ -358,14 +361,15 @@ class Planefit(Measurement):
 
         # Check that no points within the scan range exceed the limits
         # set on the voltage over the piezos.
-        for x in [-self.piezos.x.Vmax, self.piezos.x.Vmax]:
-            for y in [-self.piezos.y.Vmax, self.piezos.y.Vmax]:
-                z_maxormin = self.plane(x, y)
-                if z_maxormin > self.piezos.z.Vmax or z_maxormin < 0:
-                    self.c = old_c
-                    raise Exception(
-                        'Plane now extends outside positive range of Z piezo! '+
-                        'Move the attocubes and try again.')
+        if check_plane:
+            for x in [-self.piezos.x.Vmax, self.piezos.x.Vmax]:
+                for y in [-self.piezos.y.Vmax, self.piezos.y.Vmax]:
+                    z_maxormin = self.plane(x, y)
+                    if z_maxormin > self.piezos.z.Vmax or z_maxormin < 0:
+                        self.c = old_c
+                        raise Exception(
+                            'Plane now extends outside positive range of Z piezo! '+
+                            'Move the attocubes and try again.')
         # Subtract old c, add new c
         self.Z -= (old_c - self.c)
         self.save()

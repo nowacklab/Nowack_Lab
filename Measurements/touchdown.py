@@ -156,13 +156,16 @@ class Touchdown(Measurement):
 'Current z attocube position is %i um.\n \
 [y]: Sweep z piezo down, move z attocube by %+.1f um, and redo touchdown\n \
 n: Sweep z piezo down and redo without moving z attocube.\n \
-#: Enter custom attocube movement. ' %(self.atto.z.pos, self.attoshift))
+#: Enter custom attocube movement.\n \
+q: Quit' %(self.atto.z.pos, self.attoshift))
             try:
                 float(inp)
                 is_number = True
             except:
                 is_number = False
-            if inp in ('y', '', 'Y') or is_number:
+            if inp == 'q':
+                raise Exception('Quit by user')
+            elif inp in ('y', '', 'Y') or is_number:
                 if is_number:
                     self.attoshift = float(inp)
 
@@ -226,7 +229,7 @@ n: Sweep z piezo down and redo without moving z attocube.\n \
         '''
         Sets the plot title to an informative message.
         '''
-        if not hasattr(self, 'ax'):
+        if not hasattr(self, 'ax') or self.ax is None:
             self.setup_plots()
         self.ax.set_title(title, fontsize=12)
         self.fig.canvas.draw()
@@ -296,7 +299,7 @@ n: Sweep z piezo down and redo without moving z attocube.\n \
         self.lockin_cap.ac_coupling()
         # self.lockin_cap.auto_phase
 
-    def do(self, start=None):
+    def do(self, start=None, plot=True, **kwargs):
         '''
         Does the touchdown.
         Timestamp is determined at the beginning of this function.
@@ -491,7 +494,7 @@ n: Sweep z piezo down and redo without moving z attocube.\n \
 
 
     def setup_plots(self):
-        if not hasattr(self, 'ax'): # for _set_title
+        if not hasattr(self, 'ax') or self.ax is None: # for _set_title
             self.fig, self.ax = plt.subplots()
             line = self.ax.plot(self.V, self.C, 'k.')
             self.line = line[0]

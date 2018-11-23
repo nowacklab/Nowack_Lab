@@ -41,7 +41,7 @@ class Measurement(Saver, Plotter):
                 raise Exception('Instrument %s not loaded. Cannot run Measurement!' %i)
 
 
-    def do(self):
+    def do(self, **kwargs):
         '''
         Do the main part of the measurement. Write this function for subclasses.
         run() wraps this function to enable keyboard interrupts.
@@ -131,7 +131,7 @@ class FakeMeasurement(Measurement):
         self.x = np.linspace(-10,10,20)
         self.y = np.full(self.x.shape, np.nan)
 
-    def do(self):
+    def do(self, **kwargs):
         for i in range(len(self.x)):
             time.sleep(.1)
             self.y[i] = self.x[i]**2

@@ -183,93 +183,96 @@ class NIDAQ(Instrument):
         Arrays should be equally sized for all output channels.
         chan_in is a list of all input channel labels or names you wish to monitor.
         '''
+        try:
+            # Make everything a numpy array
+            data = data.copy() # so we don't modify original data
 
-        # Make everything a numpy array
-        data = data.copy() # so we don't modify original data
+            no_output = False
+            if 't' in data:
+                no_output = True  # sending "t" suggests we do not want to write to output channels
+                len_data = len(data.pop('t'))
 
-        no_output = False
-        if 't' in data:
-            no_output = True  # sending "t" suggests we do not want to write to output channels
-            len_data = len(data.pop('t'))
+            for key, value in data.items():
+                value = value.copy() # so we don't modify original data
+                if np.isscalar(value):
+                    value = np.array([value])
+                elif type(value) is list:
+                    value = np.array(value)
 
-        for key, value in data.items():
-            value = value.copy() # so we don't modify original data
-            if np.isscalar(value):
-                value = np.array([value])
-            elif type(value) is list:
-                value = np.array(value)
+                # Make sure daq does not go out of range
+                absmax = abs(value).max()
+                if absmax > self._output_range:
+                    value = np.clip(value, -self._output_range, self._output_range)
+                    print('%s is out of range for DAQ with output range %s! Set to max output.' %(absmax,self._output_range))
 
-            # Make sure daq does not go out of range
-            absmax = abs(value).max()
-            if absmax > self._output_range:
-                value = np.clip(value, -self._output_range, self._output_range)
-                print('%s is out of range for DAQ with output range %s! Set to max output.' %(absmax,self._output_range))
+                # Repeat the last data point.
+                # The DAQ for some reason gives data points late by 1. (see later)
+                value = np.append(value, value[-1])
 
-            # Repeat the last data point.
-            # The DAQ for some reason gives data points late by 1. (see later)
-            value = np.append(value, value[-1])
+                # Add units for Instrumental
+                value = value * u.V
 
-            # Add units for Instrumental
-            value = value * u.V
+                data[key] = value
 
-            data[key] = value
+            # Make sure there's at least one input channel (or DAQmx complains)
+            if chan_in is None:
+                chan_in = ['ai23'] # just a random channel
+            elif np.isscalar(chan_in):
+                chan_in = [chan_in]
 
-        # Make sure there's at least one input channel (or DAQmx complains)
-        if chan_in is None:
-            chan_in = ['ai23'] # just a random channel
-        elif np.isscalar(chan_in):
-            chan_in = [chan_in]
+            # Need to copy chan_in to ensure names don't change!
+            chan_in = chan_in.copy()
 
-        # Need to copy chan_in to ensure names don't change!
-        chan_in = chan_in.copy()
+            # Convert to real channel names
+            output_labels = list(data.keys())
+            for label in output_labels:
+                if label in self.output_names: # this means we've labeled it something other than the channel name
+                    data[self.output_names[label]] = data.pop(label) # replaces custom label with real channel name
 
-        # Convert to real channel names
-        output_labels = list(data.keys())
-        for label in output_labels:
-            if label in self.output_names: # this means we've labeled it something other than the channel name
-                data[self.output_names[label]] = data.pop(label) # replaces custom label with real channel name
+            input_labels = chan_in.copy()
+            for label in input_labels:
+                if label in self.input_names: # this means we've used a custom label
+                    chan_in.remove(label)
+                    chan_in.append(self.input_names[label])
 
-        input_labels = chan_in.copy()
-        for label in input_labels:
-            if label in self.input_names: # this means we've used a custom label
-                chan_in.remove(label)
-                chan_in.append(self.input_names[label])
-
-        # prepare a NIDAQ Task
-        taskargs = tuple([getattr(self._daq, ch) for ch in list(data.keys()) + chan_in])
-        task = ni.Task(*taskargs)
-        if no_output:
-            task.set_timing(n_samples = len_data, fsamp='%fHz' %sample_rate)  ## HACK
-        else:
-            some_data = next(iter(data.values())) # All data must be equal length, so just choose one.  ## HACK
-            task.set_timing(n_samples = len(some_data), fsamp='%fHz' %sample_rate)  ## HACK:
-
-        # run the task and remove units
-        received = task.run(data)
-        for key, value in received.items():
-            received[key] = value.magnitude
-
-        # Undo added data point
-        # The daq gives data late by one.
-        # This only happens on the lowest numbered input channel.
-        # the nowacklab branch of Instrumental is modified so that channels
-        # are ordered, and in this case it's the lowest numbered channel.
-        # First we find the input channel numbers as ints, then find the min.
-        ch_nums = [int(''.join(x for x in y if x.isdigit())) for y in chan_in]
-        min_chan = 'ai%i' %min(ch_nums)
-
-        for chan, value in received.items():
-            if chan == min_chan:
-                received[chan] = np.delete(value, 0)  # removes first data point, which is wrong
+            # prepare a NIDAQ Task
+            taskargs = tuple([getattr(self._daq, ch) for ch in list(data.keys()) + chan_in])
+            task = ni.Task(*taskargs)
+            if no_output:
+                task.set_timing(n_samples = len_data, fsamp='%fHz' %sample_rate)  ## HACK
             else:
-                received[chan] = np.delete(value,-1)  # removes last data point, a duplicate
+                some_data = next(iter(data.values())) # All data must be equal length, so just choose one.  ## HACK
+                task.set_timing(n_samples = len(some_data), fsamp='%fHz' %sample_rate)  ## HACK:
 
-        received2 = received.copy()
-        for chan, value in received2.items():
-            if chan not in input_labels and chan is not 't':
-                received[getattr(self, chan).label] = received.pop(chan)  # change back to the given channel labels if different from the real channel names
+            # run the task and remove units
+            received = task.run(data)
+            for key, value in received.items():
+                received[key] = value.magnitude
 
-        return received
+            # Undo added data point
+            # The daq gives data late by one.
+            # This only happens on the lowest numbered input channel.
+            # the nowacklab branch of Instrumental is modified so that channels
+            # are ordered, and in this case it's the lowest numbered channel.
+            # First we find the input channel numbers as ints, then find the min.
+            ch_nums = [int(''.join(x for x in y if x.isdigit())) for y in chan_in]
+            min_chan = 'ai%i' %min(ch_nums)
+
+            for chan, value in received.items():
+                if chan == min_chan:
+                    received[chan] = np.delete(value, 0)  # removes first data point, which is wrong
+                else:
+                    received[chan] = np.delete(value,-1)  # removes last data point, a duplicate
+
+            received2 = received.copy()
+            for chan, value in received2.items():
+                if chan not in input_labels and chan is not 't':
+                    received[getattr(self, chan).label] = received.pop(chan)  # change back to the given channel labels if different from the real channel names
+
+            return received
+        except Exception as e:
+            print('Daq send_receive failed! Make sure your version of nowacklab/Instrumental is current!')
+            raise e
 
 
     def setup_inputs(self):

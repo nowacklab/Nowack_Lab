@@ -48,7 +48,7 @@ class DaqSpectrum(Measurement):
         self.timetraces_t = [None]*averages
         self.timetraces_V = [None]*averages
 
-    def do(self, plot=True):
+    def do(self, plot=True, **kwargs):
         '''
         Do the DaqSpectrum measurment.
         '''

@@ -66,7 +66,7 @@ class RvsSomething(Measurement):
         return self._num_lockins
 
 
-    def do(self, duration=None, delay=1, num_avg = 1, delay_avg = 0, plot=True, auto_gain=False):
+    def do(self, duration=None, delay=1, num_avg = 1, delay_avg = 0, plot=True, auto_gain=False, **kwargs):
         '''
         Duration and delay both in seconds.
         Use do_measurement() for each resistance measurement.
@@ -258,7 +258,7 @@ class RvsT(RvsSomething):
         self.delay = delay
         self.sweep_rate = sweep_rate
 
-    def do(self, plot=True):
+    def do(self, plot=True, **kwargs):
         ## Set initial temperature if not already there
         if abs(self.ppms.temperature - self.Tstart) > 1: # different by more than 1 K
             self.ppms.temperature_rate = 20 # sweep as fast as possible
@@ -288,7 +288,7 @@ class RvsT_RT_to_4K(Measurement):
     def __init__(self, instruments):
         self.instruments = instruments
 
-    def do(self):
+    def do(self, **kwargs):
         r300_10 = RvsT(self.instruments, Tstart=305, Tend=10, delay=1, sweep_rate=20)
         r300_10.run()
 
@@ -315,7 +315,7 @@ class RvsT_Bluefors(RvsSomething):
         self.Tend = Tend
         self.delay = delay
 
-    def do(self, plot=True):
+    def do(self, plot=True, **kwargs):
         while self.channel.T > self.Tend:
             self.T = np.append(self.T, self.channel.T)
             self.do_measurement(delay=self.delay, plot=plot)
@@ -336,7 +336,7 @@ class RvsT_Montana(RvsSomething):
         self.Tend = Tend
         self.delay = delay
 
-    def do(self, plot=True):
+    def do(self, plot=True, **kwargs):
         while self.montana.temperature['platform'] > self.Tend:
             self.do_measurement(delay=self.delay, plot=plot)
 
@@ -388,7 +388,7 @@ class RvsVg(RvsSomething):
         self.Ig = np.array([])
 
 
-    def do(self, num_avg = 1, delay_avg = 0, zero=False, plot=True, auto_gain=False):
+    def do(self, num_avg = 1, delay_avg = 0, zero=False, plot=True, auto_gain=False, **kwargs):
         # Sweep to Vstart
         self.keithley.sweep_V(self.keithley.V, self.Vstart)
         self.keithley.Vout_range = abs(self.Vg_values).max()
@@ -479,7 +479,7 @@ class RvsVg_Vtg(RvsVg):
 
         # remember: shape of matrix given in y,x. So Vtg is on the y axis and Vg on the x axis.
 
-    def do(self, delay=0, auto_gain=False):
+    def do(self, delay=0, auto_gain=False, **kwargs):
         '''
         delay: wait time after sweeping field
         '''
@@ -612,7 +612,7 @@ class RvsVg_T(RvsVg):
             setattr(self, 'R%ifull' %j, np.array([]))
 
 
-    def do(self, auto_gain=False):
+    def do(self, auto_gain=False, **kwargs):
         for i, T in enumerate(self.T):
             if self.Vg_sweep is not None:
                 self.keithley.sweep_V(self.keithley.V, self.Vg_sweep) # set desired gate voltage for the temp sweep

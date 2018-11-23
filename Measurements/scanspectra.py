@@ -52,7 +52,7 @@ class Scanspectra(Measurement):
             print('plane not loaded... no idea where the surface is without a plane!')
 
 
-    def do(self):
+    def do(self, **kwargs):
         self.setup_preamp()
 
         for i in range(self.X.shape[0]):

@@ -35,7 +35,7 @@ class DAQ_IV(Measurement):
 
         print('Ibias from %.4f to %.4f mA' %(Vstart/Rbias*1e3, Vend/Rbias*1e3))
 
-    def do(self):
+    def do(self, **kwargs):
         self.numpts = round(abs(self.Vend-self.Vstart)/self.Vstep)+1
         self.Vout = np.linspace(self.Vstart, self.Vend, self.numpts)
 
@@ -165,7 +165,7 @@ class RvsT_Montana_Keithley(Measurement):
 
 
 
-    def do(self, plot=True):
+    def do(self, plot=True, **kwargs):
         while self.montana.temperature['platform'] > self.Tend:
             time.sleep(self.delay)
 
