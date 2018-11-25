@@ -441,8 +441,6 @@ class Delayer(Measurement):
         starttime = time.time()
         while(time.time() - starttime<self.delay):
             pass
-    def _getconfig(self):
-        return {'Delay length' : self.delay}
 
 
 class Wait(Measurement):
