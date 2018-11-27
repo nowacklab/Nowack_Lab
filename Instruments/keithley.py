@@ -403,7 +403,10 @@ class Keithley2450(Keithley2400):
         Max sweep: maximum sweep rate (V/s)
         '''
         super().__init__(resource)
-        self.I # trigger reading to update screen
+        # if self.source == 'V':
+        #     self.I # trigger reading to update screen
+        # elif self.source == 'I':
+        #     self.V # if in "source current" mode
 
     def setup(self):
         # self.write('*LANG SCPI2400') # for Keithley2400 compatibility mode
