@@ -1,5 +1,6 @@
 from .instrument import VISAInstrument
 import numpy as np
+import visa
 
 class LakeshoreChannel(VISAInstrument):
     '''
@@ -205,8 +206,15 @@ class Lakeshore372(VISAInstrument):
         8: 'User2'
     }
 
-    def __init__(self, host = '192.168.100.143', port=7777):
-        self._init_visa('TCPIP::%s::%i::SOCKET' %(host, port), termination='\n')
+    def __init__(self, host = '192.168.100.143', usb=False, com=72, baud_rate=57600, port=7777):
+        if usb:
+            self._init_visa("COM{}".format(com))
+            self._visa_handle.parity=visa.constants.Parity(1) # odd parity
+            self._visa_handle.data_bits = 7
+            self._visa_handle.baud_rate = 57600
+        else:
+            self._init_visa('TCPIP::%s::%i::SOCKET' %(host, port), termination='\n')
+        #self._init_visa("COM{}".format(host))
 
         # Make channel objects
         for c, n in self._channel_names.items():
@@ -391,3 +399,15 @@ class Lakeshore372(VISAInstrument):
 
         self.write("RANGE 0,{0}".format(mode))
         return
+
+    @property
+    def ramp(self):
+        """Ramp rate for temperature control."""
+        return self.ask("RAMP? 0").splot(",")
+
+
+    @ramp.setter
+    def ramp(self, rate):
+        """Set the ramp rate."""
+        data = "RAMP0,1,{}[term]".format(rate)
+        self.write(data)
