@@ -1,43 +1,46 @@
-from ..Procedures import alexsweep
+from scipy.interpolate import interp1d
 import numpy as np
 import time
 
 class Thermometer():
 
-    def __init__(self, daq, biasout, v1, v2,  calibrationfilename,
-                    rbias = 1e6, ibias = 1e-6, iterations = 10):
+    def __init__(self, lockin, diffv, output, calibrationfilename,
+                    rbias = 1e6):
         '''
         Calibration file should be CSV, with the first column being
-        temperatures and the second being resistances in ohms
-        V2 should be the 4 point closer to the current source. 
+        temperatures and the second being resistances in ohms. Lockin
+        should be configured to source a current on on side of resistor
+        thermometer and record 4 point voltage across it.
         '''
 
-        self.daq = daq
-        self.biasout = biasout
-        self.v1 = v1
-        self.v2 = v2
+        self.lockin = lockin
+        self.diffv = diffv
+        self.output = output
         self.rbias = rbias
-        self.ibias = ibias
-        self.iterations = iterations
-        with open(filename) as f:
+        self.calibrationfilename = calibrationfilename
+        with open(calibrationfilename) as f:
             calibration = [line.strip().split(',') for line in f]
         self.resistances = []
         self.temperatures = []
         for a in calibration:
             self.resistances.append(float(a[1]))
             self.temperatures.append(float(a[0]))
+        self.converter = interp1d(self.resistances, self.temperatures,
+                     fill_value  = 300, bounds_error = False, kind = 'cubic')
+
+    def __getstate__(self):
+        lockinstate = self.lockin.__getstate__()
+        state = {'Thermo Calibration File': self.calibrationfilename,
+                 'Thermo Calibration Resistances (Ohms)' : self.resistances,
+                 'Thermo Calibration Temperatures (Kelvin)' : self.temperatures,
+                 'Reported rbias (Ohms)' : self.rbias,
+                 'Property used for ibias': self.output,
+                 'Property used to record diffV': self.diffv}
+        state.update(lockinstate)
+        return state
 
     @property
     def T(self):
-        r = []
-        for i in range(self.iterations):
-            setattr(self.daq, self.biasout + '.V', self.rbias * self.ibias)
-            time.sleep(1e-2)
-            r.append((getattr(self.daq, self.v2 + '.V')-
-                                getattr(self.daq, self.v1 + '.V'))/self.ibias)
-            setattr(self.daq, self.biasout + '.V', -1 * self.rbias * self.ibias)
-            time.sleep(1e-2)
-            r.append((getattr(self.daq, self.v1 + '.V')-
-                                getattr(self.daq, self.v2 + '.V'))/self.ibias)
-            avgr = np.mean(r)
-            return np.interp(avgr, self.resistances, self.temperatures)
+        r = self.rbias * (getattr(self.lockin, self.diffv)
+                            /getattr(self.lockin, self.output))
+        return self.converter(r)
