@@ -432,13 +432,14 @@ def get_data_paths(experiment='', kind=''):
 
     # Get a list of all the date directories
     p = os.path.join(experiment, '*')
-    g = list(glob.iglob(p))
+    ptd = os.path.join(experiment, '*/touchdowns')
+    g = list(glob.iglob(p)) + list(glob.iglob(ptd))
     g.sort()
 
     paths = []
     # Iterate over dates and add all paths to given data files
-    for dir in g:
-        p = os.path.join(dir, '*%s.json' %kind)
+    for dirname in g:
+        p = os.path.join(dirname, '*%s.json' %kind)
         g2 = list(glob.iglob(p))
         g2.sort()
         paths += g2
