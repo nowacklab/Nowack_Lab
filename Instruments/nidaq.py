@@ -1,7 +1,7 @@
 import sys, os
 
 home = os.path.expanduser("~")
-sys.path.append(os.path.join(home,'Documents','GitHub','Instrumental'))
+sys.path.append(os.path.join(home, 'Documents', 'GitHub', 'Instrumental'))
 
 from instrumental.drivers.daq import ni
 from instrumental import u
@@ -14,6 +14,7 @@ import time
 from copy import copy
 from ..Utilities import logging
 from .instrument import Instrument
+
 
 class NIDAQ(Instrument):
     """
@@ -42,7 +43,6 @@ class NIDAQ(Instrument):
         if zero:
             self.zero()
 
-
     def __getstate__(self):
         self._save_dict = {}
         # for chan in self._ins + self._outs:
@@ -55,10 +55,8 @@ class NIDAQ(Instrument):
 
         return self._save_dict
 
-
     def __setstate__(self, state):
         self._daq = ni.NIDAQ(state['device name'], state['input range'], state['output range'])
-
 
     def accel_function(self, start,end, numpts):
         """ Does an x**2-like ramp. Code looks weird but test it if you want! ^_^ """
@@ -73,7 +71,6 @@ class NIDAQ(Instrument):
         part2 = end-(part2arg-end)**2/((end-start)/2)**2*(end-start)/2
         return list(part1)+list(part2[1:])
 
-
     def all(self):
         """
         Returns a dictionary of all channel voltages.
@@ -82,7 +79,6 @@ class NIDAQ(Instrument):
         for chan in self._ins + self._outs:
             voltages[chan] =  getattr(self, chan).V
         return voltages
-
 
     @property
     def inputs(self):
@@ -102,7 +98,6 @@ class NIDAQ(Instrument):
             self._inputs[label] = getattr(self, name)
         return self._inputs
 
-
     @inputs.setter
     def inputs(self, d):
         """
@@ -114,7 +109,6 @@ class NIDAQ(Instrument):
                 name = 'ai%i' %name
             getattr(self, name).label = label
 
-
     @property
     def input_names(self):
         """
@@ -124,7 +118,6 @@ class NIDAQ(Instrument):
         for chan in self._ins:
             self._input_names[getattr(self, chan).label] = chan
         return self._input_names
-
 
     @property
     def outputs(self):
@@ -143,7 +136,6 @@ class NIDAQ(Instrument):
             self._outputs[label] = getattr(self, name)
         return self._outputs
 
-
     @outputs.setter
     def outputs(self, d):
         """
@@ -155,7 +147,6 @@ class NIDAQ(Instrument):
                 name = 'ao%i' %name
             getattr(self, name).label = label
 
-
     @property
     def output_names(self):
         """
@@ -166,7 +157,6 @@ class NIDAQ(Instrument):
         for chan in self._outs:
             self._output_names[getattr(self, chan).label] = chan
         return self._output_names
-
 
     def monitor(self, chan_in, duration, sample_rate=100):
         """
@@ -196,7 +186,6 @@ class NIDAQ(Instrument):
 
         return received
 
-
     def send_receive(self, data, chan_in=None, sample_rate=100):
         """
         Send data to daq outputs and receive data on input channels.
@@ -205,7 +194,6 @@ class NIDAQ(Instrument):
         Arrays should be equally sized for all output channels.
         chan_in is a list of all input channel labels or names you wish to monitor.
         """
-
 
         # Make everything a numpy array
         data = data.copy() # so we don't modify original data
@@ -230,7 +218,6 @@ class NIDAQ(Instrument):
             value = value * u.V
 
             data[key] = value
-
 
         # Make sure there's at least one input channel (or DAQmx complains)
         if chan_in is None:
@@ -275,15 +262,14 @@ class NIDAQ(Instrument):
 
         for chan, value in received.items():
             if chan == min_chan:
-                received[chan] = np.delete(value, 0) #removes first data point, which is wrong
+                received[chan] = np.delete(value, 0) # removes first data point, which is wrong
             else:
-                received[chan] = np.delete(value,-1) #removes last data point, a duplicate
+                received[chan] = np.delete(value,-1) # removes last data point, a duplicate
         for chan, value in received.items():
             if chan not in input_labels and chan is not 't':
-                received[getattr(self, chan).label] = received.pop(chan) # change back to the given channel labels if different from the real channel names
+                received[getattr(self, chan).label] = received.pop(chan)  # change back to the given channel labels if different from the real channel names
 
         return received
-
 
     def sweep(self, Vstart, Vend, chan_in=None, sample_rate=100, numsteps=1000):
         """
@@ -322,6 +308,7 @@ class NIDAQ(Instrument):
 class Channel():
     _V = 0
     _conversion = 1 # build in conversion factor?
+
     def __init__(self, daq, name):
         """
         daq = NIDAQ from Instrumental library
@@ -330,7 +317,6 @@ class Channel():
         self._daq = daq
         self.label = name # default label
         self._name = name # channel name ('ao#' or 'ai#'). Should not change.
-
 
     def __getstate__(self):
         self._save_dict = {}
@@ -341,7 +327,6 @@ class Channel():
         })
 
         return self._save_dict
-
 
     def __repr__(self):
         return str(self.__class__.__name__) + '; name: '+ self._name+'; label: ' + self.label + '; V = %.3f' %self.V

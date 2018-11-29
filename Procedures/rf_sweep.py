@@ -62,8 +62,8 @@ class RF_take_spectra:
         self.v1.powerstate = 1  # turn vna source power on
         self.v1.averaging_state = 1  # Turn averaging on
         self.v1.averaging_factor = self.v_avg_factor
-        self.v1.maxfreq = self.v_freqmax
-        self.v1.minfreq = self.v_freqmin
+        self.v1.freqmax = self.v_freqmax
+        self.v1.freqmin = self.v_freqmin
         self.v1.sweepmode = "LIN"
         self.v1.numpoints = self.v_numpoints  # set num freq pnts for VNA
         self.v1.smoothing_state = self.v_smoothing_state  # turn smoothing on
@@ -176,8 +176,8 @@ class RFSweepCurrentDAQ:
         self.vna.powerstate = 1  # turn vna source power on
         self.vna.averaging_state = 1  # Turn averaging on
         self.vna.averaging_factor = self.v_avg_factor
-        self.vna.maxfreq = self.v_freqmax
-        self.vna.minfreq = self.v_freqmin
+        self.vna.freqmax = self.v_freqmax
+        self.vna.freqmin = self.v_freqmin
         self.vna.sweepmode = "LIN"
         self.vna.numpoints = self.v_numpoints  # set num freq pnts for VNA
         self.vna.smoothing_state = self.v_smoothing_state  # turn smoothing on
@@ -448,8 +448,8 @@ class RFSweepCurrentDAQREV:
         self.vna.powerstate = 1  # turn vna source power on
         self.vna.averaging_state = 1  # Turn averaging on
         self.vna.averaging_factor = self.v_avg_factor
-        self.vna.maxfreq = self.v_freqmax
-        self.vna.minfreq = self.v_freqmin
+        self.vna.freqmax = self.v_freqmax
+        self.vna.freqmin = self.v_freqmin
         self.vna.sweepmode = "LIN"
         self.vna.numpoints = self.v_numpoints  # set num freq pnts for VNA
         self.vna.smoothing_state = self.v_smoothing_state  # turn smoothing on
@@ -648,6 +648,8 @@ class RFSweepCurrentDAQREV:
         info.append(path + '/re_im_rev/description', "shape [Current, Data, Re Im]")
         info.append(path + '/notes', self.notes)
         info.append(path + '/hysteresis', self.hysteresis)
+
+
 class RFSweepCurrent:
 
     """Class for sweeping current with the Keithley2400 and recording
@@ -661,7 +663,7 @@ class RFSweepCurrent:
     Initiates a RF_sweep_current object with parameters about the sweep.
     """
     def __init__(self, k_Istart, k_Istop, k_Isteps, v_freqmin, v_freqmax, v_power, v_avg_factor, v_numpoints,
-                 filepath, v_smoothing_state=0, v_smoothing_factor=1, notes="No notes",hysteresis=False,
+                 filepath, v_smoothing_state=0, v_smoothing_factor=1, notes="No notes", hysteresis=False,
                  plot=False):
         # Set object variables
         self.k_Istart = k_Istart
@@ -712,8 +714,8 @@ class RFSweepCurrent:
         self.v1.powerstate = 1  # turn vna source power on
         self.v1.averaging_state = 1  # Turn averaging on
         self.v1.averaging_factor = self.v_avg_factor
-        self.v1.maxfreq = self.v_freqmax
-        self.v1.minfreq = self.v_freqmin
+        self.v1.freqmax = self.v_freqmax
+        self.v1.freqmin = self.v_freqmin
         self.v1.sweepmode = "LIN"
         self.v1.numpoints = self.v_numpoints  # set num freq pnts for VNA
         self.v1.smoothing_state = self.v_smoothing_state  # turn smoothing on

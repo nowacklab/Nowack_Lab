@@ -4,6 +4,7 @@ For the future? Instrument base class that all instruments belong to.
 
 import visa
 
+
 class Instrument:
     _label = 'instrument'
 
@@ -12,16 +13,17 @@ class Instrument:
 
     def __setstate__(self, state):
     	"""
-    	Setstate for an instrument by default does not load an instrument.
-    	You must custom-write setstates if you want private variables to be loaded.
-    	It is not recommended to load directly into properties, in case this makes
-    	an unwanted change to the physical instrument.
-    	"""
-    	pass
+        Setstate for an instrument by default does not load an instrument.
+        You must custom-write setstates if you want private variables to be loaded.
+        It is not recommended to load directly into properties, in case this makes
+        an unwanted change to the physical instrument.
+        """
+        pass
+
 
 class VISAInstrument(Instrument):
     _label = 'VISAinstrument'
-    _strip = '' # default character to strip from read commands
+    _strip = ''  # default character to strip from read commands
 
     def __del__(self):
         """
@@ -63,7 +65,7 @@ class VISAInstrument(Instrument):
         """
         if hasattr(self, '_visa_handle'):
             self._visa_handle.close()
-            del(self._visa_handle)
+            del self._visa_handle
 
     def read(self, strip=''):
         """

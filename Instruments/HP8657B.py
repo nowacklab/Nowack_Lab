@@ -3,6 +3,7 @@ import numpy as np
 import time
 from .instrument import Instrument, VISAInstrument
 
+
 class functiongenerator(VISAInstrument):
     _label = 'HP8657'
     """

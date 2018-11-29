@@ -39,8 +39,8 @@ class MixerCircuitTester:
         self.vna.powerstate = 1
 
         self.fxngen.freq = float(self.freq_start)/2
-        self.vna.minfreq = self.freq_start
-        self.vna.maxfreq = self.freq_start
+        self.vna.freqmin = self.freq_start
+        self.vna.freqmax = self.freq_start
 
         data_arr = np.zeros((self.power_numpoints, self.freq_numpoints))
 
@@ -51,8 +51,8 @@ class MixerCircuitTester:
             time.sleep(.5)
             for f in range(self.freq_numpoints):
                 thisfreq = self.freq_range[f]
-                self.vna.minfreq = thisfreq
-                self.vna.maxfreq = thisfreq
+                self.vna.freqmin = thisfreq
+                self.vna.freqmax = thisfreq
                 clear_output()
                 print("changing fxngen freq")
                 print("power step ", i)

@@ -2,9 +2,7 @@ import visa
 import numpy as np
 import time
 import math
-from .instrument import Instrument, VISAInstrument
-from .keithley import Keithley2400
-import matplotlib.pyplot as plt
+from .instrument import Instrument
 
 
 class VNA8722ES(Instrument):
@@ -54,8 +52,8 @@ class VNA8722ES(Instrument):
         self._freqmin = .05e9   # set to max range
         self._freqmax = 40.05e9
         self._numpoints = int(float(self.ask('POIN?')))  # necessary because number of points doesn't reset
-        self._sweeptime = 1 # sweep time to 1 second
-
+        self._sweeptime = 1  # sweep time to 1 second
+        self._sweeptime = float(self.ask('SWET?'))
         self._averaging_state = 0
         self._averaging_factor = 16
 
@@ -79,14 +77,14 @@ class VNA8722ES(Instrument):
 
     def __getstate__(self):
         self._save_dict = {
-        'power state': self._power_state,
-        'power': self._power,
-        'sweep mode': self._sweepmode,
-        'min of frequency sweep': self._freqmin,
-        'max of frequency sweep': self._freqmax,
-        'number of frequency points': self._numpoints,
-        'averaging state': self._averaging_state,
-        'averaging factor': self._averaging_factor
+                'power state': self._power_state,
+                'power': self._power,
+                'sweep mode': self._sweepmode,
+                'min of frequency sweep': self._freqmin,
+                'max of frequency sweep': self._freqmax,
+                'number of frequency points': self._numpoints,
+                'averaging state': self._averaging_state,
+                'averaging factor': self._averaging_factor
         }
         return self._save_dict
 
@@ -165,13 +163,13 @@ class VNA8722ES(Instrument):
         """
         if value == 'LIN':
             value = 'LINFREQ'
-            self.sweeptime = 1
+            self._sweeptime = 1
         elif value == 'LOG':
             value = 'LOGFREQ'
-            self.sweeptime = 1
+            self._sweeptime = 1
         elif value == 'LIST':
             value = 'LISTFREQ'
-            self.sweeptime = 1
+            self._sweeptime = 1
         elif value == 'CW':
             value == 'CWTIME'
         else:
@@ -181,33 +179,33 @@ class VNA8722ES(Instrument):
         # Check stuff here
 
     @property
-    def minfreq(self):
+    def freqmin(self):
         """
         Get the min frequency
         """
-        self._minfreq = float(self.ask('STAR?'))
-        return self._minfreq
+        self._freqmin = float(self.ask('STAR?'))
+        return self._freqmin
 
-    @minfreq.setter
-    def minfreq(self, value):
+    @freqmin.setter
+    def freqmin(self, value):
         """
         Set min frequency
         """
         assert type(value) is float or int, "frequency must be float or int"
         self.write('STAR %f' % value)
-        self._minfreq = value
+        self._freqmin = value
 
     @property
-    def maxfreq(self):
+    def freqmax(self):
         """Get the stop frequency"""
-        self._maxfreq = float(self.ask('STOP?'))
-        return self._maxfreq
+        self._freqmax = float(self.ask('STOP?'))
+        return self._freqmax
 
-    @maxfreq.setter
-    def maxfreq(self, value):
+    @freqmax.setter
+    def freqmax(self, value):
         """Set max frequency"""
         assert type(value) is float or int, "frequency must be float or int"    # TODO replace assert
-        self._maxfreq = value
+        self._freqmax = value
         self.write('STOP %f' % value)
 
     @property
@@ -313,7 +311,7 @@ class VNA8722ES(Instrument):
     @smoothing_factor.setter
     def smoothing_factor(self, value):
         """Set smoothing factor"""
-        assert value >= .05 and value < 20, "value must be between .05 and 20 (%)"
+        assert .05 <= value < 20, "value must be between .05 and 20 (%)"
         self.write('SMOOAPER %f' % value)
         self._smoothing_factor = value
 
@@ -358,7 +356,7 @@ class VNA8722ES(Instrument):
         instrument_for_saving.write('OUTPFORM')  # todo description from programming guide
         rawdata = instrument_for_saving.read(termination='~')  # i.e. character that will never be found in the raw data
         split_rawdata = rawdata.split('\n')     # split into lines, with two values each
-                                                # programming guide shows which display format allows which data type read
+        # programming guide says which display format allows which data type read
 
         dB_array = np.empty((1, self._numpoints))  # 1xn empty array (row vector)
 
@@ -426,7 +424,8 @@ class VNA8722ES(Instrument):
         dB_array = np.empty((1, input_shape[1]))
 
         for i in range(input_shape[1]):  # for each frequency point
-            dB_array[0, i] = 20 * math.log(math.sqrt(Re_Im_array[0,i]**2 + Re_Im_array[1,i]**2), 10)  # calculate dB from Re,Im
+            # calculate dB from Re, Im
+            dB_array[0, i] = 20 * math.log(math.sqrt(Re_Im_array[0, i]**2 + Re_Im_array[1, i]**2), 10)
         return dB_array
 
     @staticmethod
@@ -447,7 +446,6 @@ class VNA8722ES(Instrument):
                 phase_radians = math.pi/2
             phase_array[0, i] = phase_radians * (180/math.pi)
         return phase_array
-
 
     def sleep_until_finish_averaging(self):
         """Sleeps for number of seconds <VNA sweep time>*<averaging factor+2>
@@ -473,4 +471,4 @@ class VNA8722ES(Instrument):
 
     def close(self):
         self._visa_handle.close()
-        del(self._visa_handle)
+        del self._visa_handle

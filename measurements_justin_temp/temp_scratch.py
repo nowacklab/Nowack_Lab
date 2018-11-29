@@ -62,8 +62,8 @@ class RF_sweep_current:
         self.v1.powerstate = 1  # turn vna source power on
         self.v1.averaging_state = 1  # Turn averaging on
         self.v1.averaging_factor = self.v_avg_factor
-        self.v1.maxfreq = self.v_freqmax
-        self.v1.minfreq = self.v_freqmin
+        self.v1.freqmax = self.v_freqmax
+        self.v1.freqmin = self.v_freqmin
         self.v1.sweepmode = "LIN"
         self.v1.numpoints = self.v_numpoints  # set num freq pnts for VNA
         self.v1.smoothing_state = self.v_smoothing_state  # turn smoothing on
