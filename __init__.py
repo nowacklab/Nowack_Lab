@@ -17,7 +17,7 @@ def set_experiment_data_path():
         print('Current experiment: %s' %save.get_experiment_data_dir())
 
     except:
-        pass
+        raise
     inp = input('New experiment? y/(n): ')
     if inp in ('y', 'Y'):
         while True:
