@@ -7,8 +7,16 @@ import re
 import time
 from importlib import reload
 
+import Nowack_Lab.Utilities.utilities
+reload(Nowack_Lab.Utilities.utilities)
+from Nowack_Lab.Utilities.utilities import reject_outliers_spectrum
+
 import Nowack_Lab.Utilities.conversions as conversions
 reload(conversions)
+
+import Nowack_Lab.Utilities.welch
+reload(Nowack_Lab.Utilities.welch)
+from Nowack_Lab.Utilities.welch import Welch
 
 #import Nowack_Lab.Utilities.dataset
 #reload(Nowack_Lab.Utilities.dataset)
@@ -18,8 +26,11 @@ import Nowack_Lab.Utilities.datasaver
 reload(Nowack_Lab.Utilities.datasaver)
 from Nowack_Lab.Utilities.datasaver import Saver
 
-class DaqSpectrum():
+import Nowack_Lab.Utilities.alexsave_david_meas
+reload(Nowack_Lab.Utilities.alexsave_david_meas)
+from Nowack_Lab.Utilities.alexsave_david_meas import Preamp_Util
 
+class DaqSpectrum():
     _daq_inputs=['dc']
 
     def __init__(self,
@@ -29,6 +40,7 @@ class DaqSpectrum():
             fft_fspace = 1,
             units='V',
             units_per_V=1,
+            rms_range=(500,5000),
             set_preamp_gain=None,
             set_preamp_filter=None,
             set_preamp_dccouple=None,
@@ -48,7 +60,12 @@ class DaqSpectrum():
 
         '''
         self.daq = instruments['daq']
-        self.preamp = instruments['preamp']
+        Preamp_Util.init(self, instruments, 
+                        set_preamp_gain=set_preamp_gain,
+                        set_preamp_filter=set_preamp_filter,
+                        set_preamp_dccouple=set_preamp_dccouple,
+                        set_preamp_diffmode=set_preamp_diffmode,
+                        )
 
         self.measure_time = measure_time
         self.measure_freq = measure_freq
@@ -57,11 +74,7 @@ class DaqSpectrum():
         self.units = units
         self.units_per_V = units_per_V
 
-        self.set_preamp_gain = set_preamp_gain
-        self.set_preamp_filter = set_preamp_filter
-        self.set_preamp_dccouple = set_preamp_dccouple
-        self.set_preamp_diffmode = set_preamp_diffmode
-        self._setpreamp()
+        self.rms_range = rms_range
 
         self.V = np.full(self.measure_time*self.measure_freq, np.nan)
         self.t = np.full(self.measure_time*self.measure_freq, np.nan)
@@ -69,15 +82,6 @@ class DaqSpectrum():
 
         self.saver = Saver(name='DaqSpectrum')
 
-    def _setpreamp(self):
-        if self.set_preamp_gain is not None:
-            self.preamp.gain = self.set_preamp_gain
-        if self.set_preamp_filter is not None:
-            self.preamp.filter = self.set_preamp_filter
-        if self.set_preamp_dccouple is not None:
-            self.preamp.dc_coupling(self.set_preamp_dccouple)
-        if self.set_preamp_diffmode is not None:
-            self.preamp.diff_input(self.set_diffmode)
 
     def run(self):
         self.meas_starttime = time.time()
@@ -87,18 +91,71 @@ class DaqSpectrum():
         self.V = received['dc']/self.preamp.gain
         self.t = received['t']
 
-        self.saver.append('V', self.V)
-        self.saver.append('t', self.t)
-        self.saver.append('attrs': {'units_V': self.units,
+        self.saver.append('/V', self.V)
+        self.saver.append('/t', self.t)
+        self.saver.append('/instr/preamp': Preamp_Util.to_dict(self))
+        self.saver.append('/attrs': {'units_V': self.units,
                                     'units_t': 'seconds',
                                     'measure_freq': self.measure_freq,
                                     'measure_time': self.measure_time,
                                     })
-        self.saver.append('instr/preamp': {'gain': self.preamp.gain,
-                                           'filter': self.preamp.filter,
-                                           # add dc coupling and diff mode
-                                           })
+        _ = self._welch()
+        _ = self._make_rms()
                                            
+    def _welch(self, fft_fspace=None):
+        if fft_fspace == None:
+            fft_fspace = self.fft_fspace
+
+        [self.f, self.psd] = Welch.welchf(self.V, self.measure_freq, self.fft_fspace)
+        self.saver.append('/psd', self.psd)
+        self.asd = np.sqrt(self.psd)*self.units_per_V
+        self.saver.append('/asd', self.asd)
+        self.saver.append('/f', self.f)
+
+        self.saver.append('/_dims', {
+                                    'psd': np.array(['f']),
+                                    'asd': np.array(['f']),
+                                    'V':, np.array(['t']),})
+        self.saver.append('/attrs/units_psd', 'V^2/Hz')
+        self.saver.append('/attrs/units_asd', '{0}/Hz^.5'.format(self.units))
+        self.saver.append('/attrs/units_f', 'Hz')
+
+        return [self.f, self.psd]
+
+    def _make_rms(self, rms_range=None, sigma=2):
+        '''
+        Make rms of (self.psd) from self.psd and self.f given
+        the range of frequencies defined by rms_range (tuple)
+
+        returns:
+        ~~~~~~~~
+        [rms, rms_sigma]
+        rms is the root mean squared of the amplitude spectral density
+        in units of self.units
+
+        rms_sigma is rms but rejecting outliers.  Large sigma means less
+        rejected points
+        '''
+        if rms_range == None:
+            rms_range = self.rms_range
         
+        rms = self._rms_ranged(self.f, self.psd, rms_range)*self.units_per_V
 
+        rms_sigma = self._rms_ranged(*reject_outliers_spectrum(self.f,
+                                     self.psd, m=sigma), rms_range
+                                    )*self.units_per_V
 
+        self.saver.append('/rms_noise', rms)
+        self.saver.append('/rms_noise_exclude_outliers', rms_sigma)
+        self.saver.append('/attrs/units_rms_noise', 
+                            '{0}/Hz^.5'.format(self.units))
+        self.saver.append('/attrs/units_rms_noise_exclude_outliers', 
+                            '{0}/Hz^.5'.format(self.units))
+        return [rms, rms_sigma]
+
+    @staticmethod               
+    def _rms_ranged(f, psd, rms_range):
+        i_start = np.argmin(np.abs(f - rms_range[0]))
+        i_end   = np.argmin(np.abs(f - rms_range[-1]))
+        rms     = np.sqrt(np.mean( psd[i_start:i_end]))
+        return rms
