@@ -1,3 +1,4 @@
+import numpy as np
 class Preamp_Util():
     @staticmethod
     def init(self,
