@@ -1,5 +1,4 @@
 import h5py
-print('test')
 import numpy as np
 
 class Dataset():
@@ -11,6 +10,8 @@ class Dataset():
     '''
     allowedtypes = [float, int,complex]
     allowednonlisttypes = [str, float, int, complex]
+
+    dtype_string = h5py.special_dtype(vlen=str)
 
     def __init__(self, filename):
         '''
@@ -72,10 +73,16 @@ class Dataset():
         numbers or numpy arrays. Data may not overwrite, however, dicts can be
         used that go through HDF5 groups that already exist.
 
+        Params:
+        ~~~~~~~
+        pathtowrite: (string): path to save dataset.  Starts with '/'
+        datatowrite: (string, number, numpy array, list, nested dict): data to write
+        slc:         (tuple or False): if slc: existing[slc] = datatowrite
+
         '''
-        cleandatatowrite = self.sanitize(datatowrite)
-        if isinstance(cleandatatowrite, dict):
-            def _loadhdf5(path, obj):
+        [cleandatatowrite, dtype] = self.sanitize(datatowrite)
+        if isinstance(cleandatatowrite, dict) and dtype is dict:
+            def _loadhdf5(path, obj, dtype):
                 '''
                 Takes the path to an object in an dict file and the object
                 itself. If the object is a dict, does nothing, but if the
@@ -85,15 +92,17 @@ class Dataset():
                 sep = '/'
                 h5path = pathtowrite + sep.join([str(place) for place in path])
                 if not isinstance(obj, dict):
-                    self._writetoh5(data = obj, path = h5path)
+                    self._writetoh5(data = obj, path = h5path, dtype=dtype)
             self.dictvisititems(cleandatatowrite, _loadhdf5)
         elif isinstance(cleandatatowrite, (np.ndarray, list) +
                                             tuple(self.allowedtypes))  and slc:
                     self._appenddatah5(self.filename, cleandatatowrite,
-                                                             pathtowrite,slc)
+                                       pathtowrite, slc, dtype)
         else:
-            print(datatowrite)
-            self._writetoh5(data = cleandatatowrite, path = pathtowrite)
+            #print(datatowrite)
+            self._writetoh5(data=cleandatatowrite, 
+                            path=pathtowrite, 
+                            dtype=dtype)
 
 
 
@@ -120,7 +129,8 @@ class Dataset():
             kwargs['path']=newpath
             self._writetoh5(**kwargs)
         except KeyError:
-            f.create_dataset(kwargs['path'], data = kwargs['data'])
+            f.create_dataset(kwargs['path'], data = kwargs['data'], 
+                             dtype=kwargs['dtype'])
             f.close()
 
 
@@ -131,14 +141,16 @@ class Dataset():
         '''
         def recursivevisit(dictionary, function, keylist):
             for key in dictionary.keys():
-                function(keylist + [key], dictionary[key])
+                [cleandatatowrite, dtype] = dictionary[key]
+                function(keylist + [key], cleandatatowrite, dtype)
                 if isinstance(dictionary[key], dict):
-                    recursivevisit(dictionary[key], function, keylist + [key])
+                    recursivevisit(cleandatatowrite, function, keylist + [key])
         recursivevisit(dictionary, function, [])
 
-    def _appenddatah5(self, filename, numpyarray, pathtowrite, slc):
+    def _appenddatah5(self, filename, numpyarray, pathtowrite, slc, dtype):
         '''
-        Adds data to an existing array in a h5 file. Can only overwrite nan's,
+        Adds data to an existing array in a h5 file. Can only overwrite nan's
+        and empty strings,
         such arrays should be instantiated with writetoh5
         '''
         f = h5py.File(filename,'r+')
@@ -150,9 +162,9 @@ class Dataset():
             f.close()
             print(numpyarray)
             print(oldstuff)
-            raise Exception('Slice shape '+ str(oldshape) +
+            raise ValueError('Slice shape '+ str(oldshape) +
              ' does not match data shape ' + str(newshape))
-        elif np.all(np.isnan(oldstuff)):
+        elif np.all(np.isnan(oldstuff)) or np.all(oldstuff == ''):
             dataset[slc] = numpyarray
             f.close()
         else:
@@ -167,7 +179,7 @@ class Dataset():
             else:
                 fao = h5py.File('antioverwrite_' + filename,'a')
                 try:
-                    fao.create_dataset(pathtowrite, data = dataset)
+                    fao.create_dataset(pathtowrite, data = dataset, dtype=dtype)
                     fao[pathtowrite][slc] = numpyarray
                     fao.close()
                     f.close()
@@ -175,55 +187,88 @@ class Dataset():
                     fao.close()
                     f.close()
                     self._appenddatah5('antioverwrite_' + filename,
-                                        numpyarray, pathtowrite, slc)
+                                        numpyarray, pathtowrite, slc, dtype)
 
     def sanitize(self,data):
         '''
         Sanitizes input before loading into an h5 file. If sanitization fails,
         prints a message and converts to a string.
+
+        returns:
+        ~~~~~~~~
+        [cleandata, dtype]
+            cleandata is data that has been cleaned to fit nicely into hdf5
+                If type(cleandata) is dict, 
+                    cleandata[key] = sanitize(data[key]) which is a list
+
+            dtype is the type of dtype passed to h5py's create_dataset
+                None if you do not want to overwrite cleandata's dtype
         '''
         if any([isinstance(data, sometype) for sometype in
                                                     self.allowednonlisttypes]):
             cleandata = data
+            dtype = None
         elif type(data) == np.ndarray:
             if data.dtype in [np.dtype(a) for a in self.allowedtypes]:
                 cleandata = data
+                dtype = None
             else:
                 try:
                     cleandata = np.array(data, dtype = 'float')
+                    dtype = None
                 except ValueError:
-                    print('Could not convert dtype of numpy array to float.'
-                          +' Saving as a string')
-                    cleandata = str(data)
+                    try:
+                        cleandata = np.asarray(data, dtype=np.bytes_)
+                        dtype = self.dtype_string
+                    except ValueError:
+                        print('Could not convert dtype of numpy array to float.'
+                            +' Saving as a string')
+                        cleandata = str(data)
+                        dtype = None
+
         elif type(data) == list:
             if all([any([isinstance(elem, sometype) for sometype in
                                         self.allowedtypes]) for elem in data]):
                 cleandata = data
+                dtype = None
             else:
-                print('List with unauthorized types. Most likely dicts' +
-                                ' or strings. Attempting to convert to string.')
-                try:
-                    cleandata = str(data)
-                    print('Success!')
+                try: 
+                    asciidata = [str(n).encode('ascii', 'ignore') 
+                                 for n in data] 
+                    cleandata = asciidata
+                    dtype = self.dtype_string
                 except:
-                    shouldcontinue = input('COULD NOT CONVERT TO STRING. '
-                    + 'DATA WILL NOT BE SAVED. Continue y/(n)')
-                    if shouldcontinue != 'y':
-                        raise Exception('TypeError: could not convert to h5')
-                    cleandata = 'unconvertable'
+                    print('List with unauthorized types. Most likely something' +
+                                ' that could not be converted to strings. ' + 
+                                'Attempting to convert to string.')
+                    try:
+                        cleandata = str(data)
+                        dtype = None
+                        print('Success!')
+                    except:
+                        shouldcontinue = input('COULD NOT CONVERT TO STRING. '
+                                    + 'DATA WILL NOT BE SAVED. Continue y/(n)')
+                        if shouldcontinue != 'y':
+                            raise TypeError('TypeError: could not convert to h5')
+                        cleandata = 'unconvertable'
+                        dtype = None
         elif isinstance(data, dict):
             cleandata = {}
+            dtype = dict
             for key in data.keys():
                 cleandata[key] = self.sanitize(data[key])
         else: #todo: add conversion to utf-8 for string containing numpys
             print('Could not recognize type. Attempting to convert to string.')
             try:
                 cleandata = str(data)
+                dtype = None
                 print('Success!')
             except:
                 shouldcontinue = input('COULD NOT CONVERT TO STRING. '
                 + 'DATA WILL NOT BE SAVED. Continue y/(n)')
                 if shouldcontinue != 'y':
-                    raise Exception('TypeError: could not convert to h5')
+                    raise TypeError('TypeError: could not convert to h5')
                 cleandata = 'unconvertable'
-        return cleandata
+                dtype = None
+
+        return [cleandata, dtype]
