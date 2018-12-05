@@ -263,12 +263,13 @@ class ArrayTune(Measurement):
         # Plot the spectrum
         mean = self.noise_mean
         std = self.noise_std
+        rms = self.noise_rms
         
         self.ax[2].loglog(self.spectrum.f,
                      self.spectrum.psdAve * self.spectrum.conversion)
         self.ax[2].set_xlabel("Frequency (Hz)")
-        self.ax[2].set_title(r"PSD (Noise = {1:2.2f} $\mu \rm {0}/\sqrt{{Hz\rm}}$".format(
-                        self.spectrum.units, mean*1e6 ), size="medium")
+        self.ax[2].set_title(r"PSD (Noise = {1:2.2f} (rms {2:2.2f}) $\mu \rm {0}/\sqrt{{Hz\rm}}$".format(
+                        self.spectrum.units, mean*1e6 , rms*1e6), size="medium")
 #        self.ax[2].set_title(r"PSD ($\rm {0}/\sqrt{{Hz\rm}}$".format( self.spectrum.units),
 #                        size="medium")
         self.ax[2].annotate('Sbias        = {0:2.2e} uA\nAflux_offset = {1:2.2e} uA'.format(
@@ -300,8 +301,8 @@ class ArrayTune(Measurement):
         Run a squid spectrum
         '''
         self.squidarray.sensitivity = "High" #Essential, for some reason
-        self.preamp.gain = 1
-        self.preamp.filter = (1, 100000)
+        self.preamp.gain = 10 
+        self.preamp.filter = (1, 10000)
         self.squidarray.reset()
         self.spectrum = SQUIDSpectrum(self.instruments, 
                                       preamp_dccouple_override=True)
@@ -373,7 +374,7 @@ class ArrayTune(Measurement):
             plt.close()
 
         # make some statistics
-        self.noise_mean, self.noise_std = self.spectrum.findmeanstd()
+        self.noise_mean, self.noise_std, self.noise_rms = self.spectrum.findmeanstd()
 
 
         if self.mutualsweep:
@@ -1021,7 +1022,7 @@ class ArrayTuneBatch(Measurement):
                        aflux_offset=aflux,
                        conversion=self.conversion, 
                        debug=self.debug,
-                       mutualsweep=mutualsweep)
+                       mutualsweep=self.mutualsweep)
         locked = at.run(save_appendedpath=self.save_appendedpath)
 
         try:
@@ -1036,6 +1037,7 @@ class ArrayTuneBatch(Measurement):
                           np.array(at.char[1]).flatten(), 
                           np.array(at.char[2]).flatten(),
                           np.array([at.noise_mean]).flatten(),
+                          np.array([at.noise_rms]).flatten(),
                           np.array([at.noise_std]).flatten(),
                           np.array([at.sweep_p]).flatten(),
                           np.array([at.sweep_v]).flatten()
@@ -1046,6 +1048,7 @@ class ArrayTuneBatch(Measurement):
                           np.array(at.char[1]).flatten(), 
                           np.array(at.char[2]).flatten(),
                           np.array([at.noise_mean]).flatten(),
+                          np.array([at.noise_rms]).flatten(),
                           np.array([at.noise_std]).flatten(),
                          ]
         except:
