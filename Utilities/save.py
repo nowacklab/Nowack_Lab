@@ -354,11 +354,11 @@ class Measurement:
                     # If a numpy array is found
                     if type(value) is np.ndarray:
                         # Save the numpy array as a dataset
-                        d = group.create_dataset(key, value.shape,
+                        d = group.create_dataset(key, value.shape, data=value,
                             compression = 'gzip', compression_opts=9)
-                        d.set_fill_value = np.nan
+                        #d.set_fill_value = np.nan
                         # Fill the dataset with the corresponding value
-                        d[...] = value
+                        #d[...] = value
                     # If a dictionary is found
                     elif 'dict' in utilities.get_superclasses(value):
                         new_group = group.create_group(key) # make a group with the dictionary name
