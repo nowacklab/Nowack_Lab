@@ -40,6 +40,8 @@ class Zurich(Instrument):
             self.in_channel = in_channel
             self.meas_type = meas_type
 
+            self.setup_OL_detect()
+
 
     def __getstate__(self):
         if self._loaded:
@@ -87,18 +89,27 @@ class Zurich(Instrument):
             self._Y = 1e-34 # so we don't have zeros
         return self._Y
 
-    @property
-    def TA_gain(self):
-        '''
-        Inflexible. Get transimpedance amplifier gain if set up for input 0
-        '''
-        param = '/%s/zctrls/0/tamp/0/currentgain' %self.device_id
-        return self.get_setting(param)[0]
+    # @property
+    # def TA_gain(self):
+    #     '''
+    #     Inflexible. Get transimpedance amplifier gain if set up for input 0
+    #     '''
+    #     param = '/%s/zctrls/0/tamp/0/currentgain' %self.device_id
+    #     return self.get_setting(param)[0]
 
 
-    def autorange(self, input_ch=0, sleep_time=5):
-        self.daq.setInt('/%s/sigins/%i/autorange' %(self.device_id, input_ch), 1)  # autorange input
-        time.sleep(sleep_time)  # wait for autoranging to complete
+    def autorange(self, input_ch=0, sleep_time=5, force=False):
+        '''
+        force: force autorange even if no overload
+        '''
+        if self.get_OL(input_ch) or force:
+            range1 = self.get_input_range(input_ch)
+            self.daq.setInt('/%s/sigins/%i/autorange' %(self.device_id, input_ch), 1)  # autorange input
+            time.sleep(.5)
+            range2 = self.get_input_range(input_ch)
+            if range1 == range2:
+                return
+            time.sleep(sleep_time-.5)  # wait for autoranging to complete
 
 
     def get(self, param):
@@ -111,12 +122,34 @@ class Zurich(Instrument):
         # self.in_channel
 
 
+    def get_OL(self, input_ch=0):
+        '''
+        If input is overloading, returns True. See setup_OL_detect for description.
+        '''
+        dio = self.daq.getDIO('/%s/dios/%i/input' %(self.device_id, input_ch))['dio'][0]
+        return dio == 0x0F
+
+
+    def get_input_range(self, input_ch=0):
+        return self.get_setting('/%s/sigins/%i/range' %(self.device_id, input_ch))
+
+
     def get_setting(self, param):
         '''
         Bypass the Zurich's annoying get protocol.
         '''
-        return self.daq.get(param, True)[param]
+        return self.daq.get(param, True)[param]['value'][0]
 
+
+    def setup_OL_detect(self):
+        '''
+        Use the threshold unit to send a binary 1 to digital input if detect an overload on the input.
+        This is the only way I could figure out how to detect an overload.
+        '''
+        # set zeroth TU to Input overload (V)
+        self.daq.setInt('/dev3447/tu/thresholds/0/input', 53)
+        # set up DIO to watch threshold outputs
+        self.daq.setInt('/dev3447/dios/0/mode', 3)
 
 class HF2LI(Zurich):
     _label = 'Zurich HF2LI'

@@ -254,6 +254,8 @@ class RvsSomething_DC(RvsSomething):
 
         self.preamp_gain = preamp_gain
 
+    def do(self, *args, **kwargs):
+        return RvsSomething.do(self, auto_gain=True, **kwargs)
 
     def do_measurement(self, delay = 0, num_avg = 1, delay_avg = 0,
                                 plot=True, auto_gain=True):
@@ -276,7 +278,7 @@ class RvsSomething_DC(RvsSomething):
         self.I = np.append(self.I, self.keithleybias.I)
 
         if auto_gain:
-            self.zurich.autorange() # takes 5 seconds by default!!
+            self.zurich.autorange(force=False) # takes 5 seconds by default!!
 
         # Take as many measurements as requested and average them
         v = 0
@@ -539,6 +541,10 @@ class RvsVg_DC(RvsSomething_DC, RvsVg):
             )
 
         self.Ig = np.array([])
+
+    def do(self, *args, **kwargs):
+        return RvsVg.do(self, auto_gain=True, **kwargs)
+
 
 class RvsVg_DC_KeithleyYoko(RvsSomething_DC_KeithleyYoko, RvsVg):
     '''
