@@ -261,8 +261,8 @@ class DaqSpectrum(Measurement):
         '''
         [f, psdAve] = keeprange(self.f, [self.psdAve*self.conversion], 
                                 m0=10, mend=1000)
-        [f, psdAve] = reject_outliers_spectrum(f, psdAve)
-        return [np.mean(psdAve), np.std(psdAve)]
+        [f, psdAve_reject] = reject_outliers_spectrum(f, psdAve)
+        return [np.mean(psdAve_reject), np.std(psdAve_reject), np.sqrt(np.mean(psdAve**2))]
 
 
 class TwoSpectrum(DaqSpectrum):
