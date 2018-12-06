@@ -1,8 +1,7 @@
 import numpy as np
 class Preamp_Util():
     @staticmethod
-    def init(self,
-             instruments,
+    def init(self, instruments,
              set_preamp_gain=None,
              set_preamp_filter=None,
              set_preamp_dccouple=None,
