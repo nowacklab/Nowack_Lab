@@ -44,7 +44,7 @@ psd
         [w, nperseg] = Welch._makewindow(freqspace, sample_rate, windowfnct)
         return signal.welch(v, sample_rate, window=w, nperseg=nperseg,
                             scaling=scaling)
-
+    
     @staticmethod
     def _makewindow(freqspace, sample_rate, windowfnct):
         n = int(sample_rate/freqspace)

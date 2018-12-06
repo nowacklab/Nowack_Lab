@@ -10,6 +10,7 @@ from importlib import reload
 import Nowack_Lab.Utilities.utilities
 reload(Nowack_Lab.Utilities.utilities)
 from Nowack_Lab.Utilities.utilities import reject_outliers_spectrum
+from Nowack_Lab.Utilities.utilities import make_rms
 
 import Nowack_Lab.Utilities.conversions as conversions
 reload(conversions)
@@ -134,12 +135,10 @@ class DaqSpectrum():
         '''
         if rms_range == None:
             rms_range = self.rms_range
-        
-        rms = self._rms_ranged(self.f, self.psd, rms_range)*self.units_per_V
 
-        rms_sigma = self._rms_ranged(*reject_outliers_spectrum(self.f,
-                                     self.psd, m=sigma), rms_range
-                                    )*self.units_per_V
+        [rms, rms_sigma] = make_rms(self.f, self.psd, rms_range, sigma)
+        rms = rms*self.units_per_V
+        rms_sigma = rms_sigma*self.units_per_V
 
         self.saver.append('/rms_noise/', rms)
         self.saver.append('/rms_noise_exclude_outliers/', rms_sigma)
@@ -147,11 +146,3 @@ class DaqSpectrum():
                             '{0}/Hz^.5'.format(self.units))
         self.saver.append('/attrs/units_rms_noise_exclude_outliers/', 
                             '{0}/Hz^.5'.format(self.units))
-        return [rms, rms_sigma]
-
-    @staticmethod               
-    def _rms_ranged(f, psd, rms_range):
-        i_start = np.argmin(np.abs(f - rms_range[0]))
-        i_end   = np.argmin(np.abs(f - rms_range[-1]))
-        rms     = np.sqrt(np.mean( psd[i_start:i_end]))
-        return rms

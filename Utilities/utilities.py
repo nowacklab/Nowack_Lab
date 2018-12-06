@@ -269,3 +269,31 @@ def running_std(array1d, windowlen=16, mode='same'):
     out = np.sqrt((q-s**2/windowlen)/(windowlen-1))
 
     return out
+
+def make_rms(f, psd, rms_range, sigma=2):
+    ''' 
+    Make rms of (self.psd) from self.psd and self.f given
+    the range of frequencies defined by rms_range (tuple)
+
+    returns:
+    ~~~~~~~~
+    [rms, rms_sigma]
+    rms is the root mean squared of the amplitude spectral density
+    in units of self.units
+
+    rms_sigma is rms but rejecting outliers.  Large sigma means less
+    rejected points
+    '''
+    rms = _rms_ranged(self.f, self.psd, rms_range)
+
+    rms_sigma = _rms_ranged(*reject_outliers_spectrum(f, psd, m=sigma), 
+		            rms_range)
+
+    return [rms, rms_sigma]
+
+def _rms_ranged(f, psd, rms_range):
+    i_start = np.argmin(np.abs(f - rms_range[0]))
+    i_end   = np.argmin(np.abs(f - rms_range[-1]))
+    rms     = np.sqrt(np.mean( psd[i_start:i_end]))
+    return rms 
+
