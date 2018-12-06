@@ -143,7 +143,7 @@ class Dataset():
             for key in dictionary.keys():
                 [cleandatatowrite, dtype] = dictionary[key]
                 function(keylist + [key], cleandatatowrite, dtype)
-                if isinstance(dictionary[key], dict):
+                if isinstance(cleandatatowrite, dict):
                     recursivevisit(cleandatatowrite, function, keylist + [key])
         recursivevisit(dictionary, function, [])
 
