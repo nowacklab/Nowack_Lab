@@ -538,6 +538,9 @@ field in magnet!')
         If False, will free up the kernel for other commands, e.g. measurements.
         Be sure to manually enter persistent mode and ramp down the power supply if desired.
         '''
+        if self.Bmagnet == Bset:
+            print('%s T already in the magnet. Did not ramp.' %Bset)
+            return
 
         if self.p_switch == False:  # magnet is out of the circuit
             # ramp power supply quickly to match magnet field
