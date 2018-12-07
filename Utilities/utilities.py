@@ -284,7 +284,7 @@ def make_rms(f, psd, rms_range, sigma=2):
     rms_sigma is rms but rejecting outliers.  Large sigma means less
     rejected points
     '''
-    rms = _rms_ranged(self.f, self.psd, rms_range)
+    rms = _rms_ranged(f, psd, rms_range)
 
     rms_sigma = _rms_ranged(*reject_outliers_spectrum(f, psd, m=sigma), 
 		            rms_range)

@@ -18,7 +18,7 @@ reload(Nowack_Lab.Utilities.alexsave_david_meas)
 from Nowack_Lab.Utilities.alexsave_david_meas import Preamp_Util
 
 class SQUID_Noise():
-    _daq_inputs=['dc', 'saa', 'fieldcoil']
+    _daq_inputs=['dc', 'saa', 'fieldcoil', 'test']
     _daq_outputs=['fieldcoil']
 
     def __init__(self,
@@ -62,7 +62,7 @@ class SQUID_Noise():
         self.fc_R = fc_R
         self.fc_rate = fc_rate
 
-        self.rms_range = self.rms_range
+        self.rms_range = rms_range
 
     def lock_squid(self, attempts=5, sflux_offset=0, squid_tol=.1):
         """
@@ -392,7 +392,7 @@ class SQUID_Noise_Open_Loop(SQUID_Noise):
                                     np.nan))
         self.saver.append('/Voverview/',
                             np.full((self.sbias.shape[0],
-                                    3,
+                                    2,
                                      int(self.fast_dur*self.fast_rate)
                                      ),
                                     np.nan))
@@ -418,8 +418,8 @@ class SQUID_Noise_Open_Loop(SQUID_Noise):
         self.saver.append('/f/', np.full(len_fft, np.nan))
         self.saver.append('/wasoverloaded/', 
                             np.full((self.sbias.shape[0],
-                                     self.sflux.shape[0]), np.nan)
-        self.saver.append('/attrs/':
+                                     self.sflux.shape[0]), np.nan))
+        self.saver.append('/attrs/',
                 {'sample_dur': sample_dur,
                  'sample_rate': sample_rate,
                  'fast_dur': fast_dur,
@@ -433,14 +433,14 @@ class SQUID_Noise_Open_Loop(SQUID_Noise):
         self.saver.append('/_dims/', 
                 {'Vsaa': ['sbias', 'sflux', 'samples_vsaa'],
                  'Voverview': ['sbias', 'Vover_data', 'samples_vover'],
-                 'Vsaa_per_sflux': ['sbias' ,'sflux']
-                 'starttimes': ['sbias' ,'sflux']
+                 'Vsaa_per_sflux': ['sbias' ,'sflux'],
+                 'starttimes': ['sbias' ,'sflux'],
                  'asd': ['sbias', 'sflux', 'f'],
                  'asd_rms': ['sbias', 'sflux', 'rms_data'],
                                 })
         self.saver.append('/_coords/',
                 {'rms_data': ['rms', 'rms_reject_outliers'],
-                 'Vover_data': ['test', 'Vsaa', 'Vdc'],
+                 'Vover_data': ['test', 'Vdc'],
                     })
         self.saver.append('/units/',
                 {'sflux': 'SAA uA',
@@ -497,7 +497,7 @@ class SQUID_Noise_Open_Loop(SQUID_Noise):
             r = self.daq.monitor(['dc'],
                                  self.sample_dur,
                                  sample_rate=self.sample_rate)
-            self.saver.append('/starttime/', starttime, slc=(i,j))
+            self.saver.append('/starttimes/', starttime, slc=(i,j))
             self.saver.append('/Vsaa/', 
                               r['dc']/self.preamp.gain, 
                               slc=(i,j))
@@ -507,7 +507,7 @@ class SQUID_Noise_Open_Loop(SQUID_Noise):
             # save fourier transformed data
             [f, psd] = Welch.welchf(r['dc']/self.preamp.gain, self.sample_rate,
                                     self.fft_fspace)
-            asd = np.sqrt(psd) / v_per_sflux_uA * phi_0_per_sflux_uA
+            asd = np.sqrt(psd) / v_per_sflux_uA * self.phi_0_per_sflux_uA
             self.saver.append('/asd/', asd, slc=(i,j))
 
             # save rms
@@ -521,7 +521,7 @@ class SQUID_Noise_Open_Loop(SQUID_Noise):
 
         _ = self._minimize_attr('A_flux')
 
-        r = self.daq.monitor(['dc','saa','test'], 
+        r = self.daq.monitor(['dc','test'], 
                              self.fast_dur,
                              sample_rate=self.fast_rate)
         self.saver.append('/Voverview/',
@@ -530,9 +530,9 @@ class SQUID_Noise_Open_Loop(SQUID_Noise):
         self.saver.append('/Voverview/',
                           r['dc']/self.preamp.gain,
                           slc=(i,1))
-        self.saver.append('/Voverview/',
-                          r['saa'],
-                          slc=(i,2))
+        #self.saver.append('/Voverview/',
+        #                  r['saa'],
+        #                  slc=(i,2))
 
     def run(self):
         '''
@@ -655,7 +655,7 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
                                      2), 
                                     np.nan))
         self.saver.append('/f/', np.full(len_fft, np.nan))
-        self.saver.append('/attrs/':
+        self.saver.append('/attrs/',
                 {'sample_dur': sample_dur,
                  'sample_rate': sample_rate,
                  'fast_dur': fast_dur,
