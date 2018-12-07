@@ -272,3 +272,113 @@ class Dataset():
                 dtype = None
 
         return [cleandata, dtype]
+
+    def dim_get(self, datasetname):
+        '''
+        returns f[datasetname].dims
+        '''
+        with h5py.File(self.filename,'r') as f:
+            try:
+                return f[datasetname].dims
+            except:
+                raise
+
+    def make_dim(self, datasetname, dim_number, label, dim_dataset_name,
+                 dim_name):
+        '''
+        Params:
+        ~~~~~~~
+        datasetname (string):   dataset name
+        dim_number (int):       dimension number
+        label (string):         name of dimension
+        dim_dataset_name (string):  name of the dimension dataset
+        dim_name (string):          name of the dimension 
+        '''
+        with h5py.File(self.filename, 'w') as f:
+            try:
+                f[datasetname].dims[dim_number] = label
+                f[datasetname].create_scale(f[dim_dataset_name], dim_name)
+                f[datasetname].dims[dim_number].attach_scale(
+                                        f[dim_dataset_name])
+            except:
+                raise
+
+    def dim_set(self, datasetname, dim_number, label):
+        '''
+        for /datasetname, set dim[dim_number] = label
+        Params:
+        ~~~~~~~
+        datasetname (string):   dataset name
+        dim_number (int):       dimension number
+        label (string):         name of dimension
+        '''
+        with h5py.File(self.filename,'w') as f:
+            try:
+                f[datasetname].dims[dim_number] = label
+            except:
+                raise
+
+
+    def dim_create_scale(self, datasetname, dim_dataset_name, dim_name):
+        '''
+        creates scale for the given dataset
+        f[datasetname].create_scale(f[dim_dataset_name], dim_name)
+
+        Params:
+        ~~~~~~~
+        datasetname (string):       dataset name
+        dim_dataset_name (string):  name of the dimension dataset
+        dim_name (string):          name of the dimension 
+        '''
+        with h5py.File(self.filename, 'w') as f:
+            try:
+                f[datasetname].create_scale(f[dim_dataset_name], dim_name)
+            except:
+                raise
+        
+    def dim_attach_scale(self, datasetname, dim_number, dim_dataset_name):
+        '''
+        f[datasetname].dims[dim_number].attach_scale(f[dim_dataset_name])
+        '''
+        with h5py.File(self.filename, 'w') as f:
+            try:
+                f[datasetname].dims[dim_number].attach_scale(
+                                        f[dim_dataset_name])
+            except:
+                raise
+
+    def get_attr(self, datasetname, *args, **kwargs):
+        '''
+        Just a wrapper for dataset.attrs.get(*args, **kwargs)
+        params:
+        ~~~~~~~
+        datasetname (string): name of dataset, full path
+        name (string): name of attribute to get
+        default=None (string): defaults to getting this one if 
+                                name does not exist
+
+        '''
+        with h5py.File(self.filename, 'r') as f:
+            try:
+                return f['datasetname'].attrs.get(*args, **kwargs)
+            except:
+                raise
+    def create_attr(self, datasetname, *args, **kwargs):
+        '''
+        Just a wrapper for dataset.attrs.create(*args, **kwargs)
+        params:
+        ~~~~~~~
+        datasetname (string): name of dataset, full path
+        name (string): name of attribute to set
+        data: value of attribute, will be put through np.array(data)
+        shape=None (tuple): shape of attribute, overrides data.shape
+                        I think it reshapes
+        dtype=None (numpy dtype): data type for the attribute, overrides
+                            data.dtype
+        '''
+        with h5py.File(self.filename, 'r') as f:
+            try:
+                return f['datasetname'].attrs.create(*args, **kwargs)
+            except:
+                raise
+
