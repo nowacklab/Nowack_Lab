@@ -454,7 +454,7 @@ class SQUID_Noise_Open_Loop(SQUID_Noise):
                  'wasoverloaded': 'boolean (0 False, 1 True)',
                     })
 
-    def _localconversion(self, span=.5):
+    def _localconversion(self, span=1):
         '''
         Returns the Vsaa (V) /S_flux (uA) at the current S_flux
         '''
@@ -507,7 +507,7 @@ class SQUID_Noise_Open_Loop(SQUID_Noise):
             # save fourier transformed data
             [f, psd] = Welch.welchf(r['dc']/self.preamp.gain, self.sample_rate,
                                     self.fft_fspace)
-            asd = np.sqrt(psd) / v_per_sflux_uA * self.phi_0_per_sflux_uA
+            asd = np.sqrt(psd) / np.abs(v_per_sflux_uA) * self.phi_0_per_sflux_uA
             self.saver.append('/asd/', asd, slc=(i,j))
 
             # save rms
