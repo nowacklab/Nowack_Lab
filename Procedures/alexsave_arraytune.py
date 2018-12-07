@@ -9,6 +9,10 @@ import Nowack_Lab.Utilities.welch
 reload(Nowack_Lab.Utilities.welch)
 from Nowack_Lab.Utilities.welch import Welch
 
+import Nowack_Lab.Utilities.dataset
+reload(Nowack_Lab.Utilities.dataset)
+from Nowack_Lab.Utilities.dataset import Dataset
+
 import Nowack_Lab.Utilities.datasaver
 reload(Nowack_Lab.Utilities.datasaver)
 from Nowack_Lab.Utilities.datasaver import Saver
@@ -331,7 +335,7 @@ class SQUID_Noise():
         '''
         v = np.ones(self.sample_dur * self.sample_rate)
         [f, psd] = Welch.welchf(v, self.sample_rate, self.fft_fspace)
-        return f.shape[0]
+        return [f, f.shape[0]]
 
 class SQUID_Noise_Open_Loop(SQUID_Noise):
     def __init__(self,
@@ -376,12 +380,28 @@ class SQUID_Noise_Open_Loop(SQUID_Noise):
         self.sflux = np.asarray(sflux)
         self.phi_0_per_sflux_uA = phi_0_per_sflux_uA
 
+        [f, len_fft] = self._len_of_fft()
+
         self.saver = Saver(name='SQUID_Noise_Open_Loop')
 
+        # dimensions (coordinates)
         self.saver.append('/sflux/', self.sflux)
+        self.saver.create_attr('/sflux/', 'units', 'micro Amps')
         self.saver.append('/sbias/', self.sbias)
+        self.saver.create_attr('/sbias/', 'units', 'micro Amps')
+        self.saver.append('/f/', f)
+        self.saver.create_attr('/f/', 'units', 'Seconds')
+        self.saver.append('/t_Vsaa/', 
+                            np.linspace(0, self.sample_dur, 
+                            int(self.sample_dur*self.sample_rate)))
+        self.saver.create_attr('/t_Vsaa/', 'units', 'Seconds')
+        self.saver.append('/t_Voverview/', 
+                            np.linspace(0, self.fast_dur, 
+                            int(self.fast_dur*self.fast_rate)))
+        self.saver.create_attr('/t_Voverview/', 'units', 'Seconds')
 
-        len_fft = self._len_of_fft()
+        self.saver.append('/voverview_data/', ['test', 'Vdc'])
+        self.saver.append('/rms_data/', ['rms', 'rms_reject_outliers'])
 
 
         self.saver.append('/Vsaa/', 
@@ -390,35 +410,68 @@ class SQUID_Noise_Open_Loop(SQUID_Noise):
                                      int(self.sample_dur*self.sample_rate)
                                      ),
                                     np.nan))
+        self.saver.make_dim('/Vsaa/', 0, 'sbias', '/sbias/', 'sbias (uA)')
+        self.saver.make_dim('/Vsaa/', 1, 'sflux', '/sflux/', 'sflux (uA)')
+        self.saver.make_dim('/Vsaa/', 2, 't_Vsaa', '/t_Vsaa/', 'time (s)')
+        self.saver.create_attr('/Vsaa/', 'units', 'Volts')
+
         self.saver.append('/Voverview/',
                             np.full((self.sbias.shape[0],
                                     2,
                                      int(self.fast_dur*self.fast_rate)
                                      ),
                                     np.nan))
+        self.saver.make_dim('/Voverview/', 0, 'sbias', '/sbias/', 'sbias (uA)')
+        self.saver.make_dim('/Voverview/', 1, 'voverview_data', 
+                                              '/voverview_data/', 'Voverview Data')
+        self.saver.make_dim('/Voverview/', 2, 't_Voverview', '/t_Voverview/', 
+                                                'time (s)')
+        self.saver.create_attr('/Voverview/', 'units', 'Volts')
+        
         self.saver.append('/starttimes/',
                             np.full((self.sbias.shape[0],
                                      self.sflux.shape[0]),
                                     np.nan))
+        self.saver.make_dim('/starttimes/', 0, 'sbias', '/sbias/', 'sbias (uA)')
+        self.saver.make_dim('/starttimes/', 1, 'sflux', '/sflux/', 'sflux (uA)')
+        self.saver.create_attr('/starttimes/', 'units', 'Seconds')
+
         self.saver.append('/Vsaa_per_sflux/', 
                             np.full((self.sbias.shape[0],
                                      self.sflux.shape[0]),
                                     np.nan))
+        self.saver.make_dim('/Vsaa_per_sflux/', 0, 'sbias', '/sbias/', 'sbias (uA)')
+        self.saver.make_dim('/Vsaa_per_sflux/', 1, 'sflux', '/sflux/', 'sflux (uA)')
+        self.saver.create_attr('/Vsaa_per_sflux/', 'units', 'Volts / micro Amps')
+
         self.saver.append('/asd/', 
                             np.full((self.sbias.shape[0],
                                      self.sflux.shape[0],
                                      len_fft,
                                      ),
                                     np.nan))
+        self.saver.make_dim('/asd/', 0, 'sbias', '/sbias/', 'sbias (uA)')
+        self.saver.make_dim('/asd/', 1, 'sflux', '/sflux/', 'sflux (uA)')
+        self.saver.make_dim('/asd/', 2, 'f', '/f/', 'frequency (Hz)')
+        self.saver.create_attr('/asd/', 'units', 'phi_0/Hz^.5')
+
         self.saver.append('/asd_rms/',
                             np.full((self.sbias.shape[0],
                                      self.sflux.shape[0],
                                      2), 
                                     np.nan))
-        self.saver.append('/f/', np.full(len_fft, np.nan))
+        self.saver.make_dim('/asd_rms/', 0, 'sbias', '/sbias/', 'sbias (uA)')
+        self.saver.make_dim('/asd_rms/', 1, 'sflux', '/sflux/', 'sflux (uA)')
+        self.saver.make_dim('/asd_rms/', 2, 'rms_data', '/rms_data/', 'rms data')
+        self.saver.create_attr('/asd_rms/', 'units', 'phi_0/Hz^.5')
+
         self.saver.append('/wasoverloaded/', 
                             np.full((self.sbias.shape[0],
                                      self.sflux.shape[0]), np.nan))
+        self.saver.make_dim('/wasoverloaded/', 0, 'sbias', '/sbias/', 'sbias (uA)')
+        self.saver.make_dim('/wasoverloaded/', 1, 'sflux', '/sflux/', 'sflux (uA)')
+        self.saver.create_attr('/wasoverloaded/', 'units', '(0=False, 1=True)')
+
         self.saver.append('/attrs/',
                 {'sample_dur': sample_dur,
                  'sample_rate': sample_rate,
@@ -430,18 +483,6 @@ class SQUID_Noise_Open_Loop(SQUID_Noise):
                  'fc_rate': fc_rate,
                  'phi_0_per_sflux_uA': phi_0_per_sflux_uA,
                 })
-        self.saver.append('/_dims/', 
-                {'Vsaa': ['sbias', 'sflux', 'samples_vsaa'],
-                 'Voverview': ['sbias', 'Vover_data', 'samples_vover'],
-                 'Vsaa_per_sflux': ['sbias' ,'sflux'],
-                 'starttimes': ['sbias' ,'sflux'],
-                 'asd': ['sbias', 'sflux', 'f'],
-                 'asd_rms': ['sbias', 'sflux', 'rms_data'],
-                                })
-        self.saver.append('/_coords/',
-                {'rms_data': ['rms', 'rms_reject_outliers'],
-                 'Vover_data': ['test', 'Vdc'],
-                    })
         self.saver.append('/units/',
                 {'sflux': 'SAA uA',
                  'sbias': 'SAA uA',
@@ -453,6 +494,7 @@ class SQUID_Noise_Open_Loop(SQUID_Noise):
                  'asd_rms': 'phi_0/Hz^.5',
                  'wasoverloaded': 'boolean (0 False, 1 True)',
                     })
+        
 
     def _localconversion(self, span=.5):
         '''
@@ -843,3 +885,5 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
                         self._take_spectrum(i,j, phi0perV)
                         self._prep_fc_linearity()
                         self._take_fc_linearity(i,j)
+
+
