@@ -106,3 +106,86 @@ class Saver():
         specified by filetouse keyword in the save config file.
         '''
         return self.datasets[filetouse].get(*args,**kwargs)
+
+    def dim_get(self, *args, filetouse='local', **kwargs):
+        '''
+        returns f[datasetname].dims
+        '''
+        return self.datasets[filetouse].dim_get(*args, **kwargs)
+
+    def get_attr(self, *args, filetouse='local', **kwargs):
+        '''
+        Just a wrapper for dataset.attrs.get(*args, **kwargs)
+        params:
+        ~~~~~~~
+        datasetname (string): name of dataset, full path
+        name (string): name of attribute to get
+        default=None (string): defaults to getting this one if 
+                                name does not exist
+
+        '''
+        return self.datasets[filetouse].get_attr(*args, **kwargs)
+
+    def make_dim(self, *args, **kwargs):
+        '''
+        Params:
+        ~~~~~~~
+        datasetname (string):   dataset name
+        dim_number (int):       dimension number
+        label (string):         name of dimension
+        dim_dataset_name (string):  name of the dimension dataset
+        dim_name (string):          name of the dimension 
+        '''
+        for dataset_name in self.datasets.keys():
+            self.datasets[dataset_name].make_dim(*args, **kwargs)
+            
+    def dim_set(self, *args, **kwargs):
+        '''
+        for /datasetname, set dim[dim_number] = label
+        Params:
+        ~~~~~~~
+        datasetname (string):   dataset name
+        dim_number (int):       dimension number
+        label (string):         name of dimension
+        '''
+        for dataset_name in self.datasets.keys():
+            self.datasets[dataset_name].dim_set(*args, **kwargs)
+
+    def dim_create_scale(self, *args, **kwargs):
+        '''
+        creates scale for the given dataset
+        f[datasetname].create_scale(f[dim_dataset_name], dim_name)
+
+        Params:
+        ~~~~~~~
+        datasetname (string):       dataset name
+        dim_dataset_name (string):  name of the dimension dataset
+        dim_name (string):          name of the dimension 
+        '''
+        for dataset_name in self.datasets.keys():
+            self.datasets[dataset_name].dim_create_scale(*args, **kwargs)
+
+    def dim_attach_scale(self, *args, **kwargs):
+        '''
+        f[datasetname].dims[dim_number].attach_scale(f[dim_dataset_name])
+        '''
+        for dataset_name in self.datasets.keys():
+            self.datasets[dataset_name].dim_attach_scale(*args, **kwargs)
+
+    def create_attr(self, *args, **kwargs):
+        '''
+        Just a wrapper for dataset.attrs.create(*args, **kwargs)
+        params:
+        ~~~~~~~
+        datasetname (string): name of dataset, full path
+        name (string): name of attribute to set
+        data: value of attribute, will be put through np.array(data)
+        shape=None (tuple): shape of attribute, overrides data.shape
+                        I think it reshapes
+        dtype=None (numpy dtype): data type for the attribute, overrides
+                            data.dtype
+        '''
+        for dataset_name in self.datasets.keys():
+            self.datasets[dataset_name].create_attr(*args, **kwargs)
+    
+
