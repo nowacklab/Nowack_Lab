@@ -294,10 +294,10 @@ class Dataset():
         dim_dataset_name (string):  name of the dimension dataset
         dim_name (string):          name of the dimension 
         '''
-        with h5py.File(self.filename, 'w') as f:
+        with h5py.File(self.filename, 'a') as f:
             try:
-                f[datasetname].dims[dim_number] = label
-                f[datasetname].create_scale(f[dim_dataset_name], dim_name)
+                f[datasetname].dims[dim_number].label = label
+                f[datasetname].dims.create_scale(f[dim_dataset_name], dim_name)
                 f[datasetname].dims[dim_number].attach_scale(
                                         f[dim_dataset_name])
             except:
@@ -312,9 +312,9 @@ class Dataset():
         dim_number (int):       dimension number
         label (string):         name of dimension
         '''
-        with h5py.File(self.filename,'w') as f:
+        with h5py.File(self.filename,'a') as f:
             try:
-                f[datasetname].dims[dim_number] = label
+                f[datasetname].dims[dim_number].label = label
             except:
                 raise
 
@@ -330,9 +330,9 @@ class Dataset():
         dim_dataset_name (string):  name of the dimension dataset
         dim_name (string):          name of the dimension 
         '''
-        with h5py.File(self.filename, 'w') as f:
+        with h5py.File(self.filename, 'a') as f:
             try:
-                f[datasetname].create_scale(f[dim_dataset_name], dim_name)
+                f[datasetname].dims.create_scale(f[dim_dataset_name], dim_name)
             except:
                 raise
         
@@ -340,7 +340,7 @@ class Dataset():
         '''
         f[datasetname].dims[dim_number].attach_scale(f[dim_dataset_name])
         '''
-        with h5py.File(self.filename, 'w') as f:
+        with h5py.File(self.filename, 'a') as f:
             try:
                 f[datasetname].dims[dim_number].attach_scale(
                                         f[dim_dataset_name])
@@ -360,10 +360,10 @@ class Dataset():
         '''
         with h5py.File(self.filename, 'r') as f:
             try:
-                return f['datasetname'].attrs.get(*args, **kwargs)
+                return f[datasetname].attrs.get(*args, **kwargs)
             except:
                 raise
-    def create_attr(self, datasetname, *args, **kwargs):
+    def create_attr(self, datasetname, name, data, dtype=None, **kwargs):
         '''
         Just a wrapper for dataset.attrs.create(*args, **kwargs)
         params:
@@ -376,9 +376,13 @@ class Dataset():
         dtype=None (numpy dtype): data type for the attribute, overrides
                             data.dtype
         '''
-        with h5py.File(self.filename, 'r') as f:
+        with h5py.File(self.filename, 'a') as f:
             try:
-                return f['datasetname'].attrs.create(*args, **kwargs)
+                if type(data) is str:
+                    dtype=self.dtype_string
+                return f[datasetname].attrs.create(name, data,
+                                            dtype=dtype, **kwargs)
             except:
                 raise
+                
 
