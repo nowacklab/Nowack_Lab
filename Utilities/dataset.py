@@ -385,7 +385,7 @@ class Dataset():
                 raise
                 
 
-    def create_attr_dict(self, datasetname, dict_to_attr):
+    def create_attr_dict(self, datasetname, dict_to_attr, prefix=''):
         with h5py.File(self.filename, 'a') as f:
             for key in dict_to_attr.keys():
                 data = dict_to_attr[key]
@@ -396,6 +396,6 @@ class Dataset():
                 if type(data) is str:
                     dtype=self.dtype_string
 
-                f[datasetname].attrs.create(key, data, dtype=dtype)
+                f[prefix+datasetname].attrs.create(key, data, dtype=dtype)
 
 

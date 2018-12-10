@@ -201,5 +201,3 @@ class Saver():
         for name in self.datasets.keys():
             d['__filename_of_' + name] = self.datasets[name].filename
         self.create_attr_dict('/', d)
-    
-
