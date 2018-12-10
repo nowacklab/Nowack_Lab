@@ -400,8 +400,8 @@ class SQUID_Noise_Open_Loop(SQUID_Noise):
                             int(self.fast_dur*self.fast_rate)))
         self.saver.create_attr('/t_Voverview/', 'units', 'Seconds')
 
-        self.saver.append('/voverview_data/', ['test', 'Vdc'])
-        self.saver.append('/rms_data/', ['rms', 'rms_reject_outliers'])
+        self.saver.append('/_voverview_data_names/', ['test', 'Vdc'])
+        self.saver.append('/_rms_data_names/', ['rms', 'rms_reject_outliers'])
 
 
         self.saver.append('/Vsaa/', 
@@ -422,8 +422,9 @@ class SQUID_Noise_Open_Loop(SQUID_Noise):
                                      ),
                                     np.nan))
         self.saver.make_dim('/Voverview/', 0, 'sbias', '/sbias/', 'sbias (uA)')
-        self.saver.make_dim('/Voverview/', 1, 'voverview_data', 
-                                              '/voverview_data/', 'Voverview Data')
+        self.saver.make_dim('/Voverview/', 1, 'voverview_data_names', 
+                                              '/_voverview_data_names/', 
+                                              'Voverview Data names')
         self.saver.make_dim('/Voverview/', 2, 't_Voverview', '/t_Voverview/', 
                                                 'time (s)')
         self.saver.create_attr('/Voverview/', 'units', 'Volts')
@@ -462,7 +463,8 @@ class SQUID_Noise_Open_Loop(SQUID_Noise):
                                     np.nan))
         self.saver.make_dim('/asd_rms/', 0, 'sbias', '/sbias/', 'sbias (uA)')
         self.saver.make_dim('/asd_rms/', 1, 'sflux', '/sflux/', 'sflux (uA)')
-        self.saver.make_dim('/asd_rms/', 2, 'rms_data', '/rms_data/', 'rms data')
+        self.saver.make_dim('/asd_rms/', 2, 'rms_data_names', 
+                            '/_rms_data_names/', 'rms data names')
         self.saver.create_attr('/asd_rms/', 'units', 'phi_0/Hz^.5')
 
         self.saver.append('/wasoverloaded/', 
@@ -635,69 +637,172 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
         len_fft = self._len_of_fft()
 
         self.saver = Saver(name='SQUID_Noise_Closed_Loop')
-        
+
+        # dimensions / coordinates
+        self.saver.append('/sbias/', self.sbias)
+        self.saver.create_attr('/sbias/', 'units', 'saa uA')
+        self.saver.append('/_num_afluxes/', np.arange(0,self._num_aflux))
+        self.saver.create_attr('/_num_aflux/', 'units', 'index')
+        self.saver.append('/t_Vspectrum/', 
+                          np.linspace(0,self.sample_dur,
+                                      int(self.sample_rate*self.sample_dur)))
+        self.saver.create_attr('/t_Vspectrum/', 'units', 'seconds')
+        self.saver.append('/t_Vsquidchar/', 
+                          np.linspace(0,self.fast_dur,
+                                      int(self.fast_rate*self.fast_dur)))
+        self.saver.create_attr('/t_Vsquidchar/', 'units', 'seconds')
+        self.saver.append('/_vsquidchar_data_names/', ['test', 'Vsaa'])
+        self.saver.append('/f/', np.full(len_fft, np.nan))
+        self.saver.create_attr('/f/', 'units', 'Hz')
+        self.saver.append('/_Vfc_sweep_data_names/', ['Vsrc', 'Vmeas'])
+        self.saver.append('/t_Vfc_sweep/', 
+                          np.linspace(0,self.fc_Is.shape[0]/self.fc_rate,
+                                      int(self.fc_Is.shape[0])))
+        self.saver.create_attr('/t_Vfc_sweep/', 'units', 'Seconds')
+        self.saver.append('/_rms_data_names/', ['rms', 'rms_reject_outliers'])
         self.saver.append('/Vspectrum/', 
                             np.full((self.sbias.shape[0],
                                      self.num_aflux,
                                      int(self.sample_rate*self.sample_dur),
                                      ), np.nan))
-        self.saver.append('/sbias/', self.sbias)
+        self.saver.make_dim('/Vspectrum/', 0, 'sbias', '/sbias/', 'sbias (uA)')
+        self.saver.make_dim('/Vspectrum/', 1, 'aflux_num', '/_num_aflux/', 'index')
+        self.saver.make_dim('/Vspectrum/', 2, 't_Vspectrum', '/t_Vspectrum/', 
+                            'Vspectrum time (seconds)')
+        self.saver.create_attr('/Vspectrum/', 'units', 'Volts')
+
         self.saver.append('/aflux/', 
                             np.full((self.sbias.shape[0],
                                          self.num_aflux),
                                          np.nan))
+        self.saver.make_dim('/aflux/', 0, 'sbias', '/sbias/', 'sbias (uA)')
+        self.saver.make_dim('/aflux/', 1, 'aflux_num', '/_num_aflux/', 'index')
+        self.saver.create_attr('/aflux/', 'units', 'saa micro Amps')
+
         self.saver.append('/wastuned/', 
                             np.full((self.sbias.shape[0],
                                          self.num_aflux),
                                          np.nan))
+        self.saver.make_dim('/wastuned/', 0, 'sbias', '/sbias/', 'sbias (uA)')
+        self.saver.make_dim('/wastuned/', 1, 'aflux_num', '/_num_aflux/', 'index')
+        self.saver.create_attr('/wastuned/', 'units', 
+                                'boolean (0 False, 1 True)')
+
         self.saver.append('/waslocked_med/', 
                             np.full((self.sbias.shape[0],
                                          self.num_aflux),
                                          np.nan))
+        self.saver.make_dim('/waslocked_med/', 0, 'sbias', '/sbias/', 'sbias (uA)')
+        self.saver.make_dim('/waslocked_med/', 1, 'aflux_num', '/_num_aflux/', 
+                            'index')
+        self.saver.create_attr('/waslocked_med/', 'units', 
+                                'boolean (0 False, 1 True)')
+
         self.saver.append('/waslocked_high/', 
                             np.full((self.sbias.shape[0],
                                          self.num_aflux),
                                          np.nan))
+        self.saver.make_dim('/waslocked_high/', 0, 'sbias', '/sbias/', 'sbias (uA)')
+        self.saver.make_dim('/waslocked_high/', 1, 'aflux_num', '/_num_aflux/', 
+                            'index')
+        self.saver.create_attr('/waslocked_high/', 'units', 
+                                'boolean (0 False, 1 True)')
+
         self.saver.append('/Vsquidchar/', 
                             np.full((self.sbias.shape[0],
                                          self.num_aflux,
                                          2, # 0 test, 1 saa 
                                          int(self.fast_dur*self.fast_rate)),
                                          np.nan))
+        self.saver.make_dim('/Vsquidchar/', 0, 'sbias', '/sbias/', 'sbias (uA)')
+        self.saver.make_dim('/Vsquidchar/', 1, 'aflux_num', '/_num_aflux/', 'index')
+        self.saver.make_dim('/Vsquidchar/', 2, 'Vsquidchar_data_names', 
+                            '/_vsquidchar_data_names/', 'Vsquidchar data names')
+        self.saver.make_dim('/Vsquidchar/', 3, 't_Vsquidchar', '/t_Vsquidchar/', 
+                            'seconds')
+        self.saver.create_attr('/Vsquidchar/', 'units', 'Volts')
+
         self.saver.append('phi_0_per_V', 
                             np.full((self.sbias.shape[0],
                                      self.num_aflux), np.nan))
+        self.saver.make_dim('/phi_0_per_V/', 0, 'sbias', '/sbias/', 'sbias (uA)')
+        self.saver.make_dim('/phi_0_per_V/', 1, 'aflux_num', '/_num_aflux/', 'index')
+        self.saver.create_attr('/phi_0_per_V/', 'units', 'phi_0 / Volts')
+
         self.saver.append('/Vfc_sweep/', 
                             np.full((self.sbias.shape[0],
                                      self.num_aflux,
                                      2, # 1 Vsrc, 2 Vmeas
-                                     int(self.fc_rate*self.fc_Is.shape[0])
+                                     int(self.fc_Is.shape[0])
                                      ), np.nan))
+        self.saver.make_dim('/Vfc_sweep/', 0, 'sbias', '/sbias/', 'sbias (uA)')
+        self.saver.make_dim('/Vfc_sweep/', 1, 'aflux_num', '/_num_aflux/', 'index')
+        self.saver.make_dim('/Vfc_sweep/', 2, 'vfc_sweep_data_names', 
+                            '/_Vfc_sweep_data_names/', 'Vfc sweep data names')
+        self.saver.make_dim('/Vfc_sweep/', 3, 't_Vfc_sweep', '/t_Vfc_sweep/', 
+                            'time of fc sweep (seconds)')
+        self.saver.create_attr('/Vfc_sweep/', 'units', 'Volts')
+
         self.saver.append('/wasoverloaded/',
                             np.full((self.sbias.shape[0],
                                          self.num_aflux),
                                          np.nan))
+        self.saver.make_dim('/wasoverloaded/', 0, 'sbias', '/sbias/', 'sbias (uA)')
+        self.saver.make_dim('/wasoverloaded/', 1, 'aflux_num', '/_num_aflux/', 
+                            'index')
+        self.saver.create_attr('/wasoverloaded/', 'units', 
+                                'boolean (0 False, 1 True)')
+
         self.saver.append('/Vspectrum_starttimes/',
                             np.full((self.sbias.shape[0],
                                      self.num_aflux),
                                     np.nan))
+        self.saver.make_dim('/Vspectrum_starttimes/', 0, 'sbias', '/sbias/', 
+                            'sbias (uA)')
+        self.saver.make_dim('/Vspectrum_starttimes/', 1, 'aflux_num', 
+                            '/_num_aflux/', 'index')
+        self.saver.create_attr('/Vspectrum_starttimes/', 'units', 
+                            'epoch time (seconds)')
+
         self.saver.append('/Vfc_sweep_starttimes/',
                             np.full((self.sbias.shape[0],
                                      self.num_aflux),
                                     np.nan))
+        self.saver.make_dim('/Vfc_sweep_starttimes/', 0, 'sbias', '/sbias/', 
+                            'sbias (uA)')
+        self.saver.make_dim('/Vfc_sweep_starttimes/', 1, 'aflux_num', 
+                            '/_num_aflux/', 'index')
+        self.saver.create_attr('/Vfc_sweep_starttimes/', 'units', 
+                            'epoch time (seconds)')
+
         self.saver.append('/Vpsectrum_asd/', 
                             np.full((self.sbias.shape[0],
                                      self.num_aflux,
                                      len_fft,
                                      ),
                                     np.nan))
+        self.saver.make_dim('/Vspectrum_asd/', 0, 'sbias', '/sbias/', 
+                            'sbias (uA)')
+        self.saver.make_dim('/Vspectrum_asd/', 1, 'aflux_num', 
+                            '/_num_aflux/', 'index')
+        self.saver.make_dim('/Vspectrum_asd/', 2, 'frequency', 
+                            '/f/', 'frequency (Hz)')
+        self.saver.create_attr('/Vspectrum_asd/', 'units', 'phi_0/Hz^.5')
+
         self.saver.append('/Vspectrum_asd_rms/',
                             np.full((self.sbias.shape[0],
                                      self.num_aflux,
                                      2), 
                                     np.nan))
-        self.saver.append('/f/', np.full(len_fft, np.nan))
-        self.saver.append('/attrs/',
+        self.saver.make_dim('/Vspectrum_asd_rms/', 0, 'sbias', '/sbias/', 
+                            'sbias (uA)')
+        self.saver.make_dim('/Vspectrum_asd_rms/', 1, 'aflux_num', 
+                            '/_num_aflux/', 'index')
+        self.saver.make_dim('/Vspectrum_asd_rms/', 2, 'rms_data_names', 
+                            '/_rms_data_names/', 'names of rms data')
+        self.saver.create_attr('/Vspectrum_asd_rms/', 'units', 'phi_0/Hz^.5')
+
+        self.saver.create_attr_dict('/',
                 {'sample_dur': sample_dur,
                  'sample_rate': sample_rate,
                  'fast_dur': fast_dur,
@@ -707,42 +812,6 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
                  'fc_R': fc_R,
                  'fc_rate': fc_rate,
                 })
-        self.saver.append('/_dims/', 
-                {
-                    'aflux': ['sbias', 'num_aflux'],
-                    'wastuned': ['sbias', 'num_aflux'],
-                    'waslocked_med': ['sbias', 'num_aflux'],
-                    'waslocked_high': ['sbias', 'num_aflux'],
-                    'Vspectrum': ['sbias', 'num_aflux', 'samples'],
-                    'Vsquidchar': ['sbias', 'num_aflux', 'vsquidchar_data', 
-                                   'fast_samples'],
-                    'Vfc_sweep': ['sbias', 'num_aflux', 'vfc_sweep_data',
-                                    'fc_samples'],
-                    'wasoverloaded': ['sbias', 'num_aflux'],
-                    'Vspectrum_starttimes': ['sbias', 'num_aflux'],
-                    'Vfc_sweep_starttimes': ['sbias', 'num_aflux'],
-                    'Vspectrum_asd': ['sbias', 'num_aflux', 'f'],
-                    'phi_0_per_V': ['sbias', 'num_aflux'],
-                    'Vspectrum_asd_rms': ['sbias', 'num_aflux', 'rms_data'],
-                                })
-        self.saver.append('/_coords/',
-                {'rms_data': ['rms', 'rms_reject_outliers'],
-                 'vsquidchar_data': ['Vtest', 'Vsaa'],
-                 'vfc_sweep_data': ['Vsrc', 'Vmeas'],
-                    })
-        self.saver.append('/units/',
-                {'aflux': 'SAA uA',
-                 'sbias': 'SAA uA',
-                 'Vspectrum' : 'V',
-                 'Vsquidchar': 'V',
-                 'Vfc_sweep': 'V',
-                 'wasoverloaded': 'boolean (0 False, 1 True)',
-                 'Vspectrum_starttimes': 'epoc time (seconds)',
-                 'Vfc_sweep_starttimes': 'epoc time (seconds)',
-                 'Vspectrum_asd': 'phi_0/Hz^.5',
-                 'Vspectrum_asd_rms': 'phi_0/Hz^.5',
-                 'phi_0_per_V': 'phi_0/V',
-                    })
 
     def _make_aflux(self, i):
         '''
