@@ -60,6 +60,10 @@ class Saver():
         for key in filestowrite.keys():
             self.datasets[key] = Dataset(filestowrite[key])
 
+        self.save_filenames()
+        self.create_attr('/', '__created_on', 
+                        self.__class__.make_timestamp())
+
     def savefigure(self, figure, name):
         paths = getsavepaths
         for key in paths.keys():
@@ -187,5 +191,15 @@ class Saver():
         '''
         for dataset_name in self.datasets.keys():
             self.datasets[dataset_name].create_attr(*args, **kwargs)
+
+    def create_attr_dict(self, *args, **kwargs):
+        for dataset_name in self.datasets.keys():
+            self.datasets[dataset_name].create_attr_dict(*args, **kwargs)
+
+    def save_filenames(self):
+        d = {}
+        for name in self.datasets.keys():
+            d['__filename_of_' + name] = self.datasets[name].filename
+        self.create_attr_dict('/', d)
     
 

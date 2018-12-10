@@ -318,7 +318,6 @@ class Dataset():
             except:
                 raise
 
-
     def dim_create_scale(self, datasetname, dim_dataset_name, dim_name):
         '''
         creates scale for the given dataset
@@ -380,9 +379,23 @@ class Dataset():
             try:
                 if type(data) is str:
                     dtype=self.dtype_string
-                return f[datasetname].attrs.create(name, data,
+                f[datasetname].attrs.create(name, data,
                                             dtype=dtype, **kwargs)
             except:
                 raise
                 
+
+    def create_attr_dict(self, datasetname, dict_to_attr):
+        with h5py.File(self.filename, 'a') as f:
+            for key in dict_to_attr.keys():
+                data = dict_to_attr[key]
+                dtype = None
+                if type(data) not in self.allowedtypes:
+                    data = str(data)
+
+                if type(data) is str:
+                    dtype=self.dtype_string
+
+                f[datasetname].attrs.create(key, data, dtype=dtype)
+
 
