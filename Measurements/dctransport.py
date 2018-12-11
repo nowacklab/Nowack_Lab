@@ -232,13 +232,15 @@ class RvsSomething_DC(RvsSomething):
 
     Preamp may be used before the Zurich input. Specify preamp_gain manually.
     NOTE the preamp_gain parameter only affects the signal received from the Zurich's normal inputs.
+
+    get_aux: if want to record voltage into aux input
     '''
     instrument_list = ['zurich', 'keithleybias']
     something='time'
     something_units = 's'
     legendtitle=None
 
-    def __init__(self, instruments = {}, preamp_gain=1):
+    def __init__(self, instruments = {}, preamp_gain=1, get_aux=True):
         Measurement.__init__(self, instruments=instruments)
 
         # Set up empty arrays
@@ -253,6 +255,7 @@ class RvsSomething_DC(RvsSomething):
         setattr(self, self.something, np.array([]))
 
         self.preamp_gain = preamp_gain
+        self.get_aux = get_aux
 
     def do(self, *args, **kwargs):
         return RvsSomething.do(self, auto_gain=True, **kwargs)
@@ -286,9 +289,10 @@ class RvsSomething_DC(RvsSomething):
         r = 0
         r2p = 0
         for i in range(num_avg):
-            t, V = self.zurich.get_scope_trace(self.zurich.freq_opts[10], input_ch=9) # aux in 2
-            v2p += V.mean()
-            r2p += v2p/self.I[-1]
+            if self.get_aux:
+                t, V = self.zurich.get_scope_trace(self.zurich.freq_opts[10], input_ch=9) # aux in 2
+                v2p += V.mean()
+                r2p += v2p/self.I[-1]
 
             t, V = self.zurich.get_scope_trace(self.zurich.freq_opts[10])
             v += V.mean()

@@ -6,7 +6,7 @@ class AMI1700(VISAInstrument):
     AMI Model 1700 Helium level meter
     '''
     _level = None
-    def __init__(self, ip='128.84.231.191', port=7180):
+    def __init__(self, ip='10.84.231.40', port=7180):
         '''
         Arguments:
         ip - IP address (static)

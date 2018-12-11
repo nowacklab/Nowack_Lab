@@ -145,6 +145,7 @@ class Zurich(Instrument):
         '''
         Use the threshold unit to send a binary 1 to digital input if detect an overload on the input.
         This is the only way I could figure out how to detect an overload.
+        NOTE: This isn't perfect. If overloading only on the high side (for example), won't detect reliably
         '''
         # set zeroth TU to Input overload (V)
         self.daq.setInt('/dev3447/tu/thresholds/0/input', 53)
