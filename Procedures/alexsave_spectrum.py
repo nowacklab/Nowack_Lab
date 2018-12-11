@@ -79,6 +79,14 @@ class DaqSpectrum():
 
         self.saver = Saver(name='DaqSpectrum')
 
+        self.saver.create_attr_dict('/', {
+                                    'measure_freq': self.measure_freq,
+                                    'measure_time': self.measure_time,
+                                    'units_per_V': self.units_per_V,
+                                    'rms_range': self.rms_range,
+                                    'starttime': self.meas_starttime,
+                                    }) 
+
 
     def run(self):
         self.meas_starttime = time.time()
@@ -88,14 +96,15 @@ class DaqSpectrum():
         self.V = received['dc']/self.preamp.gain
         self.t = received['t']
 
+        self.saver.append('/t/', self.t + self.meas_starttime)
+        self.saver.create_attr('/t/', 'units', 'Seconds')
         self.saver.append('/V/', self.V)
-        self.saver.append('/t/', self.t)
+        self.saver.create_attr('/V/', 'units', 'Volts')
+        self.saver.make_dim('/V/', 0, 't', '/t/', 'time (seconds)')
         self.saver.append('/instr/preamp/', Preamp_Util.to_dict(self))
-        self.saver.append('/attrs/', {'units_V': self.units,
-                                    'units_t': 'seconds',
-                                    'measure_freq': self.measure_freq,
-                                    'measure_time': self.measure_time,
-                                    })
+        self.saver.create_attr_dict('/', Preamp_Util.to_dict(self), 
+                                    prefix='instr_preamp')
+
         _ = self._welch()
         _ = self._make_rms()
                                            
@@ -104,18 +113,15 @@ class DaqSpectrum():
             fft_fspace = self.fft_fspace
 
         [self.f, self.psd] = Welch.welchf(self.V, self.measure_freq, self.fft_fspace)
+        self.saver.append('/f/', self.f)
+        self.saver.create_attr('/f/', 'units', 'Hz')
         self.saver.append('/psd/', self.psd)
+        self.saver.make_dim('/psd/', 0, 'f', '/f/', 'frequency (Hz)')
+        self.saver.create_attr('/psd/', 'units', 'V^2/Hz')
         self.asd = np.sqrt(self.psd)*self.units_per_V
         self.saver.append('/asd/', self.asd)
-        self.saver.append('/f/', self.f)
-
-        self.saver.append('/_dims/', {
-                                    'psd': np.array(['f',]),
-                                    'asd': np.array(['f',]),
-                                    'V': np.array(['t',]),})
-        self.saver.append('/attrs/units_psd/', 'V^2/Hz')
-        self.saver.append('/attrs/units_asd/', '{0}/Hz^.5'.format(self.units))
-        self.saver.append('/attrs/units_f/', 'Hz')
+        self.saver.make_dim('/asd/', 0, 'f', '/f/', 'frequency (Hz)')
+        self.saver.create_attr('/asd/', 'units', '{0}/Hz^.5'.format(self.units))
 
         return [self.f, self.psd]
 
@@ -141,8 +147,8 @@ class DaqSpectrum():
         rms_sigma = rms_sigma*self.units_per_V
 
         self.saver.append('/rms_noise/', rms)
+        self.saver.create_attr('/rms_noise/', 'units', 
+                               '{0}/Hz^.5'.format(self.units))
         self.saver.append('/rms_noise_exclude_outliers/', rms_sigma)
-        self.saver.append('/attrs/units_rms_noise/', 
-                            '{0}/Hz^.5'.format(self.units))
-        self.saver.append('/attrs/units_rms_noise_exclude_outliers/', 
-                            '{0}/Hz^.5'.format(self.units))
+        self.saver.create_attr('/rms_noise_exclude_outliers/', 'units', 
+                               '{0}/Hz^.5'.format(self.units))

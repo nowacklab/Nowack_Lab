@@ -168,6 +168,22 @@ z['y']['dataset'] = str(dataset1)
 checks.append((checker(dataset1.get('/z_'), z),35))
 
 
+# dimension testing, do it manually
+dataset1.append('/h_dim0/', np.linspace(0,2,10))
+dataset1.append('/h_dim1/', np.linspace(-10,.1,11))
+dataset1.append('/h_dim2/', ['a','b','c','d','e','f',
+                            'g','h','i','j','k','l'])
+dataset1.make_dim('/h/', 0, 'label0', '/h_dim0/', 'dim0')
+dataset1.make_dim('/h/', 1, 'label1', '/h_dim1/', 'dim1')
+dataset1.make_dim('/h/', 2, 'label0', '/h_dim2/', 'dim1')
+
+dataset1.create_attr('/z/', 'lololabel', 'fred')
+dataset1.create_attr('/z/', 'lololabel1', 1)
+dataset1.create_attr('/z/', 'lololabel2', 1.0)
+dataset1.create_attr('/z/', 'lololabel3', f)
+
+dataset1.create_attr_dict('/z/', y, prefix='_y_')
+
 for c in checks:
     if c[0] == False:
         print(c)
