@@ -66,7 +66,8 @@ class Dataset():
         f.close()
         return toreturn
 
-    def append(self, pathtowrite, datatowrite, slc = False):
+    def append(self, pathtowrite, datatowrite, slc = False,
+               chunks=None):
         '''
         Adds new data to dataset at path. Data may be a string, number, numpy
         array, or a nested dict. If a nested dict, leaves must be strings,
@@ -92,7 +93,8 @@ class Dataset():
                 sep = '/'
                 h5path = pathtowrite + sep.join([str(place) for place in path])
                 if not isinstance(obj, dict):
-                    self._writetoh5(data = obj, path = h5path, dtype=dtype)
+                    self._writetoh5(data = obj, path = h5path, dtype=dtype,
+                                    chucks=chucks)
             self.dictvisititems(cleandatatowrite, _loadhdf5)
         elif isinstance(cleandatatowrite, (np.ndarray, list) +
                                             tuple(self.allowedtypes))  and slc:
@@ -102,7 +104,8 @@ class Dataset():
             #print(datatowrite)
             self._writetoh5(data=cleandatatowrite, 
                             path=pathtowrite, 
-                            dtype=dtype)
+                            dtype=dtype,
+                            chunks=chunks)
 
 
 
@@ -130,7 +133,8 @@ class Dataset():
             self._writetoh5(**kwargs)
         except KeyError:
             f.create_dataset(kwargs['path'], data = kwargs['data'], 
-                             dtype=kwargs['dtype'])
+                             dtype=kwargs['dtype'], 
+                             chunks=kwargs['chunks'])
             f.close()
 
 
@@ -286,13 +290,24 @@ class Dataset():
     def make_dim(self, datasetname, dim_number, label, dim_dataset_name,
                  dim_name):
         '''
+        For a given dataset named datasetname that contains an array, label 
+        the dimensions in h5.  This is how you make xarray import these
+        h5 files without conversion
+
         Params:
         ~~~~~~~
-        datasetname (string):   dataset name
-        dim_number (int):       dimension number
-        label (string):         name of dimension
-        dim_dataset_name (string):  name of the dimension dataset
-        dim_name (string):          name of the dimension 
+        datasetname (string):       Dataset name
+        dim_number (int):           Dimension number (first dimension is 0)
+        label (string):             Name of dimension.  
+                                    Appears in metadata of datasetname 
+                                        under DIMENSION_LABELS
+                                    Appears in attributes in xarray
+        dim_dataset_name (string):  Name of the dimension dataset.
+                                    Must be a previously created datset.  
+                                    Appears as the xarray dimension name
+        dim_name (string):          name of the dimension.   
+                                    Appears in metadata of dim_dataset_name
+                                    Does not appear in xarray
         '''
         with h5py.File(self.filename, 'a') as f:
             try:
@@ -305,6 +320,8 @@ class Dataset():
 
     def dim_set(self, datasetname, dim_number, label):
         '''
+        This is probably useless!
+
         for /datasetname, set dim[dim_number] = label
         Params:
         ~~~~~~~
@@ -320,6 +337,8 @@ class Dataset():
 
     def dim_create_scale(self, datasetname, dim_dataset_name, dim_name):
         '''
+        This is probably useless so don't use it!!
+
         creates scale for the given dataset
         f[datasetname].create_scale(f[dim_dataset_name], dim_name)
 
@@ -337,6 +356,8 @@ class Dataset():
         
     def dim_attach_scale(self, datasetname, dim_number, dim_dataset_name):
         '''
+        This is probably unnecessary, so don't use it!
+
         f[datasetname].dims[dim_number].attach_scale(f[dim_dataset_name])
         '''
         with h5py.File(self.filename, 'a') as f:
@@ -365,6 +386,9 @@ class Dataset():
     def create_attr(self, datasetname, name, data, dtype=None, **kwargs):
         '''
         Just a wrapper for dataset.attrs.create(*args, **kwargs)
+
+        There is no warning for overwriting so DON'T BE STUPID
+
         params:
         ~~~~~~~
         datasetname (string): name of dataset, full path
@@ -386,16 +410,38 @@ class Dataset():
                 
 
     def create_attr_dict(self, datasetname, dict_to_attr, prefix=''):
+        '''
+        For a given dataset named datasetname, take a dictionary 
+        dict_to_attr and stuff it into the attributes of datasetname.
+        Prepend prefix to each key to avoid overwriting.  
+
+        There is no warning for overwriting so DON'T BE STUPID
+
+        params:
+        ~~~~~~
+        datasetname (string): name of dataset, full path
+        dict_to_attr (dict):  dictionary of values.  
+                              Supported formats: int, string, float, 
+                              complex, list.  Anything else gets 
+                              turned into a string.
+        prefix (string):      prefix to prepend to keys when adding to 
+                              datasetname
+        '''
         with h5py.File(self.filename, 'a') as f:
             for key in dict_to_attr.keys():
                 data = dict_to_attr[key]
                 dtype = None
                 if type(data) not in self.allowedtypes:
+                    if type(data) not in [str, list]:
+                        print('create_attr_dict: ' + 
+                        '{0} is a {1}.  Not supported.  Saving str'.format(
+                        key, type(data)))
+
                     data = str(data)
 
                 if type(data) is str:
                     dtype=self.dtype_string
 
-                f[prefix+datasetname].attrs.create(key, data, dtype=dtype)
+                f[datasetname].attrs.create(prefix+key, data, dtype=dtype)
 
 
