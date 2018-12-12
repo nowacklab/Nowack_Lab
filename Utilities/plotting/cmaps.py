@@ -38,6 +38,7 @@ BlueTan = diverging(color_dict['blue2'], color_dict['tan'])
 TanOrange = diverging(color_dict['tan'], color_dict['orange'])
 GreenRed = diverging(color_dict['green'], color_dict['red2'])
 GreenOrange = diverging(color_dict['green'], color_dict['orange'])
+GreenTan = diverging(color_dict['green'], color_dict['tan'])
 BlueOrange = diverging(color_dict['blue2'], color_dict['orange'], 0.75)
 
 # From list
