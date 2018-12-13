@@ -31,6 +31,7 @@ packages = [
     'tornado==4.5.3',
     'peakutils',
     'gtts',
+    'urllib3',
     'https://github.com/nowacklab/Instrumental/tarball/master',
     'https://github.com/nowacklab/PyANC350/tarball/master',
 ]
