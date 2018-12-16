@@ -12,6 +12,7 @@ class AMI1700(VISAInstrument):
         ip - IP address (static)
         port - 7180 is specified by AMI
         '''
+        self.ip, self.port = ip, port
         resource = 'TCPIP::%s::%s::SOCKET' %(ip, port)
         self._init_visa(resource, termination='\r\n')
 
@@ -46,6 +47,23 @@ class AMI1700(VISAInstrument):
         '''
         self._level = float(self.query('MEAS:HE:LEV?'))
         return self._level
+
+    def query(self, cmd, timeout=3000):  # pyvisa 1.10 ask -> query
+        '''
+        Write and read combined operation.
+        Default timeout 3000 ms. None for infinite timeout
+        Strip terminating characters from the response.
+        '''
+        try:
+            return VISAInstrument.query(self, cmd, timeout=timeout)
+        except Exception as e:
+            self.__init__(self.ip, self.port)
+            try: # try again after reinitialize
+                return VISAInstrument.query(self, cmd, timeout=timeout)
+            except:
+                # if VISAInstrument does not return anything...
+                print(e) # somehow lost communication?
+                return False # for the sake of continuing measurements
 
     def sample(self):
         '''
