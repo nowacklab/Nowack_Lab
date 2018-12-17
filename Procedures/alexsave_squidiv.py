@@ -23,7 +23,7 @@ class SQUID_testing():
                  sample_rate=10000
                  ):
         self.daq = instruments['daq']
-        Preamp_Util.init(instruments)
+        Preamp_Util.init(self, instruments)
 
         self.iv_ctr = 0
         self.mod_fastmod_ctr = 0
@@ -76,7 +76,7 @@ class SQUID_testing():
         v1s = _i1s*r1
         v2s = _i2s*r2
         datasetname = basename + '_V'
-        self.basenames.append(name)
+        self.basenames.append(basename)
         self.notesindex.append(0)
 
         i0_name = basename + '_' + o0 + '_i'
@@ -89,20 +89,20 @@ class SQUID_testing():
         v1meas_name = basename + '_' + o1 + '_meas'
         v2meas_name = basename + '_' + o2 + '_meas' 
         # dimensions / coordinates
-        self.saver.append(i0_name, _i0s,
-        self.create_attr(i0_name, 'units', 'Amps')
-        self.saver.append(i1_name, _i1s,
-        self.create_attr(i1_name, 'units', 'Amps')
-        self.saver.append(i2_name, _i2s,
-        self.create_attr(i2_name, 'units', 'Amps')
+        self.saver.append(i0_name, _i0s)
+        self.saver.create_attr(i0_name, 'units', 'Amps')
+        self.saver.append(i1_name, _i1s)
+        self.saver.create_attr(i1_name, 'units', 'Amps')
+        self.saver.append(i2_name, _i2s)
+        self.saver.create_attr(i2_name, 'units', 'Amps')
         self.saver.append(basename + '_direction', ['incr', 'decr'])
         self.saver.append(basename + '_data_names', 
                 ['time', o0+'_Vsrc', o1+'_Vsrc', o2+'_Vsrc', i0+'_Vmeas'])
 
         self.saver.append(datasetname, np.full( 
                               (v0s.shape[0],
-                               v1s.shape[1],
-                               v2s.shape[2],
+                               v1s.shape[0],
+                               v2s.shape[0],
                                2, # 0 sweep up, 1 sweep down
                                5, # 0 time, 1 v0, 2 v1, 3 v2, 4 meas v0
                                ), np.nan))
@@ -110,7 +110,7 @@ class SQUID_testing():
                             'current on {0} (Amps)'.format(o0))
         self.saver.make_dim(datasetname, 1, i1_name[1:], i1_name, 
                             'current on {0} (Amps)'.format(o1))
-        self.saver.make_dim(datasetname 2, i2_name[1:], i2_name, 
+        self.saver.make_dim(datasetname, 2, i2_name[1:], i2_name, 
                             'current on {0} (Amps)'.format(o2))
         self.saver.make_dim(datasetname, 3, 
                             basename[1:] + '_direction', 
@@ -128,17 +128,19 @@ class SQUID_testing():
                  'sample_rate': sample_rate
                  })
 
-        self._sweep_to_val_safe(o0, v0s[i], int(v0s.shape[0]/2), 
-                                sample_rate)
+        half_v0slen = max(int(v0s.shape[0]/2), 10)
+        half_v1slen = max(int(v1s.shape[0]/2), 10)
+        half_v2slen = max(int(v2s.shape[0]/2), 10)
+
+        self._sweep_to_val_safe(o0, v0s[0], half_v0slen, sample_rate)
         for i in range(v0s.shape[0]):
             self._sweep_to_val_safe(o0, v0s[i], 1, sample_rate)
-            self._sweep_to_val_safe(o1, v1s[0], v1s.shape[2]/2, sample_rate)
+            self._sweep_to_val_safe(o1, v1s[0], half_v1slen, sample_rate)
 
             for j in range(v1s.shape[0]):
                 self._sweep_to_val_safe(o1, v1s[j], 1, sample_rate)
 
-                self._sweep_to_val_safe(o2, v2s[0], v2s.shape[0]/2, 
-                                        sample_rate)
+                self._sweep_to_val_safe(o2, v2s[0], half_v2slen, sample_rate)
                 u_time = time.time()
                 u_src, u_meas = self.daq.sweep(
                         Vstart={o2: v2s[ 0]},
@@ -155,8 +157,7 @@ class SQUID_testing():
                         sample_rate=sample_rate,
                         numsteps=v2s.shape[0]
                         )
-                self._sweep_to_val_safe(o2, 0, v2s.shape[0]/2, 
-                                        sample_rate)
+                self._sweep_to_val_safe(o2, 0, half_v2slen, sample_rate)
 
                 slc_len = v2s.shape[0]
                 ones = np.ones(slc_len)
@@ -186,18 +187,20 @@ class SQUID_testing():
                                 d_meas[i0]/self.preamp.gain, 
                                 slc=(i,j,slice(slc_len),1,4))
              
-            self._sweep_to_val_safe(o1, 0, v1s.shape[0]/2, sample_rate)
+            self._sweep_to_val_safe(o1, 0, half_v1slen, sample_rate)
          
-        self._sweep_to_val_safe(o0, 0, v0s.shape[0]/2, sample_rate)
+        self._sweep_to_val_safe(o0, 0, half_v0slen, sample_rate)
 
 
 
-        self.saver.create_attr_dict(datasetname, self._get_preamp_dict(),
+        self.saver.create_attr_dict(datasetname, Preamp_Util.to_dict(self,),
                                     prefix='instr_preamp_')
     
     def iv(self,
            iv_Is  = [],
            iv_R   = None,
+           mod_R  = None,
+           fc_R  = None,
            sample_rate=None,
            mod_current=0,
            fc_current=0,
@@ -216,7 +219,7 @@ class SQUID_testing():
         fc_current (float):        current in Amps to bias the mod line
         pre_notes (string):        any notes about this iv?
         '''
-        basename = '/iv_{0:03d}'.format(self.mod_fastmod_ctr)
+        basename = '/iv_{0:03d}'.format(self.iv_ctr)
 
         if iv_R == None:
             iv_R = self.defaults['iv_R']
@@ -225,19 +228,24 @@ class SQUID_testing():
         if fc_R == None:
             fc_R = self.defaults['fc_R']
 
-        self._three_param_sweep(i0s=np.array([fc_current]),
-                                i1s=np.array([mod_current]),
-                                i2s=iv_Is,
-                                r0=fc_R,
-                                r1=mod_R,
-                                r1=iv_R,
-                                o0='fc',
-                                o1='mod',
-                                o2='iv',
-                                i0='iv',
-                                sample_rate=sample_rate,
-                                basename=basename,
-                                pre_notes=pre_notes)
+        try:
+            self._three_param_sweep(i0s=np.array([fc_current]),
+                                    i1s=np.array([mod_current]),
+                                    i2s=iv_Is,
+                                    r0=fc_R,
+                                    r1=mod_R,
+                                    r2=iv_R,
+                                    o0='fc',
+                                    o1='mod',
+                                    o2='iv',
+                                    i0='iv',
+                                    sample_rate=sample_rate,
+                                    basename=basename,
+                                    pre_notes=pre_notes)
+        except:
+            self.iv_ctr += 1
+            raise
+
         self.iv_ctr += 1
 
     def mod_fastmod(self,
@@ -272,19 +280,24 @@ class SQUID_testing():
         if fc_R == None:
             fc_R = self.defaults['fc_R']
 
-        self._three_param_sweep(i0s=np.array([fc_current]),
-                                i1s=iv_Is,
-                                i2s=mod_Is,
-                                r0=fc_R,
-                                r1=iv_R,
-                                r2=mod_R,
-                                o0='fc',
-                                o1='iv',
-                                o2='mod',
-                                i0='iv',
-                                sample_rate=sample_rate,
-                                basename=basename,
-                                pre_notes=pre_notes)
+        try:
+            self._three_param_sweep(i0s=np.array([fc_current]),
+                                    i1s=iv_Is,
+                                    i2s=mod_Is,
+                                    r0=fc_R,
+                                    r1=iv_R,
+                                    r2=mod_R,
+                                    o0='fc',
+                                    o1='iv',
+                                    o2='mod',
+                                    i0='iv',
+                                    sample_rate=sample_rate,
+                                    basename=basename,
+                                    pre_notes=pre_notes)
+        except:
+            self.mod_fastmod_ctr += 1
+            raise
+
         self.mod_fastmod_ctr += 1
 
     def mod_fastiv(self,
@@ -318,20 +331,24 @@ class SQUID_testing():
             mod_R = self.defaults['mod_R']
         if fc_R == None:
             fc_R = self.defaults['fc_R']
-
-        self._three_param_sweep(i0s=np.array([fc_current]),
-                                i1s=mod_Is,
-                                i2s=iv_Is,
-                                r0=fc_R,
-                                r1=mod_R,
-                                r2=iv_R,
-                                o0='fc',
-                                o1='mod',
-                                o2='iv',
-                                i0='iv',
-                                sample_rate=sample_rate,
-                                basename=basename,
-                                pre_notes=pre_notes)
+        
+        try:
+            self._three_param_sweep(i0s=np.array([fc_current]),
+                                    i1s=mod_Is,
+                                    i2s=iv_Is,
+                                    r0=fc_R,
+                                    r1=mod_R,
+                                    r2=iv_R,
+                                    o0='fc',
+                                    o1='mod',
+                                    o2='iv',
+                                    i0='iv',
+                                    sample_rate=sample_rate,
+                                    basename=basename,
+                                    pre_notes=pre_notes)
+        except:
+            self.mod_fastiv_ctr += 1
+            raise
         self.mod_fastiv_ctr += 1
 
     def fc_fastmod(self,
@@ -365,20 +382,23 @@ class SQUID_testing():
             mod_R = self.defaults['mod_R']
         if fc_R == None:
             fc_R = self.defaults['fc_R']
-
-        self._three_param_sweep(i0s=np.array([fc_current]),
-                                i1s=fc_Is,
-                                i2s=mod_Is,
-                                r0=iv_R,
-                                r1=fc_R,
-                                r2=mod_R,
-                                o0='iv',
-                                o1='fc',
-                                o2='mod',
-                                i0='iv',
-                                sample_rate=sample_rate,
-                                basename=basename,
-                                pre_notes=pre_notes)
+        try:
+            self._three_param_sweep(i0s=np.array([fc_current]),
+                                    i1s=fc_Is,
+                                    i2s=mod_Is,
+                                    r0=iv_R,
+                                    r1=fc_R,
+                                    r2=mod_R,
+                                    o0='iv',
+                                    o1='fc',
+                                    o2='mod',
+                                    i0='iv',
+                                    sample_rate=sample_rate,
+                                    basename=basename,
+                                    pre_notes=pre_notes)
+        except:
+            self.fc_fastmod_ctr += 1
+            raise
         self.fc_fastmod_ctr += 1
 
     def fc_fastfc(self,
@@ -404,7 +424,7 @@ class SQUID_testing():
         iv_current (float):        current in Amps to bias the iv line
         pre_notes (string):        any notes about this iv?
         '''
-        basename = '/fc_fastmod_{0:03d}'.format(self.fc_fastmod_ctr)
+        basename = '/fc_fastmod_{0:03d}'.format(self.fc_fastfc_ctr)
 
         if iv_R == None:
             iv_R = self.defaults['iv_R']
@@ -412,21 +432,91 @@ class SQUID_testing():
             mod_R = self.defaults['mod_R']
         if fc_R == None:
             fc_R = self.defaults['fc_R']
-
-        self._three_param_sweep(i0s=np.array([fc_current]),
-                                i1s=mod_Is,
-                                i2s=fc_Is,
-                                r0=iv_R,
-                                r1=mod_R,
-                                r2=fc_R,
-                                o0='iv',
-                                o1='mod',
-                                o2='fc',
-                                i0='iv',
-                                sample_rate=sample_rate,
+        
+        try:
+            self._three_param_sweep(i0s=np.array([fc_current]),
+                                    i1s=mod_Is,
+                                    i2s=fc_Is,
+                                    r0=iv_R,
+                                    r1=mod_R,
+                                    r2=fc_R,
+                                    o0='iv',
+                                    o1='mod',
+                                    o2='fc',
+                                    i0='iv',
+                                    sample_rate=sample_rate,
+                                    basename=basename,
+                                    pre_notes=pre_notes)
+        except:
+            self.fc_fastfc_ctr += 1
+            raise
+        self.fc_fastfc_ctr += 1
 
     def _sweep_to_val_safe(self, outputname, val, numsteps, rate):
         _,_ = self.daq.singlesweep(outputname, 
                                    val,
                                    numsteps=int(numsteps),
                                    sample_rate=rate)
+
+class SQUID_testing_plotter:
+    import xarray as xr
+
+    def __init__(self, filename):
+        self.dataset = xr.open_dataset(filename)
+        self.filename = filename
+
+    def update(self):
+        self.dataset = xr.open_dataset(filename)
+
+    
+    def plot_iv(self, number):
+        fig,ax = plt.subplots()
+
+        basename = 'iv_{0:03d}'.format(number)
+        iv = self.dataset.get(basename + '_V')[0,0]
+
+        ax.plot(iv.loc[:,'incr','iv_Vsrc'] / iv.iv_R / 1e-6,
+                iv.loc[:,'incr','iv_Vmeas'] / 1e-6, label='incr')
+        ax.plot(iv.loc[:,'decr','iv_Vsrc'] / iv.iv_R / 1e-6,
+                iv.loc[:,'decr','iv_Vmeas'] / 1e-6, label='decr')
+                     label='DOWN')
+        self.ax.legend()
+        self.ax.set_xlabel(r'$I_{squid}$ ($\mu A$)')
+        self.ax.set_ylabel(r'$V_{squid}$ ($\mu V$)')
+        self.ax.text(0,0, 
+                    self.dataset.__filename_of_dataserver.replace('\\', ' \\'),
+                    horizontalalignment='left', verticalalignment='bottom',
+                    transform=ax.transAxes, fontsize=8, family='monospace', wrap=True)
+
+        self.ax.text(.9,0, 
+                    'rate={0:2.2f} Sa/s'.format(iv.sample_rate),
+                    horizontalalignment='left', verticalalignment='bottom',
+                    transform=ax.transAxes, fontsize=8, family='monospace', wrap=True)
+
+        Is = iv.loc[:,'incr', 'iv_Vsrc']/iv.iv_R
+        self.ax.text(.9,.9,
+                    'Rshunt ~ {0:2.2f} ohms'.format(
+                        np.abs( np.max(iv.loc[:,'incr', 'iv_Vmeas']) - 
+                                np.min(iv.loc[:,'incr', 'iv_Vmeas'])  
+                                )/
+                        np.abs( Is[np.argmax(iv.loc[:,'incr', 'iv_Vmeas'])] -
+                                Is[np.argmin(iv.loc[:,'incr', 'iv_Vmeas'])]    
+                                )*2),
+                    horizontalalignment='right', verticalalignment='top',
+                    transform=ax.transAxes, fontsize=8, family='monospace', wrap=True)
+        return [fig,ax]
+
+    def plot_mod_fastiv(self, number, direction='incr',):
+        fig, axs = plt.subplots(1,2, figsize=(16,6))
+
+        basename = '/mod_fastiv_{0:03d}'.format(number)
+        mod = self.dataset.get(basename + '_V').loc[0,:,:, direction]
+
+        mod.coords['I_mod'] = ( (basename + '_mod_i', basename + '_iv_i'),
+                                mod[:,:,'mod_Vsrc']/mod.mod_R*1e6)
+        mod.coords['I_iv'] = ( (basename + '_mod_i', basename + '_iv_i'),
+                                mod[:,:,'iv_Vsrc']/mod.iv_R)
+        
+        (mod.loc[:,:,'iv_Vmeas']*1e6).plot(ax=axs[0], x='I_mod', y='I_iv')
+        
+
