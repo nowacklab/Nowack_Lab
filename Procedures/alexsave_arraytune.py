@@ -36,6 +36,8 @@ class SQUID_Noise():
                  fc_R,
                  fc_rate,
                  rms_range,
+                 slock_tol,
+                 stune_tol,
                  set_preamp_gain,
                  set_preamp_filter,
                  set_preamp_dccouple,
@@ -68,7 +70,10 @@ class SQUID_Noise():
 
         self.rms_range = rms_range
 
-    def lock_squid(self, attempts=5, sflux_offset=0, squid_tol=.1):
+        self.slock_tol = slock_tol
+        self.stune_tol = stune_tol
+
+    def lock_squid(self, attempts=5, sflux_offset=0, slock_tol=None):
         """
         Lock the SQUID and adjust the DC SQUID flux.
         Adjust the DC offset of the SQUID signal to be near
@@ -89,30 +94,32 @@ class SQUID_Noise():
         attempts        (int): number of times to run this (recursive)
         sflux_offset    (float): offset midpoint of signal by this much
                                  always 0 to prevent overloading preamp
-        squid_tol       (float): signal is at least squid_tol from zero
+        squid_tol       (float or None): signal is at least squid_tol from zero
 
         Returns:
         ~~~~~~~~
         If locked or not
 
         """
+        if slock_tol == None:
+            slock_tol = self.slock_tol
         self.saa.lock("Squid")
         self.saa.testSignal = "Off"
         self.saa.reset()
-        [error, _] = self._minimize_attr("A_flux", 
+        [error, _] = self._minimize_attr("S_flux", 
                                     channels=['saa'], 
                                     evalchannel='saa',
-                                    offset=aflux_offset, 
-                                    tol=squid_tol)
+                                    offset=sflux_offset, 
+                                    tol=slock_tol)
 
-        if self.debug:
-            print('lock_squid error:', error)
+        #if self.debug:
+        #    print('lock_squid error:', error)
 
-        if np.abs(error) < squid_tol:
+        if np.abs(error) < slock_tol:
             print("locked with {} attempts".format(5-attempts))
             return True
         elif attempts == 0:
-            print("Cannot lock SQUID. Cannot zero signal within squid_tol.")
+            print("Cannot lock SQUID. Cannot zero signal within slock_tol.")
             return False
         else:
             return self.lock_squid(attempts - 1)
@@ -137,7 +144,7 @@ class SQUID_Noise():
          the flux bias point necessary to make the jump,
         ]
         '''
-        [istuned,_] = self.tune_squid()
+        [istuned,_] = self.tune_squid(self.saa.S_bias)
         if not istuned:
             return [False, np.nan, -1]
         islocked = self.lock_squid()
@@ -145,7 +152,7 @@ class SQUID_Noise():
             return [False, np.nan, -1]
         sfluxlim = self.saa.S_flux_lim
         self.saa.sensitivity = 'Medium'
-        return self._findconversion('S_flux', sfluxlim, stepsize, dur) 
+        return self._findconversion('S_flux', sfluxlim, stepsize=stepsize) 
 
     def _findconversion(self, attrname, maxattrval, stepsize=1):
         '''  
@@ -185,7 +192,7 @@ class SQUID_Noise():
 
         return [False, np.nan, -1]
 
-    def tune_squid(self, sbias, attempts=5, aflux_offset=0, aflux_tol=.01):
+    def tune_squid(self, sbias, attempts=5, aflux_offset=0, stune_tol=None):
         """
         Tune the SQUID and adjust the DC SAA flux.  Array locked,
         lock on a specific value of the SQUID characteristic.
@@ -199,7 +206,7 @@ class SQUID_Noise():
         ~~~~~~~~~~~~
         SQUID is tuned
             SQUID biased to sbias
-            aflux_tol < midpoint(characteristic) + aflux_offset
+            stune_tol < midpoint(characteristic) + aflux_offset
 
         Returns:
         ~~~~~~~
@@ -209,22 +216,22 @@ class SQUID_Noise():
                      'test': test signal voltages
         ]
         """
+        if stune_tol == None:
+            stune_tol = self.stune_tol
         self._tune_squid_setup(sbias)
         [error, rec] = self._minimize_attr("A_flux", 
                                     evalchannel='saa',
                                     channels=['saa','test'], 
                                     offset=aflux_offset, 
-                                    tol=_tol)
+                                    tol=stune_tol)
 
-        if self.debug:
-            print('Tune_squid error:', error)
-        if np.abs(error) < aflux_tol:
+        if np.abs(error) < stune_tol:
             return [True, rec]
         elif attempts == 0:
             print("Cannot tune SQUID.  No good place on characteristic")
             return [False, rec]
         else:
-            return self.tune_squid(attempts = attempts-1)
+            return self.tune_squid(sbias, attempts = attempts-1)
 
     def _tune_squid_setup(self, sbias):
         """
@@ -327,6 +334,12 @@ class SQUID_Noise():
         received = self.daq.monitor('saa', self.fast_dur, 
                                     sample_rate=self.fast_rate)
         return np.mean(received['saa']), np.std(received['saa'])
+
+    def _getmaxabs(self):
+        received = self.daq.monitor('saa', self.fast_dur, 
+                                    sample_rate=self.fast_rate)
+        return np.max(np.abs(received['saa'])) 
+
     
     def _len_of_fft(self):
         '''
@@ -352,6 +365,8 @@ class SQUID_Noise_Open_Loop(SQUID_Noise):
             fc_rate=100,
             rms_range=(500,5000),
             phi_0_per_sflux_uA=1/170,
+            slock_tol=.01,
+            stune_tol=.01,
             set_preamp_gain=None,
             set_preamp_filter=None,
             set_preamp_dccouple=None,
@@ -370,6 +385,8 @@ class SQUID_Noise_Open_Loop(SQUID_Noise):
                 fc_R,
                 fc_rate,
                 rms_range,
+                slock_tol,
+                stune_tol,
                 set_preamp_gain,
                 set_preamp_filter,
                 set_preamp_dccouple,
@@ -454,7 +471,7 @@ class SQUID_Noise_Open_Loop(SQUID_Noise):
         self.saver.make_dim('/asd/', 0, 'sbias', '/sbias/', 'sbias (uA)')
         self.saver.make_dim('/asd/', 1, 'sflux', '/sflux/', 'sflux (uA)')
         self.saver.make_dim('/asd/', 2, 'f', '/f/', 'frequency (Hz)')
-        self.saver.create_attr('/asd/', 'units', 'phi_0/Hz^.5')
+        self.saver.create_attr('/asd/', 'units', r'$\phi_0/\sqrt{Hz\rm}$')
 
         self.saver.append('/asd_rms/',
                             np.full((self.sbias.shape[0],
@@ -465,7 +482,7 @@ class SQUID_Noise_Open_Loop(SQUID_Noise):
         self.saver.make_dim('/asd_rms/', 1, 'sflux', '/sflux/', 'sflux (uA)')
         self.saver.make_dim('/asd_rms/', 2, 'rms_data_names', 
                             '/_rms_data_names/', 'rms data names')
-        self.saver.create_attr('/asd_rms/', 'units', 'phi_0/Hz^.5')
+        self.saver.create_attr('/asd_rms/', 'units', r'\Phi_0/\sqrt{Hz\rm}')
 
         self.saver.append('/wasoverloaded/', 
                             np.full((self.sbias.shape[0],
@@ -495,6 +512,7 @@ class SQUID_Noise_Open_Loop(SQUID_Noise):
                  'asd': 'phi_0/Hz^.5',
                  'asd_rms': 'phi_0/Hz^.5',
                  'wasoverloaded': 'boolean (0 False, 1 True)',
+                 'rms_range': self.rms_range,
                     })
         
 
@@ -551,11 +569,14 @@ class SQUID_Noise_Open_Loop(SQUID_Noise):
             # save fourier transformed data
             [f, psd] = Welch.welchf(r['dc']/self.preamp.gain, self.sample_rate,
                                     self.fft_fspace)
-            asd = np.sqrt(psd) / np.abs(v_per_sflux_uA) * self.phi_0_per_sflux_uA
+            conversion = 1 / np.abs(v_per_sflux_uA) * self.phi_0_per_sflux_uA
+            asd = np.sqrt(psd) *conversion
             self.saver.append('/asd/', asd, slc=(i,j))
 
             # save rms
             [rms, rms_sigma] = NL_util.make_rms(f, psd, self.rms_range, sigma=2)
+            rms = rms*conversion
+            rms_sigma = rms_sigma*conversion
             self.saver.append('/asd_rms/', np.array([rms, rms_sigma]), slc=(i,j))
 
     def _get_overview(self, i):
@@ -598,16 +619,18 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
                  instruments,
                  sbias=[],
                  num_aflux=10,
-                 sample_dur=1,
-                 sample_rate=128000,
+                 sample_dur=3,
+                 sample_rate=76800,
                  fast_dur=.05,
-                 fast_rate=128000,
+                 fast_rate=25600,
                  fft_fspace=1,
                  fc_Is=[],
                  fc_R=300,
                  fc_rate=1000,
                  rms_range=(500,5000),
                  phi0perVmed=.565,
+                 slock_tol=.05,
+                 stune_tol=.01,
                  set_preamp_gain=None,
                  set_preamp_filter=None,
                  set_preamp_dccouple=None,
@@ -619,11 +642,12 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
                 fast_dur,
                 fast_rate,
                 fft_fspace,
-                fft_fspace,
                 fc_Is,
                 fc_R,
                 fc_rate,
                 rms_range,
+                slock_tol,
+                stune_tol,
                 set_preamp_gain,
                 set_preamp_filter,
                 set_preamp_dccouple,
@@ -634,14 +658,14 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
         self.num_aflux = int(num_aflux)
         self.phi0perVmed = phi0perVmed
 
-        len_fft = self._len_of_fft()
+        f, len_fft = self._len_of_fft()
 
         self.saver = Saver(name='SQUID_Noise_Closed_Loop')
 
         # dimensions / coordinates
         self.saver.append('/sbias/', self.sbias)
         self.saver.create_attr('/sbias/', 'units', 'saa uA')
-        self.saver.append('/_num_afluxes/', np.arange(0,self._num_aflux))
+        self.saver.append('/_num_aflux/', np.arange(0,self.num_aflux))
         self.saver.create_attr('/_num_aflux/', 'units', 'index')
         self.saver.append('/t_Vspectrum/', 
                           np.linspace(0,self.sample_dur,
@@ -652,7 +676,7 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
                                       int(self.fast_rate*self.fast_dur)))
         self.saver.create_attr('/t_Vsquidchar/', 'units', 'seconds')
         self.saver.append('/_vsquidchar_data_names/', ['test', 'Vsaa'])
-        self.saver.append('/f/', np.full(len_fft, np.nan))
+        self.saver.append('/f/', f)
         self.saver.create_attr('/f/', 'units', 'Hz')
         self.saver.append('/_Vfc_sweep_data_names/', ['Vsrc', 'Vmeas'])
         self.saver.append('/t_Vfc_sweep/', 
@@ -727,7 +751,7 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
                                      self.num_aflux), np.nan))
         self.saver.make_dim('/phi_0_per_V/', 0, 'sbias', '/sbias/', 'sbias (uA)')
         self.saver.make_dim('/phi_0_per_V/', 1, 'aflux_num', '/_num_aflux/', 'index')
-        self.saver.create_attr('/phi_0_per_V/', 'units', 'phi_0 / Volts')
+        self.saver.create_attr('/phi_0_per_V/', 'units', r'$\Phi_0 / $Volts')
 
         self.saver.append('/Vfc_sweep/', 
                             np.full((self.sbias.shape[0],
@@ -752,6 +776,15 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
                             'index')
         self.saver.create_attr('/wasoverloaded/', 'units', 
                                 'boolean (0 False, 1 True)')
+        self.saver.append('/gain/',
+                            np.full((self.sbias.shape[0],
+                                         self.num_aflux),
+                                         np.nan))
+        self.saver.make_dim('/gain/', 0, 'sbias', '/sbias/', 'sbias (uA)')
+        self.saver.make_dim('/gain/', 1, 'aflux_num', '/_num_aflux/', 
+                            'index')
+        self.saver.create_attr('/gain/', 'units', 
+                                'gain')
 
         self.saver.append('/Vspectrum_starttimes/',
                             np.full((self.sbias.shape[0],
@@ -775,7 +808,7 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
         self.saver.create_attr('/Vfc_sweep_starttimes/', 'units', 
                             'epoch time (seconds)')
 
-        self.saver.append('/Vpsectrum_asd/', 
+        self.saver.append('/Vspectrum_asd/', 
                             np.full((self.sbias.shape[0],
                                      self.num_aflux,
                                      len_fft,
@@ -787,7 +820,7 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
                             '/_num_aflux/', 'index')
         self.saver.make_dim('/Vspectrum_asd/', 2, 'frequency', 
                             '/f/', 'frequency (Hz)')
-        self.saver.create_attr('/Vspectrum_asd/', 'units', 'phi_0/Hz^.5')
+        self.saver.create_attr('/Vspectrum_asd/', 'units', r'$\Phi_0/\sqrt{Hz\rm}$')
 
         self.saver.append('/Vspectrum_asd_rms/',
                             np.full((self.sbias.shape[0],
@@ -800,7 +833,7 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
                             '/_num_aflux/', 'index')
         self.saver.make_dim('/Vspectrum_asd_rms/', 2, 'rms_data_names', 
                             '/_rms_data_names/', 'names of rms data')
-        self.saver.create_attr('/Vspectrum_asd_rms/', 'units', 'phi_0/Hz^.5')
+        self.saver.create_attr('/Vspectrum_asd_rms/', 'units', r'$\Phi_0/\sqrt{Hz\rm}$')
 
         self.saver.create_attr_dict('/',
                 {'sample_dur': sample_dur,
@@ -811,6 +844,7 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
                  'fc_Is': fc_Is,
                  'fc_R': fc_R,
                  'fc_rate': fc_rate,
+                 'rms_range': self.rms_range,
                 })
 
     def _make_aflux(self, i):
@@ -822,12 +856,13 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
         self.saa.testSignal = 'On'
         self.saa.testInput = 'S_flux'
         self.saa.sensitivity = 'Med'
-        self.reset()
+        self.saa.reset()
         r = self.daq.monitor(['saa'], self.fast_dur,
                              sample_rate=self.fast_rate)
         span = np.max(r['saa']) - np.min(r['saa'])
         aflux = np.linspace(-span/2, span/2, self.num_aflux)
         self.saver.append('/aflux/', aflux, slc=(i,))
+        return aflux
 
     def _take_spectrum(self, i, j, phi0perV):
         '''
@@ -842,38 +877,55 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
                             slc=(i,j))
         self.saver.append('/wasoverloaded/', self.preamp.is_OL(), 
                             slc=(i,j))
+        self.saver.append('/gain/', self.preamp.gain, slc=(i,j))
+        self.saver.append('/Vspectrum_starttimes/', starttime, slc=(i,j))
         
         # save amplitude spectral density
         [f, psd] = Welch.welchf(r['dc']/self.preamp.gain, self.sample_rate,
                                 self.fft_fspace)
-        asd = np.sqrt(psd) * phi0perV
+        asd = np.sqrt(psd) * phi0perV/10 # High sensitivity
         self.saver.append('/Vspectrum_asd/', asd, slc=(i,j))
         
         # save rms
         [rms, rms_sigma] = NL_util.make_rms(f, psd, self.rms_range, sigma=2)
+        rms = rms*phi0perV/10
+        rms_sigma = rms_sigma*phi0perV/10
         self.saver.append('/Vspectrum_asd_rms/', 
                           np.array([rms, rms_sigma]), slc=(i,j))
                             
     def _take_conversion(self, i, j):
-        [found, phi0perV, _] = self.findconversion(dur=self.fast_dur)
+        self.saa.sensitivity='Med'
+        self.saa.testSignal='Off'
+        islocked = self.lock_squid()
+
+        if not islocked:
+            return self.phi0perVmed
+
+        [found, phi0perV, _] = self.findconversion(dur=self.fast_dur, stepsize=10)
+
         if not found:
             return self.phi0perVmed
-        if np.abs(phi0perV - self.phi0perVmed) > .1:
+
+        if np.abs(phi0perV - self.phi0perVmed) > self.phi0perVmed:
             return self.phi0perVmed
-        self.append('/phi_0_per_V/', phi0perV, slc=(i,j))
+
+        self.saver.append('/phi_0_per_V/', phi0perV, slc=(i,j))
         return phi0perV
 
     def _prep_spectrum(self):
+        #self.saa.reset()
         self.saa.sensitivity = 'High'
-        self.testSignal='Off'
-        self.preamp.filter=(1,10000)
-        self.preamp.gain=10 #auto-gain?
-        self.reset()
+        self.testSignal = 'Off'
+        self.preamp.filter = (1,30000)
+        maxabs = self._getmaxabs()
+        gain = NL_util.preamp_gain(self._getmaxabs())
+        self.preamp.gain = gain
+        #self.saa.reset()
 
     def _prep_fc_linearity(self):
         self.saa.sensitivity = 'Med'
         self.saa.reset()
-        self.preamp.filter = (1,300)
+        #self.preamp.filter = (1,300)
         self.preamp.gain = 1
         self.saa.reset()
 
@@ -884,6 +936,7 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
         saves after completion
         '''
         fc_Vs = self.fc_Is * self.fc_R
+        starttime = time.time()
 
         _,_ = self.daq.singlesweep('fieldcoil', fc_Vs[0],
                                     numsteps=self.fc_Is.shape[0]/2,
@@ -897,9 +950,9 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
                                     numsteps=self.fc_Is.shape[0]/2,
                                     sample_rate=self.fc_rate)
         
-        self.saver.append('/Vfc_sweep/', rec['t'], slc=(i,j,0))
-        self.saver.append('/Vfc_sweep/', out['fieldcoil'], slc=(i,j,1))
-        self.saver.append('/Vfc_sweep/', rec['fieldcoil'], slc=(i,j,2))
+        self.saver.append('/Vfc_sweep/', out['fieldcoil'], slc=(i,j,0))
+        self.saver.append('/Vfc_sweep/', rec['dc'], slc=(i,j,1))
+        self.saver.append('/Vfc_sweep_starttimes/', starttime, slc=(i,j))
 
     def _tune(self, aflux, sbias, i, j):
         '''
@@ -911,15 +964,13 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
         self.saver.append('/wastuned/', int(istunned),
                             slc=(i,j))
 
-        self.saver.append('/Vsquidchar/', r['t'],
-                            slc=(i,j,0))
         self.saver.append('/Vsquidchar/', r['test'],
-                            slc=(i,j,1))
+                            slc=(i,j,0))
         self.saver.append('/Vsquidchar/', r['saa'],
-                            slc=(i,j,2))
+                            slc=(i,j,1))
         return istunned
 
-    def _lock(self, aflux, i, j):
+    def _lock(self, i, j):
         '''
         lock the squid at aflux aflux_offset
         i,j are the sbias, aflux_offset index
@@ -928,29 +979,50 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
         islocked = self.lock_squid()
         self.saver.append('/waslocked_med/', int(islocked),
                             slc=(i,j))
+        if not islocked:
+            # if I cannot lock at medium, I have no chance 
+            return islocked
 
-        self._prep_spectrum(aflux)
+        self.saa.sensitivity = 'High'
         islocked = self.lock_squid()
+
+        if not islocked: # sometimes you need to give it a push
+            print('Cannot Lock.  Giving a Push')
+            offset = 100
+            if self.saa.S_flux > self.saa.S_flux_lim/2:
+                offset = -100
+            self.saa.S_flux = self.saa.S_flux + offset
+            islocked = self.lock_squid()
+
         self.saver.append('/waslocked_high/', int(islocked),
                             slc=(i,j))
+        if islocked:
+            maxabs = self._getmaxabs()
+            gain = NL_util.preamp_gain(self._getmaxabs())
+            self.preamp.gain = gain
+
         return islocked
 
     def run(self):
         for i in range(self.sbias.shape[0]):
-
             aflux = self._make_aflux(i)
+            if (aflux.max() - aflux.min()) < .001: 
+                print('No afluxes, SQUID characteristic amplitude is too small')
+                continue
             for j in range(self.num_aflux):
                 istunned = False
                 islocked = False
 
-                istunned = self._tune(aflux[j], sbias[i], i, j)
+                istunned = self._tune(aflux[j], self.sbias[i], i, j)
 
                 if istunned:
-                    islocked = self._lock(aflux[j], i, j)
+                    phi0perV = self._take_conversion(i,j)
+                    islocked = self._lock(i, j)
                     
                     if islocked:
+                        print('Locked: sbias: {0}, aflux: {1}'.format(
+                                self.sbias[i], aflux[j]))
                         self._prep_spectrum()
-                        phi0perV = self._take_conversion(i,j)
                         self._take_spectrum(i,j, phi0perV)
                         self._prep_fc_linearity()
                         self._take_fc_linearity(i,j)
