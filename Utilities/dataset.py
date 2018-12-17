@@ -94,7 +94,7 @@ class Dataset():
                 h5path = pathtowrite + sep.join([str(place) for place in path])
                 if not isinstance(obj, dict):
                     self._writetoh5(data = obj, path = h5path, dtype=dtype,
-                                    chucks=chucks)
+                                    chunks=chunks)
             self.dictvisititems(cleandatatowrite, _loadhdf5)
         elif isinstance(cleandatatowrite, (np.ndarray, list) +
                                             tuple(self.allowedtypes))  and slc:
