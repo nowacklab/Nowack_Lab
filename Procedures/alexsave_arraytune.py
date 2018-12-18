@@ -124,7 +124,7 @@ class SQUID_Noise():
         else:
             return self.lock_squid(attempts - 1)
 
-    def findconversion(self, dur=.1, stepsize=1):
+    def findconversion(self, stepsize=1):
         '''  
         Find the squid phi_0/V using the saa reset
 
@@ -177,19 +177,22 @@ class SQUID_Noise():
 
         self.saa.testSignal='Off'
         self.saa.sensitivity = 'Medium'
+
+        startattrval = getattr(self.saa, attrname)
         setattr(self.saa, attrname, 0)
         self.saa.reset()
 
         for attrval in np.arange(0, maxattrval+1, stepsize):
-            self.saa.sensitivity = 'Medium'
             setattr(self.saa, attrname, attrval)
             premean, prestd = self._getmean()
             self.saa.reset()
             posmean, posstd = self._getmean()
             if np.abs(premean - posmean) > 8*np.maximum(prestd, posstd):
                 print(attrname, '=', attrval)
+                setattr(self.saa, attrname, startattrval)
                 return [True, 1/abs(posmean - premean), attrval]
 
+        setattr(self.saa, attrname, startattrval)
         return [False, np.nan, -1]
 
     def tune_squid(self, sbias, attempts=5, aflux_offset=0, stune_tol=None):
@@ -276,7 +279,7 @@ class SQUID_Noise():
 
         value = getattr(self.saa, attr)
 
-        conversion = -1/(self._calibrate_adjust(attr))
+        conversion = -1/(self._calibrate_adjust(attr)[0])
 
         if False:
             print('    adjusting {0}: error={1:3.3f}, {0}+={2:3.3f}'.format(
@@ -300,7 +303,7 @@ class SQUID_Noise():
         error = self._midpoint(rec[evalchannel]) + offset
         return [error, rec]
 
-    def _calibrate_adjust(self, attr, monitortime=.25, step=10):
+    def _calibrate_adjust(self, attr, step=1):
         """
         Create conversion factor for adjust in V/[attr]
         For a given step size, how much does the SAA signal change?
@@ -308,11 +311,13 @@ class SQUID_Noise():
         Parameters:
         -----------
         attr        (string): parameter of squidarray to change
-        monitortime (float): time in seconds to monitor the saa signal
         step        (float): step size to change attr
         """
+        success = True
         conversion = 0
         attr_state = getattr(self.saa,attr)
+        sigstate = getattr(self.saa, 'testSignal')
+        self.saa.testSignal='Off'
 
         mean1,_ = self._getmean()
         setattr(self.saa, attr, attr_state + step)
@@ -322,13 +327,15 @@ class SQUID_Noise():
         conversion_ = np.sign(conversion) * np.minimum(
                             100, np.maximum(.001, np.abs(conversion)))
         if conversion != conversion_:
-            print('Conversion (V/{0}) out of range: {1}'.format(
-                attr, conversion))
+            #print('Conversion (V/{0}) out of range: {1}'.format(
+            #    attr, conversion))
             conversion = conversion_
+            success = False
 
         setattr(self.saa, attr, attr_state)
+        setattr(self.saa, 'testSignal', sigstate)
 
-        return conversion
+        return [conversion, success]
 
     def _getmean(self):
         received = self.daq.monitor('saa', self.fast_dur, 
@@ -847,20 +854,24 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
                  'rms_range': self.rms_range,
                 })
 
-    def _make_aflux(self, i):
+    def _make_aflux(self, i, sbias):
         '''
         determine afluxes you wish to sweep
         by default, it sweeps all afluxes between the max and 
         min value
         '''
-        self.saa.testSignal = 'On'
-        self.saa.testInput = 'S_flux'
-        self.saa.sensitivity = 'Med'
-        self.saa.reset()
-        r = self.daq.monitor(['saa'], self.fast_dur,
-                             sample_rate=self.fast_rate)
-        span = np.max(r['saa']) - np.min(r['saa'])
-        aflux = np.linspace(-span/2, span/2, self.num_aflux)
+        [istunned, r] = self.tune_squid(sbias, aflux_offset=0)
+
+        #r = self.daq.monitor(['saa'], self.fast_dur,
+        #                     sample_rate=self.fast_rate)
+
+        print(np.max(r['saa']), np.min(r['saa']))
+
+        span = np.abs(np.max(r['saa']) - np.min(r['saa']))
+        print(span, -span/2-span/(self.num_aflux-2))
+        aflux = np.linspace(-span/2 - span/(self.num_aflux-2), 
+                             span/2 + span/(self.num_aflux-2),  
+                             self.num_aflux) # include 2 points that are not valid
         self.saver.append('/aflux/', aflux, slc=(i,))
         return aflux
 
@@ -894,15 +905,21 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
                           np.array([rms, rms_sigma]), slc=(i,j))
                             
     def _take_conversion(self, i, j):
-        self.saa.sensitivity='Med'
-        self.saa.testSignal='Off'
-        islocked = self.lock_squid()
+        '''
+        Measure phi0/V
 
-        if not islocked:
-            return self.phi0perVmed
+        State Before:
+        ~~~~~~~~~~~~
+        SQUID locked on Medium
+        Test Signal Off
 
-        [found, phi0perV, _] = self.findconversion(dur=self.fast_dur, stepsize=10)
-
+        State After:
+        ~~~~~~~~~~~~
+        Same as before
+        '''
+        [found, phi0perV, _] = self._findconversion('S_flux', 
+                                                    self.saa.S_flux_lim, 
+                                                    stepsize=20) 
         if not found:
             return self.phi0perVmed
 
@@ -970,61 +987,111 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
                             slc=(i,j,1))
         return istunned
 
-    def _lock(self, i, j):
+    def _lock(self, i, j, sensitivity='Med'):
         '''
         lock the squid at aflux aflux_offset
         i,j are the sbias, aflux_offset index
         saves state (islocked)
+
+        State Before:
+        ~~~~~~~~~~~~
+        SQUID tuned
+
+        State After:
+        ~~~~~~~~~~~
+        SQUID locked
+        saa
+            sensitivity = sensitivity
+            testSignal = Off
         '''
-        islocked = self.lock_squid()
-        self.saver.append('/waslocked_med/', int(islocked),
-                            slc=(i,j))
+        self.saa.sensitivity = sensitivity 
+        islocked = self.lock_squid(attempts=4)
         if not islocked:
-            # if I cannot lock at medium, I have no chance 
-            return islocked
-
-        self.saa.sensitivity = 'High'
-        islocked = self.lock_squid()
-
-        if not islocked: # sometimes you need to give it a push
-            print('Cannot Lock.  Giving a Push')
+            print('Cannot Lock at {0}.  Giving a Push'.format(sensitivity))
             offset = 100
             if self.saa.S_flux > self.saa.S_flux_lim/2:
                 offset = -100
             self.saa.S_flux = self.saa.S_flux + offset
-            islocked = self.lock_squid()
+            islocked = self.lock_squid(attempts=3)
 
-        self.saver.append('/waslocked_high/', int(islocked),
-                            slc=(i,j))
-        if islocked:
-            maxabs = self._getmaxabs()
-            gain = NL_util.preamp_gain(self._getmaxabs())
-            self.preamp.gain = gain
+        if sensitivity=='Med':
+            name = '/waslocked_med/'
+        else:
+            name = '/waslocked_high/'
+
+        self.saver.append(name, int(islocked), slc=(i,j))
 
         return islocked
 
+    def _prep_preamp(self):
+        '''
+        State Before:
+        ~~~~~~~~~~~~
+        squid locked
+        '''
+        maxabs = self._getmaxabs()
+        gain = NL_util.preamp_gain(self._getmaxabs())
+        self.preamp.gain = gain
+
+
     def run(self):
+
+        self.times_makeaflux = []
+        self.times_tune = []
+        self.times_take_conversion = []
+        self.times_lock_med = []
+        self.times_lock_high = []
+
         for i in range(self.sbias.shape[0]):
-            aflux = self._make_aflux(i)
-            if (aflux.max() - aflux.min()) < .001: 
+            s = time.time()
+            aflux = self._make_aflux(i, self.sbias[i])
+            e = time.time()
+            self.times_makeaflux.append(e-s)
+
+            if (aflux.max() - aflux.min()) < .01: 
                 print('No afluxes, SQUID characteristic amplitude is too small')
-                continue
-            for j in range(self.num_aflux):
-                istunned = False
-                islocked = False
+            else:
+                self._run_over_afluxes(aflux, i)
 
-                istunned = self._tune(aflux[j], self.sbias[i], i, j)
+    def _run_over_afluxes(self, aflux, i):
+        for j in range(self.num_aflux):
+            s = time.time()
+            istunned = self._tune(aflux[j], self.sbias[i], i, j)
+            e = time.time()
+            self.times_tune.append(e-s)
 
-                if istunned:
+            if istunned:
+                s = time.time()
+                islock_med = self._lock(i,j, 'Med')
+                e = time.time()
+                self.times_lock_med.append(e-s)
+
+                if islock_med:
+                    s = time.time()
                     phi0perV = self._take_conversion(i,j)
-                    islocked = self._lock(i, j)
-                    
-                    if islocked:
+                    e = time.time()
+                    self.times_take_conversion.append(e-s)
+
+                    s = time.time()
+                    islock_high = self._lock(i,j, 'High')
+                    e = time.time()
+                    self.times_lock_high.append(e-s)
+
+                    if islock_high:
                         print('Locked: sbias: {0}, aflux: {1}'.format(
-                                self.sbias[i], aflux[j]))
+                            self.sbias[i], aflux[j]))
+                        self._prep_preamp()
                         self._prep_spectrum()
                         self._take_spectrum(i,j, phi0perV)
                         self._prep_fc_linearity()
                         self._take_fc_linearity(i,j)
+
+                    else:
+                        print('Cannot lock on High')
+                else:
+                    print('Cannot lock on Medium so we cannot lock at High')
+            else:
+                print('Cannot Tune the SQUID')
+                    
 
 
