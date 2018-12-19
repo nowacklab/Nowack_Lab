@@ -592,12 +592,12 @@ class AMI420_ResistiveLoad(AMI420):
     Removes all persistent mode functionality
     '''
 
-    _Bmax = 10000000
-    _Imax = 20  # A
-    _coilconst = 1  # T/A  - manually update!
-    _Iratemax = 10  # A/min
+    _Bmax = .14
+    _Imax = 8.7  # A
+    _coilconst = 0.0149  # T/A
+    _Iratemax = .6  # A/min - slow to avoid hysteresis
     _Bratemax = _coilconst*_Iratemax
-    _Vmax = 2.5
+    _Vmax = 5
 
     interrupted = False  # used to monitor KeyboardInterrupts during ramping
 
