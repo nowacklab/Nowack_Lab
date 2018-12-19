@@ -16,18 +16,29 @@ class SR5113(VISAInstrument):
     _gain = None
     _filter = None
 
-    def __init__(self, port='COM4'):
+    def __init__(self, port='COM4', autosleep=10):
         '''
         Driver for the Signal Recovery 5113 preamplifier.
+
+        autosleep: time delay before preamp enters sleep mode. False if no auto
         '''
         if type(port) is int:
             port = 'COM%i' %port
         self.port = port
 
-        self._init_visa(port, termination = '\r')
+        try:
+            self._init_visa(port, termination = '\r')
+        except:
+            self._init_visa(port, termination = '\r')
 
+        self.autosleep = autosleep
+        # assume the preamp is asleep
+        self._last_write_time = time.time() - self.autosleep - 1
+
+        self.wake()
         self._gain = self.gain
         self._filter = self.filter
+
 
 
     def __getstate__(self):
@@ -40,12 +51,9 @@ class SR5113(VISAInstrument):
 
     @property
     def filter(self):
-        try:
-            low = self.query('FF0')
-            high = self.query('FF1')
-            self._filter = (FILTER[int(low)], FILTER[int(high)])
-        except:
-            print('Couldn\'t communicate with SR5113; filter may be wrong!')
+        low = self.query('FF0')
+        high = self.query('FF1')
+        self._filter = (FILTER[int(low)], FILTER[int(high)])
         return self._filter
 
     @filter.setter
@@ -73,15 +81,12 @@ class SR5113(VISAInstrument):
 
     @property
     def gain(self):
-        try:
-            cg = self.query('CG')  # gets coarse gain index
-            fg = self.query('FG')  # gets fine gain index
-            if int(fg) < 0:
-                self._gain = 5+int(fg)
-            else:
-                self._gain = int(COARSE_GAIN[int(cg)]*FINE_GAIN[int(fg)])
-        except:
-            print('Couldn\'t communicate with SR5113! Gain may be wrong!')
+        cg = self.query('CG')  # gets coarse gain index
+        fg = self.query('FG')  # gets fine gain index
+        if int(fg) < 0:
+            self._gain = 5+int(fg)
+        else:
+            self._gain = int(COARSE_GAIN[int(cg)]*FINE_GAIN[int(fg)])
         return self._gain
 
     @gain.setter
@@ -110,7 +115,7 @@ class SR5113(VISAInstrument):
 
     def id(self):
         msg = self.query('ID')
-        print(msg)
+        return msg
 
 
     def is_OL(self):
@@ -145,6 +150,9 @@ class SR5113(VISAInstrument):
     def recover(self):
         self.write('OR')
 
+    def sleep(self):
+        self.write('SLEEP') # does not appear to work
+
     def time_const(self, tensec):
         self.write('TC%i' %(tensec))  # 0 = 1s, 1 = 10s
 
@@ -156,7 +164,32 @@ class SR5113(VISAInstrument):
         Middle read command will contain response
         last read command will be empty (*\n).
         '''
-        return self.write(cmd, read=True)
+        try:
+            return self.write(cmd, read=True)
+        except:
+            print('Couldn\'t communicate with SR5113!')
+            return 0
+
+    def wake(self):
+        '''
+        Series of reading and writing commands to wake the preamp up from sleep
+        and resestablish proper communication.
+        '''
+        if self.autosleep:
+            curr_time = time.time()
+            if curr_time - self._last_write_time > self.autosleep:
+                # print('waking up!')
+                self._last_write_time = curr_time
+                super().write('ID\r') # Any command will wake it
+                time.sleep(1) # groggy...
+                super().write('ID\r') # This works; the next two reads fail.
+                try:
+                    self.read() # Will fail (pyvisa problem)
+                except:
+                    pass
+                finally:
+                    self.read() # Will return '?' indicating an error
+
 
     def write(self, cmd, read=False):
         '''
@@ -169,12 +202,16 @@ class SR5113(VISAInstrument):
         read: set to True if response is expected
         '''
 
+        self.wake()
+
         time.sleep(0.05)  # Make sure we've had enough time to make connection.
         super().write(cmd+'\r')
         self.read() # read back the same command
         if read:
             response = self.read()
         self.read()
+
+        self._last_write_time = time.time()
 
         if read:
             return response
