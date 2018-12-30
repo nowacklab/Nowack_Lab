@@ -138,13 +138,13 @@ class Sweep(Measurement):
             directions = ['forward', 'reverse']
         else:
             directions = ['forward']
-            repeaterorder = []
+        repeaterorder = []
         if self.saveconfig:
             for r in self.repeaters:
                 repeaterorder.append(r.name)
                 if hasattr(r, "_getconfig"):
+                    cur_config =  r._getconfig()
                     if self.saveasyougo or self.saveatend:
-                        cur_config =  r._getconfig()
                         self.savedata.append(self.pathtosave +
                         'initialization: %s/iteration: %s/params/%s/'
                         %(str(init),str(iter), r.name), cur_config)
