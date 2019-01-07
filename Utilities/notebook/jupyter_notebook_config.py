@@ -1,19 +1,22 @@
 # Based off of https://github.com/jupyter/notebook/blob/master/docs/source/extending/savehooks.rst
 # Belongs in jupyter_path = os.path.join(home, '.jupyter', 'jupyter_notebook_config.py')
 
-## Use firefox (if Chrome runs out of memory))
-try:
-    import webbrowser
-    ffpath = 'C:\\Program Files (x86)\\Mozilla Firefox\\firefox.exe'
-    webbrowser.register('firefox', None, webbrowser.BackgroundBrowser(ffpath), 1)
-    c.NotebookApp.browser = 'firefox'
-except:
-    pass
-
-
-import io, os, sys
+import webbrowser, io, os, sys
 from notebook.utils import to_api_path
 from IPython.paths import get_ipython_dir
+
+## Use firefox (if Chrome runs out of memory))
+ffpath = None
+paths_to_try = ['C:\\Program Files (x86)\\Mozilla Firefox\\firefox.exe',
+				'C:\\Program Files\\Mozilla Firefox\\firefox.exe']
+for path in paths_to_try:
+	if os.path.exists(path):
+		ffpath = path
+		break
+if ffpath is not None:
+    webbrowser.register('firefox', None, webbrowser.BackgroundBrowser(ffpath), 1)
+    c.NotebookApp.browser = 'firefox'
+
 
 ## Try to load notebook extensions
 ipythondir = get_ipython_dir()

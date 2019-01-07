@@ -1,104 +1,94 @@
 import time, numpy as np
 from tabulate import tabulate
-from .instrument import Instrument
+from .instrument import VISAInstrument
 
 import visa
 
 
 
 
-class SR830(Instrument):
-    """
-    Instrument driver for SR830, modified from Guen's squidpy driver
-    """
-    # Static final variables (immutible class variables)
+class SR830(VISAInstrument):
     _label = 'lockin'
+    _idn = 'SR830'
+
     time_constant_options = {
-            "10 us": 0,
-            "30 us": 1,
-            "100 us": 2,
-            "300 us": 3,
-            "1 ms": 4,
-            "3 ms": 5,
-            "10 ms": 6,
-            "30 ms": 7,
-            "100 ms": 8,
-            "300 ms": 9,
-            "1 s": 10,
-            "3 s": 11,
-            "10 s": 12,
-            "30 s": 13,
-            "100 s": 14,
-            "300 s": 15,
-            "1 ks": 16,
-            "3 ks": 17,
-            "10 ks": 18,
-            "30 ks": 19
-    };
-    _time_constant_values = (
-        10e-6, 30e-6, 100e-6, 300e-6, 
-         1e-3,  3e-3,  10e-3,  30e-3, 100e-3, 300e-3, 
-         1,     3,     10,     30,    100,    300, 
-         1000,  3000,  10000, 30000
-    );
-    _sensitivity_options = (
-              2e-9, 5e-9, 10e-9, 20e-9, 50e-9, 100e-9, 200e-9, 500e-9, 
-        1e-6, 2e-6, 5e-6, 10e-6, 20e-6, 50e-6, 100e-6, 200e-6, 500e-6, 
-        1e-3, 2e-3, 5e-3, 10e-3, 20e-3, 50e-3, 100e-3, 200e-3, 500e-3, 
-        1
-    );
-
-    _reserve_options = ('High Reserve', 'Normal', 'Low Noise')
-    _input_modes = ('A', 'A-B', 'I (10^6)', 'I (10^8)')
-
+            '10 us': 0,
+            '30 us': 1,
+            '100 us': 2,
+            '300 us': 3,
+            '1 ms': 4,
+            '3 ms': 5,
+            '10 ms': 6,
+            '30 ms': 7,
+            '100 ms': 8,
+            '300 ms': 9,
+            '1 s': 10,
+            '3 s': 11,
+            '10 s': 12,
+            '30 s': 13,
+            '100 s': 14,
+            '300 s': 15,
+            '1 ks': 16,
+            '3 ks': 17,
+            '10 ks': 18,
+            '30 ks': 19
+        }
+    '''
+    Instrument driver for SR830, modified from Guen's squidpy driver
+    '''
     def __init__(self, gpib_address=''):
         if type(gpib_address) is int:
             gpib_address = 'GPIB::%02i::INSTR' %gpib_address
         self.gpib_address = gpib_address
 
-        self.init_visa()
+        self._init_visa(gpib_address)
         self._visa_handle.timeout = 3000 # default
 
-    def __del__(self):
-        """
-        Destroy the object and close the visa handle
-        """
-        self.close()
-
     def __getstate__(self):
-        self._save_dict = {"sensitivity": self.sensitivity,
-                          "frequency": self.frequency,
-                          "amplitude": self.amplitude,
+        if self._loaded:
+            return super().__getstate__() # Do not attempt to read new values
+        self._save_dict = {'sensitivity': self.sensitivity,
+                          'frequency': self.frequency,
+                          'amplitude': self.amplitude,
                           'harmonic': self.harmonic,
                           'phase': self.phase,
-                          "time_constant": self.time_constant,
-                          "reserve": self.reserve,
-                          "gpib_address": self.gpib_address,
-                          "X": self.X,
-                          "Y": self.Y,
-                          "R": self.R,
-                          "theta": self.theta}
+                          'time_constant': self.time_constant,
+                          'reserve': self.reserve,
+                          'gpib_address': self.gpib_address,
+                          'X': self.X,
+                          'Y': self.Y,
+                          'R': self.R,
+                          'theta': self.theta}
         return self._save_dict
 
 
     def __setstate__(self, state):
-        state['_sensitivity'] = state.pop('sensitivity')
-        state['_frequency'] = state.pop('frequency')
-        state['_amplitude'] = state.pop('amplitude')
-        state['_time_constant'] = state.pop('time_constant')
-        state['_reserve'] = state.pop('reserve')
-        state['_X'] = state.pop('X')
-        state['_Y'] = state.pop('Y')
-        state['_R'] = state.pop('R')
-        state['_theta'] = state.pop('theta')
+        keys = [
+            ('_sensitivity', 'sensitivity'),
+            ('_frequency', 'frequency'),
+            ('_amplitude', 'amplitude'),
+            ('_time_constant', 'time_constant'),
+            ('_reserve', 'reserve'),
+            ('_X', 'X'),
+            ('_Y', 'Y'),
+            ('_R', 'R'),
+            ('_theta', 'theta'),
+        ]
+
+        for new, old in keys:
+            try:
+                state[new] = state.pop(old)
+            except:
+                pass
 
         self.__dict__.update(state)
+        self._loaded = True
 
 
     @property
     def sensitivity(self):
-        """Get the lockin sensitivity"""
-        value = self._sensitivity_options[int(self.ask('SENS?'))]
+        '''Get the lockin sensitivity'''
+        value = _sensitivity_options[int(self.query('SENS?'))]
         if 'I' in self.input_mode:
             value *= 1e-6 # if we're in a current mode
         self._sensitivity = value
@@ -116,12 +106,12 @@ class SR830(Instrument):
         """
 
         if value == 'up':
-            index = int(self.ask('SENS?')) + 1 # take current sensitivity and increase it
-            if index == len(self._sensitivity_options):
+            index = int(self.query('SENS?')) + 1 # take current sensitivity and increase it
+            if index == len(_sensitivity_options):
                 index -= 1 # highest sensitivity
             value = self._sensitivity_options[index]
         elif value == 'down':
-            index = int(self.ask('SENS?')) - 1
+            index = int(self.query('SENS?')) - 1
             if index == -1:
                 index += 1 # lowest sensitivity
             value = self._sensitivity_options[index]
@@ -141,8 +131,8 @@ class SR830(Instrument):
 
     @property
     def amplitude(self):
-        """Get the output amplitude"""
-        self._amplitude = float(self.ask('SLVL?'))
+        '''Get the output amplitude'''
+        self._amplitude = float(self.query('SLVL?'))
         return self._amplitude
 
     @amplitude.setter
@@ -156,7 +146,7 @@ class SR830(Instrument):
 
     @property
     def frequency(self):
-        self._frequency = float(self.ask('FREQ?'))
+        self._frequency = float(self.query('FREQ?'))
         return self._frequency
 
     @frequency.setter
@@ -165,7 +155,7 @@ class SR830(Instrument):
 
     @property
     def input_mode(self):
-        self._input_mode = self._input_modes[int(self.ask('ISRC?'))]
+        self._input_mode = _input_modes[int(self.query('ISRC?'))]
         return self._input_mode
 
     @input_mode.setter
@@ -177,8 +167,8 @@ class SR830(Instrument):
     def harmonic(self):
         """
         Get the detection harmonic
-        """
-        self._harmonic = int(self.ask('HARM?'))
+        '''
+        self._harmonic = int(self.query('HARM?'))
         return self._harmonic
 
     @harmonic.setter
@@ -193,49 +183,49 @@ class SR830(Instrument):
     def phase(self):
         """
         Get the reference phase shift (degrees)
-        """
-        self._phase = float(self.ask('PHAS?'))
+        '''
+        self._phase = float(self.query('PHAS?'))
         return self._phase
 
     @phase.setter
     def phase(self, value):
         """
         Set the reference phase shift (degrees)
-        """
-        phase = (phase + 180) % 360 - 180 # restrict from -180 to 180
+        '''
+        phase = (value + 180) % 360 - 180 # restrict from -180 to 180
         self.write('PHAS %f' %value)
 
     @property
     def X(self):
-        self._X = float(self.ask('OUTP?1'))
+        self._X = float(self.query('OUTP?1'))
         if self._X == 0:
             self._X = self.sensitivity/1e12 # so we don't have zeros
         return self._X
 
     @property
     def Y(self):
-        self._Y = float(self.ask('OUTP?2'))
+        self._Y = float(self.query('OUTP?2'))
         if self._Y == 0:
             self._Y = self.sensitivity/1e12 # so we don't have zeros
         return self._Y
 
     @property
     def R(self):
-        self._R = float(self.ask('OUTP?3'))
+        self._R = float(self.query('OUTP?3'))
         if self._R == 0:
             self._R = self.sensitivity/1e12 # so we don't have zeros
         return self._R
 
     @property
     def theta(self):
-        self._theta = float(self.ask('OUTP?4'))
+        self._theta = float(self.query('OUTP?4'))
         return self._theta
 
     @property
     def time_constant(self):
         options = {self.time_constant_options[key]: key for key in self.time_constant_options.keys()}
-        self._time_constant = self._time_constant_values[int(self.ask('OFLT?'))]
-        #return options[int(self.ask('OFLT?'))]
+        self._time_constant = _time_constant_values[int(self.query('OFLT?'))]
+        #return options[int(self.query('OFLT?'))]
         return self._time_constant
 
     @time_constant.setter
@@ -255,7 +245,7 @@ class SR830(Instrument):
 
     @property
     def reference(self):
-        i = int(self.ask('FMOD?'))
+        i = int(self.query('FMOD?'))
         if i == 0:
             return 'external'
         else:
@@ -269,29 +259,16 @@ class SR830(Instrument):
             i=1
         self.write('FMOD%i' %i)
 
-
     @property
     def reserve(self):
-        i = int(self.ask('RMOD?'))
-        self._reserve = self._reserve_options[i]
+        i = int(self.query('RMOD?'))
+        self._reserve = _reserve_options[i]
         return self._reserve
 
     @reserve.setter
     def reserve(self, value):
         i = self._reserve_options.index(value)
         self.write('RMOD%i' %i)
-
-    @property
-    def lias(self):
-        lias = int(self.ask('LIAS?'));
-        return lias;
-
-    def ask(self, cmd, timeout=3000):
-        """
-        Default timeout 3000 ms. None for infinite timeout
-        """
-        self._visa_handle.timeout = timeout
-        return self._visa_handle.ask(cmd);
 
     def ac_coupling(self):
         self.write('ICPL0')
@@ -301,11 +278,11 @@ class SR830(Instrument):
 
     def auto_gain(self):
         self.write('AGAN')
-        self.ask('*STB?', None) # let it finish
+        self.query('*STB?', None) # let it finish
 
     def auto_phase(self):
         self.write('APHS')
-        self.ask('*STB?', None) # let it finish
+        self.query('*STB?', None) # let it finish
 
     def dc_coupling(self):
         self.write('ICPL1')
@@ -341,7 +318,7 @@ class SR830(Instrument):
         table = []
         for name in ['sensitivity', 'amplitude', 'frequency', 'time_constant']:
             table.append([name, getattr(self, name)])
-        snapped = self.ask('SNAP?1,2,3,4')
+        snapped = self.query('SNAP?1,2,3,4')
         snapped = snapped.split(',')
         table.append(['X', snapped[0]])
         table.append(['Y', snapped[1]])
@@ -350,9 +327,8 @@ class SR830(Instrument):
         return tabulate(table, headers = ['Parameter', 'Value'])
 
 
-    def init_visa(self):
-        self._visa_handle = visa.ResourceManager().open_resource(self.gpib_address)
-        self._visa_handle.read_termination = '\n'
+    def _init_visa(self, resource):
+        super()._init_visa(resource) # creates self._visa_handle
         self._visa_handle.write('OUTX 1') #1=GPIB
 
     def is_OL(self, thresh=1):
@@ -382,7 +358,9 @@ class SR830(Instrument):
             return False
 
     def set_out(self, chan, param):
-        """ set output on channel [1,2] to parameter [Ch1:['R','X'],Ch2:['Y','theta']]"""
+        '''
+        set output on channel [1,2] to parameter [Ch1:['R','X'],Ch2:['Y','theta']]
+        '''
         if chan == 1:
             if param not in ('R','X'):
                 raise Exception('Cannot display %s on Channel 1!!' %param)
@@ -405,29 +383,17 @@ class SR830(Instrument):
             return np.array(value/10*self.sensitivity) # will give actual output in volts, since output is scaled to 10 V == sensitivity
         return value/10*self.sensitivity
 
-    def close(self):
-        if hasattr(self, '_visa_handle'):
-            self._visa_handle.close()
-            del(self._visa_handle)
-
-    def read(self):
-        return self._visa_handle.read()
-        self.close()
-
-    def sweep(self, Vstart, Vend, Vstep=0.01, sweep_rate=0.1):
-        """
+    def sweep(self, Vstart, Vend, Vstep=0.001, sweep_rate=0.1):
+        '''
         Sweeps the lockin amplitude at given sweep rate in V/s (default 0.1).
-        Sweeps with a step size of 0.01 V by default.
-        """
+        Sweeps with a step size of 0.001 V by default.
+        '''
         delay = Vstep/sweep_rate
         numsteps = abs(Vstart-Vend)/Vstep
         V = np.linspace(Vstart, Vend, numsteps)
         for v in V:
             self.amplitude = v
             time.sleep(delay)
-
-    def write(self, cmd):
-        self._visa_handle.write(cmd)
 
     def zero(self, sweep_rate=0.1):
         """
@@ -437,15 +403,3 @@ class SR830(Instrument):
         """
         Vstep = 0.01
         self.sweep(self.amplitude, 0, Vstep, sweep_rate)
-
-
-if __name__ == '__main__':
-    lockin = SR830('GPIB::09::INSTR')
-    #print(lockin.time_constant)
-    #lockin.auto_phase()
-    print(lockin.get_all())
-    #print(lockin.time_constant)
-
-    #lockin.auto_gain()
-
-    # lockin.auto_phase() # test this

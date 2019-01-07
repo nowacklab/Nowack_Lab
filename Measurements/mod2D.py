@@ -7,7 +7,7 @@ import time, os
 from datetime import datetime
 from .squidIV import SquidIV
 from ..Utilities.plotting import plot_mpl
-from ..Utilities.save import Measurement
+from .measurement import Measurement
 from ..Utilities.utilities import AttrDict
 
 class Mod2D(Measurement):

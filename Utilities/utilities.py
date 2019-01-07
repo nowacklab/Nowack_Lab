@@ -25,7 +25,10 @@ def fit_plane(x,y,z):
     """
     Calculates plane parameters a, b, and c for 2D data.
     z = ax + by + c
-    """
+    '''
+    if x.ndim == 1 and y.ndim ==1:
+        x, y = np.meshgrid(x,y)
+
     X = x.flatten()
     Y = y.flatten()
     Z = z.copy()
@@ -47,7 +50,7 @@ def fit_plane(x,y,z):
 
 
     A = np.vstack([X, Y, np.ones(len(X))]).T
-    return lstsq(A, Z)[0] # a,b,c
+    return lstsq(A[~np.isnan(Z)], Z[~np.isnan(Z)])[0] # a,b,c
 
 
 def get_browser_height():
@@ -116,13 +119,6 @@ def get_nb_kernel():
     return k_dict['key']
 
 
-def get_superclasses(obj):
-    """
-    Get a tuple of names of all superclasses of an object.
-    """
-    return [c.__name__ for c in obj.__class__.__mro__]
-
-
 def nanmin(data):
     result = np.nanmin(data)
     return result if not np.isnan(result) else 0
@@ -145,7 +141,7 @@ def reject_outliers(data, radius=[None,None], m=2):
     This takes a long time... might just want to do this occasionally.
 
     TODO: use chauvenet's criterion for "justified" rejection of data
-    """
+    '''
     new_data = np.copy(data)
 
     # Set a radius if None
@@ -212,6 +208,33 @@ def reject_outliers_spectrum(f, specden, m=2):
     return f[s<m], specden[s<m]
 
 
+def keeprange(master, slaves, m0, mend):
+    '''
+    WHAT DOES THIS DO?
+    '''
+    raise Exception('ADD DOCSTRING')
+    index0 = np.argmin(np.abs(master-m0))
+    indexe = np.argmin(np.abs(master-mend))
+
+    ret = [master[index0:indexe]]
+
+    for s in slaves:
+        ret.append(s[index0:indexe])
+
+    return ret
+
+
+def reject_outliers_spectrum(f, specden, m=2):
+    '''
+    WHAT DOES THIS DO?
+    '''
+    raise Exception('ADD DOCSTRING')
+    d = np.abs(specden - np.median(specden))
+    mdev = np.median(d)
+    s = d/mdev if mdev else 0.
+    return f[s<m], specden[s<m]
+
+
 def hide_code_button():
     """
     Generates an HTML button that toggles on and off the code cells in the notebook.
@@ -230,10 +253,10 @@ def hide_code_button():
     }
     $( document ).ready(code_toggle);
     </script>
-    <form action="javascript:code_toggle()"><input type="submit" value="Click here to toggle on/off the raw code."></form>""")
+    <form action="javascript:code_toggle()"><input type="submit" value="Click here to toggle on/off the raw code."></form>''')
 
 def running_std(array1d, windowlen=16, mode='same'):
-    """
+    '''
     calculate runing standard deviation
 
     parameters
@@ -252,14 +275,14 @@ def running_std(array1d, windowlen=16, mode='same'):
 
     adapted from project spikefuel, author duguyue100
     found https://www.programcreek.com/python/example/11429/numpy.convolve
-    """
+    '''
 
     # computing shifted data, avoid catastrophic cancellation
     # https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
     array1d = array1d - np.mean(array1d)
 
     # calculate sum of squares within the window for each point
-    q = np.convolve(array1d**2, np.ones(windowlen), mode=mode) 
+    q = np.convolve(array1d**2, np.ones(windowlen), mode=mode)
 
     # calculate the sum within the window for each point
     s = np.convolve(array1d,    np.ones(windowlen), mode=mode)

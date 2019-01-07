@@ -89,6 +89,10 @@ class Image:
         self._dy = value
         self._Ly = self._dy*self.Ny
 
+    @property
+    def j(self):
+        return np.sqrt(self.jx**2 + self.jy**2)
+
     def center_max(self):
         """
         Shifts the contents of an array so that its maximum value is located at the center.
@@ -278,9 +282,9 @@ class Image:
         self.pad(lr, ud, mode='constant')
 
     def plot(self, ax=None, var='data'):
-        """
-        Set var = 'jx', 'jy' to plot current
-        """
+        '''
+        Set var = 'jx', 'jy', 'j' to plot current components or magnitude
+        '''
         self.ax = ax
         if ax is None:
             fig, self.ax = plt.subplots()

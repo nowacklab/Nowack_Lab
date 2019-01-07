@@ -9,9 +9,9 @@ from IPython import display
 from numpy import ma
 from ..Utilities.plotting import plot_mpl
 from ..Instruments import piezos, montana, squidarray
-from ..Utilities.save import Measurement
+from .measurement import Measurement
 from ..Utilities import conversions
-from ..Procedures.daqspectrum import SQUIDSpectrum
+from ..Measurements.spectrum import SQUIDSpectrum
 from ..Utilities.utilities import AttrDict
 
 class Scanspectra(Measurement):
@@ -23,20 +23,21 @@ class Scanspectra(Measurement):
     })
 
     V = np.array([])
+    psdAve = np.array([])
 
     def __init__(self, instruments = {}, plane = None, span=[800,800],
                         center=[0,0], numpts=[20,20], scanheight=15,
                         monitor_time=1, sample_rate=1000, num_averages=1):
         super().__init__(instruments=instruments)
         self.instruments = instruments
+
+        # Define variables specified in init
         self.monitor_time = monitor_time
         self.sample_rate = sample_rate
         self.num_averages = num_averages
         self.span = span
         self.center = center
         self.numpts = numpts
-        if plane is None:
-            plane = Planefit()
         self.plane = plane
         self.scanheight = scanheight
 
@@ -50,8 +51,6 @@ class Scanspectra(Measurement):
         except:
             print('plane not loaded... no idea where the surface is without a plane!')
 
-        self.psdAve = []
-        self.V = []
 
     def do(self):
         self.setup_preamp()
@@ -60,7 +59,7 @@ class Scanspectra(Measurement):
             self.piezos.x.check_lim(self.X[i,:])
             self.piezos.y.check_lim(self.Y[i,:])
             self.piezos.z.check_lim(self.Z[i,:])
-            
+
         # Move to each point on the grid and take a spectrum
         for i in range(self.X.shape[0]):
             for j in range(self.Y.shape[1]):
@@ -74,19 +73,12 @@ class Scanspectra(Measurement):
                                          self.sample_rate,
                                          self.num_averages)
                 spectrum.do()
-                self.psdAve.append(spectrum.psdAve)
-                self.V.append(spectrum.V)
+                self.psdAve = np.append(self.psdAve, spectrum.psdAve)
+                self.V = np.append(self.V, spectrum.V)
                 plt.close()
         # All spectra are identical - save the frequencies and times only once
         self.f = spectrum.f
         self.t = spectrum.t
-        # Reshape lists into numpy arrays
-        self.psdAve = np.array(self.psdAve).reshape(self.numpts[0], 
-                                                    self.numpts[1],
-                                                    -1)
-        self.V = np.array(self.V).reshape(self.numpts[0],
-                                          self.numpts[1],
-                                          -1)
 
     def setup_preamp(self):
         self.preamp.dc_coupling()
@@ -94,9 +86,7 @@ class Scanspectra(Measurement):
         self.preamp.filter_mode('low',12)
 
     def plot(self):
-        fig, ax = plt.subplots(figsize=(6,6))
+        self.fig, self.ax = plt.subplots(figsize=(6,6))
         freq_avg = np.mean(self.psdAve, axis=2)
         extent = [self.X.min(), self.X.max(), self.Y.min(), self.Y.max()]
-        im = ax.imshow(freq_avg, extent=extent)
-        return
-        
+        self.im = self.ax.imshow(freq_avg, extent=extent)

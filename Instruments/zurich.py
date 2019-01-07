@@ -1,199 +1,210 @@
-"""
-Nowack_Lab high level driver for Zurich HF2LI
-
-Needs: zhinst, numpy, .instrument, time and _future_
-"""
-
 # Copyright 2016 Zurich Instruments AG
 
-from __future__ import print_function
-import time
+import time, numpy as np
 from .instrument import Instrument
-import numpy as np
-import zhinst.utils
+try:
+    import zhinst.ziPython as ziP
+    import zhinst.utils as utils
+except:
+    print('zhinst not imported in zurich.py!')
 
-class gateVoltageError( Exception ):
-    pass
 
-#class CheckArray(object):
-#    def __init__(self, *args):
-#        """
-#        """
-#
-#    def check(self):
+class Zurich(Instrument):
+    '''
+    Creates a Zurich base class object, to control a Zurich Instruments lockin
+    '''
 
-class HF2LI(Instrument):
-    """
-    Creates a Zurich HF2Li object, to control a zurich lock in amplifier
-    """
+    _label = 'Zurich'
+    device_id = None
+
+    def __init__(self, device_serial, in_channel = 1, meas_type='V'):
+            '''
+            Creates the Zurich object.
+            Arguments:
+            device_serial (int): Serial number of Zurich instrument
+            in_channel: if None, will use both inputs (TODO).
+                            Else, choose input 1 or 2.
+            meas_type: 'I' or 'V'. Choose whether this channel measures current
+                                (via transimpedance amplifier) or voltage.
+            '''
+
+            super().__init__()
+
+            api_level = 5  # API level 5 necessary for MFLI scope
+            self.daq, self.device_id, self.props = utils.create_api_session(
+                'dev%i' % device_serial, api_level
+            )
+
+            if in_channel is None:
+                raise Exception()
+            self.in_channel = in_channel
+            self.meas_type = meas_type
+
+
+    def __getstate__(self):
+        if self._loaded:
+            return super().__getstate__() # Do not attempt to read new values
+        self._save_dict = {'device_id': self.device_id,
+                          'X': self.X,
+                          'Y': self.Y,
+                          'zurich_dict': self.daq.get('/', True) #  all settings
+                          }
+        return self._save_dict
+
+
+    def __setstate__(self, state):
+        keys = [
+            ('_X', 'X'),
+            ('_Y', 'Y'),
+        ]
+
+        for new, old in keys:
+            try:
+                state[new] = state.pop(old)
+            except:
+                pass
+
+        self.__dict__.update(state)
+        self._loaded = True
+
+
+    @property
+    def X(self):
+        self._X = float(self.get('x'))
+        if self.meas_type == 'I':
+            self._X /= self.TA_gain
+        if self._X == 0:
+            self._X = 1e-34 # so we don't have zeros
+        return self._X
+
+
+    @property
+    def Y(self):
+        self._Y = float(self.get('y'))
+        if self.meas_type == 'I':
+            self._Y /= self.TA_gain
+        if self._Y == 0:
+            self._Y = 1e-34 # so we don't have zeros
+        return self._Y
+
+    @property
+    def TA_gain(self):
+        '''
+        Inflexible. Get transimpedance amplifier gain if set up for input 0
+        '''
+        param = '/%s/zctrls/0/tamp/0/currentgain' %self.device_id
+        return self.get_setting(param)[0]
+
+
+    def get(self, param):
+        '''
+        Get a parameter from the lockin.
+        '''
+        demod_num = (self.in_channel-1)*3
+
+        return self.daq.getSample('/%s/demods/%i/sample' %(self.device_id, demod_num))[param]
+        # self.in_channel
+
+    def get_setting(self, param):
+        '''
+        Bypass the Zurich's annoying get protocol.
+        '''
+        return self.daq.get(param, True)[param]
+
+
+class HF2LI(Zurich):
     _label = 'Zurich HF2LI'
 
-    def __init__(self, server_address = 'localhost', server_port = 8005 ,
-                device_serial = ''):
-        """
-        Creates the HF2LI object. By choosing server address, can connection
-        to HF2LI on remote (local network) computer.
 
-        Arguments:
+class MFLI(Zurich):
+    _label = 'Zurich MFLI'
+    freq_opts = [60e6, 30e6, 15e6, 7.5e6, 3.75e6, 1.88e6, 938e3, 469e3, 234e3,
+        117e3, 58.6e3, 29.3e3, 14.6e3, 7.32e3, 3.66e3, 1.83e3, 916]
 
-        server_address (str,optional) = Private IPV4 address of the computer
-                            hosting the zurich. Defults to 'localhost',
-                            the computer the python kernel is running on.
+    '''
+    MFLI - additional functionality for scope that may be different from HF2LI
+    '''
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-        server_port (int, optional) = Port of Zurich HF2LI. For local is
-                            always 8005 (default), usually 8006 for remote.
+        self.scope = self.daq.scopeModule()
+        self.scope.subscribe('/%s/scopes/0/wave' %self.device_id)
 
-        device_serial (str, optional) = Serial number of prefered zurich
-                            hf2li. If empty string or does not exist,
-                            uses first avaliable ZI.
+    def _setup_scope(self, freq=60e6, N=16384, input_ch=0):
+        '''
+        Parameters:
+        freq - sampling rate (Hz). Must be in MFLI.freq_opts.
+        N - Length (pts).  2^14 = 16384 by default.
+        input_ch - Input channel. 0 = "Signal Input 1"; 9 = "Aux Input 2"
+        '''
+        scope = self.scope
+        daq = self.daq
 
-        """
-        # Accesses the DAQServer at the instructed address and port.
-        self.daq = zhinst.ziPython.ziDAQServer(server_address, server_port)
-        # Gets the list of ZI devices connected to the Zurich DAQServer
-        deviceList = zhinst.utils.devices(self.daq)
+        if freq not in self.freq_opts:
+            raise Exception('Frequency must be in: %s' %self.freq_opts)
 
-        # Checks if the device serial number you asked for is in the list
-        if device_serial in deviceList :
-            # Sets class variable device_id to the serial number
-            self.device_id = device_serial
-            # Tells the user that the ZI they asked for was found
-            print('Using Zurich HF2LI with serial %s' % self.device_id)
+        f = self.freq_opts.index(freq)
 
-        # Checks if you actually asked for a specific serial
-        elif device_serial != '' :
-            # Tells user ZI wasn't found.
-            print('Requested device not found.')
-            # Sets device_id to the first avaliable. Prints SN.
-            self.device_id = zhinst.utils.autoDetect(self.daq)
-        else:
-            # Sets device_id to the first avaliable. Prints SN.
-            self.device_id = zhinst.utils.autoDetect(self.daq)
-        self.name = 'zurich ' + self.device_id
-        allNodes = self.daq.listNodes(self.device_id, 0x07)
-        for elem in allNodes:
-            nameofattr = elem.replace('/','_')[9:]
-            if not 'SAMPLE' == elem[-6:]:
-                setattr(HF2LI, nameofattr, property(
-               fget=eval("lambda self: self.daq.getDouble('%s')" %elem),
-               fset=eval("lambda self, value: self.daq.setDouble('%s', value)" %elem)))
-            else:
-                setattr(HF2LI, nameofattr, property(fget=eval("lambda self: self.daq.getSample('%s')" %elem)))
+        scope.set('scopeModule/mode', 1)  # See p 49 Programming Manual:
+        scope.set('scopeModule/averager/weight', 1)  # number of averages
 
-    def setup(self, config):
-            """
-            Pass in a dictionary with the desired configuration. If an element
-            is ommited from the dictionary, no change. Dictionary will be
-            compared to a check array. To determine formatting, structure your
-            dictionary the same way as the checkarray, but the inner most
-            element in the dict (a list) replaced by the value you want. The
-            value must be of the type given in the first element of the array
-            at that dict location, and if the second element of the list is an
-            array, it must be an element of that array. Conversely, if the
-            second element is a number, the value must be inclusive between
-            the second and third elements.
-            Obey the following conventions:
+        daq.setInt('/%s/scopes/0/time' %self.device_id, f)
+        daq.setInt('/%s/scopes/0/length' %self.device_id, N)  # number of points
 
-            checkarray = {'sigin': {'ac': [bool], 'range': [float, 1e-4, 2],
-                                                                'diff':[bool]},
+        daq.sync()
 
-                          'demod': {'enable':[bool], 'rate': [float],
-                            'oscselect':[int, [0,1]], 'order': [int, 1,8],
-                            'timeconstant':[float], 'harmonic':[int, 1, 1023]},
+        daq.setInt('/%s/scopes/0/single' %self.device_id, 1)
+        daq.setInt('/%s/scopes/0/channel' %self.device_id, 1)
+        daq.setInt('/%s/scopes/0/channels/0/inputselect' %self.device_id, input_ch)
+        daq.setInt('/dev3447/scopes/0/channels/0/bwlimit', 1)
+        # To average rather than decimate signal acquired at max sampling rate
+        # This avoids aliasing
 
-                          'osc':{'freq': [float, 0, 1e8]},
+        daq.sync()
 
-                          'sigout':{'enable':[bool],
-                                                'range':[float, [.01,.1,1,10]],
-                             'amplitude':[float, -1,1],'offset':[float, -1,1]},
+        scope.set('scopeModule/clearhistory', 1)
 
-                          'TAMP':{
-                            'currentgain': [int,[1e2,1e3,1e4,1e5,1e6,1e7,1e8]],
-                            'dc':[bool], 'voltagegain': [int, [1,10]],
-                            'offset':[float]}
-                          }
-            """
-            zCONFIG = []
-            checkarray = {'sigin': {'ac': [bool], 'range': [float, 1e-4, 2],
-                                                                'diff':[bool]},
 
-                          'demod': {'enable':[bool], 'rate': [float],
-                            'oscselect':[int, [0,1]], 'order': [int, 1,8],
-                            'timeconstant':[float], 'harmonic':[int, 1, 1023]},
 
-                          'osc':{'freq': [float, 0, 1e8]},
+    def get_scope_trace(self, freq=60e6, N=16384, input_ch=0):
+        '''
+        Returns a tuple (array of time values, array of scope input values)
+        Parameters:
+        freq - sampling rate (Hz). Must be in MFLI.freq_opts.
+        N - Length (pts).  2^14 = 16384 by default.
+        input_ch - Input channel. 0 = "Signal Input 1"; 9 = "Aux Input 2"
+        '''
+        self._setup_scope(freq, N, input_ch)
 
-                          'sigout':{'enable':[bool],
-                                                'range':[float, [.01,.1,1,10]],
-                             'amplitude':[float, -1,1],'offset':[float, -1,1]},
+        scope = self.scope
+        daq = self.daq
 
-                          'TAMP':{
-                            'currentgain': [int,[1e2,1e3,1e4,1e5,1e6,1e7,1e8]],
-                            'dc':[bool], 'voltagegain': [int, [1,10]],
-                            'offset':[float]}
-                          }
-            tampchannel = -1
-            for i in [0,1]:
-                if self.daq.getInt('/%s/ZCTRLS/%d/TAMP/AVAILABLE'
-                                                        % (self.device_id, i)):
-                                                        tampchannel = i
-            for subsystem in config.keys():
-                if subsystem[:-1] in checkarray.keys():
-                    subconfig = config[subsystem]
-                    subcheck = checkarray[subsystem[:-1]]
-                    for param in subconfig.keys():
-                        value = subconfig[param]
-                        paramchk = subcheck[param]
-                        if param in subcheck.keys():
-                            if type(value) is paramchk[0]:
-                                if type(value) is bool:
-                                    value = int(value)
-                                if (len(paramchk) == 1
-                                    or
-                                    (len(paramchk) == 2 and
-                                    value in paramchk[1])
-                                    or
-                                    (len(paramchk)== 3   and
-                                    value <= paramchk[2] and
-                                    value >= paramchk[1])
-                                    ):
-                                    if subsystem[:-1] == 'TAMP':
-                                        if tampchannel == -1:
-                                            raise Exception('No TA connected!')
-                                        else:
-                                            zCONFIG.append([
-                                            '/%s/ZCTRLS/%i/TAMP/%i/%s'
-                                            % (self.device_id,tampchannel,
-                                                subsystem[-1], param), value])
-                                    else:
-                                        zCONFIG.append(['/%s/%ss/%s/%s'
-                                        % (self.device_id,subsystem[:-1],
-                                            subsystem[-1], param), value])
-                                else:
-                                    raise Exception('Parameter ' + param +' of '
-                                               + subsystem + 'is out of domain')
-                            else:
-                                raise Exception('Parameter ' + param +' of ' +
-                                    subsystem + ' is the wrong type, should be'
-                                    + str(paramchk[0]))
-                        else:
-                            raise Exception(param +
-                                    'is not a valid parameter for' + subsystem)
-                else:
-                    raise Exception(subsystem + 'is not a Zurich subsystem')
-            self.daq.set(zCONFIG)
-            config_as_set_changed = []
-            for subconfig in zCONFIG:
-                if type(subconfig[1]) is int:
-                    config_as_set_changed.append([subconfig[0],
-                                            self.daq.getInt(subconfig[0])])
-                elif type(subconfig[1]) is str:
-                    config_as_set_changed.append([subconfig[0],
-                                            self.daq.getString(subconfig[0])])
-                elif type(subconfig[1]) is float:
-                    config_as_set_changed.append([subconfig[0],
-                                            self.daq.getDouble(subconfig[0])])
-                else:
-                    raise Exception('type not handled!')
-            return config_as_set_changed
-            #return zCONFIG
+        try:  # In a try block so scope.finish() runs in finally
+            daq.setInt('/%s/scopes/0/enable' %self.device_id, 1)
+            daq.sync()
+
+            scope.execute()
+
+            while scope.progress() < 1:
+                time.sleep(0.1)
+
+            daq.setInt('/%s/scopes/0/enable' %self.device_id, 0)
+            rawdata=scope.read()
+        finally:
+            scope.finish()
+
+        data = rawdata[self.device_id]['scopes']['0']['wave'][0][0]
+
+        data_array = data['wave'][0].reshape(N)
+
+        chscl = data['channelscaling'][0]
+        if chscl != 1:
+            print('Warning: channel scaling is %f. \
+                You are probably using mode "0"' %chscl)
+            data_array *= chscl
+
+        dt = data['dt']
+
+        time_array = np.linspace(0, dt*N, N)
+
+        return time_array, data_array
