@@ -23,6 +23,10 @@ import Nowack_Lab.Utilities.datasaver
 reload(Nowack_Lab.Utilities.datasaver)
 from Nowack_Lab.Utilities.datasaver import Saver
 
+import Nowack_Lab.Utilities.dataset
+reload(Nowack_Lab.Utilities.dataset)
+from Nowack_Lab.Utilities.dataset import Dataset
+
 import Nowack_Lab.Utilities.alexsave_david_meas
 reload(Nowack_Lab.Utilities.alexsave_david_meas)
 from Nowack_Lab.Utilities.alexsave_david_meas import Preamp_Util
@@ -152,3 +156,4 @@ class DaqSpectrum():
         self.saver.append('/rms_noise_exclude_outliers/', rms_sigma)
         self.saver.create_attr('/rms_noise_exclude_outliers/', 'units', 
                                '{0}/Hz^.5'.format(self.units))
+

@@ -479,7 +479,6 @@ class SQUID_testing_plotter:
                 iv.loc[:,'incr','iv_Vmeas'] / 1e-6, label='incr')
         ax.plot(iv.loc[:,'decr','iv_Vsrc'] / iv.iv_R / 1e-6,
                 iv.loc[:,'decr','iv_Vmeas'] / 1e-6, label='decr')
-                     label='DOWN')
         self.ax.legend()
         self.ax.set_xlabel(r'$I_{squid}$ ($\mu A$)')
         self.ax.set_ylabel(r'$V_{squid}$ ($\mu V$)')

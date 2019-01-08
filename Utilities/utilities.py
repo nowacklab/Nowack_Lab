@@ -297,7 +297,7 @@ def _rms_ranged(f, psd, rms_range):
     rms     = np.sqrt(np.mean( psd[i_start:i_end]))
     return rms 
 
-def preamp_gain(maxabs, offset=-2):
+def preamp_gain(maxabs, mult_safety=2):
     course_gains = [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000]
     fine_gains = [1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0]
     all_gains = [1,2,3,4]
@@ -307,8 +307,8 @@ def preamp_gain(maxabs, offset=-2):
 
     all_gains = np.asarray(all_gains)
 
-    targetgain = 5/maxabs
+    targetgain = 5/(maxabs*mult_safety)
     index = max(np.argmin(np.abs(all_gains - targetgain)
                       *(all_gains < targetgain)
-                      ) + offset, 0)
+                      ), 0)
     return all_gains[index]
