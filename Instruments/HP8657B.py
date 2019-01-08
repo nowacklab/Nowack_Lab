@@ -4,7 +4,7 @@
 from .instrument import VISAInstrument
 
 
-class FunctionGenerator(VISAInstrument):
+class functiongenerator(VISAInstrument):
     _label = 'HP8657'
     """
     Instrument driver for HP 8657 2GHz signal generator

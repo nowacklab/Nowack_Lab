@@ -1,31 +1,53 @@
 import numpy as np
-from .planefit import Planefit
 import time, os
-from datetime import datetime
 import matplotlib.pyplot as plt
-from ..Utilities import plotting, conversions
-from ..Instruments import piezos, nidaq, montana, squidarray
-from ..Utilities.save import Measurement
+from ..Utilities import conversions
+from .measurement import Measurement
 from ..Utilities.utilities import AttrDict
 
 
 class Scanline(Measurement):
     _daq_inputs = ['dc','cap','acx','acy']
     _conversions = AttrDict({
-        'dc': conversions.Vsquid_to_phi0,
+        # Assume high; changed in init when array loaded
+        'dc': conversions.Vsquid_to_phi0['High'],
         'cap': conversions.V_to_C,
-        'acx': conversions.Vsquid_to_phi0,
-        'acy': conversions.Vsquid_to_phi0,
-        'piezo': conversions.Vxy_to_um
+        'acx': conversions.Vsquid_to_phi0['High'],
+        'acy': conversions.Vsquid_to_phi0['High'],
+        'x': conversions.Vx_to_um,
+        'y': conversions.Vy_to_um
+    })
+    _units = AttrDict({
+        'dc': 'phi0',
+        'cap': 'C',
+        'acx': 'phi0',
+        'acy': 'phi0',
+        'x': '~um',
+        'y': '~um',
     })
     instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto']
 
-    def __init__(self, instruments={}, plane=None, start=(-100,-100), end=(100,100), scanheight=15, scan_rate=120, return_to_zero=True):
+    def __init__(self, instruments={}, plane=None, start=(-100,-100),
+                 end=(100,100), scanheight=15, scan_rate=120, zero=True):
         super().__init__(instruments=instruments)
+
+        # Load the correct SAA sensitivity based on the SAA feedback
+        # resistor
+        try:  # try block enables creating object without instruments
+            Vsquid_to_phi0 = conversions.Vsquid_to_phi0[self.squidarray.sensitivity]
+            self._conversions['acx'] = Vsquid_to_phi0
+            self._conversions['acy'] = Vsquid_to_phi0
+            # doesn't consider preamp gain. If preamp communication fails, then
+            # this will be recorded
+            self._conversions['dc'] = Vsquid_to_phi0
+            # Divide out the preamp gain for the DC channel
+            self._conversions['dc'] /= self.preamp.gain
+        except:
+            pass
 
         self.start = start
         self.end = end
-        self.return_to_zero = return_to_zero
+        self.zero = zero
 
         self.plane = plane
 
@@ -41,10 +63,16 @@ class Scanline(Measurement):
         })
         self.Vout = np.nan
 
-    def do(self):
-        self.temp_start = self.montana.temperature['platform']
+        for chan in self._daq_inputs:
+            # If no conversion factor is given then directly record the
+            # voltage by setting conversion = 1
+            if chan not in self._conversions.keys():
+                self._conversions[chan] = 1
+            if chan not in self._units.keys():
+                self._units[chan] = 'V'
 
-        ## Start and end points
+    def do(self):
+        # Start and end points
         Vstart = {'x': self.start[0],
                 'y': self.start[1],
                 'z': self.plane.plane(self.start[0],self.start[1]) - self.scanheight
@@ -54,14 +82,16 @@ class Scanline(Measurement):
                 'z': self.plane.plane(self.end[0],self.end[1]) - self.scanheight
                 }
 
-        ## Explicitly go to first point of scan
+        # Explicitly go to first point of scan
         self.piezos.V = Vstart
         self.squidarray.reset()
-        # time.sleep(3)
+        time.sleep(3*self.lockin_squid.time_constant)
 
-        ## Do the sweep
-        in_chans = self._daq_inputs
-        output_data, received = self.piezos.sweep(Vstart, Vend, chan_in=in_chans, sweep_rate=self.scan_rate) # sweep over Y
+        # Do the sweep
+        output_data, received = self.piezos.sweep(Vstart, Vend,
+                                                  chan_in=self._daq_inputs,
+                                                  sweep_rate=self.scan_rate
+                                                  ) # sweep over Y
 
         for axis in ['x','y','z']:
             self.V[axis] = output_data[axis]
@@ -80,7 +110,7 @@ class Scanline(Measurement):
 
         self.plot()
 
-        if self.return_to_zero:
+        if self.zero:
             self.piezos.V = 0
 
     def plot(self):
@@ -90,7 +120,8 @@ class Scanline(Measurement):
         super().plot()
 
         for chan in self._daq_inputs:
-            self.ax[chan].plot(self.Vout*self._conversions['piezo'], self.V[chan], '-b')
+            self.ax[chan].plot(self.Vout*self._conversions['x'],
+                               self.V[chan] * self._conversions[chan], '-')
 
         self.fig.tight_layout()
         self.fig.canvas.draw()
@@ -107,8 +138,10 @@ class Scanline(Measurement):
 
         for label, ax in self.ax.items():
             ax.set_xlabel(r'$\sim\mu\mathrm{m} (|V_{piezo}|*%.2f)$'
-                                %self._conversions['piezo']
+                                %self._conversions['x']
                     )
             ax.set_ylabel('%s ($\phi_0$)' %label)
             ax.set_title(self.filename)
-        self.ax['cap'].set_ylabel('cap (C)')
+            ax.yaxis.get_major_formatter().set_powerlimits((-2, 2))
+
+        self.ax['cap'].set_ylabel('cap (fF)')

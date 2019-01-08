@@ -62,8 +62,8 @@ class RFTakeSpectrum:
         self.v1.powerstate = 1  # turn vna source power on
         self.v1.averaging_state = 1  # Turn averaging on
         self.v1.averaging_factor = self.v_avg_factor
-        self.v1.maxfreq = self.v_freqmax
-        self.v1.minfreq = self.v_freqmin
+        self.v1.freqmax = self.v_freqmax
+        self.v1.freqmin = self.v_freqmin
         self.v1.sweepmode = "LIN"
         self.v1.numpoints = self.v_numpoints  # set num freq pnts for VNA
         self.v1.smoothing_state = self.v_smoothing_state  # turn smoothing on
@@ -302,8 +302,8 @@ class RFSweepCurrentDAQ:
         self.vna.powerstate = 1  # turn vna source power on
         self.vna.averaging_state = 1  # Turn averaging on
         self.vna.averaging_factor = self.v_avg_factor
-        self.vna.maxfreq = self.v_freqmax
-        self.vna.minfreq = self.v_freqmin
+        self.vna.freqmax = self.v_freqmax
+        self.vna.freqmin = self.v_freqmin
         self.vna.sweepmode = "LIN"
         self.vna.numpoints = self.v_numpoints  # set num freq pnts for VNA
         self.vna.smoothing_state = self.v_smoothing_state  # turn smoothing on
@@ -575,8 +575,8 @@ class RFSweepCurrentDAQREV:
         self.vna.powerstate = 1  # turn vna source power on
         self.vna.averaging_state = 1  # Turn averaging on
         self.vna.averaging_factor = self.v_avg_factor
-        self.vna.maxfreq = self.v_freqmax
-        self.vna.minfreq = self.v_freqmin
+        self.vna.freqmax = self.v_freqmax
+        self.vna.freqmin = self.v_freqmin
         self.vna.sweepmode = "LIN"
         self.vna.numpoints = self.v_numpoints  # set num freq pnts for VNA
         self.vna.smoothing_state = self.v_smoothing_state  # turn smoothing on
@@ -790,7 +790,7 @@ class RFSweepCurrent:
     Initiates a RF_sweep_current object with parameters about the sweep.
     """
     def __init__(self, k_Istart, k_Istop, k_Isteps, v_freqmin, v_freqmax, v_power, v_avg_factor, v_numpoints,
-                 filepath, v_smoothing_state=0, v_smoothing_factor=1, notes="No notes",hysteresis=False,
+                 filepath, v_smoothing_state=0, v_smoothing_factor=1, notes="No notes", hysteresis=False,
                  plot=False):
         # Set object variables
         self.k_Istart = k_Istart
@@ -841,8 +841,8 @@ class RFSweepCurrent:
         self.v1.powerstate = 1  # turn vna source power on
         self.v1.averaging_state = 1  # Turn averaging on
         self.v1.averaging_factor = self.v_avg_factor
-        self.v1.maxfreq = self.v_freqmax
-        self.v1.minfreq = self.v_freqmin
+        self.v1.freqmax = self.v_freqmax
+        self.v1.freqmin = self.v_freqmin
         self.v1.sweepmode = "LIN"
         self.v1.numpoints = self.v_numpoints  # set num freq pnts for VNA
         self.v1.smoothing_state = self.v_smoothing_state  # turn smoothing on
@@ -1244,3 +1244,54 @@ class RFCWSweepPower:
                 m += 1
             n += 1
         return attenuation
+
+class RFSetupSaverPlotter:
+    """
+    Want to make this parent class of the other rf_sweep measurement procedures for less repeat save/plot code
+    """
+    # must have "to save" attributes
+    def __init__(self, save_location):
+        self.save_location = save_loc
+        ation
+        # save_location should be whatever we have been using as filepath
+        # self.attributes_to_save = []  # add all names of attributes to be saved with h5py here
+        pass
+
+    def get_timestamp(self):
+        """
+        Return timestamp. Use for saving (and graph labeling?)
+        """
+        now = datetime.now()
+        timestamp = now.strftime('%Y-%m-%d_%H%M%S')
+        return timestamp
+    def do(self):
+        """
+        The measurement; implement in subclass
+        """
+        pass
+
+    def filepath(self):
+        """
+        Return filepath for saving
+        What is the best way to do this? user prompt? come back here
+        """
+        print("Not implemented, returning None")
+        return None
+
+    def save(self):
+        # gather attributes that are not Python special methods or methods
+        attributes_to_save = [a for a in dir(self) if not a.startswith('__') and not callable(getattr(self, a))]
+        timestamp = self.get_timestamp()
+        for att in attributes_to_save:
+            def save_data(self, timestamp, re_im):
+                name = timestamp + '_RF_CW_sweep_power'
+                path = os.path.join(self.filepath, name + '.hdf5')
+                info = dataset.Dataset(path)
+                info.append(path + '/Istart', self.k_Istart)
+                info.append(path + '/Istop', self.k_Istop)
+                info.append(path + '/Isteps', self.k_Isteps)
+                info.append(path + '/v_cw_freq', self.v_cw_freq)
+                info.append(path + '/v_power_stop', self.v_power_stop)
+                info.append(path + '/v_power_start', self.v_power_start)
+                info.append(path + '/v_power_step', self.v_power_step)
+                info.append(path + '/avg_factor', self.v_avg_factor)

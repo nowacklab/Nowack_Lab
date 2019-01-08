@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="e66dbb36-0de2-458a-91dc-087f5a6696f9" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Instruments/VNA.py" beforeDir="false" afterPath="$PROJECT_DIR$/Instruments/VNA.py" afterDir="false" />
-    </list>
+    <list default="true" id="e66dbb36-0de2-458a-91dc-087f5a6696f9" name="Default" comment="" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -13,82 +10,6 @@
   </component>
   <component name="CreatePatchCommitExecutor">
     <option name="PATCH_PATH" value="" />
-  </component>
-  <component name="DockManager">
-    <window id="1">
-      <content type="file-editors">
-        <state>
-          <leaf>
-            <file pinned="false" current-in-tab="false">
-              <entry file="file://$PROJECT_DIR$/Instruments/VNA.py">
-                <provider selected="true" editor-type-id="text-editor">
-                  <state relative-caret-position="291">
-                    <caret line="391" column="17" lean-forward="true" selection-start-line="391" selection-start-column="17" selection-end-line="391" selection-end-column="17" />
-                    <folding>
-                      <element signature="e#1046#2580#0" />
-                      <element signature="e#1046#1093#0" />
-                      <element signature="e#2875#3251#0" />
-                      <element signature="e#4004#4103#0" />
-                      <element signature="e#4159#4731#0" />
-                      <element signature="e#4780#5371#0" />
-                      <element signature="e#5435#5970#0" />
-                      <element signature="e#6017#6140#0" />
-                      <element signature="e#6200#6386#0" />
-                      <element signature="e#6433#6539#0" />
-                      <element signature="e#6599#6792#0" />
-                      <element signature="e#6841#6967#0" />
-                      <element signature="e#7031#7490#0" />
-                      <element signature="e#7676#7948#0" />
-                      <element signature="e#7995#8115#0" />
-                      <element signature="e#8175#8267#0" />
-                      <element signature="e#8322#8460#0" />
-                      <element signature="e#8536#8803#0" />
-                      <element signature="e#11277#12732#0" />
-                      <element signature="e#12768#13620#0" />
-                      <element signature="e#14851#15482#0" />
-                    </folding>
-                  </state>
-                </provider>
-              </entry>
-            </file>
-            <file pinned="false" current-in-tab="true">
-              <entry file="file://$PROJECT_DIR$/Procedures/rf_sweep.py">
-                <provider selected="true" editor-type-id="text-editor">
-                  <state relative-caret-position="612">
-                    <caret line="723" column="14" selection-start-line="723" selection-start-column="14" selection-end-line="723" selection-end-column="14" />
-                    <folding>
-                      <element signature="e#0#18#0" expanded="true" />
-                      <element signature="e#3423#4144#0" />
-                      <element signature="e#4674#6712#0" />
-                      <element signature="e#6740#10346#0" />
-                      <element signature="e#10411#11993#0" />
-                      <element signature="e#12059#12537#0" />
-                      <element signature="e#12606#13063#0" />
-                      <element signature="e#13130#13933#0" />
-                      <element signature="e#14001#15604#0" />
-                      <element signature="e#15675#16772#0" />
-                      <element signature="e#19456#23131#0" />
-                      <element signature="e#23196#24778#0" />
-                      <element signature="e#24844#25322#0" />
-                      <element signature="e#25391#25848#0" />
-                      <element signature="e#25915#26718#0" />
-                      <element signature="e#26786#28389#0" />
-                      <element signature="e#29713#29819#0" />
-                      <element signature="e#30009#30093#1" />
-                      <element signature="e#30347#31486#0" />
-                      <element signature="e#31514#31553#1" />
-                      <element signature="e#41631#50601#0" />
-                      <marker date="1542142397510" expanded="true" signature="4368:9660" ph="..." />
-                      <marker date="1542142397510" expanded="true" signature="7162:7171" ph="..." />
-                    </folding>
-                  </state>
-                </provider>
-              </entry>
-            </file>
-          </leaf>
-        </state>
-      </content>
-    </window>
   </component>
   <component name="FUSProjectUsageTrigger">
     <session id="721832116">
@@ -123,42 +44,61 @@
         </counts>
       </usages-collector>
     </session>
+    <session id="447191965">
+      <usages-collector id="statistics.lifecycle.project">
+        <counts>
+          <entry key="project.closed" value="3" />
+          <entry key="project.open.time.5" value="1" />
+          <entry key="project.open.time.6" value="1" />
+          <entry key="project.open.time.7" value="2" />
+          <entry key="project.opened" value="4" />
+        </counts>
+      </usages-collector>
+      <usages-collector id="statistics.file.extensions.open">
+        <counts>
+          <entry key="py" value="4" />
+        </counts>
+      </usages-collector>
+      <usages-collector id="statistics.file.types.open">
+        <counts>
+          <entry key="Python" value="4" />
+        </counts>
+      </usages-collector>
+      <usages-collector id="statistics.file.extensions.edit">
+        <counts>
+          <entry key="dummy" value="14" />
+          <entry key="py" value="1633" />
+        </counts>
+      </usages-collector>
+      <usages-collector id="statistics.file.types.edit">
+        <counts>
+          <entry key="PLAIN_TEXT" value="14" />
+          <entry key="Python" value="1633" />
+        </counts>
+      </usages-collector>
+    </session>
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Procedures/simple_daq_plotting.py">
+        <entry file="file://$PROJECT_DIR$/Instruments/VNA.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="408">
-              <caret line="24" column="10" lean-forward="true" selection-start-line="24" selection-start-column="10" selection-end-line="24" selection-end-column="10" />
+            <state relative-caret-position="6135">
+              <caret line="409" selection-start-line="409" selection-end-line="409" />
               <folding>
-                <marker date="1542142213914" expanded="true" signature="160:637" ph="..." />
-                <marker date="1542142213914" expanded="true" signature="710:719" ph="..." />
+                <element signature="e#0#11#0" expanded="true" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/Procedures/mixer_circuit_characterization.py">
+        <entry file="file://$PROJECT_DIR$/Measurements/rf_sweep.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="335">
-              <caret line="61" column="31" lean-forward="true" selection-start-line="61" selection-start-column="31" selection-end-line="61" selection-end-column="31" />
+            <state>
               <folding>
-                <element signature="e#91#100#0" expanded="true" />
-                <element signature="e#3532#4250#0" />
-                <marker date="1542142439205" expanded="true" signature="509:2720" ph="..." />
-                <marker date="1542142439205" expanded="false" signature="3153:3162" ph="..." />
+                <element signature="e#0#18#0" expanded="true" />
               </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Instruments/HP8657B.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="17">
-              <caret line="1" column="20" lean-forward="true" selection-start-line="1" selection-start-column="20" selection-end-line="1" selection-end-column="20" />
             </state>
           </provider>
         </entry>
@@ -214,23 +154,22 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$USER_HOME$/PycharmProjects/rf_squid/plot_simple_frequency.py" />
+        <option value="$PROJECT_DIR$/../rf_squid/plot_simple_frequency.py" />
         <option value="$PROJECT_DIR$/Procedures/rfsquid_sweep.py" />
         <option value="$PROJECT_DIR$/Instruments/simple_daq_plotting.py" />
-        <option value="$PROJECT_DIR$/Instruments/VNA.py" />
-        <option value="$PROJECT_DIR$/Procedures/simple_daq_plotting.py" />
-        <option value="$PROJECT_DIR$/Instruments/HP8657B.py" />
+        <option value="$PROJECT_DIR$/Instruments/instrument.py" />
         <option value="$PROJECT_DIR$/Procedures/rf_sweep.py" />
-        <option value="$PROJECT_DIR$/Instruments/nidaq.py" />
         <option value="$PROJECT_DIR$/Procedures/mixer_circuit_characterization.py" />
+        <option value="$PROJECT_DIR$/Procedures/simple_daq_plotting.py" />
+        <option value="$PROJECT_DIR$/Instruments/nidaq.py" />
+        <option value="$PROJECT_DIR$/Instruments/HP8657B.py" />
+        <option value="$PROJECT_DIR$/Instruments/VNA.py" />
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds">
-    <option name="x" value="299" />
-    <option name="y" value="40" />
-    <option name="width" value="960" />
-    <option name="height" value="1100" />
+  <component name="ProjectFrameBounds" extendedState="6">
+    <option name="width" value="956" />
+    <option name="height" value="1044" />
   </component>
   <component name="ProjectInspectionProfilesVisibleTreeState">
     <entry key="Project Default">
@@ -254,6 +193,7 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -264,7 +204,7 @@
             <path>
               <item name="Nowack_Lab" type="b2602c69:ProjectViewProjectNode" />
               <item name="Nowack_Lab" type="462c0819:PsiDirectoryNode" />
-              <item name="Instruments" type="462c0819:PsiDirectoryNode" />
+              <item name="Measurements" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="Nowack_Lab" type="b2602c69:ProjectViewProjectNode" />
@@ -275,12 +215,11 @@
           <select />
         </subPane>
       </pane>
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
-    <property name="settings.editor.selected.configurable" value="Errors" />
+    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
@@ -345,13 +284,13 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="299" y="40" width="960" height="1100" extended-state="0" />
+    <frame x="0" y="0" width="1920" height="1044" extended-state="6" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.18112798" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.11808118" />
       <window_info id="Structure" order="1" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
-      <window_info anchor="bottom" id="Find" order="1" weight="0.32855567" />
+      <window_info anchor="bottom" id="Find" order="1" weight="0.3278867" />
       <window_info anchor="bottom" id="Run" order="2" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
@@ -389,52 +328,15 @@
     <option name="myLimit" value="2678400000" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$USER_HOME$/PycharmProjects/rf_squid/plot_simple_frequency.py" />
-    <entry file="file://$PROJECT_DIR$/Procedures/scanline.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state>
-          <folding>
-            <element signature="e#0#18#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/Procedures/navigation.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state>
-          <folding>
-            <element signature="e#0#29#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/Procedures/mod2D.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="34">
-          <caret line="2" lean-forward="true" selection-start-line="2" selection-end-line="2" />
-          <folding>
-            <element signature="e#242#269#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/Procedures/rfsquid_sweep.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="998">
-          <caret line="367" column="3" selection-start-line="367" selection-start-column="3" selection-end-line="367" selection-end-column="3" />
-          <folding>
-            <element signature="e#67#85#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$PROJECT_DIR$/../rf_squid/plot_simple_frequency.py" />
+    <entry file="file://$PROJECT_DIR$/Procedures/scanline.py" />
+    <entry file="file://$PROJECT_DIR$/Procedures/navigation.py" />
+    <entry file="file://$PROJECT_DIR$/Procedures/mod2D.py" />
+    <entry file="file://$PROJECT_DIR$/Procedures/rfsquid_sweep.py" />
     <entry file="file://$PROJECT_DIR$/Procedures/magnetotransport.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="-5360">
           <caret selection-end-column="50" />
-          <folding>
-            <element signature="e#0#50#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -445,51 +347,41 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Procedures/simple_daq_plotting.py">
+    <entry file="file://$PROJECT_DIR$/Instruments/instrument.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="408">
-          <caret line="24" column="10" lean-forward="true" selection-start-line="24" selection-start-column="10" selection-end-line="24" selection-end-column="10" />
-          <folding>
-            <marker date="1542142213914" expanded="true" signature="160:637" ph="..." />
-            <marker date="1542142213914" expanded="true" signature="710:719" ph="..." />
-          </folding>
+        <state relative-caret-position="900">
+          <caret line="60" selection-start-line="60" selection-end-line="60" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Procedures/mixer_circuit_characterization.py" />
+    <entry file="file://$PROJECT_DIR$/Procedures/simple_daq_plotting.py" />
+    <entry file="file://$PROJECT_DIR$/Instruments/nidaq.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="840">
+          <caret line="379" column="3" selection-start-line="379" selection-start-column="3" selection-end-line="379" selection-end-column="3" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Instruments/HP8657B.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="60">
+          <caret line="4" selection-start-line="4" selection-end-line="4" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Procedures/rf_sweep.py" />
+    <entry file="file://$PROJECT_DIR$/measurements_justin_temp/temp_scratch.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state>
+          <caret column="19" selection-start-column="19" selection-end-column="19" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/Instruments/VNA.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="291">
-          <caret line="391" column="17" lean-forward="true" selection-start-line="391" selection-start-column="17" selection-end-line="391" selection-end-column="17" />
-          <folding>
-            <element signature="e#1046#2580#0" />
-            <element signature="e#1046#1093#0" />
-            <element signature="e#2875#3251#0" />
-            <element signature="e#4004#4103#0" />
-            <element signature="e#4159#4731#0" />
-            <element signature="e#4780#5371#0" />
-            <element signature="e#5435#5970#0" />
-            <element signature="e#6017#6140#0" />
-            <element signature="e#6200#6386#0" />
-            <element signature="e#6433#6539#0" />
-            <element signature="e#6599#6792#0" />
-            <element signature="e#6841#6967#0" />
-            <element signature="e#7031#7490#0" />
-            <element signature="e#7676#7948#0" />
-            <element signature="e#7995#8115#0" />
-            <element signature="e#8175#8267#0" />
-            <element signature="e#8322#8460#0" />
-            <element signature="e#8536#8803#0" />
-            <element signature="e#11277#12732#0" />
-            <element signature="e#12768#13620#0" />
-            <element signature="e#14851#15482#0" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/Procedures/rf_sweep.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="612">
-          <caret line="723" column="14" selection-start-line="723" selection-start-column="14" selection-end-line="723" selection-end-column="14" />
+        <state relative-caret-position="6135">
+          <caret line="409" selection-start-line="409" selection-end-line="409" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
             <element signature="e#3423#4144#0" />
@@ -518,40 +410,21 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Instruments/nidaq.py">
+    <entry file="file://$PROJECT_DIR$/Utilities/save.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="765">
-          <caret line="61" lean-forward="true" selection-start-line="61" selection-end-line="61" />
+        <state relative-caret-position="675">
+          <caret line="138" column="10" selection-start-line="138" selection-start-column="10" selection-end-line="138" selection-end-column="10" />
           <folding>
-            <element signature="e#761#1277#0" />
-            <element signature="e#1847#2425#0" />
-            <element signature="e#2455#2666#0" />
-            <element signature="e#2713#3406#0" />
-            <element signature="e#3461#3815#0" />
-            <element signature="e#3867#4142#0" />
-            <element signature="e#4190#4795#0" />
-            <element signature="e#4852#5213#0" />
-            <element signature="e#5266#5554#0" />
+            <element signature="e#0#41#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Instruments/HP8657B.py">
+    <entry file="file://$PROJECT_DIR$/Measurements/rf_sweep.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="17">
-          <caret line="1" column="20" lean-forward="true" selection-start-line="1" selection-start-column="20" selection-end-line="1" selection-end-column="20" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/Procedures/mixer_circuit_characterization.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="335">
-          <caret line="61" column="31" lean-forward="true" selection-start-line="61" selection-start-column="31" selection-end-line="61" selection-end-column="31" />
+        <state>
           <folding>
-            <element signature="e#91#100#0" expanded="true" />
-            <element signature="e#3532#4250#0" />
-            <marker date="1542142439205" expanded="true" signature="509:2720" ph="..." />
-            <marker date="1542142439205" expanded="false" signature="3153:3162" ph="..." />
+            <element signature="e#0#18#0" expanded="true" />
           </folding>
         </state>
       </provider>

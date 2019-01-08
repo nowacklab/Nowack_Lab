@@ -13,8 +13,7 @@ import time, os
 from datetime import datetime
 from ..Utilities import dummy
 from ..Instruments import nidaq, preamp
-from ..Utilities.save import Measurement
-from ..Utilities import save
+from .measurement import Measurement
 from ..Utilities.utilities import AttrDict
 from . import squid_plotting
 
@@ -123,8 +122,9 @@ class Mod(Measurement):
 
 
 class SquidIV(Measurement):
-    _chan_labels = ['squidout', 'modout', 'squidin', 'currentin']
-    instrument_list = ['daq','preamp','preamp_I']
+    _daq_inputs = ['squidin', 'currentin']
+    _daq_outputs = ['squidout', 'modout']
+    instrument_list = ['daq','preamp','montana','preamp_I']
 
     V = np.array([0]*2) # to make plotting happy with no real data
     I = np.array([0]*2)
@@ -173,131 +173,40 @@ class SquidIV(Measurement):
         display.clear_output()
 
 
-    def calc_ramp(self, smooth=False):
-        """
-            For given ramp step size and ramp span, calculate the actual
-            ramp voltages.  Takes in no additional arguments.
+    def calc_ramp(self):
+        self.numpts = int(self.Irampspan/self.Irampstep)
+        Ibias = np.linspace(self.Irampcenter-self.Irampspan/2, self.Irampcenter+self.Irampspan/2, self.numpts) # Desired current ramp
+        self.Vbias = Ibias*(self.Rbias+self.Rmeas) # SQUID bias voltage
 
 
+    def do(self):
+        self.param_prompt() # Check parameters
 
-            Depends on:
-                self.Irampstep
-                self.Irampcenter
-            Changes:
-                self.numpts
-                self.Vbias
-        """
-        if smooth:
-            # fill me in rachel
-            self.numpts = int(self.Irampspan/self.Irampstep)
-            Ibias1 = np.linspace(self.Irampcenter,
-                                self.Irampcenter-self.Irampspan/2,
-                                self.numpts/2) # Desired current ramp
-            Ibias2 = np.linspace(self.Irampcenter-self.Irampspan/2,
-                                self.Irampcenter+self.Irampspan/2,
-                                self.numpts) # Desired current ramp
-            Ibias3 = np.linspace(self.Irampcenter+self.Irampspan/2,
-                                self.Irampcenter,
-                                self.numpts/2) # Desired current ramp
-            Ibias = np.array(list(Ibias1) + list(Ibias2) + list(Ibias3))
-            self.Vbias = Ibias*(self.Rbias+self.Rmeas) # SQUID bias voltage
-            self.numpts= self.numpts * 2
-        else:
-            self.numpts = int(self.Irampspan/self.Irampstep)
-            Ibias = np.linspace(self.Irampcenter-self.Irampspan/2,
-                                self.Irampcenter+self.Irampspan/2,
-                                self.numpts) # Desired current ramp
-            self.Vbias = Ibias*(self.Rbias+self.Rmeas) # SQUID bias voltage
+        self.do_IV()
+        self.daq.zero() # zero everything
 
+        self.setup_plots()
+        self.plot(dvdi = False)
+        self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
 
-    def do(self, squidNum = '0',rate=9, Rbias=2000,
-           Irampspan = 200e-6, Irampstep = 0.5e-6, Irampcenter = 0,
-           preampgain = 5000, preampfilter = (.3,100),
-           smooth=False, checkParam = True, notes = True):
-        """
-        Execute me ... FIXME
-
-        Inputs:
-
-        Outputs:
-            None
-        """
-
-
-        self.rate = rate # Hz # measurement rate of the daq
-
-        self.Rbias = Rbias
-        self.Rmeas = 0 # Ohm # determined by squid testing box
-        self.Rbias_mod = 2e3 # Ohm # Inside SQUID testing box
-        self.Imod = 0 # A # constant mod current
-
-        self.Irampcenter = Irampcenter
-        self.Irampspan = Irampspan # A # Will sweep from -Irampspan/2 to +Irampspan/2
-        self.Irampstep = Irampstep # A # Step size
-
-        self.preamp.filter = preampfilter;
-        self.preamp.gain = preampgain;
-
-        self.calc_ramp(smooth)
-
-        repeat = True;
-        while(repeat):
-            if(checkParam):
-                stop = self.param_prompt(smooth) # Check parameters
-                if(stop):
-                    repeat = False
-                    break
-
-            self.do_IV()
-            self.daq.zero() # zero everything
-
-            # path = os.path.join(save.get_local_data_path(),
-            #                     save.get_todays_data_dir())
-            # if(smooth):
-            #     squid_plotting.makePlots(squidNum, path, ivsmooth=self.filename)
-            # else:
-            #     squid_plotting.makePlots(squidNum, path, iv=self.filename)
-
-            # self.setup_plots()
-            # self.plot(dvdi = False)
-            # self.fig.canvas.draw() #draws the plot; needed for %matplotlib notebook
-            if(notes):
-                self.notes = input('Notes for this IV (r to redo, q to quit): ')
-                if self.notes == 'r':
-                    self.notes = ''
-                    display.clear_output()
-                    repeat=True;
-                    continue;
-                #self.do(self, rate=self.rate, Rbias=self.Rbias,
-                #       Irampspan = self.Irampspan,
-                #       Irampstep = self.Irampstep,
-                #       Irampcenter = self.Irampcenter,
-                #       preampgain = self.preamp.gain,
-                #       preampfilter = self.preamp.filter,
-                #       smooth=smooth)
-
-                elif self.notes != 'q':
-                    self.ax.set_title(self.filename+'\n'+self.notes)
-                    self.save()
-            else:
-                self.save()
-            repeat=False;
-            return self.filename
+        self.notes = input('Notes for this IV (r to redo): ')
+        if self.notes == 'r':
+            self.notes = ''
+            display.clear_output()
+            self.do()
+        self.ax.set_title(self.filename+'\n'+self.notes)
 
 
     def do_IV(self):
         """ Wrote this for mod2D so it doesn't plot """
         self.daq.outputs['modout'].V = self.Imod*self.Rbias_mod # Set mod current
         # Collect data
-        in_chans = ['squidin','currentin']
-        #output_data, received = self.daq.sweep({'squidout': self.Vbias[0]},
-        #                                       {'squidout': self.Vbias[-1]},
-        #                                       chan_in=in_chans,
-        #                                       sample_rate=self.rate,
-        #                                       numsteps=self.numpts
-        #                                   )
-        received = self.daq.send_receive({'squidout': self.Vbias},
-                                                        in_chans, self.rate);
+        output_data, received = self.daq.sweep({'squidout': self.Vbias[0]},
+                                               {'squidout': self.Vbias[-1]},
+                                               chan_in=self._daq_inputs,
+                                               sample_rate=self.rate,
+                                               numsteps=self.numpts
+                                           )
         self.V = np.array(received['squidin'])/self.preamp.gain
         if self.two_preamps:
             self.I = np.array(received['currentin'])/self.preamp_I.gain/self.Rmeas # Measure current from series resistor
@@ -332,7 +241,7 @@ class SquidIV(Measurement):
                     return True
                 else:
                     exec('self.'+inp)
-                    self.calc_ramp(smooth) # recalculate daq output
+                    self.calc_ramp() # recalculate daq output
                     display.clear_output()
             except:
                 display.clear_output()

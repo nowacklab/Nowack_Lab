@@ -1,11 +1,9 @@
 # just updates DAQ input voltage data
-# import numpy as np
-# import matplotlib.pyplot as plt
-# mport time
+import matplotlib.pyplot as plt
 from ..Instruments.nidaq import *
 
 
-class daq_plotter:
+class daqPlotter:
     def __init__(self, total_time=5, timestep=.01):
         self.total_time = total_time
         self.timestep = timestep
@@ -22,7 +20,7 @@ class daq_plotter:
         plt.plot(arr)
 
 
-class PlotTester:
+class plotTester:
     def __init__(self):
         pass
 

@@ -1,6 +1,6 @@
 import time, os, numpy as np, matplotlib.pyplot as plt
 from ..Utilities import conversions
-from ..Utilities.save import Measurement
+from .measurement import Measurement
 from ..Utilities.plotting import plot_mpl
 from ..Utilities.utilities import AttrDict
 
@@ -9,7 +9,7 @@ class MutualInductance_sweep(Measurement):
     _daq_inputs = ['dc']
     _daq_outputs = ['fieldcoil']
 
-    def __init__(self, 
+    def __init__(self,
                  instruments = {},
                  fc_Is = [],
                  sbias = [],
@@ -17,6 +17,7 @@ class MutualInductance_sweep(Measurement):
                  rate = 100,
                  numsteps = 1000,
                  conversion = 1/14.4):
+        raise Exception('This is out of date and will not work.')
         super().__init__(instruments=instruments)
         self.fc_Is = np.array(fc_Is)
         self.sbias = np.array(sbias)
@@ -30,13 +31,13 @@ class MutualInductance_sweep(Measurement):
         for sb in self.sbias:
             self.squidarray.S_bias = sb
             self.squidarray.reset()
-            m = MutualInductance2(instruments, 
-                                  self.fc_Is, 
-                                  self.Rbias, 
-                                  self.rate, 
+            m = MutualInductance2(instruments,
+                                  self.fc_Is,
+                                  self.Rbias,
+                                  self.rate,
                                   self.numsteps,
                                   self.conversion)
-                 
+
             m.run(removeplot=True, save_appendedpath=self.filename)
             self.mutuals.append(m)
             self.sbias_live.append(sb)
@@ -49,7 +50,7 @@ class MutualInductance_sweep(Measurement):
 
     def plot(self):
         m = self.mutuals[-1]
-        self.ax.plot(m.Vsrc / m.Rbias / 1e-3, m.Vmeas * m.conversion, 
+        self.ax.plot(m.Vsrc / m.Rbias / 1e-3, m.Vmeas * m.conversion,
                      label='Sbias={0:2.2f} uA'.format(self.sbias_live[-1]*1e6))
         self.ax.legend()
 
@@ -66,8 +67,8 @@ class MutualInductance2(Measurement):
                 rate=100,
                 numsteps = 1000,
                 title='',
-                conversion = 1/14.4,
-                units = r'\Phi_0'):
+                conversion = 1/14.4):
+
         super().__init__(instruments=instruments)
         self.Is = np.array(Is)
         self.Rbias = Rbias
@@ -76,7 +77,6 @@ class MutualInductance2(Measurement):
         self.numsteps = numsteps
         self.title = title
         self.conversion = conversion
-        self.units = units
 
     def do(self, title='', plot=True, removeplot = False):
         if title != '':
@@ -111,19 +111,15 @@ class MutualInductance2(Measurement):
 
     def setup_plots(self):
         self.fig, self.ax = plt.subplots()
-        plt.pause(.01)
+        # plt.pause(.01)
 
     def plot(self):
         super().plot()
         self.ax.plot(self.Vsrc / self.Rbias / 1e-3, self.Vmeas * self.conversion,
                      label='data')
-        self.ax.set_ylabel('SQUID response (${0}$)'.format(self.units))
+        self.ax.set_ylabel('SQUID response ($\Phi_0$)')
         self.ax.set_xlabel('Field Coil (mA)')
         self.ax.annotate(self.filename, xy=(0.02, .98), xycoords='axes fraction',
-                        fontsize=8, ha='left', va='top', family='monospace')
-        self.ax.annotate('max={0:2.2e}, min={1:2.2e}'.format(
-                        np.max(self.Vmeas*self.conversion), np.min(self.Vmeas*self.conversion)), 
-                        xy=(0.02, .1), xycoords='axes fraction',
                         fontsize=8, ha='left', va='top', family='monospace')
         self.ax.set_title(self.title)
 
