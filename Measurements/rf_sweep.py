@@ -1118,53 +1118,35 @@ class RFCWSweepPower:
             n += 1
         return attenuation
 
-class RFSetupSaverPlotter:
+
+class RFSetupSaver:
     """
-    Want to make this parent class of the other rf_sweep measurement procedures for less repeat save/plot code
+    Want to make this parent class of the other rf_sweep measurement procedures for less repeat save code
     """
-    # must have "to save" attributes
     def __init__(self, save_location):
-        self.save_location = save_loc
-        ation
-        # save_location should be whatever we have been using as filepath
-        # self.attributes_to_save = []  # add all names of attributes to be saved with h5py here
+        # child classes should call this (how to enforce this using standard inheritance/OOP practices?)
+        self.save_location = save_location
+        self.timestamp = datetime.now().strftime('%Y-%m-%d_%H%M%S')
+        self.__hdf5_file = None
         pass
 
-    def get_timestamp(self):
-        """
-        Return timestamp. Use for saving (and graph labeling?)
-        """
-        now = datetime.now()
-        timestamp = now.strftime('%Y-%m-%d_%H%M%S')
-        return timestamp
     def do(self):
         """
         The measurement; implement in subclass
         """
         pass
 
-    def filepath(self):
-        """
-        Return filepath for saving
-        What is the best way to do this? user prompt? come back here
-        """
-        print("Not implemented, returning None")
-        return None
-
     def save(self):
-        # gather attributes that are not Python special methods or methods
-        attributes_to_save = [a for a in dir(self) if not a.startswith('__') and not callable(getattr(self, a))]
-        timestamp = self.get_timestamp()
-        for att in attributes_to_save:
-            def save_data(self, timestamp, re_im):
-                name = timestamp + '_RF_CW_sweep_power'
-                path = os.path.join(self.filepath, name + '.hdf5')
-                info = dataset.Dataset(path)
-                info.append(path + '/Istart', self.k_Istart)
-                info.append(path + '/Istop', self.k_Istop)
-                info.append(path + '/Isteps', self.k_Isteps)
-                info.append(path + '/v_cw_freq', self.v_cw_freq)
-                info.append(path + '/v_power_stop', self.v_power_stop)
-                info.append(path + '/v_power_start', self.v_power_start)
-                info.append(path + '/v_power_step', self.v_power_step)
-                info.append(path + '/avg_factor', self.v_avg_factor)
+        # gather names of attributes that are not methods or Python special methods
+        attribute_names_to_save = [a for a in dir(self) if not a.startswith('__') and not callable(getattr(self, a))]
+        timestamp = self.timestamp
+        name = timestamp + self.__name__
+        path = os.path.join(self.save_location, name + '.hdf5')
+        info = dataset.Dataset(path)
+        self.__hdf5_file = info
+        for attr_name in attribute_names_to_save:
+            info.append(path + '/' + attr_name, self.__getattribute__(attr_name))
+
+    def get_saved_attribute(self, attribute_name):
+        attr_to_return = getattr(self.__hdf5_file, attribute_name)
+        return attr_to_return
