@@ -1163,9 +1163,9 @@ class RFCWSweepPower:
         self.v1.powerstate = 0  # turn off VNA source power
 
         if self.plot:
-            RFCWSweepPower.plotPowerSweep(self.filepath + "\\" + timestamp + "_RF_CW_sweep_power.hdf5")
+            RFCWSweepPower.plot_power_sweep(self.filepath + "\\" + timestamp + "_RF_CW_sweep_power.hdf5")
             if self.hysteresis:
-                RFCWSweepPower.plotPowerSweep(self.filepath + "\\" + timestamp + "_RF_CW_sweep_power.hdf5", rev=False)
+                RFCWSweepPower.plot_power_sweep(self.filepath + "\\" + timestamp + "_RF_CW_sweep_power.hdf5", rev=False)
 
     def save_data(self, timestamp, re_im):
         name = timestamp + '_RF_CW_sweep_power'
@@ -1185,7 +1185,7 @@ class RFCWSweepPower:
         info.append(path + '/notes', self.notes)
 
     @staticmethod
-    def plotPowerSweep(filename, rev=False):
+    def plot_power_sweep(filename, rev=False):
         fig, ax = plt.subplots(1, 1, figsize=(10, 6))
         data = dataset.Dataset(filename)
         if not rev:
@@ -1277,3 +1277,78 @@ class RFSetupSaver:
     def get_saved_attribute(self, attribute_name):
         attr_to_return = getattr(self.__hdf5_file, attribute_name)
         return attr_to_return
+
+
+class RFSetup1DPlotter:
+    """Intended to be parent class to something that will """
+    pass
+
+
+class RFTakeSpectrum2(RFSetupSaver):
+    """
+    RFSetupSaver implementation of RFTakeSpectrum
+    Take a single spectrum (gain/attenuation as function of frequency)
+    """
+
+    def __init__(self, save_location, v_freqmin, v_freqmax, v_power, v_avg_factor, v_numpoints, v_smoothing_state=0,
+                 v_smoothing_factor=1, notes="No notes", plot=False, v_network_param='S21'):
+        super().__init__(save_location)
+
+        # Set object variables
+        self.v_freqmax = v_freqmax
+        self.v_freqmin = v_freqmin
+        self.v_power = v_power
+        self.v_avg_factor = v_avg_factor
+
+        self.save_location = save_location
+        self.v_smoothing_state = v_smoothing_state
+        self.v_smoothing_factor = v_smoothing_factor
+        self.notes = notes
+        self.plot = plot
+        self.v_network_param = v_network_param
+
+        self.valid_numpoints = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
+        self.v_numpoints = v_numpoints
+
+        if v_numpoints not in self.valid_numpoints:
+            index = (np.abs(self.valid_numpoints - v_numpoints)).argmin()
+            closest_valid_numpoint = self.valid_numpoints[index]
+            print("%f is not a valid point number. Setting to %d instead." % (v_numpoints, closest_valid_numpoint))
+            self.v_numpoints = closest_valid_numpoint
+        else:
+            self.v_numpoints = v_numpoints
+
+        self.v1 = VNA8722ES(16)  # initialize VNA (Instrument object)
+
+    def do(self):
+        """
+        Run measurement
+        """
+        # Set up VNA settings
+        self.v1.networkparam = self.v_network_param  # Set to measure forward transmission
+        self.v1.power = self.v_power
+        self.v1.powerstate = 1  # turn vna source power on
+        self.v1.averaging_state = 1  # Turn averaging on
+        self.v1.averaging_factor = self.v_avg_factor
+        self.v1.freqmax = self.v_freqmax
+        self.v1.freqmin = self.v_freqmin
+        self.v1.sweepmode = "LIN"
+        self.v1.numpoints = self.v_numpoints  # set num freq pnts for VNA
+        self.v1.smoothing_state = self.v_smoothing_state  # turn smoothing on
+        self.v1.smoothing_factor = self.v_smoothing_factor
+
+        # initialize empty array to store data in TODO: change from empty to NAN?
+        # re_im = np.empty((2, int(self.v1.numpoints)))
+        time.sleep(5)
+        power_range = self.v1.ask('POWR?')
+        vna_power = self.v1.ask('POWE?')
+        print(power_range)
+        print(vna_power)
+        re_im = self.v1.save_re_im()  # get real and imaginary parts
+        self.save()  # save data to h5, using RFSetupSaver method
+
+        self.v1.powerstate = 0  # turn off VNA source power
+
+        # plot TODO: only plots foward attenuation atm
+        if self.plot:
+            RFSweepCurrent.plotdB1D(self.save_location + "\\" + self.timestamp + "_rf_sweep.hdf5")
