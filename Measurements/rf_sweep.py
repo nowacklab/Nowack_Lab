@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import os, time
+import os
+import time
 from datetime import datetime
 
 # from importlib import reload
@@ -11,6 +12,8 @@ from datetime import datetime
 
 # Nowack_Lab imports
 from ..Utilities import dataset
+from ..Utilities.plotting.plotter import *
+from ..Utilities.save import *
 from ..Instruments.VNA import VNA8722ES
 from ..Instruments.nidaq import NIDAQ
 from ..Instruments.keithley import Keithley2400
@@ -1284,17 +1287,18 @@ class RFSetup1DPlotter:
     pass
 
 
-class RFTakeSpectrum2(RFSetupSaver):
+class RFTakeSpectrum2(Saver, Plotter):
     """
-    RFSetupSaver implementation of RFTakeSpectrum
+    Implement RFTakeSpectrum but use existing Saver and Plotter classes
     Take a single spectrum (gain/attenuation as function of frequency)
     """
 
     def __init__(self, save_location, v_freqmin, v_freqmax, v_power, v_avg_factor, v_numpoints, v_smoothing_state=0,
                  v_smoothing_factor=1, notes="No notes", plot=False, v_network_param='S21'):
-        super().__init__(save_location)
 
-        # Set object variables
+        super(RFTakeSpectrum2, self).__init__()
+
+        # Set VNA object variables
         self.v_freqmax = v_freqmax
         self.v_freqmin = v_freqmin
         self.v_power = v_power
@@ -1344,11 +1348,22 @@ class RFTakeSpectrum2(RFSetupSaver):
         vna_power = self.v1.ask('POWE?')
         print(power_range)
         print(vna_power)
-        re_im = self.v1.save_re_im()  # get real and imaginary parts
-        self.save()  # save data to h5, using RFSetupSaver method
 
         self.v1.powerstate = 0  # turn off VNA source power
 
-        # plot TODO: only plots foward attenuation atm
-        if self.plot:
-            RFSweepCurrent.plotdB1D(self.save_location + "\\" + self.timestamp + "_rf_sweep.hdf5")
+        self.save(filename=None)
+
+        self.plot(self.plot)
+
+
+class SaverPlotterTester(Saver, Plotter):
+    def __init__(self, param1, param2, param3, plot=True):
+        super(SaverPlotterTester, self).__init__()
+        self.var1 = param1
+        self.var2 = param2
+        self.var3 = param3
+
+    def do(self):
+        self.save()
+        self.plot()
+        pass
