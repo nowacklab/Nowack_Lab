@@ -370,7 +370,7 @@ class Saver(object):
 
 
     def make_timestamp_and_filename(self):
-        """
+        '''
         Makes a timestamp and filename from the current time.
         '''
         now = dt.now()
