@@ -1,4 +1,4 @@
-r"""
+"""
 Template setup file for handling imports.
 Modify for each computer as you see appropriate.
 Run using get_ipython().magic('run %s' %setup_path)
@@ -20,7 +20,7 @@ from Nowack_Lab.Utilities import utilities, save, logging, conversions, anim, co
 from Nowack_Lab.Utilities.plotting import plot_mpl
 from Nowack_Lab.Utilities.say import say
 from Nowack_Lab.Utilities.save import Saver
-from Nowack_Lab.Measurements.array_tune import BestLockPoint
+"""from Nowack_Lab.Measurements.array_tune import BestLockPoint
 from Nowack_Lab.Measurements.spectrum import DaqSpectrum, SQUIDSpectrum, ZurichSpectrum
 from Nowack_Lab.Measurements.dctransport import DAQ_IV, RvsT_Montana_Keithley
 from Nowack_Lab.Measurements.heightsweep import Heightsweep
@@ -36,6 +36,8 @@ from Nowack_Lab.Measurements.squidIV import SquidIV
 from Nowack_Lab.Measurements.touchdown import Touchdown
 from Nowack_Lab.Measurements.transport import RvsVg, RvsTime, RvsT, RvsVg_Vtg, RvsT_RT_to_4K, RvsVg_T, PPMS_cool, RvsT_Montana
 from Nowack_Lab.Measurements.magnetotransport import RvsB, RvsVg_B, RvsB_BlueFors, RvsVg_B_BlueFors, RvsB_Phil, RvsVg_B_Phil
+"""
+print("on Justin branch, Utilities/setup/Cactus-PC.py has a bunch of stuff commented out")
 from Nowack_Lab.Instruments.attocube import Attocube
 from Nowack_Lab.Instruments.keithley import Keithley2400, Keithley2450, KeithleyPPMS
 from Nowack_Lab.Instruments.lakeshore import Lakeshore372

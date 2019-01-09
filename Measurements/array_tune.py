@@ -15,7 +15,7 @@ import sys
 
 import Nowack_Lab.Utilities.save
 reload(Nowack_Lab.Utilities.save)
-from Nowack_Lab.Utilities.save import Measurement
+from .measurement import Measurement
 
 import Nowack_Lab.Utilities.utilities
 reload(Nowack_Lab.Utilities.utilities)

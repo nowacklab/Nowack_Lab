@@ -174,7 +174,7 @@ class NIDAQ(Instrument):
         duration using len(data['t'])/sample_rate = num_seconds
         Arrays should be equally sized for all output channels.
         chan_in is a list of all input channel labels or names you wish to monitor.
-        '''
+        """
 
         # Make everything a numpy array
         data = data.copy() # so we don't modify original data

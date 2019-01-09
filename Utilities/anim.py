@@ -8,7 +8,7 @@ def scan_gif(scan_list):
     Colorscale will use the lowest lower bound and the highest upper bound.
     This will (hopefully) ensure that we can see features on all scans.
     scan_list = A list of files to load
-    '''
+    """
     from ..Measurements.scanplane import Scanplane
 
     scans = []

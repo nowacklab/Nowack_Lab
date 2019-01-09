@@ -308,7 +308,7 @@ class Scanplane(Measurement):
     def setup_plots(self):
         """
         Set up all plots.
-        '''
+        """
 
         # Use the aspect ratio of the image set subplot size.
         # The aspect ratio is Xspan/Yspan
@@ -410,7 +410,7 @@ class Scanplane(Measurement):
     def plot_line(self):
         """
         Update the data in the linecut plot.
-        '''
+        """
         for chan in self._daq_inputs:
             ax = self.ax_cuts[chan]
             l_full = self.lines_full[chan]

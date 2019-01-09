@@ -136,7 +136,7 @@ class Saver(object):
 
 
     def _load_hdf5(self, filename):
-        '''
+        """
         Loads data from HDF5 files. Will walk through the HDF5 file and populate
         the object's dictionary and subdictionaries (already loaded by JSON)
         """
@@ -525,7 +525,7 @@ def set_experiment_data_dir(description=''):
     Run this when you start a new experiment (e.g. a cooldown).
     Makes a new directory in the data folder corresponding to your computer
     with the current date and a description of the experiment.
-    '''
+    """
     now = dt.now()
     now_fmt = now.strftime('%Y-%m-%d')
 

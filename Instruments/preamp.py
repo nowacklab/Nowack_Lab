@@ -179,7 +179,7 @@ class SR5113(VISAInstrument):
         last read command will be empty (*\n).
 
         read: set to True if response is expected
-        '''
+        """
 
         time.sleep(0.05)  # Make sure we've had enough time to make connection.
         super().write(cmd+'\r')

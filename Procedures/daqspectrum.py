@@ -5,7 +5,7 @@ from datetime import datetime
 import os
 import re
 from ..Instruments import nidaq, preamp
-from ..Utilities.save import Measurement
+from .measurement import Measurement
 from ..Utilities.utilities import AttrDict
 from ..Utilities import conversions
 

@@ -25,7 +25,7 @@ def fit_plane(x,y,z):
     """
     Calculates plane parameters a, b, and c for 2D data.
     z = ax + by + c
-    '''
+    """
     if x.ndim == 1 and y.ndim ==1:
         x, y = np.meshgrid(x,y)
 
@@ -141,7 +141,7 @@ def reject_outliers(data, radius=[None,None], m=2):
     This takes a long time... might just want to do this occasionally.
 
     TODO: use chauvenet's criterion for "justified" rejection of data
-    '''
+    """
     new_data = np.copy(data)
 
     # Set a radius if None
@@ -253,7 +253,7 @@ def hide_code_button():
     }
     $( document ).ready(code_toggle);
     </script>
-    <form action="javascript:code_toggle()"><input type="submit" value="Click here to toggle on/off the raw code."></form>''')
+    <form action="javascript:code_toggle()"><input type="submit" value="Click here to toggle on/off the raw code."></form>""")
 
 def running_std(array1d, windowlen=16, mode='same'):
     '''

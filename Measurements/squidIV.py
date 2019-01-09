@@ -15,7 +15,7 @@ from ..Utilities import dummy
 from ..Instruments import nidaq, preamp
 from .measurement import Measurement
 from ..Utilities.utilities import AttrDict
-from . import squid_plotting
+
 
 class IV(Measurement):
     _daq_inputs = ['iv']

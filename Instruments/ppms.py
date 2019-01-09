@@ -6,15 +6,16 @@ Adapted for use by the Nowack lab Jan 2017
 from .instrument import Instrument
 import select, os, time, subprocess, socket
 
+
 class PPMS(Instrument):
-    r"""
+    r'''
     For remote operation of the Quantum Design PPMS.
     Makes use of PyQDInstrument (https://github.com/guenp/PyQDInstrument).
     Make sure to run PyQDInstrument.run_server() in an IronPython console on a
     machine that can connect to the PPMS control PC's QDInstrument_Server.exe
     The basic commands to set up the server for the blue PPMS are:
         import sys
-        sys.path.append(r'C:\Users\ccmradmin\Documents\GitHub')
+        sys.path.append(C:\Users\ccmradmin\Documents\GitHub')
             (if pyQDInstrument is in the GitHub directory)
         import pyQDInstrument as pqi
         pqi.run_server('192.168.0.103', 50009, '192.168.0.100', 11000)
@@ -22,7 +23,9 @@ class PPMS(Instrument):
     'temperature', 'temperature_rate', 'temperature_approach', 'field',
     'field_rate', 'field_approach', 'field_mode', 'temperature_status',
     'field_status', 'chamber'
+    ###
     '''
+
     _pid = None # process id number for server
 
     def __init__(self, host='127.0.0.1', port=50009, s=None):

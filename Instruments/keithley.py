@@ -7,7 +7,7 @@ class Keithley2400(VISAInstrument):
     _label = 'keithley'
     _idn = 'MODEL 2400'
 
-    '''
+    """
     Instrument driver for Keithley 2400 Source Meter
     """
     _Iout = None
@@ -261,7 +261,7 @@ class Keithley2400(VISAInstrument):
     def output(self):
         """
         Check whether or not output is enabled
-        '''
+        """
         self._output = {0: 'off', 1:'on'}[int(self.query('OUTP?'))]
         return self._output
 

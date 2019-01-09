@@ -56,8 +56,6 @@ class Heightsweep(Measurement):
 
     def do(self):
 
-    def do(self, zstart=0.0):
-
         Vstart = {'z': self.zstart}
         Vend = {'z': self.zend}
 
@@ -99,7 +97,7 @@ class Heightsweep(Measurement):
         for chan, ax in zip(self._daq_inputs, axes):
             ax.plot(self.Vup['z'], self.Vup[chan])
             ax.plot(self.Vdown['z'], self.Vdown[chan])
-            ax.set_ylabel(labels[chan])
+            # ax.set_ylabel(labels[chan])
 
         self.axes[3].set_xlabel("Z Position (V)")
         self.axes[0].set_title(self.timestamp, size="medium")

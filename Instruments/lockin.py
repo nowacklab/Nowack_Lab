@@ -167,7 +167,7 @@ class SR830(VISAInstrument):
     def harmonic(self):
         """
         Get the detection harmonic
-        '''
+        """
         self._harmonic = int(self.query('HARM?'))
         return self._harmonic
 
@@ -183,7 +183,7 @@ class SR830(VISAInstrument):
     def phase(self):
         """
         Get the reference phase shift (degrees)
-        '''
+        """
         self._phase = float(self.query('PHAS?'))
         return self._phase
 
@@ -191,7 +191,7 @@ class SR830(VISAInstrument):
     def phase(self, value):
         """
         Set the reference phase shift (degrees)
-        '''
+        """
         phase = (value + 180) % 360 - 180 # restrict from -180 to 180
         self.write('PHAS %f' %value)
 
