@@ -17,26 +17,26 @@
         <counts>
           <entry key="project.closed" value="4" />
           <entry key="project.open.time.0" value="1" />
-          <entry key="project.open.time.3" value="2" />
-          <entry key="project.opened" value="3" />
+          <entry key="project.open.time.3" value="3" />
+          <entry key="project.opened" value="4" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
           <entry key="dummy" value="89" />
-          <entry key="py" value="9790" />
+          <entry key="py" value="9869" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
           <entry key="PLAIN_TEXT" value="89" />
-          <entry key="Python" value="9790" />
+          <entry key="Python" value="9869" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.open">
         <counts>
           <entry key="json" value="1" />
-          <entry key="py" value="52" />
+          <entry key="py" value="55" />
           <entry key="txt" value="1" />
         </counts>
       </usages-collector>
@@ -44,7 +44,7 @@
         <counts>
           <entry key="JSON" value="1" />
           <entry key="PLAIN_TEXT" value="1" />
-          <entry key="Python" value="52" />
+          <entry key="Python" value="55" />
         </counts>
       </usages-collector>
     </session>
@@ -83,7 +83,38 @@
     </session>
   </component>
   <component name="FileEditorManager">
-    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300" />
+    <leaf>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/Measurements/rf_sweep.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="642">
+              <caret line="823" column="83" lean-forward="true" selection-start-line="823" selection-start-column="83" selection-end-line="823" selection-end-column="83" />
+              <folding>
+                <element signature="e#651#4273#0" />
+                <element signature="e#4307#9740#0" />
+                <element signature="e#9772#22360#0" />
+                <element signature="e#22395#35149#0" />
+                <element signature="e#57613#60202#0" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/Instruments/keithley.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="442">
+              <caret line="411" lean-forward="true" selection-start-line="411" selection-end-line="411" />
+              <folding>
+                <element signature="e#0#11#0" expanded="true" />
+                <element signature="e#135#12939#0" />
+                <element signature="e#14974#15941#0" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+    </leaf>
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -109,7 +140,6 @@
       <find>averaging_restart</find>
       <find>save_re</find>
       <find>sleep_</find>
-      <find>print</find>
       <find>don'</find>
       <find>don</find>
       <find>def power</find>
@@ -124,6 +154,7 @@
       <find>save_re_i</find>
       <find>measurement</find>
       <find>'''</find>
+      <find>print</find>
     </findStrings>
     <replaceStrings>
       <replace>&quot;&quot;&quot;</replace>
@@ -143,9 +174,6 @@
         <option value="$PROJECT_DIR$/Procedures/mixer_circuit_characterization.py" />
         <option value="$PROJECT_DIR$/Procedures/simple_daq_plotting.py" />
         <option value="$PROJECT_DIR$/Instruments/HP8657B.py" />
-        <option value="$PROJECT_DIR$/Instruments/VNA.py" />
-        <option value="$PROJECT_DIR$/Measurements/rf_sweep.py" />
-        <option value="$PROJECT_DIR$/Instruments/keithley.py" />
         <option value="$PROJECT_DIR$/Utilities/save.py" />
         <option value="$PROJECT_DIR$/Utilities/utilities.py" />
         <option value="$PROJECT_DIR$/Utilities/anim.py" />
@@ -158,6 +186,9 @@
         <option value="$PROJECT_DIR$/Procedures/daqspectrum.py" />
         <option value="$PROJECT_DIR$/Instruments/lockin.py" />
         <option value="$PROJECT_DIR$/Instruments/ppms.py" />
+        <option value="$PROJECT_DIR$/Instruments/keithley.py" />
+        <option value="$PROJECT_DIR$/Instruments/VNA.py" />
+        <option value="$PROJECT_DIR$/Measurements/rf_sweep.py" />
       </list>
     </option>
   </component>
@@ -198,16 +229,6 @@
               <item name="Nowack_Lab" type="b2602c69:ProjectViewProjectNode" />
               <item name="Nowack_Lab" type="462c0819:PsiDirectoryNode" />
               <item name="Instruments" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="Nowack_Lab" type="b2602c69:ProjectViewProjectNode" />
-              <item name="Nowack_Lab" type="462c0819:PsiDirectoryNode" />
-              <item name="Procedures" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="Nowack_Lab" type="b2602c69:ProjectViewProjectNode" />
-              <item name="Nowack_Lab" type="462c0819:PsiDirectoryNode" />
-              <item name="Utilities" type="462c0819:PsiDirectoryNode" />
             </path>
           </expand>
           <select />
@@ -283,9 +304,10 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="0" y="0" width="960" height="1040" extended-state="0" />
+    <frame x="-8" y="-8" width="1936" height="1056" extended-state="6" />
+    <editor active="true" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.36442515" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.13856691" />
       <window_info id="Structure" order="1" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
@@ -297,7 +319,7 @@
       <window_info anchor="bottom" id="TODO" order="6" />
       <window_info anchor="bottom" id="Version Control" order="7" />
       <window_info anchor="bottom" id="Terminal" order="8" />
-      <window_info anchor="bottom" id="Event Log" order="9" sideWeight="0.50105375" side_tool="true" visible="true" weight="0.0" />
+      <window_info anchor="bottom" id="Event Log" order="9" sideWeight="0.50105375" side_tool="true" weight="0.3296582" />
       <window_info anchor="bottom" id="Python Console" order="10" />
       <window_info anchor="right" id="Commander" order="0" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
@@ -356,162 +378,8 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Measurements/rf_sweep.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="459">
-          <caret line="1283" column="8" lean-forward="true" selection-start-line="1283" selection-start-column="8" selection-end-line="1283" selection-end-column="8" />
-          <folding>
-            <element signature="e#98#128#0" />
-            <element signature="e#883#1887#0" />
-            <element signature="e#1464#1759#0" />
-            <element signature="e#1915#3419#0" />
-            <element signature="e#3472#4193#0" />
-            <element signature="e#4227#9660#0" />
-            <element signature="e#4632#5738#0" />
-            <element signature="e#5314#5610#0" />
-            <element signature="e#5766#7118#0" />
-            <element signature="e#5766#5805#1" />
-            <element signature="e#6836#6918#0" />
-            <element signature="e#7171#8144#0" />
-            <element signature="e#8198#9225#0" />
-            <element signature="e#9280#9660#0" />
-            <element signature="e#9401#9507#0" />
-            <element signature="e#9569#9633#0" />
-            <element signature="e#9692#22280#0" />
-            <element signature="e#10190#12228#0" />
-            <element signature="e#10444#10592#0" />
-            <element signature="e#10619#10749#0" />
-            <element signature="e#11086#11382#0" />
-            <element signature="e#11875#12171#0" />
-            <element signature="e#12256#15864#0" />
-            <element signature="e#14399#14733#0" />
-            <element signature="e#14434#14550#0" />
-            <element signature="e#14811#15265#0" />
-            <element signature="e#14867#15199#0" />
-            <element signature="e#14906#15024#0" />
-            <element signature="e#15471#15864#0" />
-            <element signature="e#15691#15864#0" />
-            <element signature="e#15929#17511#0" />
-            <element signature="e#16048#16246#0" />
-            <element signature="e#16273#16471#0" />
-            <element signature="e#16969#17086#0" />
-            <element signature="e#17113#17283#0" />
-            <element signature="e#17577#18055#0" />
-            <element signature="e#17800#17902#0" />
-            <element signature="e#17964#18028#0" />
-            <element signature="e#18124#18581#0" />
-            <element signature="e#18341#18437#0" />
-            <element signature="e#18499#18560#0" />
-            <element signature="e#18637#19440#0" />
-            <element signature="e#19509#21112#0" />
-            <element signature="e#19628#19826#0" />
-            <element signature="e#19853#20051#0" />
-            <element signature="e#20558#20675#0" />
-            <element signature="e#20702#20872#0" />
-            <element signature="e#21183#22280#0" />
-            <element signature="e#22315#35069#0" />
-            <element signature="e#22315#22525#1" />
-            <element signature="e#22899#24937#0" />
-            <element signature="e#23153#23301#0" />
-            <element signature="e#23328#23458#0" />
-            <element signature="e#23795#24091#0" />
-            <element signature="e#24584#24880#0" />
-            <element signature="e#24965#28642#0" />
-            <element signature="e#27108#27511#0" />
-            <element signature="e#27143#27328#0" />
-            <element signature="e#27589#28043#0" />
-            <element signature="e#27645#27977#0" />
-            <element signature="e#27684#27802#0" />
-            <element signature="e#28249#28642#0" />
-            <element signature="e#28469#28642#0" />
-            <element signature="e#28707#30289#0" />
-            <element signature="e#28826#29024#0" />
-            <element signature="e#29051#29249#0" />
-            <element signature="e#29747#29864#0" />
-            <element signature="e#29891#30061#0" />
-            <element signature="e#30355#30833#0" />
-            <element signature="e#30578#30680#0" />
-            <element signature="e#30742#30806#0" />
-            <element signature="e#30902#31359#0" />
-            <element signature="e#31119#31215#0" />
-            <element signature="e#31277#31338#0" />
-            <element signature="e#31426#32229#0" />
-            <element signature="e#32298#33901#0" />
-            <element signature="e#32417#32615#0" />
-            <element signature="e#32642#32840#0" />
-            <element signature="e#33347#33464#0" />
-            <element signature="e#33491#33661#0" />
-            <element signature="e#33972#35069#0" />
-            <element signature="e#35099#47125#0" />
-            <element signature="e#35099#35222#1" />
-            <element signature="e#35227#35333#0" />
-            <element signature="e#35523#35607#1" />
-            <element signature="e#35862#37001#0" />
-            <element signature="e#36494#36789#0" />
-            <element signature="e#37029#40385#0" />
-            <element signature="e#37029#37068#1" />
-            <element signature="e#38992#39299#0" />
-            <element signature="e#39396#39858#0" />
-            <element signature="e#39449#39792#0" />
-            <element signature="e#40175#40385#0" />
-            <element signature="e#40424#40479#0" />
-            <element signature="e#40518#40605#0" />
-            <element signature="e#40644#40731#0" />
-            <element signature="e#40802#41890#0" />
-            <element signature="e#41956#43510#0" />
-            <element signature="e#42075#42249#0" />
-            <element signature="e#42276#42470#0" />
-            <element signature="e#42961#43078#0" />
-            <element signature="e#43105#43275#0" />
-            <element signature="e#43578#44056#0" />
-            <element signature="e#43801#43903#0" />
-            <element signature="e#43965#44029#0" />
-            <element signature="e#44127#44584#0" />
-            <element signature="e#44344#44440#0" />
-            <element signature="e#44502#44563#0" />
-            <element signature="e#44651#45468#0" />
-            <element signature="e#44651#44745#1" />
-            <element signature="e#45537#47125#0" />
-            <element signature="e#45654#45848#0" />
-            <element signature="e#45875#46069#0" />
-            <element signature="e#46571#46688#0" />
-            <element signature="e#46715#46885#0" />
-            <element signature="e#47439#48656#0" />
-            <element signature="e#48219#48531#0" />
-            <element signature="e#48684#52568#0" />
-            <element signature="e#50495#51123#0" />
-            <element signature="e#50812#51123#0" />
-            <element signature="e#51202#51970#0" />
-            <element signature="e#51329#51970#0" />
-            <element signature="e#51627#51970#0" />
-            <element signature="e#52326#52568#0" />
-            <element signature="e#52621#53452#0" />
-            <element signature="e#53525#55469#0" />
-            <element signature="e#53644#53838#0" />
-            <element signature="e#53865#54059#0" />
-            <element signature="e#54574#54713#0" />
-            <element signature="e#54635#54694#0" />
-            <element signature="e#54915#55035#0" />
-            <element signature="e#55062#55232#0" />
-            <element signature="e#55547#56124#0" />
-            <element signature="e#55939#56097#0" />
-            <element signature="e#56000#56078#0" />
-            <element signature="e#56151#56268#1" />
-            <element signature="e#56596#56671#0" />
-            <element signature="e#56596#56658#1" />
-            <element signature="e#56701#57235#0" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/Utilities/plotting/plotter.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state>
-          <folding>
-            <element signature="e#0#56#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
+      <provider selected="true" editor-type-id="text-editor" />
     </entry>
     <entry file="file://$PROJECT_DIR$/Utilities/plotting/plot_mpl.py">
       <provider selected="true" editor-type-id="text-editor" />
@@ -534,9 +402,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="131">
           <caret line="156" column="22" lean-forward="true" selection-start-line="156" selection-start-column="22" selection-end-line="156" selection-end-column="22" />
-          <folding>
-            <element signature="e#0#30#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -544,9 +409,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="170">
           <caret line="10" column="7" selection-start-line="10" selection-start-column="7" selection-end-line="10" selection-end-column="7" />
-          <folding>
-            <element signature="e#0#40#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -554,56 +416,31 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="459">
           <caret line="39" column="34" lean-forward="true" selection-start-line="39" selection-start-column="34" selection-end-line="39" selection-end-column="34" />
-          <folding>
-            <element signature="e#348#375#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/Measurements/planefit.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-255">
-          <folding>
-            <element signature="e#0#62#0" expanded="true" />
-          </folding>
-        </state>
+        <state relative-caret-position="-255" />
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/Measurements/scanline.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state>
-          <folding>
-            <element signature="e#0#18#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
+      <provider selected="true" editor-type-id="text-editor" />
     </entry>
     <entry file="file://$PROJECT_DIR$/Measurements/scanplane.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="306">
           <caret line="412" column="11" selection-start-line="412" selection-start-column="11" selection-end-line="412" selection-end-column="11" />
-          <folding>
-            <element signature="e#0#76#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/Measurements/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state>
-          <folding>
-            <element signature="e#0#33#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
+      <provider selected="true" editor-type-id="text-editor" />
     </entry>
     <entry file="file://$PROJECT_DIR$/Measurements/heightsweep.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="216">
           <caret line="77" column="26" lean-forward="true" selection-start-line="77" selection-start-column="26" selection-end-line="77" selection-end-column="26" />
-          <folding>
-            <marker date="1547065839630" expanded="true" signature="2094:2113" ph="..." />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -632,53 +469,26 @@
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/Instruments/piezos.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state>
-          <folding>
-            <element signature="e#0#18#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
+      <provider selected="true" editor-type-id="text-editor" />
     </entry>
     <entry file="file://$PROJECT_DIR$/Instruments/lockin.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="310">
           <caret line="193" column="11" selection-start-line="193" selection-start-column="11" selection-end-line="193" selection-end-column="11" />
-          <folding>
-            <element signature="e#0#24#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/Instruments/montana.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state>
-          <folding>
-            <element signature="e#0#23#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
+      <provider selected="true" editor-type-id="text-editor" />
     </entry>
     <entry file="file://$PROJECT_DIR$/Instruments/magnet.py">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
     <entry file="file://$PROJECT_DIR$/Instruments/levelmeter.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state>
-          <folding>
-            <element signature="e#0#11#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
+      <provider selected="true" editor-type-id="text-editor" />
     </entry>
     <entry file="file://$PROJECT_DIR$/Instruments/lakeshore.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state>
-          <folding>
-            <element signature="e#0#38#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
+      <provider selected="true" editor-type-id="text-editor" />
     </entry>
     <entry file="file://$PROJECT_DIR$/Instruments/keithleys_untested.py">
       <provider selected="true" editor-type-id="text-editor" />
@@ -701,13 +511,7 @@
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
     <entry file="file://$PROJECT_DIR$/Instruments/scope.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state>
-          <folding>
-            <element signature="e#0#18#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
+      <provider selected="true" editor-type-id="text-editor" />
     </entry>
     <entry file="file://$PROJECT_DIR$/Instruments/squidarray.py">
       <provider selected="true" editor-type-id="text-editor" />
@@ -719,16 +523,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Instruments/VNA.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="562">
-          <caret line="444" column="36" selection-start-line="444" selection-start-column="36" selection-end-line="444" selection-end-column="36" />
-          <folding>
-            <element signature="e#0#11#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/Instruments/zurich.py">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
@@ -736,20 +530,40 @@
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
     <entry file="file://$PROJECT_DIR$/Instruments/sr760.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Instruments/VNA.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state>
+        <state relative-caret-position="-30">
+          <caret line="302" column="31" selection-start-line="302" selection-start-column="31" selection-end-line="302" selection-end-column="31" />
           <folding>
-            <element signature="e#0#38#0" expanded="true" />
+            <element signature="e#0#11#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/Instruments/keithley.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="235">
-          <caret line="263" column="11" selection-start-line="263" selection-start-column="11" selection-end-line="263" selection-end-column="11" />
+        <state relative-caret-position="442">
+          <caret line="411" lean-forward="true" selection-start-line="411" selection-end-line="411" />
           <folding>
             <element signature="e#0#11#0" expanded="true" />
+            <element signature="e#135#12939#0" />
+            <element signature="e#14974#15941#0" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Measurements/rf_sweep.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="642">
+          <caret line="823" column="83" lean-forward="true" selection-start-line="823" selection-start-column="83" selection-end-line="823" selection-end-column="83" />
+          <folding>
+            <element signature="e#651#4273#0" />
+            <element signature="e#4307#9740#0" />
+            <element signature="e#9772#22360#0" />
+            <element signature="e#22395#35149#0" />
+            <element signature="e#57613#60202#0" />
           </folding>
         </state>
       </provider>

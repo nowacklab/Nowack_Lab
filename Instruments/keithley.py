@@ -3,6 +3,7 @@ import numpy as np
 import time
 from .instrument import Instrument, VISAInstrument
 
+
 class Keithley2400(VISAInstrument):
     _label = 'keithley'
     _idn = 'MODEL 2400'
@@ -396,48 +397,45 @@ class Keithley2450(Keithley2400):
     _idn = 'MODEL 2450'
 
     def __init__(self, resource='USB0::0x05E6::0x2450::04110400::INSTR',
-                    max_step=0.1, max_sweep=1):
-        '''
+                 max_step=0.1, max_sweep=1):
+        """
         Parameters affect sweeps and zeroing
         Max step: maximum sweep step size (V)
         Max sweep: maximum sweep rate (V/s)
-        '''
+        """
         super().__init__(resource)
-        self.I # trigger reading to update screen
+        self.I  # trigger reading to update screen
 
     def setup(self):
         # self.write('*LANG SCPI2400') # for Keithley2400 compatibility mode
         super().setup()
 
-
     @property
     def I(self):
-        '''
+        """
         Get the input current.
-        '''
+        """
         if self.output == 'off':
             raise Exception('Need to turn output on to read current!')
         I = self.query('MEAS:CURR?') # get current reading
         return float(I)
 
-
     @property
     def V(self):
-        '''
+        """
         Get the input voltage.
-        '''
+        """
         if self.output == 'off':
             raise Exception('Need to turn output on to read voltage!')
         V = self.query('MEAS:VOLT?') # get voltage reading
         return float(V)
 
-
     def sweep_V(self, Vstart, Vend, Vstep=None, sweep_rate=None):
-        r'''
+        r"""
         Sweep WITHOUT using Keithley internal function to sweep from Vstart to Vend
         with a step size of Vstep and sweep rate of sweep_rate volts/second.
         If Vstep and sweep_rate are None, use maxes set in init
-        '''
+        """
         if Vstep is None:
             Vstep = self.max_step
         if sweep_rate is None:

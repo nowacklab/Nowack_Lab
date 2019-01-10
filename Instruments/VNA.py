@@ -124,12 +124,13 @@ class VNA8722ES(Instrument):
         if value > -5 or value < -80:
             raise Exception('Power should be between -10 and -80 dBm')
         rangenum = min(math.floor((-value + 5)/5)-1, 11)
-        print(self.ask('POWE?'))
-        self.write('POWR%02d' %rangenum)  # first change power range
-        print("Setting power range to %d..." % rangenum); time.sleep(8)
-        self.write('POWE%f' %value)  # then can change power
+        # print(self.ask('POWE?'))
+        self.write('POWR%02d' % rangenum)  # first change power range
+        print("Setting power range to %d..." % rangenum);
+        time.sleep(8)
+        self.write('POWE%f' % value)  # then can change power
         print("Setting power to ", value)
-        print(self.ask('POWE?'))
+        # print(self.ask('POWE?'))
         self._power = value
 
     @property
@@ -281,7 +282,7 @@ class VNA8722ES(Instrument):
     @averaging_factor.setter
     def averaging_factor(self, value):
         """Set averaging factor, in [0, 999]"""
-        assert isinstance(value, int) and value >= 0 and value <= 999, "Averaging factor should be int in [0, 999]"
+        assert isinstance(value, int) and 0 <= value <= 999, "Averaging factor should be int in [0, 999]"
         self.write('AVERFACT%s' % value)
 
     def averaging_restart(self):
@@ -299,7 +300,7 @@ class VNA8722ES(Instrument):
         """Set smoothing to on/off 1/0"""
         val = int(value)
         assert val in [1, 0], "smoothing state should be 1 or 0 on/off"
-        self.write('SMOOO%d' %val)
+        self.write('SMOOO%d' % val)
         self._smoothing_state = val
 
     @property

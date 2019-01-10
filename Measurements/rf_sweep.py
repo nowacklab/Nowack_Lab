@@ -16,7 +16,7 @@ from ..Utilities.plotting.plotter import *
 from ..Utilities.save import *
 from ..Instruments.VNA import VNA8722ES
 from ..Instruments.nidaq import NIDAQ
-from ..Instruments.keithley import Keithley2400
+from ..Instruments.keithley import Keithley2400, Keithley2450
 
 from IPython.display import clear_output
 
@@ -81,8 +81,8 @@ class RFTakeSpectrum:
         time.sleep(5)
         power_range = self.v1.ask('POWR?')
         vna_power = self.v1.ask('POWE?')
-        print(power_range)
-        print(vna_power)
+        # print(power_range)
+        # print(vna_power)
         re_im = self.v1.save_re_im()  # get real and imaginary parts
         self.save_data(timestamp, re_im)  # save data to h5
 
@@ -781,8 +781,8 @@ class RFSweepCurrentDAQREV:
 
 
 class RFSweepCurrent:
-
-    """Class for sweeping current with the Keithley2400 and recording
+    """
+    Class for sweeping current with the Keithley2400 and recording
     data from the VNA8722ES at each current step.
     """
     # should this extend class Measurement? also, there will be other sweeps in the future (e.g. power sweep),
@@ -821,7 +821,10 @@ class RFSweepCurrent:
         else:
             self.v_numpoints = v_numpoints
 
-        self.k3 = Keithley2400(24)  # initialize current source (Instrument object)
+        try:
+            self.k3 = Keithley2400(24)  # initialize current source (Instrument object)
+        except:
+            self.k3 = Keithley2450(18)
         self.v1 = VNA8722ES(16)  # initialize VNA (Instrument object)
 
     def do(self):
