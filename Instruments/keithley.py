@@ -20,22 +20,21 @@ class Keithley2400(VISAInstrument):
     _rel = None
 
     def __init__(self, gpib_address='', max_step=0.1, max_sweep=1):
-        '''
+        """
         Parameters affect sweeps and zeroing
         Max step: maximum sweep step size (V)
         Max sweep: maximum sweep rate (V/s)
-        '''
+        """
         self.max_step = max_step
         self.max_sweep = max_sweep
 
         if type(gpib_address) is int:
-            gpib_address = 'GPIB::%02i::INSTR' %gpib_address
-        self.gpib_address= gpib_address
+            gpib_address = 'GPIB::%02i::INSTR' % gpib_address
+        self.gpib_address = gpib_address
 
         self._init_visa(gpib_address, termination='\n')
 
         self.setup()
-
 
     def __getstate__(self):
         if self._loaded:
@@ -82,7 +81,7 @@ class Keithley2400(VISAInstrument):
             "I": "CURR",
             "memory": "MEM"
         }
-        self.write(':SOUR:FUNC:MODE %s' %options[value])
+        self.write(':SOUR:FUNC:MODE %s' % options[value])
         if value == 'V':
             self._Iout = None # just to make it clear that there is no output current
             self._Iout_range = None
@@ -100,7 +99,7 @@ class Keithley2400(VISAInstrument):
         """
         if self.output == 'off':
             raise Exception('Need to turn output on to read current!')
-        self.write(':FORM:ELEM CURR') # get current reading
+        self.write(':FORM:ELEM CURR')  # get current reading
         return float(self.query(':READ?'))
 
     @property
@@ -113,7 +112,6 @@ class Keithley2400(VISAInstrument):
         self._Iout = float(self.query(':SOUR:CURR:LEV:AMPL?'))
 
         return self._Iout
-
 
     @Iout.setter
     def Iout(self, value):
@@ -129,7 +127,7 @@ class Keithley2400(VISAInstrument):
         self.write(':SOUR:CURR:LEV %s' %value)
         self._Iout = value
 
-        self.V # trigger a reading to update the screen, assuming we measure V
+        self.V  # trigger a reading to update the screen, assuming we measure V
 
     @property
     def Iout_range(self):
@@ -380,10 +378,10 @@ class Keithley2400(VISAInstrument):
 
 
     def zero_V(self, Vstep=None, sweep_rate=None):
-        '''
+        """
         Ramp down voltage to zero.
         Vstep and sweep_rate if None, will use max set in init
-        '''
+        """
         Vstep = self.max_step
         sweep_rate = self.max_sweep
 
@@ -417,7 +415,7 @@ class Keithley2450(Keithley2400):
         """
         if self.output == 'off':
             raise Exception('Need to turn output on to read current!')
-        I = self.query('MEAS:CURR?') # get current reading
+        I = self.query('MEAS:CURR?')  # get current reading
         return float(I)
 
     @property
@@ -429,6 +427,46 @@ class Keithley2450(Keithley2400):
             raise Exception('Need to turn output on to read voltage!')
         V = self.query('MEAS:VOLT?') # get voltage reading
         return float(V)
+
+    @property
+    def I_compliance(self):
+        """
+        Get the compliance current (if in voltage source mode).
+        """
+        if self.source != 'V':
+            raise Exception('Cannot get current compliance if sourcing current!')
+        self._I_compliance = float(self.query(':SOUR:VOLT:ILIM?'))
+        return self._I_compliance
+
+    @I_compliance.setter
+    def I_compliance(self, value):
+        """
+        Set the compliance current (if in voltage source mode).
+        """
+        if self.source != 'V':
+            raise Exception('Cannot set current compliance if sourcing current!')
+        self.write(':SOUR:VOLT:ILIM %s' % value)
+        self._I_compliance = value
+
+    @property
+    def V_compliance(self):
+        """
+        Get the compliance voltage (if in current source mode).
+        """
+        if self.source != 'I':
+            raise Exception('Cannot get voltage compliance if sourcing voltage!')
+        self._V_compliance = float(self.query(':SOUR:CURR:VLIM?'))
+        return self._V_compliance
+
+    @V_compliance.setter
+    def V_compliance(self, value):
+        """
+        Set the compliance voltage (if in current source mode).
+        """
+        if self.source != 'I':
+            raise Exception('Cannot set voltage compliance if sourcing voltage!')
+        self.write(':SOUR:CURR:VLIM %s' % value)
+        self._V_compliance = value
 
     def sweep_V(self, Vstart, Vend, Vstep=None, sweep_rate=None):
         r"""
