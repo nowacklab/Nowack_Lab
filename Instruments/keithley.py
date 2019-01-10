@@ -3,6 +3,8 @@ import numpy as np
 import time
 from .instrument import Instrument, VISAInstrument
 
+#TODO fix output on/off
+
 
 class Keithley2400(VISAInstrument):
     _label = 'keithley'
@@ -253,7 +255,7 @@ class Keithley2400(VISAInstrument):
         """
         if self.source != 'I':
             raise Exception('Cannot set voltage compliance if sourcing voltage!')
-        self.write(':SENS:VOLT:PROT %s' %value)
+        self.write(':SENS:VOLT:PROT %s' % value)
         self._V_compliance = value
 
     @property
@@ -402,7 +404,10 @@ class Keithley2450(Keithley2400):
         Max sweep: maximum sweep rate (V/s)
         """
         super().__init__(resource)
-        self.I  # trigger reading to update screen
+        try:
+            self.I  # trigger reading to update screen
+        except:
+            print("couldn't measure current")
 
     def setup(self):
         # self.write('*LANG SCPI2400') # for Keithley2400 compatibility mode

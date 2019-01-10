@@ -958,7 +958,7 @@ class RFSweepCurrent:
                            data.get(filename + '/numpoints'))
         y, x = np.meshgrid(freq, current)
         dB = RFSweepCurrent.dB_data(filename, rev=rev)
-        im = ax.pcolor(x, y, dB, cmap="inferno")
+        im = ax.pcolor(x, y, dB, cmap="viridis")
         cbar = fig.colorbar(im)
         ax.set_xlabel('field coil current (mA)')
         ax.set_ylabel('frequency (GHz)')
@@ -1042,7 +1042,7 @@ class RFSweepCurrent:
                            data.get(filename + '/numpoints'))
         y, x = np.meshgrid(freq, current)
         phase = RFSweepCurrent.phase_data(filename, rev = rev)
-        im = ax.pcolor(x, y, phase, cmap="inferno")
+        im = ax.pcolor(x, y, phase, cmap="viridis")
         cbar = fig.colorbar(im)
         ax.set_xlabel('field coil current (mA)')
         ax.set_ylabel('frequency (GHz)')
@@ -1066,9 +1066,6 @@ class RFSweepCurrentRev:
     Class for sweeping current with the Keithley2400 and recording
     data from the VNA8722ES at each current step.
     """
-    # should this extend class Measurement? also, there will be other sweeps in the future (e.g. power sweep),
-    # so may be worth having the class WithoutDAQ_ThreeParam_Sweep (esp. for plotting fxns)
-    # and having these RF_sweep_<some parameter> classes extend WithoutDAQ_ThreeParam_Sweep
 
     def __init__(self, k_Istart, k_Istop, k_Isteps, v_freqmin, v_freqmax, v_power, v_avg_factor, v_numpoints,
                  filepath, v_smoothing_state=0, v_smoothing_factor=1, notes="No notes", hysteresis=False,
@@ -1116,7 +1113,7 @@ class RFSweepCurrentRev:
         """
         # Set up current source settings
         if self.k3.output == 'off':
-            self.k3.output = 'on'  # does this even do anything?
+            self.k3.output = 'on'
         self.k3.source = 'I'
         time.sleep(3)
         self.k3.Iout_range = 1e-3  # 2 mA range # TODO: figure out what exactly range is
@@ -1139,7 +1136,7 @@ class RFSweepCurrentRev:
         # print estimated_runtime
         sleep_length = float(self.v1.ask('SWET?'))*(self.v1.averaging_factor+3)
         estimated_runtime = sleep_length*self.k_Isteps
-        print('Minimum estimated runtime: '+ str(int(estimated_runtime/60)) + ' minutes')
+        print('Minimum estimated runtime: ' + str(int(estimated_runtime/60)) + ' minutes')
 
         I_stepsize = (float(self.k_Istop-self.k_Istart))/self.k_Isteps
         print('Incrementing current in step sizes of ', str(I_stepsize*1000) + ' milliamps')
@@ -1236,7 +1233,7 @@ class RFSweepCurrentRev:
                            data.get(filename + '/numpoints'))
         y, x = np.meshgrid(freq, current)
         dB = RFSweepCurrent.dB_data(filename, rev=rev)
-        im = ax.pcolor(x, y, dB, cmap="inferno")
+        im = ax.pcolor(x, y, dB, cmap="viridis")
         cbar = fig.colorbar(im)
         ax.set_xlabel('field coil current (mA)')
         ax.set_ylabel('frequency (GHz)')
@@ -1320,7 +1317,7 @@ class RFSweepCurrentRev:
                            data.get(filename + '/numpoints'))
         y, x = np.meshgrid(freq, current)
         phase = RFSweepCurrent.phase_data(filename, rev = rev)
-        im = ax.pcolor(x, y, phase, cmap="inferno")
+        im = ax.pcolor(x, y, phase, cmap="viridis")
         cbar = fig.colorbar(im)
         ax.set_xlabel('field coil current (mA)')
         ax.set_ylabel('frequency (GHz)')
@@ -1498,7 +1495,7 @@ class RFCWSweepPower:
                 dB_avg[n][m] = np.mean(currentArray)
                 m += 1
             n += 1
-        im=ax.pcolor(X, Y, dB_avg, cmap="inferno")
+        im=ax.pcolor(X, Y, dB_avg, cmap="viridis")
         cbar = fig.colorbar(im)
         ax.set_ylabel('field coil current (mA)')
         ax.set_xlabel('power (dBm)')
