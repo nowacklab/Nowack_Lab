@@ -17,6 +17,7 @@ from ..Utilities.save import *
 from ..Instruments.VNA import VNA8722ES
 from ..Instruments.nidaq import NIDAQ
 from ..Instruments.keithley import Keithley2400, Keithley2450
+from ..Measurements.mixer_circuit_characterization import SimpleTakeDAQVoltage
 
 from IPython.display import clear_output
 
@@ -760,7 +761,7 @@ class RFSweepCurrentDAQREV:
             graph_path = filename.replace(".hdf5", "phase_rev.png")
         fig.savefig(graph_path)
 
-    def save_data(self, timestamp, re_im, re_im_rev = None):
+    def save_data(self, timestamp, re_im, re_im_rev=None):
         name = timestamp + '_rf_sweep'
         path = os.path.join(self.filepath, name + '.hdf5')
         info = dataset.Dataset(path)
@@ -1063,7 +1064,7 @@ class RFSweepCurrent:
 
 class RFSweepCurrentRev:
     """
-    Class for sweeping current with the Keithley2400 and recording
+    Class for sweeping current with the Keithley2400/2450 and recording
     data from the VNA8722ES at each current step.
     """
 
@@ -1071,7 +1072,7 @@ class RFSweepCurrentRev:
                  filepath, v_smoothing_state=0, v_smoothing_factor=1, notes="No notes", hysteresis=False,
                  plot=False):
         """
-           Initiates a RF_sweep_current object with parameters about the sweep.
+        Initiates a RF_sweep_current object with parameters about the sweep.
         """
         # Set object variables
         self.k_Istart = k_Istart
@@ -1334,6 +1335,131 @@ class RFSweepCurrentRev:
         else:
             graph_path = filename.replace(".hdf5", "phase_rev.png")
         fig.savefig(graph_path)
+
+
+class RFSweepCurrentRevDAQMeasure:
+    """
+    Class for sweeping current with the Keithley2400/2450 and recording
+    data from DAQ at each current step.
+    For use with demodulation circuit
+    """
+
+    def __init__(self, k_Istart, k_Istop, k_Isteps, v_freq, v_power, filepath, DAQ_channel_name='ai0', notes="No notes",
+                 plot=False):
+
+        self.k_Istart = k_Istart
+        self.k_Istop = k_Istop
+        self.k_Isteps = k_Isteps
+        self.v_freq = v_freq
+        self.v_power = v_power
+        self.filepath = filepath
+        self.DAQ_channel_name = DAQ_channel_name
+        self.notes = notes
+        self.plot = plot
+
+        # initialize current source (one of the Keithley types)
+        try:
+            self.k3 = Keithley2400(24)
+        except Exception as e:
+            #print(e)
+            print("Didn't find Keithley2400, instead looking for Keithley2450")
+            self.k3 = Keithley2450(18)
+
+        # initialize the vna
+        self.v1 = VNA8722ES(16)
+
+        # initialize DAQ:
+        # TODO 1 second is sort of arbitary, should be able to do much faster?
+        self.daq_voltage_measure = SimpleTakeDAQVoltage(1, self.DAQ_channel_name)
+
+    def do(self):
+        """
+        Execute the test
+        """
+        # set up current source settings
+        self.k3.output = 'on'
+        self.k3.source = 'I'
+        time.sleep(3)
+        self.k3.Iout_range = 1e-3  # 2 mA range # TODO: figure out what exactly range is
+        self.k3.Iout = self.k_Istart
+        self.k3.V_compliance = 21  # 21 volt compliance
+
+        # set up VNA settings
+        self.v1.networkparam = 'S12'  # Set to measure reverse transmission
+        self.v1.power = self.v_power
+        self.v1.powerstate = 1  # turn vna source power on
+        self.v1.freqmax = self.v_freq
+        self.v1.freqmin = self.v_freq
+        self.v1.sweepmode = "LIN"
+        # TODO consider just making this power sweep
+        self.v1.numpoints = 3  # basically a single frequency
+
+        # print estimated_runtime
+        sleep_length = float(self.v1.ask('SWET?')) * (self.v1.averaging_factor + 3)
+        estimated_runtime = sleep_length * self.k_Isteps
+        print('Minimum estimated runtime: ' + str(int(estimated_runtime / 60)) + ' minutes')
+
+        I_stepsize = (float(self.k_Istop - self.k_Istart)) / self.k_Isteps
+        print('Incrementing current in step sizes of ', str(I_stepsize * 1000) + ' milliamps')
+
+        # creates a timestamp that will be in the h5 file name for this run
+        now = datetime.now()
+        timestamp = now.strftime('%Y-%m-%d_%H%M%S')
+
+        # initialize empty array to store data in TODO: change from empty to NAN?
+        daq_voltage_readings = np.empty((self.k_Isteps, 1))
+
+        # sweep foward in current
+        index = 0
+        for step in range(0, self.k_Isteps):
+            if step % 10 == 0:
+                print("Current source step #" + str(step + 1) + " out of " + str(self.k_Isteps))
+            self.k3.Iout += I_stepsize  # increment current
+            daq_voltage_readings[index] = self.daq_voltage_measure.do()
+            clear_output()
+            index += 1
+
+        self.save_data(timestamp, daq_voltage_readings)
+
+        self.k3.Iout = 0
+        self.k3.output = 'off'  # turn off keithley output
+        self.v1.powerstate = 0  # turn off VNA source power
+
+        if self.plot:
+            RFSweepCurrentRevDAQMeasure.plot_daq_voltages(self.filepath + "\\" + timestamp +
+                                                          "_RFSweepCurrentRevDAQMeasure.hdf5")
+
+    @staticmethod
+    def plot_daq_voltages(filename):
+        """
+        Plot and save single current sweep. x-axis is bias current, y-axis is DAQ voltage
+        """
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+        data = dataset.Dataset(filename)
+        currents = np.linspace(data.get(filename + '/Istart')/1000,
+                               data.get(filename + '/Istop')/1000,
+                               data.get(filename + '/Isteps')/1000)
+        daq_voltages = data.get(filename + '/daq_voltage_readings')
+        im = ax.plot(currents, daq_voltages)
+        ax.set_ylabel('DAQ readings (V)')
+        ax.set_xlabel('Bias current (mA)')
+        ax.set_title(filename + "\nPower from VNA = " +
+                     str(data.get(filename + '/v_power')) + " dBm" + "\n" + data.get(filename + '/notes'))
+        graph_path = filename.replace(".hdf5", "db.png")
+        fig.savefig(graph_path)
+
+    def save_data(self, timestamp, daq_voltage_readings):
+        name = timestamp + '_RFSweepCurrentRevDAQMeasure'
+        path = os.path.join(self.filepath, name + '.hdf5')
+        info = dataset.Dataset(path)
+        info.append(path + '/Istart', self.k_Istart)
+        info.append(path + '/Istop', self.k_Istop)
+        info.append(path + '/Isteps', self.k_Isteps)
+        info.append(path + '/v_freq', self.v_freq)
+        info.append(path + '/v_power', self.v_power)
+        info.append(path + '/DAQ_channel_name', self.DAQ_channel_name)
+        info.append(path + '/daq_voltage_readings', daq_voltage_readings)
+        info.append(path + '/notes', self.notes)
 
 
 class RFCWSweepPower:

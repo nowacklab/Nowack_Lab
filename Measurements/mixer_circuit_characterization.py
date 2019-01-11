@@ -112,6 +112,9 @@ class MixerCircuitTester:
 
 
 class SimpleTakeDAQVoltage:
+    """
+    Take voltage of DAQ using monitor
+    """
     def __init__(self, daq_monitor_time, daq_input_label='ai0'):
         self.daq = NIDAQ()
         self.daq_monitor_time = daq_monitor_time
@@ -122,3 +125,4 @@ class SimpleTakeDAQVoltage:
         time.sleep(1.1 * self.daq_monitor_time)
         daq_data_average = np.mean(daq_data[self.daq_input_label])
         print(daq_data_average)
+        return daq_data_average

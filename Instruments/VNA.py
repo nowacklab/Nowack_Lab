@@ -120,13 +120,13 @@ class VNA8722ES(Instrument):
     @power.setter
     def power(self, value):
         """Set the power (dBm)"""
-        assert type(value) is float or int
-        if value > -5 or value < -80:
-            raise Exception('Power should be between -10 and -80 dBm')
+        #assert type(value) is float or int
+        #if value > -5 or value < -80:
+        #    raise Exception('Power should be between -10 and -80 dBm')
         rangenum = min(math.floor((-value + 5)/5)-1, 11)
         # print(self.ask('POWE?'))
         self.write('POWR%02d' % rangenum)  # first change power range
-        print("Setting power range to %d..." % rangenum);
+        print("Setting power range to %d..." % rangenum)
         time.sleep(8)
         self.write('POWE%f' % value)  # then can change power
         print("Setting power to ", value)

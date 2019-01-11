@@ -1,4 +1,4 @@
-from ..Instruments.HP8657B import functiongenerator
+from ..Instruments.HP8657B import FunctionGenerator
 from ..Instruments.nidaq import *
 import numpy as np
 import matplotlib.pyplot as plt
@@ -14,7 +14,7 @@ class hp_freq_sweep_linear_abs():
 	def __init__(self, freq_range, filepath, source_power = 15, notes = "No notes", plot=True):
 		"""freq_range should be range of Hz values"""
 		print("Remember to manually turn on source!")
-		self.fxn_gen = functiongenerator(7)
+		self.fxn_gen = FunctionGenerator(7)
 		self.dq = NIDAQ()
 		self.freq_range = freq_range
 		self.power = 15  # +15 dbm default
@@ -82,7 +82,7 @@ class hp_freq_sweep_logarithmic_abs():
 	def __init__(self, freq_range, filepath, source_power = 15, notes = "No notes", plot=True):
 		"""freq_range should be np.logspace range of Hz values"""
 		print("Remember to manually turn on source!")
-		self.fxn_gen = functiongenerator(7)
+		self.fxn_gen = FunctionGenerator(7)
 		self.dq = NIDAQ()
 		self.freq_range = freq_range  # should be a numpy log range
 		self.power = 15  # +15 dbm default
@@ -148,7 +148,7 @@ class constant_freq_change_flux():
 			print("Check Ibias range values: do not send too much current thru field coil")
 		print("Make sure bias resistor is connected (do not blow up squid)")
 		self.frequency = frequency
-		self.fxn_gen = functiongenerator(7)
+		self.fxn_gen = FunctionGenerator(7)
 		self.fxn_gen.freq = self.frequency
 		self.power = source_power
 		self.dq = NIDAQ(input_range=5)

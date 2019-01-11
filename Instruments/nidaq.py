@@ -159,7 +159,7 @@ class NIDAQ(Instrument):
         # and tell the DAQ to output that value of ao0 for every data
         # point.
         numsteps = int(duration*sample_rate)
-        data = {'t': np.array([0]*numsteps)}  ## HACK: This data is not used and just converted back to a duration in send_receive
+        data = {'t': np.array([0]*numsteps)}  # HACK: This data is not used and just converted back to a duration in send_receive
 
         received = self.send_receive(data, chan_in=chan_in, sample_rate=sample_rate)
 
@@ -177,7 +177,7 @@ class NIDAQ(Instrument):
         """
 
         # Make everything a numpy array
-        data = data.copy() # so we don't modify original data
+        data = data.copy()  # so we don't modify original data
 
         no_output = False
         if 't' in data:
@@ -185,7 +185,7 @@ class NIDAQ(Instrument):
             len_data = len(data.pop('t'))
 
         for key, value in data.items():
-            value = value.copy() # so we don't modify original data
+            value = value.copy()  # so we don't modify original data
             if np.isscalar(value):
                 value = np.array([value])
             elif type(value) is list:
@@ -208,7 +208,7 @@ class NIDAQ(Instrument):
 
         # Make sure there's at least one input channel (or DAQmx complains)
         if chan_in is None:
-            chan_in = ['ai23'] # just a random channel
+            chan_in = ['ai23']  # just a random channel
         elif np.isscalar(chan_in):
             chan_in = [chan_in]
 

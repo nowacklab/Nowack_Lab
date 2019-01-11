@@ -16,10 +16,10 @@ class double_mixer_measurement():
     voltage from the daq input"""
 
     def __init__(self, bias_resistance, Ioutmin, Ioutmax, numpoints):
-        self.dq = NIDAQ() # create new daq object
+        self.dq = NIDAQ()  # create new daq object
 
     def do(self):
-        self.dq.ao0.V = 0 # zero daq 0 ouput
+        self.dq.ao0.V = 0  # zero daq 0 ouput
 
         daq_iout_range = range(Ioutmin, Ioutmax, numpoints)
         daq_vout_range = bias_resistance*daq_iout_range
