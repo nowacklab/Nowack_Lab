@@ -1436,13 +1436,13 @@ class RFSweepCurrentRevDAQMeasure:
         """
         fig, ax = plt.subplots(1, 1, figsize=(10, 6))
         data = dataset.Dataset(filename)
-        currents = np.linspace(data.get(filename + '/Istart')/1000,
-                               data.get(filename + '/Istop')/1000,
-                               data.get(filename + '/Isteps')/1000)
+        currents = np.linspace(data.get(filename + '/Istart'),
+                               data.get(filename + '/Istop'),
+                               data.get(filename + '/Isteps'))
         daq_voltages = data.get(filename + '/daq_voltage_readings')
         im = ax.plot(currents, daq_voltages)
         ax.set_ylabel('DAQ readings (V)')
-        ax.set_xlabel('Bias current (mA)')
+        ax.set_xlabel('Bias current (A)')
         ax.set_title(filename + "\nPower from VNA = " +
                      str(data.get(filename + '/v_power')) + " dBm" + "\n" + data.get(filename + '/notes'))
         graph_path = filename.replace(".hdf5", "db.png")
@@ -1640,7 +1640,7 @@ class RFCWSweepPower:
         fig.savefig(graph_path)
 
     @staticmethod
-    def dB_data_pow_sweep(filename, rev = False):
+    def dB_data_pow_sweep(filename, rev=False):
         data = dataset.Dataset(filename)
         if not rev:
             re_im_info = data.get(filename + '/re_im/data')
@@ -1751,7 +1751,7 @@ class RFTakeSpectrum2(Saver, Plotter):
 
         # initialize empty array to store data in TODO: change from empty to NAN?
         # re_im = np.empty((2, int(self.v1.numpoints)))
-        time.sleep(5)
+        time.sleep(3)
         power_range = self.v1.ask('POWR?')
         vna_power = self.v1.ask('POWE?')
         print(power_range)
@@ -1761,7 +1761,8 @@ class RFTakeSpectrum2(Saver, Plotter):
 
         self.save(filename=None)
 
-        self.plot(self.plot)
+        if self.plot:
+            self.plot()
 
 
 class SaverPlotterTester(Saver, Plotter):
@@ -1773,5 +1774,6 @@ class SaverPlotterTester(Saver, Plotter):
 
     def do(self):
         self.save()
-        self.plot()
+        if self.plot:
+            self.plot()
         pass
