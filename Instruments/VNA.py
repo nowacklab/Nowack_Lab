@@ -28,6 +28,8 @@ class VNA8722ES(Instrument):
     _smoothing_state = None
     _smoothing_factor = None
 
+    _if_bandwidth = None
+
     # TODO: fix all @property things: should query then set and return etc.
     # TODO: need to change preset: dangerous to have it jump to -10dB with source power with preset command
     def __init__(self, gpib_address=16):
@@ -120,9 +122,6 @@ class VNA8722ES(Instrument):
     @power.setter
     def power(self, value):
         """Set the power (dBm)"""
-        #assert type(value) is float or int
-        #if value > -5 or value < -80:
-        #    raise Exception('Power should be between -10 and -80 dBm')
         rangenum = min(math.floor((-value + 5)/5)-1, 11)
         # print(self.ask('POWE?'))
         self.write('POWR%02d' % rangenum)  # first change power range
@@ -138,13 +137,6 @@ class VNA8722ES(Instrument):
         """
         Get the sweep mode
         """
-        options = {
-        "": "LIN",
-        "": "LOG",
-        "": "LIST",
-        "": "POWER",
-        "": "CW"
-        }
         if self.ask('LINFREQ?') == '1':
             self._sweepmode = "LIN"
         elif self.ask('LOGFREQ?') == '1':
@@ -339,11 +331,21 @@ class VNA8722ES(Instrument):
             print("Make sure you are not sending current thru something wrong way - double-check connections")
         self.write(value)
 
+    @property
+    def if_bandwidth(self):
+        """Get the IF bandwidth"""
+        self._if_bandwidth = int(self.ask('IFBW?'))
+        return self._if_bandwidth
+
+    @if_bandwidth.setter
+    def if_bandwidth(self, value):
+        """Set the IF bandwidth"""
+        self.write('IFBW %d' % value)
+
     def save_dB(self):
         """Return attenuation data (units are dB) in 1D np array by querying VNA through GPIB commands
         shape of array: 1x(number of frequency sweep points)
         """
-
         self.write('FORM4')  # Prepare to output correct data format TODO description from programming guide
         self.write('LOGM')  # Temporarily set VNA to log magnitude display to enable saving log magnitude
 
