@@ -122,7 +122,10 @@ class VNA8722ES(Instrument):
     @power.setter
     def power(self, value):
         """Set the power (dBm)"""
-        rangenum = min(math.floor((-value + 5)/5)-1, 11)
+        if value >= -20:
+            rangenum = 0
+        else:
+            rangenum = min(math.floor((-value + 5)/5)-1, 11)
         # print(self.ask('POWE?'))
         self.write('POWR%02d' % rangenum)  # first change power range
         print("Setting power range to %d..." % rangenum)

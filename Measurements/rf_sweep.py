@@ -1070,7 +1070,7 @@ class RFSweepCurrentRev:
 
     def __init__(self, k_Istart, k_Istop, k_Isteps, v_freqmin, v_freqmax, v_power, v_avg_factor, v_numpoints,
                  filepath, v_smoothing_state=0, v_smoothing_factor=1, notes="No notes", hysteresis=False,
-                 plot=False):
+                 plot=False, v_if_bw=100):
         """
         Initiates a RF_sweep_current object with parameters about the sweep.
         """
@@ -1082,6 +1082,7 @@ class RFSweepCurrentRev:
         self.v_freqmax = v_freqmax
         self.v_power = v_power
         self.v_avg_factor = v_avg_factor
+        self.v_if_bw = v_if_bw
 
         self.filepath = filepath
         self.v_smoothing_state = v_smoothing_state
@@ -1131,8 +1132,9 @@ class RFSweepCurrentRev:
         self.v1.freqmin = self.v_freqmin
         self.v1.sweepmode = "LIN"
         self.v1.numpoints = self.v_numpoints  # set num freq pnts for VNA
-        self.v1.smoothing_state = self.v_smoothing_state  # turn smoothing on
+        self.v1.smoothing_state = self.v_smoothing_state  # turn smoothing on/off
         self.v1.smoothing_factor = self.v_smoothing_factor
+        self.v1.if_bandwidth = self.v_if_bw  # set IF bandwidth
 
         # print estimated_runtime
         sleep_length = float(self.v1.ask('SWET?'))*(self.v1.averaging_factor+3)
