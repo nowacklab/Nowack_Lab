@@ -10,6 +10,7 @@ from ..Instruments.HP8657B import FunctionGenerator
 from ..Utilities.dataset import Dataset
 from IPython.display import clear_output
 from ..Utilities.save import Saver
+from ..Utilities.plotting.plotter import Plotter
 
 
 class MixerCircuitTester:
@@ -129,7 +130,7 @@ class SimpleTakeDAQVoltage:
         return daq_data_average
 
 
-class StepVNAasRF:
+class StepVNAasRF(Saver, Plotter):
     """
     To characterize direct conversion property of single mixer
     With set LO frequency, step VNA frequency as RF input
@@ -144,29 +145,55 @@ class StepVNAasRF:
         self.v_pausetime = v_pause_time
         self.v_network_param = v_network_param
         # self.daq_input_label = daq_input_label
+        self.v_freq_range = np.linspace(self.v_minfreq, self.v_maxfreq, num=self.v_freqsteps)
+
+        self.x_axis_data = self.v_freq_range
+        self.y_axis_data = np.array([])
 
     def do(self):
-        v_freq_range = np.linspace(self.v_minfreq, self.v_maxfreq, num=self.v_freqsteps)
+        # first get y data, then save, then plot
         self.v.sweepmode = 'CW'  # set VNA to continuous wave
         self.v.cw_freq = self.v_minfreq
 
         self.v.power = self.v_power
         self.v.networkparam = self.v_network_param
 
-        data_array = np.empty((self.v_freqsteps, 1))
+        y_data_array = np.empty((self.v_freqsteps, 1))
 
         self.v.powerstate = 1
 
-        array_counter = 0
-        for freq_point in v_freq_range:
+        counter = 0
+        for freq_point in self.v_freq_range:
             self.v.cw_freq = freq_point
-            time.sleep(.5)
-            data_array[array_counter] = self.daq.ai0.V
-            time.sleep(1)
-            array_counter += 1
+            time.sleep(self.v_pausetime)
+            y_data_array[counter] = self.daq.ai0.V
+            counter += 1
 
-        self.v.powerstate = 0
+        self.y_axis_data = y_data_array
+        self.save()
+        self.plot()
 
-        print(data_array)
+    def plot_update(self):
+        self.plot1.set_xdata(self.v_freq_range)
+        self.plot1.set_ydata(self.y_axis_data)
 
-        plt.plot(v_freq_range, data_array)
+        self.ax.relim()
+        self.ax.autoscale_view()
+
+    def setup_plots(self):
+        self.fig, self.ax = plt.subplots()
+        self.plot1 = self.ax.plot(self.x_axis_data, self.y_axis_data)[0]
+        self.ax.set_xlabel('VNA frequency (mixer RF port)')
+        self.ax.set_ylabel('DAQ voltage reading (mixer IF port)')
+
+class StepVNAandFunctionGenerator:
+    """
+    To characterize direct conversion property of single mixer
+    Keep VNA and FunctionGenerator at equal frequencies, artificially control VNA power as function of frequency
+    """
+
+    def __init__(self, minfreq, maxfreq, freqsteps, power_dip_frequencies, pause_time, v_network_param='S12'):
+        self.v = VNA8722ES(16)
+        self.daq = NIDAQ
+        self.fxn_gen = FunctionGenerator()
+        pass

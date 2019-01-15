@@ -25,8 +25,8 @@
             <file pinned="false" current-in-tab="true">
               <entry file="file://$PROJECT_DIR$/Measurements/rf_sweep.py">
                 <provider selected="true" editor-type-id="text-editor">
-                  <state relative-caret-position="582">
-                    <caret line="1788" column="42" selection-start-line="1788" selection-start-column="42" selection-end-line="1788" selection-end-column="42" />
+                  <state relative-caret-position="548">
+                    <caret line="1786" column="22" selection-start-line="1786" selection-start-column="22" selection-end-line="1786" selection-end-column="22" />
                     <folding>
                       <element signature="e#104#134#0" />
                     </folding>
@@ -52,19 +52,19 @@
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
           <entry key="dummy" value="106" />
-          <entry key="py" value="15228" />
+          <entry key="py" value="16754" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
           <entry key="PLAIN_TEXT" value="106" />
-          <entry key="Python" value="15228" />
+          <entry key="Python" value="16754" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.open">
         <counts>
           <entry key="json" value="1" />
-          <entry key="py" value="72" />
+          <entry key="py" value="73" />
           <entry key="txt" value="1" />
         </counts>
       </usages-collector>
@@ -72,7 +72,7 @@
         <counts>
           <entry key="JSON" value="1" />
           <entry key="PLAIN_TEXT" value="1" />
-          <entry key="Python" value="72" />
+          <entry key="Python" value="73" />
         </counts>
       </usages-collector>
     </session>
@@ -113,30 +113,6 @@
   <component name="FileEditorManager">
     <leaf>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Measurements/array_tune.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="411">
-              <caret line="515" column="54" lean-forward="true" selection-start-line="515" selection-start-column="54" selection-end-line="515" selection-end-column="54" />
-              <folding>
-                <element signature="e#178#214#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/Measurements/dctransport.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="454">
-              <caret line="196" column="33" lean-forward="true" selection-start-line="196" selection-start-column="33" selection-end-line="196" selection-end-column="33" />
-              <folding>
-                <element signature="e#0#54#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/Utilities/plotting/plotter.py">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="-612" />
@@ -146,8 +122,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/Utilities/save.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="304">
-              <caret line="29" column="23" selection-start-line="29" selection-start-column="23" selection-end-line="29" selection-end-column="23" />
+            <state relative-caret-position="440">
+              <caret line="544" column="19" lean-forward="true" selection-start-line="544" selection-start-column="19" selection-end-line="544" selection-end-column="19" />
               <folding>
                 <element signature="e#0#41#0" expanded="true" />
                 <element signature="e#1614#1714#1" />
@@ -164,30 +140,21 @@
                 <element signature="e#7073#7850#0" />
                 <element signature="e#8178#10341#0" />
                 <element signature="e#9672#9746#0" />
-                <element signature="e#10388#12020#0" />
                 <element signature="e#12067#13764#0" />
                 <element signature="e#12506#13728#0" />
                 <element signature="e#13811#14207#0" />
-                <element signature="e#14269#14481#0" />
-                <element signature="e#14535#14808#0" />
-                <element signature="e#14864#14998#0" />
-                <element signature="e#15197#15241#0" />
                 <element signature="e#15616#15980#1" />
                 <element signature="e#16057#16193#0" />
                 <element signature="e#16424#16534#0" />
-                <element signature="e#16590#16672#1" />
                 <element signature="e#17001#17094#1" />
                 <element signature="e#17441#17503#1" />
                 <element signature="e#17709#17772#1" />
                 <element signature="e#17952#18007#1" />
                 <element signature="e#18343#18539#0" />
                 <element signature="e#18728#18835#0" />
-                <element signature="e#18887#19101#1" />
                 <element signature="e#19352#19573#0" />
                 <element signature="e#19860#19921#1" />
                 <element signature="e#19995#20075#0" />
-                <element signature="e#20168#20305#0" />
-                <element signature="e#20428#20510#0" />
               </folding>
             </state>
           </provider>
@@ -267,34 +234,28 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Instruments/scope.py">
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/Measurements/mixer_circuit_characterization.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="806">
-              <caret line="51" selection-start-line="51" selection-end-line="51" />
+            <state relative-caret-position="17">
+              <caret line="150" column="39" selection-start-line="150" selection-start-column="39" selection-end-line="150" selection-end-column="39" />
               <folding>
-                <element signature="e#0#18#0" expanded="true" />
+                <element signature="e#91#100#0" expanded="true" />
+                <marker date="1547584262429" expanded="true" signature="6203:6209" ph="..." />
+                <marker date="1547584262429" expanded="true" signature="6222:6231" ph="..." />
+                <marker date="1547584262429" expanded="true" signature="7643:7648" ph="..." />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Instruments/keithley.py">
+        <entry file="file://$PROJECT_DIR$/Measurements/dctransport.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="3665">
-              <caret line="481" column="8" selection-start-line="481" selection-start-column="8" selection-end-line="481" selection-end-column="8" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Measurements/mixer_circuit_characterization.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="63">
-              <caret line="131" column="17" selection-start-line="131" selection-start-column="17" selection-end-line="131" selection-end-column="17" />
+            <state relative-caret-position="658">
+              <caret line="196" column="33" lean-forward="true" selection-start-line="196" selection-start-column="33" selection-end-line="196" selection-end-column="33" />
               <folding>
-                <element signature="e#91#100#0" expanded="true" />
+                <element signature="e#0#54#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -347,9 +308,9 @@
       <find>cw</find>
       <find>self.write</find>
       <find>bias current</find>
+      <find>self.la</find>
       <find>plotter</find>
       <find>set_experiment</find>
-      <find>self.la</find>
     </findStrings>
     <replaceStrings>
       <replace>&quot;&quot;&quot;</replace>
@@ -369,7 +330,6 @@
         <option value="$PROJECT_DIR$/Procedures/rf_sweep.py" />
         <option value="$PROJECT_DIR$/Procedures/mixer_circuit_characterization.py" />
         <option value="$PROJECT_DIR$/Procedures/simple_daq_plotting.py" />
-        <option value="$PROJECT_DIR$/Utilities/save.py" />
         <option value="$PROJECT_DIR$/Utilities/utilities.py" />
         <option value="$PROJECT_DIR$/Utilities/anim.py" />
         <option value="$PROJECT_DIR$/Instruments/preamp.py" />
@@ -386,8 +346,9 @@
         <option value="$PROJECT_DIR$/Instruments/HP8657B.py" />
         <option value="$PROJECT_DIR$/Instruments/VNA.py" />
         <option value="$PROJECT_DIR$/Instruments/scope.py" />
-        <option value="$PROJECT_DIR$/Measurements/mixer_circuit_characterization.py" />
         <option value="$PROJECT_DIR$/Measurements/rf_sweep.py" />
+        <option value="$PROJECT_DIR$/Utilities/save.py" />
+        <option value="$PROJECT_DIR$/Measurements/mixer_circuit_characterization.py" />
       </list>
     </option>
   </component>
@@ -722,17 +683,34 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Instruments/keithley.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="3665">
-          <caret line="481" column="8" selection-start-line="481" selection-start-column="8" selection-end-line="481" selection-end-column="8" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/Instruments/nidaq.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="779">
           <caret line="210" column="32" selection-start-line="210" selection-start-column="32" selection-end-line="210" selection-end-column="32" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Measurements/mod2D.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="697">
+          <caret line="41" selection-start-line="41" selection-end-line="41" />
+          <folding>
+            <element signature="e#242#269#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Measurements/scanspectra.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="153">
+          <caret line="9" column="22" selection-start-line="9" selection-start-column="22" selection-end-line="9" selection-end-column="22" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Instruments/keithley.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="3665">
+          <caret line="481" column="8" selection-start-line="481" selection-start-column="8" selection-end-line="481" selection-end-column="8" />
         </state>
       </provider>
     </entry>
@@ -742,16 +720,6 @@
           <caret line="51" selection-start-line="51" selection-end-line="51" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/Measurements/mixer_circuit_characterization.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="63">
-          <caret line="131" column="17" selection-start-line="131" selection-start-column="17" selection-end-line="131" selection-end-column="17" />
-          <folding>
-            <element signature="e#91#100#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -828,23 +796,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Measurements/mod2D.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="697">
-          <caret line="41" selection-start-line="41" selection-end-line="41" />
-          <folding>
-            <element signature="e#242#269#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/Measurements/scanspectra.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="153">
-          <caret line="9" column="22" selection-start-line="9" selection-start-column="22" selection-end-line="9" selection-end-column="22" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/Measurements/array_tune.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="411">
@@ -857,8 +808,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/Utilities/save.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="304">
-          <caret line="29" column="23" selection-start-line="29" selection-start-column="23" selection-end-line="29" selection-end-column="23" />
+        <state relative-caret-position="440">
+          <caret line="544" column="19" lean-forward="true" selection-start-line="544" selection-start-column="19" selection-end-line="544" selection-end-column="19" />
           <folding>
             <element signature="e#0#41#0" expanded="true" />
             <element signature="e#1614#1714#1" />
@@ -875,30 +826,31 @@
             <element signature="e#7073#7850#0" />
             <element signature="e#8178#10341#0" />
             <element signature="e#9672#9746#0" />
-            <element signature="e#10388#12020#0" />
             <element signature="e#12067#13764#0" />
             <element signature="e#12506#13728#0" />
             <element signature="e#13811#14207#0" />
-            <element signature="e#14269#14481#0" />
-            <element signature="e#14535#14808#0" />
-            <element signature="e#14864#14998#0" />
-            <element signature="e#15197#15241#0" />
             <element signature="e#15616#15980#1" />
             <element signature="e#16057#16193#0" />
             <element signature="e#16424#16534#0" />
-            <element signature="e#16590#16672#1" />
             <element signature="e#17001#17094#1" />
             <element signature="e#17441#17503#1" />
             <element signature="e#17709#17772#1" />
             <element signature="e#17952#18007#1" />
             <element signature="e#18343#18539#0" />
             <element signature="e#18728#18835#0" />
-            <element signature="e#18887#19101#1" />
             <element signature="e#19352#19573#0" />
             <element signature="e#19860#19921#1" />
             <element signature="e#19995#20075#0" />
-            <element signature="e#20168#20305#0" />
-            <element signature="e#20428#20510#0" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Measurements/dctransport.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="658">
+          <caret line="196" column="33" lean-forward="true" selection-start-line="196" selection-start-column="33" selection-end-line="196" selection-end-column="33" />
+          <folding>
+            <element signature="e#0#54#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -908,22 +860,25 @@
         <state relative-caret-position="-612" />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Measurements/dctransport.py">
+    <entry file="file://$PROJECT_DIR$/Measurements/rf_sweep.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="454">
-          <caret line="196" column="33" lean-forward="true" selection-start-line="196" selection-start-column="33" selection-end-line="196" selection-end-column="33" />
+        <state relative-caret-position="548">
+          <caret line="1786" column="22" selection-start-line="1786" selection-start-column="22" selection-end-line="1786" selection-end-column="22" />
           <folding>
-            <element signature="e#0#54#0" expanded="true" />
+            <element signature="e#104#134#0" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Measurements/rf_sweep.py">
+    <entry file="file://$PROJECT_DIR$/Measurements/mixer_circuit_characterization.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="582">
-          <caret line="1788" column="42" selection-start-line="1788" selection-start-column="42" selection-end-line="1788" selection-end-column="42" />
+        <state relative-caret-position="17">
+          <caret line="150" column="39" selection-start-line="150" selection-start-column="39" selection-end-line="150" selection-end-column="39" />
           <folding>
-            <element signature="e#104#134#0" />
+            <element signature="e#91#100#0" expanded="true" />
+            <marker date="1547584262429" expanded="true" signature="6203:6209" ph="..." />
+            <marker date="1547584262429" expanded="true" signature="6222:6231" ph="..." />
+            <marker date="1547584262429" expanded="true" signature="7643:7648" ph="..." />
           </folding>
         </state>
       </provider>
