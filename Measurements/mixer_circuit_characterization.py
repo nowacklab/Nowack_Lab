@@ -11,6 +11,7 @@ from ..Utilities.dataset import Dataset
 from IPython.display import clear_output
 from ..Utilities.save import Saver
 
+
 class MixerCircuitTester:
     """ SHOULD NOT BE USED - this test should not give meaningful results"""
     def __init__(self, power_start, power_stop, power_numpoints,
@@ -128,12 +129,12 @@ class SimpleTakeDAQVoltage:
         return daq_data_average
 
 
-class StepVNAasRF():
+class StepVNAasRF:
     """
     To characterize direct conversion property of single mixer
     With set LO frequency, step VNA frequency as RF input
     """
-    def __init__(self, v_minfreq, v_maxfreq, v_freqsteps, v_power, v_pause_time, v_network_param='S12', daq_input_label='ai0'):
+    def __init__(self, v_minfreq, v_maxfreq, v_freqsteps, v_power, v_pause_time, v_network_param='S12'):
         self.v = VNA8722ES(16)
         self.daq = NIDAQ()
         self.v_minfreq = v_minfreq
@@ -142,7 +143,7 @@ class StepVNAasRF():
         self.v_power = v_power
         self.v_pausetime = v_pause_time
         self.v_network_param = v_network_param
-        self.daq_input_label = daq_input_label
+        # self.daq_input_label = daq_input_label
 
     def do(self):
         v_freq_range = np.linspace(self.v_minfreq, self.v_maxfreq, num=self.v_freqsteps)
@@ -167,3 +168,5 @@ class StepVNAasRF():
         self.v.powerstate = 0
 
         print(data_array)
+
+        plt.plot(v_freq_range, data_array)
