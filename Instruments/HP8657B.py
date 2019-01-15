@@ -12,7 +12,7 @@ class FunctionGenerator(VISAInstrument):
 
     def __init__(self, gpib_address=''):
         if type(gpib_address) is int:
-            gpib_address = 'GPIB::%02i::INSTR' %gpib_address
+            gpib_address = 'GPIB::%02i::INSTR' % gpib_address
         self.gpib_address = gpib_address
 
         self._init_visa(gpib_address, termination='\n')

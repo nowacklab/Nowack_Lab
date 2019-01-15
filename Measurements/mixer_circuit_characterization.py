@@ -136,6 +136,7 @@ class StepVNAasRF(Saver, Plotter):
     With set LO frequency, step VNA frequency as RF input
     """
     def __init__(self, v_minfreq, v_maxfreq, v_freqsteps, v_power, v_pause_time, v_network_param='S12'):
+        super(StepVNAasRF, self).__init__()
         self.v = VNA8722ES(16)
         self.daq = NIDAQ()
         self.v_minfreq = v_minfreq
@@ -147,10 +148,13 @@ class StepVNAasRF(Saver, Plotter):
         # self.daq_input_label = daq_input_label
         self.v_freq_range = np.linspace(self.v_minfreq, self.v_maxfreq, num=self.v_freqsteps)
 
+        # for plotting:
         self.x_axis_data = self.v_freq_range
         self.y_axis_data = np.array([])
 
     def do(self):
+        """
+        """
         # first get y data, then save, then plot
         self.v.sweepmode = 'CW'  # set VNA to continuous wave
         self.v.cw_freq = self.v_minfreq
@@ -186,14 +190,142 @@ class StepVNAasRF(Saver, Plotter):
         self.ax.set_xlabel('VNA frequency (mixer RF port)')
         self.ax.set_ylabel('DAQ voltage reading (mixer IF port)')
 
-class StepVNAandFunctionGenerator:
+
+class StepVNAandFunctionGenerator(Saver, Plotter):
     """
     To characterize direct conversion property of single mixer
     Keep VNA and FunctionGenerator at equal frequencies, artificially control VNA power as function of frequency
     """
 
-    def __init__(self, minfreq, maxfreq, freqsteps, power_dip_frequencies, pause_time, v_network_param='S12'):
+    def __init__(self, minfreq, maxfreq, freqsteps, base_power, power_dip_min, power_dip_max, pause_time,
+                 v_network_param='S12'):
+
+        super(StepVNAandFunctionGenerator, self).__init__()
         self.v = VNA8722ES(16)
-        self.daq = NIDAQ
-        self.fxn_gen = FunctionGenerator()
+        self.daq = NIDAQ()
+        self.fxn_gen = FunctionGenerator(7)
+        self.minfreq = minfreq
+        self.maxfreq = maxfreq
+        self.freqsteps = freqsteps
+        self.base_power = base_power
+        self.power_dip_min = power_dip_min
+        self.power_dip_max = power_dip_max
+        self.pause_time = pause_time
+        self.v_network_param = v_network_param
+
+        self.freq_range = np.linspace(minfreq, maxfreq, num=freqsteps)
+
+        # for plotting:
+        self.x_axis_data = self.freq_range
+        self.y_axis_data = np.array([])
+
+        print("Must manually adjust power of HP8657 function generator")
+
+    def do(self):
+        # need to set self.y_axis_data
+        self.v.sweepmode = 'CW'
+        self.v.cw_freq = self.minfreq
+        self.v.power = self.base_power
+        self.v.networkparam = self.v_network_param
+        self.v.powerstate = 1
+
+        self.fxn_gen.freq = self.minfreq
+
+        y_data_array = np.empty((self.freqsteps, 1))
+
+        counter = 0
+        hyst = 0
+        for i in self.freq_range:
+            # update VNA frequency, fxn gen frequency, VNA power, record in y_data_array
+            time.sleep(.5)
+            if hyst == 0 and self.power_dip_min <= i <= self.power_dip_max:
+                print("Frequency: ", i)
+                self.v.power = self.base_power - 10
+                time.sleep(3)
+                hyst = 1
+            elif hyst == 1 and not self.power_dip_min <= i <= self.power_dip_max:
+                print("Frequency: ", i)
+                self.v.power = self.base_power
+                time.sleep(3)
+                hyst = 0
+            self.v.cw_freq = i
+            self.fxn_gen.freq = i
+            y_data_array[counter] = self.daq.ai0.V
+            counter += 1
+
+        hyst = 0
+
+        self.y_axis_data = y_data_array
+
+        self.save()
+        self.plot()
         pass
+
+    def plot_update(self):
+        self.plot1.set_xdata(self.freq_range)
+        self.plot1.set_ydata(self.y_axis_data)
+
+        self.ax.relim()
+        self.ax.autoscale_view()
+
+    def setup_plots(self):
+        self.fig, self.ax = plt.subplots()
+        self.plot1 = self.ax.plot(self.x_axis_data, self.y_axis_data)[0]
+        self.ax.set_xlabel('VNA frequency (mixer RF port)')
+        self.ax.set_ylabel('DAQ voltage reading (mixer IF port)')
+
+
+class ChangeVNAPower(Saver, Plotter):
+    def __init__(self, freq, base_power, base_numpoints):
+        super(ChangeVNAPower, self).__init__()
+        self.v = VNA8722ES(16)
+        self.daq = NIDAQ()
+        self.fxn_gen = FunctionGenerator(7)
+        self.freq = freq
+        self.base_power = base_power
+        self.base_numpoints = base_numpoints
+
+        # for plotting:
+        self.x_axis_data = np.linspace(0, 3*self.base_numpoints, num=3*self.base_numpoints)
+        self.y_axis_data = np.empty((3*self.base_numpoints, 1))
+
+        print("Must manually adjust power of HP8657 function generator")
+
+    def do(self):
+        self.v.sweepmode = 'CW'
+        self.v.cw_freq = self.freq
+        self.v.power = self.base_power
+        self.v.powerstate = 1
+        self.v.networkparam = 'S12'
+
+        self.fxn_gen.freq = self.freq
+
+        for i in range(0, self.base_numpoints):
+            time.sleep(.1)
+            self.y_axis_data[i] = self.daq.ai0.V
+        self.v.power = self.base_power - 10
+        time.sleep(2)
+        for i in range(self.base_numpoints, 2*self.base_numpoints):
+            time.sleep(.1)
+            self.y_axis_data[i] = self.daq.ai0.V
+        self.v.power = self.base_power
+        time.sleep(2)
+        for i in range(2*self.base_numpoints, 3*self.base_numpoints):
+            time.sleep(.1)
+            self.y_axis_data[i] = self.daq.ai0.V
+
+        self.save()
+        self.plot()
+
+    def plot_update(self):
+        self.plot1.set_xdata(self.x_axis_data)
+        self.plot1.set_ydata(self.y_axis_data)
+
+        self.ax.relim()
+        self.ax.autoscale_view()
+
+    def setup_plots(self):
+        self.fig, self.ax = plt.subplots()
+        self.plot1 = self.ax.plot(self.x_axis_data, self.y_axis_data)[0]
+        self.ax.set_xlabel('Point number')
+        self.ax.set_ylabel('DAQ voltage reading (mixer IF port)')
