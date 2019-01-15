@@ -30,19 +30,19 @@
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
           <entry key="dummy" value="106" />
-          <entry key="py" value="12660" />
+          <entry key="py" value="14365" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
           <entry key="PLAIN_TEXT" value="106" />
-          <entry key="Python" value="12660" />
+          <entry key="Python" value="14365" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.open">
         <counts>
           <entry key="json" value="1" />
-          <entry key="py" value="63" />
+          <entry key="py" value="65" />
           <entry key="txt" value="1" />
         </counts>
       </usages-collector>
@@ -50,7 +50,7 @@
         <counts>
           <entry key="JSON" value="1" />
           <entry key="PLAIN_TEXT" value="1" />
-          <entry key="Python" value="63" />
+          <entry key="Python" value="65" />
         </counts>
       </usages-collector>
     </session>
@@ -93,8 +93,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/Measurements/rf_sweep.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1122">
-              <caret line="1134" column="81" selection-start-line="1134" selection-start-column="81" selection-end-line="1134" selection-end-column="81" />
+            <state relative-caret-position="544">
+              <caret line="1109" column="8" lean-forward="true" selection-start-line="1109" selection-start-column="8" selection-end-line="1109" selection-end-column="32" />
               <folding>
                 <element signature="e#104#134#0" />
                 <element signature="e#665#4291#0" />
@@ -316,25 +316,110 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/Instruments/VNA.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="230">
-              <caret line="97" column="10" selection-start-line="97" selection-start-column="4" selection-end-line="97" selection-end-column="10" />
+            <state relative-caret-position="691">
+              <caret line="473" column="25" lean-forward="true" selection-start-line="473" selection-start-column="25" selection-end-line="473" selection-end-column="25" />
               <folding>
-                <element signature="e#0#11#0" expanded="true" />
+                <element signature="e#760#831#0" />
+                <element signature="e#989#2574#0" />
+                <element signature="e#989#1036#0" />
+                <element signature="e#2614#2813#0" />
+                <element signature="e#2614#2741#1" />
+                <element signature="e#2851#3395#0" />
+                <element signature="e#2869#3309#0" />
+                <element signature="e#3439#3443#0" />
+                <element signature="e#3493#3621#0" />
+                <element signature="e#3687#4018#0" />
+                <element signature="e#3833#3901#0" />
+                <element signature="e#3928#3986#0" />
+                <element signature="e#4063#4162#0" />
+                <element signature="e#4218#4715#0" />
+                <element signature="e#4700#5165#0" />
+                <element signature="e#4700#4742#1" />
+                <element signature="e#5229#5767#0" />
+                <element signature="e#5229#5271#1" />
+                <element signature="e#5311#5360#0" />
+                <element signature="e#5402#5451#0" />
+                <element signature="e#5494#5544#0" />
+                <element signature="e#5814#5937#0" />
+                <element signature="e#5814#5859#1" />
+                <element signature="e#5997#6183#0" />
+                <element signature="e#5997#6038#1" />
+                <element signature="e#6230#6336#0" />
+                <element signature="e#6396#6589#0" />
+                <element signature="e#6638#6764#0" />
+                <element signature="e#6828#7287#0" />
+                <element signature="e#7336#7409#0" />
+                <element signature="e#7473#7745#0" />
+                <element signature="e#7556#7653#0" />
+                <element signature="e#7680#7745#0" />
+                <element signature="e#7792#7912#0" />
+                <element signature="e#8119#8257#0" />
+                <element signature="e#8333#8600#0" />
+                <element signature="e#8656#8787#0" />
+                <element signature="e#8865#9051#0" />
+                <element signature="e#9094#9164#0" />
+                <element signature="e#9219#9344#0" />
+                <element signature="e#9420#9622#0" />
+                <element signature="e#9678#9804#0" />
+                <element signature="e#9882#10062#0" />
+                <element signature="e#10114#10501#0" />
+                <element signature="e#11092#11204#0" />
+                <element signature="e#11274#11338#0" />
+                <element signature="e#11371#12783#0" />
+                <element signature="e#11371#11538#1" />
+                <element signature="e#11833#12001#1" />
+                <element signature="e#12588#12715#0" />
+                <element signature="e#12775#13627#0" />
+                <element signature="e#12775#12941#1" />
+                <element signature="e#13467#13600#0" />
+                <element signature="e#13663#14796#0" />
+                <element signature="e#13663#13907#1" />
+                <element signature="e#14567#14769#0" />
+                <element signature="e#14858#15503#0" />
+                <element signature="e#15350#15479#0" />
+                <element signature="e#15568#16299#0" />
+                <element signature="e#16007#16272#0" />
+                <element signature="e#16353#16570#0" />
+                <element signature="e#16619#17072#0" />
+                <element signature="e#16880#17072#0" />
+                <element signature="e#17167#17222#0" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/Instruments/scope.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="806">
+              <caret line="51" selection-start-line="51" selection-end-line="51" />
+              <folding>
+                <element signature="e#0#18#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/Instruments/keithley.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="3665">
+              <caret line="481" column="8" selection-start-line="481" selection-start-column="8" selection-end-line="481" selection-end-column="8" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/Measurements/mixer_circuit_characterization.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="743">
-              <caret line="127" column="31" selection-start-line="127" selection-start-column="31" selection-end-line="127" selection-end-column="31" />
+            <state relative-caret-position="705">
+              <caret line="157" column="8" selection-start-line="157" selection-start-column="8" selection-end-line="157" selection-end-column="8" />
               <folding>
                 <element signature="e#91#100#0" expanded="true" />
+                <element signature="e#437#4767#0" />
               </folding>
             </state>
           </provider>
@@ -360,8 +445,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>def power</find>
-      <find>def save</find>
       <find>def save_data</find>
       <find>networkpara</find>
       <find>powerstate</find>
@@ -388,8 +471,10 @@
       <find>if value &gt;</find>
       <find>clear_output</find>
       <find>simple</find>
-      <find>bias current</find>
       <find>bandwidth</find>
+      <find>bias current</find>
+      <find>cw</find>
+      <find>self.write</find>
     </findStrings>
     <replaceStrings>
       <replace>&quot;&quot;&quot;</replace>
@@ -424,17 +509,18 @@
         <option value="$PROJECT_DIR$/measurements_justin_temp/double_mixer.py" />
         <option value="$PROJECT_DIR$/Instruments/nidaq.py" />
         <option value="$PROJECT_DIR$/Instruments/HP8657B.py" />
-        <option value="$PROJECT_DIR$/Measurements/mixer_circuit_characterization.py" />
-        <option value="$PROJECT_DIR$/Instruments/VNA.py" />
         <option value="$PROJECT_DIR$/Measurements/rf_sweep.py" />
+        <option value="$PROJECT_DIR$/Instruments/VNA.py" />
+        <option value="$PROJECT_DIR$/Instruments/scope.py" />
+        <option value="$PROJECT_DIR$/Measurements/mixer_circuit_characterization.py" />
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds">
-    <option name="x" value="848" />
-    <option name="y" value="107" />
+  <component name="ProjectFrameBounds" extendedState="6">
+    <option name="x" value="290" />
+    <option name="y" value="-17" />
     <option name="width" value="960" />
-    <option name="height" value="1040" />
+    <option name="height" value="1072" />
   </component>
   <component name="ProjectInspectionProfilesVisibleTreeState">
     <entry key="Project Default">
@@ -552,7 +638,7 @@
     <frame x="-8" y="-8" width="1936" height="1056" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.11959958" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.11959958" />
       <window_info id="Structure" order="1" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
@@ -731,9 +817,6 @@
     <entry file="file://$PROJECT_DIR$/Instruments/Readme.txt">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
-    <entry file="file://$PROJECT_DIR$/Instruments/scope.py">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
     <entry file="file://$PROJECT_DIR$/Instruments/squidarray.py">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
@@ -751,13 +834,6 @@
     <entry file="file://$PROJECT_DIR$/Instruments/sr760.py">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
-    <entry file="file://$PROJECT_DIR$/Instruments/keithley.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="459">
-          <caret line="410" selection-start-line="410" selection-end-line="410" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/Instruments/HP8657B.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="102">
@@ -772,10 +848,37 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/Utilities/save.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="236">
+          <caret line="477" selection-start-line="477" selection-end-line="477" />
+          <folding>
+            <element signature="e#0#41#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Instruments/scope.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="806">
+          <caret line="51" selection-start-line="51" selection-end-line="51" />
+          <folding>
+            <element signature="e#0#18#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Instruments/keithley.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="3665">
+          <caret line="481" column="8" selection-start-line="481" selection-start-column="8" selection-end-line="481" selection-end-column="8" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/Measurements/rf_sweep.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1122">
-          <caret line="1134" column="81" selection-start-line="1134" selection-start-column="81" selection-end-line="1134" selection-end-column="81" />
+        <state relative-caret-position="544">
+          <caret line="1109" column="8" lean-forward="true" selection-start-line="1109" selection-start-column="8" selection-end-line="1109" selection-end-column="32" />
           <folding>
             <element signature="e#104#134#0" />
             <element signature="e#665#4291#0" />
@@ -984,16 +1087,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Measurements/mixer_circuit_characterization.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="743">
-          <caret line="127" column="31" selection-start-line="127" selection-start-column="31" selection-end-line="127" selection-end-column="31" />
-          <folding>
-            <element signature="e#91#100#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/Instruments/nidaq.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="779">
@@ -1001,22 +1094,86 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Utilities/save.py">
+    <entry file="file://$PROJECT_DIR$/Instruments/VNA.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="236">
-          <caret line="477" selection-start-line="477" selection-end-line="477" />
+        <state relative-caret-position="691">
+          <caret line="473" column="25" lean-forward="true" selection-start-line="473" selection-start-column="25" selection-end-line="473" selection-end-column="25" />
           <folding>
-            <element signature="e#0#41#0" expanded="true" />
+            <element signature="e#760#831#0" />
+            <element signature="e#989#2574#0" />
+            <element signature="e#989#1036#0" />
+            <element signature="e#2614#2813#0" />
+            <element signature="e#2614#2741#1" />
+            <element signature="e#2851#3395#0" />
+            <element signature="e#2869#3309#0" />
+            <element signature="e#3439#3443#0" />
+            <element signature="e#3493#3621#0" />
+            <element signature="e#3687#4018#0" />
+            <element signature="e#3833#3901#0" />
+            <element signature="e#3928#3986#0" />
+            <element signature="e#4063#4162#0" />
+            <element signature="e#4218#4715#0" />
+            <element signature="e#4700#5165#0" />
+            <element signature="e#4700#4742#1" />
+            <element signature="e#5229#5767#0" />
+            <element signature="e#5229#5271#1" />
+            <element signature="e#5311#5360#0" />
+            <element signature="e#5402#5451#0" />
+            <element signature="e#5494#5544#0" />
+            <element signature="e#5814#5937#0" />
+            <element signature="e#5814#5859#1" />
+            <element signature="e#5997#6183#0" />
+            <element signature="e#5997#6038#1" />
+            <element signature="e#6230#6336#0" />
+            <element signature="e#6396#6589#0" />
+            <element signature="e#6638#6764#0" />
+            <element signature="e#6828#7287#0" />
+            <element signature="e#7336#7409#0" />
+            <element signature="e#7473#7745#0" />
+            <element signature="e#7556#7653#0" />
+            <element signature="e#7680#7745#0" />
+            <element signature="e#7792#7912#0" />
+            <element signature="e#8119#8257#0" />
+            <element signature="e#8333#8600#0" />
+            <element signature="e#8656#8787#0" />
+            <element signature="e#8865#9051#0" />
+            <element signature="e#9094#9164#0" />
+            <element signature="e#9219#9344#0" />
+            <element signature="e#9420#9622#0" />
+            <element signature="e#9678#9804#0" />
+            <element signature="e#9882#10062#0" />
+            <element signature="e#10114#10501#0" />
+            <element signature="e#11092#11204#0" />
+            <element signature="e#11274#11338#0" />
+            <element signature="e#11371#12783#0" />
+            <element signature="e#11371#11538#1" />
+            <element signature="e#11833#12001#1" />
+            <element signature="e#12588#12715#0" />
+            <element signature="e#12775#13627#0" />
+            <element signature="e#12775#12941#1" />
+            <element signature="e#13467#13600#0" />
+            <element signature="e#13663#14796#0" />
+            <element signature="e#13663#13907#1" />
+            <element signature="e#14567#14769#0" />
+            <element signature="e#14858#15503#0" />
+            <element signature="e#15350#15479#0" />
+            <element signature="e#15568#16299#0" />
+            <element signature="e#16007#16272#0" />
+            <element signature="e#16353#16570#0" />
+            <element signature="e#16619#17072#0" />
+            <element signature="e#16880#17072#0" />
+            <element signature="e#17167#17222#0" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Instruments/VNA.py">
+    <entry file="file://$PROJECT_DIR$/Measurements/mixer_circuit_characterization.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="230">
-          <caret line="97" column="10" selection-start-line="97" selection-start-column="4" selection-end-line="97" selection-end-column="10" />
+        <state relative-caret-position="705">
+          <caret line="157" column="8" selection-start-line="157" selection-start-column="8" selection-end-line="157" selection-end-column="8" />
           <folding>
-            <element signature="e#0#11#0" expanded="true" />
+            <element signature="e#91#100#0" expanded="true" />
+            <element signature="e#437#4767#0" />
           </folding>
         </state>
       </provider>

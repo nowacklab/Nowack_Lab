@@ -9,7 +9,7 @@ from ..Instruments.nidaq import NIDAQ
 from ..Instruments.HP8657B import FunctionGenerator
 from ..Utilities.dataset import Dataset
 from IPython.display import clear_output
-
+from ..Utilities.save import Saver
 
 class MixerCircuitTester:
     """ SHOULD NOT BE USED - this test should not give meaningful results"""
@@ -126,3 +126,44 @@ class SimpleTakeDAQVoltage:
         daq_data_average = np.mean(daq_data[self.daq_input_label])
         print(daq_data_average)
         return daq_data_average
+
+
+class StepVNAasRF():
+    """
+    To characterize direct conversion property of single mixer
+    With set LO frequency, step VNA frequency as RF input
+    """
+    def __init__(self, v_minfreq, v_maxfreq, v_freqsteps, v_power, v_pause_time, v_network_param='S12', daq_input_label='ai0'):
+        self.v = VNA8722ES(16)
+        self.daq = NIDAQ()
+        self.v_minfreq = v_minfreq
+        self.v_maxfreq = v_maxfreq
+        self.v_freqsteps = v_freqsteps
+        self.v_power = v_power
+        self.v_pausetime = v_pause_time
+        self.v_network_param = v_network_param
+        self.daq_input_label = daq_input_label
+
+    def do(self):
+        v_freq_range = np.linspace(self.v_minfreq, self.v_maxfreq, num=self.v_freqsteps)
+        self.v.sweepmode = 'CW'  # set VNA to continuous wave
+        self.v.cw_freq = self.v_minfreq
+
+        self.v.power = self.v_power
+        self.v.networkparam = self.v_network_param
+
+        data_array = np.empty((self.v_freqsteps, 1))
+
+        self.v.powerstate = 1
+
+        array_counter = 0
+        for freq_point in v_freq_range:
+            self.v.cw_freq = freq_point
+            time.sleep(.5)
+            data_array[array_counter] = self.daq.ai0.V
+            time.sleep(1)
+            array_counter += 1
+
+        self.v.powerstate = 0
+
+        print(data_array)
