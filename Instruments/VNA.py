@@ -314,6 +314,7 @@ class VNA8722ES(Instrument):
     @property
     def networkparam(self):
         """Get which network parameter is being measured"""
+        #
         if self.ask('S11') == '1':
             self._networkparam = 'S11'
         elif self.ask('S21') == '1':
@@ -329,9 +330,7 @@ class VNA8722ES(Instrument):
         nplist = ['S11', 'S21', 'S12', 'S22']
         assert value in nplist, "Network parameter should be one of " + str(nplist)
         if value == 'S12' or value == 'S22':
-            # raise Exception('Don\'t send current thru amplifer backwards (just for cold amplifer testing,
-            # remove this in code if situation changes)')
-            print("Make sure you are not sending current thru something wrong way - double-check connections")
+            print("Note: sending power out of VNA port 2")
         self.write(value)
 
     @property

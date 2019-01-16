@@ -25,7 +25,7 @@ as necessary) and populate the numpy arrays.
 
 class Saver(object):
     subdirectory = ''  # Formerly "appendedpath".
-        # Name of subdirectory off the main data directory where data is saved.
+    # Name of subdirectory off the main data directory where data is saved.
 
     def __init__(self):
         super().__init__()  # To deal with multiple inheritance mro
@@ -59,14 +59,12 @@ class Saver(object):
 
         return walk(self.__dict__)
 
-
     def __setstate__(self, state):
         """
         Default method for loading from JSON.
         `state` is a dictionary.
         """
         self.__dict__.update(state)
-
 
     def _copy_to_remote(self, localpath, remotepath):
         '''
@@ -96,7 +94,6 @@ class Saver(object):
         else:
             print('Not connected to %s, data not saved remotely!'\
                                 %get_data_server_path())
-
 
     @classmethod
     def _load(cls, filename=None):
@@ -133,7 +130,6 @@ class Saver(object):
         obj = Saver._load_json(filename+'.json')
         obj._load_hdf5(filename+'.h5')
         return obj
-
 
     def _load_hdf5(self, filename):
         """
@@ -173,7 +169,6 @@ class Saver(object):
 
             walk(self.__dict__, f)  # start walkin'
 
-
     @staticmethod
     def _load_json(json_file):
         '''
@@ -212,7 +207,6 @@ class Saver(object):
         obj = jsp.decode(obj_string)
 
         return obj
-
 
     def _make_paths(self, filename):
         '''
@@ -264,7 +258,6 @@ class Saver(object):
             remote_path = None
 
         return local_path, remote_path
-
 
     def _save(self, filename=None):
         '''
@@ -387,10 +380,10 @@ class Saver(object):
 
 
 def exists(filename):
-    inp='y'
+    inp = 'y'
     if os.path.exists(filename+'.json'):
         inp = input('File %s already exists! Overwrite? (y/n)' %(filename+'.json'))
-    if inp not in ('y','Y'):
+    if inp not in ('y', 'Y'):
         print('File not saved!')
         return True
     return False
@@ -398,7 +391,7 @@ def exists(filename):
 
 def get_computer_name():
     computer_name = socket.gethostname()
-    aliases = {'SPRUCE': 'bluefors', 'HEMLOCK': 'montana'} # different names we want to give the directories for each computer
+    aliases = {'SPRUCE': 'bluefors', 'HEMLOCK': 'montana'}  # different names we want to give the directories for each computer
     if computer_name in aliases.keys():
         computer_name = aliases[computer_name]
     return computer_name

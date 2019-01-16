@@ -1774,9 +1774,26 @@ class SaverPlotterTester(Saver, Plotter):
         self.var1 = param1
         self.var2 = param2
         self.var3 = param3
+        # self.fig = None  # update this in plot_update
+        self.x_axis_data = np.array([])
+        self.y_axis_data = np.array([])
 
     def do(self):
         self.save()
-        if self.plot:
-            self.plot()
+        self.plot()
+
         pass
+
+    def plot_update(self):
+        x_data = np.arange(0.0, 2.0, 0.01)
+        self.plot1.set_xdata(x_data)
+        self.plot1.set_ydata(np.sin(x_data))
+
+        self.ax.relim()
+        self.ax.autoscale_view()
+
+    def setup_plots(self):
+        self.fig, self.ax = plt.subplots()
+        self.plot1 = self.ax.plot(self.x_axis_data, self.y_axis_data)[0]
+        self.ax.set_xlabel('some x label')
+        self.ax.set_ylabel('some y label')
