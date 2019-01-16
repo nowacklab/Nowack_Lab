@@ -21,6 +21,7 @@ from ..Measurements.mixer_circuit_characterization import SimpleTakeDAQVoltage
 
 from IPython.display import clear_output
 
+#TODO add IF bandwidth parameters to everything?
 
 class RFTakeSpectrum:
     """
