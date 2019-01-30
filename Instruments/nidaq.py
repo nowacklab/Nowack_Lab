@@ -3,8 +3,11 @@ import sys, os
 home = os.path.expanduser("~")
 sys.path.append(os.path.join(home,'Documents','GitHub','Instrumental'))
 
-from instrumental.drivers.daq import ni
-from instrumental import u
+try:
+    from instrumental.drivers.daq import ni
+    from instrumental import u
+except:
+    print('instrumental not imported in nidaq.py!')
 import numpy as np
 try:
     import PyDAQmx as mx

@@ -33,6 +33,7 @@ class SpectrumSeries(Saver):
         Vbias = []
         V2ps = []
         Vn = []
+        Vnstd = []
 
         for j, Vtg in enumerate(self.Vtgs):
             self.zs = ZurichSpectrum.load(self.paths[j])
@@ -46,11 +47,13 @@ class SpectrumSeries(Saver):
                 Ibias.append(zs.keithleybias.input_current)
                 Vbias.append(zs.keithleybias.input_voltage)
             Vn.append(zs.get_average(fmin, fmax))
+            Vnstd.append(zs.get_std(fmin, fmax))
 
         self.Vav = np.array(Vav)
         self.Ibias = np.array(Ibias)
         self.R2p = np.array(Vbias)/Ibias
         self.Vn = np.array(Vn)
+        self.Vnstd = np.array(Vnstd)
 
 
     def get_one_over_f(self, fmin=.1, fmax=None, filters=[60], filters_bw=[10]):

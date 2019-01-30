@@ -78,7 +78,7 @@ def extents(x, y):
             y.max() + np.abs(dy) / 2
             ]
 
-def no_scientific_notation(ax, which='both'):
+def no_scientific_notation(ax, which='both', minor=False):
     '''
     Formats ticks using FormatStrFormatter to remove scientific notation for
     small exponents
@@ -93,8 +93,12 @@ def no_scientific_notation(ax, which='both'):
         y = True
     if x:
         ax.xaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%g'))
+        if minor:
+            ax.xaxis.set_minor_formatter(mpl.ticker.FormatStrFormatter('%g'))
     if y:
         ax.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%g'))
+        if minor:
+            ax.yaxis.set_minor_formatter(mpl.ticker.FormatStrFormatter('%g'))
 
 def plotline(ax, x, y, z):
     pass

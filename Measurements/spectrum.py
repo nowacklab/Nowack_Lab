@@ -156,6 +156,15 @@ class DaqSpectrum(Measurement):
         # Convert spectrum to V/sqrt(Hz)
         return np.sqrt(psdAve)
 
+    def get_std(self, fmin=0, fmax=None):
+        '''
+        Returns standard deviation of the spectral density over the given
+        frequency range [fmin, fmax].
+        Default, over entire spectrum
+        '''
+        argmin, argmax = self._get_argmin_argmax(fmin, fmax)
+        return np.std(self.Vn[argmin:argmax])
+
     def get_time_trace(self):
         '''
         Collect a single time trace from the DAQ.
