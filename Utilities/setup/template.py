@@ -22,7 +22,7 @@ from Nowack_Lab.Utilities.say import say
 from Nowack_Lab.Utilities.save import Saver
 from Nowack_Lab.Measurements.array_tune import BestLockPoint
 from Nowack_Lab.Measurements.spectrum import DaqSpectrum, SQUIDSpectrum, ZurichSpectrum
-from Nowack_Lab.Measurements.dctransport import DAQ_IV, RvsT_Montana_Keithley
+from Nowack_Lab.Measurements.dctransport import DAQ_IV, RvsT_Montana_Keithley, RvsSomething_DC, RvsVg_DC, RvsB_Phil_DC
 from Nowack_Lab.Measurements.heightsweep import Heightsweep
 from Nowack_Lab.Measurements.measurement import Measurement
 from Nowack_Lab.Measurements.mod2D import Mod2D

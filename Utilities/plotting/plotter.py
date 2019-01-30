@@ -8,6 +8,7 @@ class Plotter(object):
     Supports live plotting in jupyter notebook or from the console.
     '''
     fig = None
+    ax = None
 
     def __init__(self):
         super().__init__()  # To deal with multiple inheritance mro

@@ -24,7 +24,7 @@ class RvsB(RvsSomething):
         self.delay = delay
         self.sweep_rate = sweep_rate
 
-    def do(self, plot=True, auto_gain=False):
+    def do(self, plot=True, auto_gain=False, **kwargs):
         raise Exception('Got rid of Bstart. Check out code.')
         # Set initial field if not already there
         if abs(self.ppms.field - self.Bstart*10000) > 0.1: # different by more than 0.1 Oersted = 10 uT.
@@ -90,7 +90,7 @@ class RvsB(RvsSomething):
 class RvsB_BlueFors(RvsB):
     instrument_list = ['magnet', 'lockin_V1', 'lockin_I']
 
-    def do(self, plot=True, auto_gain=False):
+    def do(self, plot=True, auto_gain=False, **kwargs):
         raise Exception('MAGNET DRIVER WAS CHANGED. Also got rid of Bstart')
         # Set initial field if not already there
         if abs((self.magnet.B - self.Bstart)/self.magnet.B) > 0.01: # different by more than 1%
@@ -126,11 +126,11 @@ class RvsB_Phil(RvsB):
         Sweep rate and field in T. Delay is in seconds. Rate is T/min
         persistent: whether to enter persistent mode after the measurement
         '''
-        super().__init__(instruments, Bend, delay, sweep_rate)
+        RvsB.__init__(self, instruments, Bend, delay, sweep_rate)
         self.persistent = persistent
 
 
-    def do(self, plot=True, auto_gain=False):
+    def do(self, plot=True, auto_gain=False, **kwargs):
 
         if abs(self.magnet.Bmagnet-self.Bend) < 10e-6:
             return # sweeping between the same two fields, no point in doing the measurement
@@ -199,7 +199,7 @@ class RvsVg_B(RvsVg):
 
         self.gs_names = []
 
-    def do(self, delay=0, auto_gain=False):
+    def do(self, delay=0, auto_gain=False, **kwargs):
         '''
         delay: wait time after sweeping field
         '''

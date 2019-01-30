@@ -72,7 +72,8 @@ class Piezos(Instrument):
 
 
     def __setstate__(self, state):
-        state.pop('daq') # don't want to load the daq automatically
+        if 'daq' in state:
+            state.pop('daq') # don't want to load the daq automatically
         keys = [
             ('_max_sweep_rate', 'max_sweep_rate'),
             ('_max_step_size', 'sweep_step_size'),

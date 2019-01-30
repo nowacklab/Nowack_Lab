@@ -48,7 +48,7 @@ class Scanplane(Measurement):
 
     def __init__(self, instruments={}, plane=None, span=[800, 800],
                  center=[0, 0], numpts=[20, 20],
-                 scanheight=15, scan_rate=120, raster=False,
+                 scanheight=15, scan_rate=60, raster=False,
                  direction=['+','+'], ROI=None):
         '''
         direction: +/- to sweep each axis forwards or backwards.
@@ -125,7 +125,7 @@ class Scanplane(Measurement):
                 self._units[chan] = 'V'
 
 
-    def do(self, fast_axis='x', wait=None):
+    def do(self, fast_axis='x', wait=None, **kwargs):
         '''
         Routine to perform a scan over a plane.
 

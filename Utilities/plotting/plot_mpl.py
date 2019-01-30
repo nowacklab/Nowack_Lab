@@ -1,4 +1,6 @@
-import matplotlib, matplotlib.pyplot as plt, numpy as np
+import matplotlib as mpl, matplotlib.pyplot as plt, numpy as np
+from matplotlib.transforms import Bbox
+from matplotlib.colors import LinearSegmentedColormap
 
 ## NOTE: Aspect handled differently in matplotlib 2.0. Don't need to set it this way!
 def aspect(ax, ratio, absolute=True):
@@ -40,8 +42,6 @@ def cubehelix(g=1.0, s=0.5, r=-1.0, h=1.5):
     r: number of rgb rotations in color made from start to end
     h: hue (adjust saturation)
     '''
-    import matplotlib as mpl
-    from matplotlib.colors import LinearSegmentedColormap
     cdict = mpl._cm.cubehelix(g, s, r, h)
     cm = LinearSegmentedColormap('cubehelix_custom', cdict)
     return cm
@@ -78,6 +78,27 @@ def extents(x, y):
             y.max() + np.abs(dy) / 2
             ]
 
+def no_scientific_notation(ax, which='both', minor=False):
+    '''
+    Formats ticks using FormatStrFormatter to remove scientific notation for
+    small exponents
+    ax: axis to format
+    which: 'x', 'y', or 'both'
+    '''
+    x = False
+    y = False
+    if which in ('x', 'both'):
+        x = True
+    if which in ('y', 'both'):
+        y = True
+    if x:
+        ax.xaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%g'))
+        if minor:
+            ax.xaxis.set_minor_formatter(mpl.ticker.FormatStrFormatter('%g'))
+    if y:
+        ax.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%g'))
+        if minor:
+            ax.yaxis.set_minor_formatter(mpl.ticker.FormatStrFormatter('%g'))
 
 def plotline(ax, x, y, z):
     pass
@@ -137,6 +158,52 @@ def plot2D(ax, x, y, z, cmap='RdBu', interpolation='none', title='', xlabel='',
         aspect(ax, 1, absolute=False) # equal aspect ratio based on data scales
 
     return im
+
+def save_subplot(fig, ax, *args, **kwargs):
+    '''
+    Save a subplot on axis ax.
+    args and kwargs are passed directly to fig.savefig
+    '''
+
+    def full_extent(ax, pad=0.0):
+        '''
+        Get the full extent of an axes, including axes labels, tick labels, and
+        titles.
+        '''
+        items = ax.get_xticklabels() + ax.get_yticklabels()
+        items += [ax.get_xaxis().get_label(), ax.get_yaxis().get_label()]
+        items += [ax, ax.title]
+
+        bbox = Bbox.union([item.get_window_extent() for item in items])
+
+        return bbox.expanded(1.0 + pad, 1.0 + pad)
+
+    extent = full_extent(ax).transformed(fig.dpi_scale_trans.inverted())
+
+    kwargs['bbox_inches'] = extent
+    fig.savefig(*args, **kwargs)
+
+
+def set_size(w, h, fig=None, ax=None, mm=False):
+    '''
+    Resize a set of axes to (w,h) given in inches
+    mm: if True, (w,h) in mm
+    '''
+    if mm:
+        w /= 25.4
+        h /= 25.4
+    if not fig: fig = plt.gcf()
+    if not ax: ax = plt.gca()
+    for i in range(3): # Gives the best results
+        fig.tight_layout()
+        l = ax.figure.subplotpars.left
+        r = ax.figure.subplotpars.right
+        t = ax.figure.subplotpars.top
+        b = ax.figure.subplotpars.bottom
+        figw = float(w)/(r-l)
+        figh = float(h)/(t-b)
+        ax.figure.set_size_inches(figw, figh)
+
 
 def update2D(im, z, center_at_zero=False, equal_aspect=True):
     '''

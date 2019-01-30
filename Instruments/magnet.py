@@ -283,7 +283,7 @@ class AMI430(VISAInstrument):
         self.p_switch = False
 
 
-    def wait(self, timeout=1800, interval=0.1):
+    def wait(self, timeout=180000, interval=0.1):
         '''
         Wait for holding.
         '''
@@ -538,6 +538,9 @@ field in magnet!')
         If False, will free up the kernel for other commands, e.g. measurements.
         Be sure to manually enter persistent mode and ramp down the power supply if desired.
         '''
+        if self.Bmagnet == Bset:
+            print('%s T already in the magnet. Did not ramp.' %Bset)
+            return
 
         if self.p_switch == False:  # magnet is out of the circuit
             # ramp power supply quickly to match magnet field
@@ -580,6 +583,88 @@ field in magnet!')
         else:
             print('Magnet ramping to %.2f T. Will not enter persistent mode afterwards.' %Bset)
             self.Bmagnet = Bset
+
+
+class AMI420_ResistiveLoad(AMI420):
+    '''
+    Control for the American Magnetics AMI420 Power Supply.
+    This class is when it is hooked up to a resistive load (e.g. GMW 5403)
+    Removes all persistent mode functionality
+    '''
+
+    _Bmax = .14
+    _Imax = 8.7  # A
+    _coilconst = 0.0149  # T/A
+    _Iratemax = .6  # A/min - slow to avoid hysteresis
+    _Bratemax = _coilconst*_Iratemax
+    _Vmax = 5
+
+    interrupted = False  # used to monitor KeyboardInterrupts during ramping
+
+    def __init__(self, gpib_address=22):
+        '''
+        Parameters:
+        gpib_address - GPIB address.
+        '''
+        self._resource = 'GPIB::%02i::INSTR' %gpib_address
+        VISAInstrument._init_visa(self, self._resource)
+
+    @property
+    def Brate(self):
+        return super().Brate
+
+    @Brate.setter
+    def Brate(self, value):
+        '''
+        Set the field ramp rate (T/min)
+        '''
+        Bratemax = self._Bratemax
+        if value > Bratemax:
+            print('Warning! %g T/min ramp rate too high! Rate set to %g T/min.'
+                                                    %(value, Bratemax))
+            value = Bratemax
+        self.write('CONF:RAMP:RATE:FIELD %g' %value)
+
+
+    def enter_persistent_mode(self):
+        '''
+        Raises an exception to remind the user we are using a resistive load.
+        '''
+        raise Exception('Resistive load! No persistent mode!')
+
+
+    def ramp_to_field(self, Bset, Brate, wait=True):
+        '''
+        Ramp the magnet to a given field setpoint at a given rate.
+
+        Does the following procedure:
+            - Set the desired field setpoint (T) and rate (T/min).
+            - Start ramping the field.
+
+        Parameters:
+        Bset - field setpoint (T)
+        Brate - field ramp rate (T/min)
+        wait (bool) - If True, wait for ramp to finish.
+        If False, will free up the kernel for other commands, e.g. measurements.
+        '''
+
+        # specify new rate and setpoint, then start ramping
+        self.Brate = Brate
+        self.Bset = Bset
+        self.ramp()
+
+        if wait:
+            try:
+                while self.status == 'RAMPING':
+                    time.sleep(0.5)
+            except KeyboardInterrupt:  # If we interrupt the ramp, we need to make sure we know the field still
+                self._interrupted = True  # This flag will prevent p-switch operation
+                raise KeyboardInterrupt
+            while abs(self.Vmag-0.02) > 0.01:
+                time.sleep(.5) # wait for field to stabilize
+
+        else:
+            print('Magnet ramping to %.2f T.' %Bset)
 
 
 class Magnet(AMI430):

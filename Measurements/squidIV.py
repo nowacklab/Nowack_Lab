@@ -72,7 +72,7 @@ class SquidIV(Measurement):
         self.Vbias = Ibias*(self.Rbias+self.Rmeas) # SQUID bias voltage
 
 
-    def do(self):
+    def do(self, **kwargs):
         self.param_prompt() # Check parameters
 
         self.do_IV()

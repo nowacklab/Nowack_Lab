@@ -48,7 +48,7 @@ class DaqSpectrum(Measurement):
         self.timetraces_t = [None]*averages
         self.timetraces_V = [None]*averages
 
-    def do(self, plot=True):
+    def do(self, plot=True, **kwargs):
         '''
         Do the DaqSpectrum measurment.
         '''
@@ -77,7 +77,7 @@ class DaqSpectrum(Measurement):
             freq0 = filters[i]
             freq = freq0
             j=1
-            while freq < fmax:
+            while freq < f[-1]:
                 # harmonics
                 freq = freq0 * j
                 j += 1
@@ -111,6 +111,8 @@ class DaqSpectrum(Measurement):
             fmax  = self.f.max()
         argmin = abs(self.f-fmin).argmin()
         argmax = abs(self.f-fmax).argmin()
+        if argmin == 0:  # Do not want to return zero frequency
+            argmin = 1
         return argmin, argmax
 
     def get_Nfft(self):
@@ -153,6 +155,15 @@ class DaqSpectrum(Measurement):
         psdAve = psdAve / self.averages
         # Convert spectrum to V/sqrt(Hz)
         return np.sqrt(psdAve)
+
+    def get_std(self, fmin=0, fmax=None):
+        '''
+        Returns standard deviation of the spectral density over the given
+        frequency range [fmin, fmax].
+        Default, over entire spectrum
+        '''
+        argmin, argmax = self._get_argmin_argmax(fmin, fmax)
+        return np.std(self.Vn[argmin:argmax])
 
     def get_time_trace(self):
         '''
@@ -225,7 +236,8 @@ class ZurichSpectrum(DaqSpectrum):
             measure_freq=14.6e3,
             averages=30,
             input_ch = 0,
-            preamp_gain=1):
+            preamp_gain=1,
+            force_autorange=True):
         '''
         Create a ZurichSpectrum object
 
@@ -235,6 +247,8 @@ class ZurichSpectrum(DaqSpectrum):
         averages (int): number of time traces averaged before computing the FFT
         input_ch - Input channel. 0 = "Signal Input 1"; 9 = "Aux Input 2"
         preamp_gain - gain of preamp used in measurement
+        force_autorange - force autorange the Zurich before measurement (if input range too high)
+            By default, the Zurich *will* autorange if overloading regardless of this parameter.
         '''
         super().__init__(instruments, None, measure_freq, averages, preamp_gain)
 
@@ -244,8 +258,11 @@ class ZurichSpectrum(DaqSpectrum):
         self.measure_time = 16384/measure_freq  # 16384 = 2^14 fixed number
         self.input_ch = input_ch
 
-        self.zurich.daq.setInt('/dev3447/sigins/%i/autorange' %input_ch, 1)  # autorange input
-        time.sleep(5)  # wait for autoranging to complete
+        self.force_autorange = force_autorange
+
+    def do(self, **kwargs):
+        self.zurich.autorange(self.input_ch, force=self.force_autorange)
+        DaqSpectrum.do(self, **kwargs)
 
 
     def get_Nfft(self):
@@ -258,7 +275,8 @@ class ZurichSpectrum(DaqSpectrum):
         '''
         Collect a single time trace from the Zurich.
         '''
-        return self.zurich.get_scope_trace(freq=self.measure_freq, N=16384, input_ch=self.input_ch)
+        return self.zurich.get_scope_trace(freq=self.measure_freq, N=16384,
+                input_ch=self.input_ch)
 
     def setup_preamp(self):
         '''

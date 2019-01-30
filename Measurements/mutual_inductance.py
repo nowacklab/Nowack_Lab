@@ -25,7 +25,7 @@ class MutualInductance_sweep(Measurement):
         self.rate = rate
         self.numsteps = numsteps
 
-    def do(self):
+    def do(self, **kwargs):
         self.mutuals = []
         self.sbias_live = []
         for sb in self.sbias:
@@ -78,7 +78,7 @@ class MutualInductance2(Measurement):
         self.title = title
         self.conversion = conversion
 
-    def do(self, title='', plot=True, removeplot = False):
+    def do(self, title='', plot=True, removeplot = False, **kwargs):
         if title != '':
             self.title = title
         outputdata, received = self.daq.sweep(Vstart = {'fieldcoil':
@@ -147,7 +147,7 @@ class MutualInductance(Measurement):
         self.I = np.full((len(self.freqs), len(self.amps)), np.nan)
 
 
-    def do(self):
+    def do(self, **kwargs):
         for i, f in enumerate(self.freqs):
             self.lockin_squid.frequency = f
             for j, a in enumerate(self.amps):
@@ -240,7 +240,7 @@ class ArraylessMI(Measurement):
         self.V = np.full((num_mod, len(self.field_current)),
                          np.nan)
 
-    def do(self):
+    def do(self, **kwargs):
         '''
         Perform the MI measurement
         '''

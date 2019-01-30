@@ -190,13 +190,22 @@ class Saver(object):
                     try:
                         exec(classname)  # see if class is in the namespace
                     except:
-                        if 'Procedures' in classname:
-                            d['py/object'] = classname.replace('Procedures',
-                                    'Measurements')  # for legacy loading
-                        else:
-                            print('Cannot find class definition {0}: '.format(
-                                classname) + 'using Saver object')
-                            d['py/object'] = 'Nowack_Lab.Utilities.save.Saver'
+                        try:  # Does it exist in the module? Trust the code below
+                            split = classname.rsplit('.', maxsplit=1)
+                            lsplit = split[0][::-1].rsplit('.', maxsplit=1)[0][::-1]
+                            exec_str = 'from ..%s import %s' %(lsplit, split[1])
+                            exec(exec_str)
+                        except Exception as e:
+                            # print(e)
+                            if 'Procedures' in classname:
+                                d['py/object'] = classname.replace('Procedures',
+                                        'Measurements')  # for legacy loading
+                            else:
+                                print('Cannot find class definition {0}: '.format(
+                                    classname) + 'using Saver object')
+                                d['py/object'] = 'Nowack_Lab.Utilities.save.Saver'
+                            if 'daqspectrum' in d['py/object']: # legacy
+                                d['py/object'] = d['py/object'].replace('daq', '')
                 if isinstance(d[key], dict):
                     d[key] = walk(d[key])
             return d
@@ -327,7 +336,8 @@ class Saver(object):
                     if type(value) is np.ndarray:
                         # Save the numpy array as a dataset
                         d = group.create_dataset(key, value.shape,
-                            compression = 'gzip', compression_opts=9)
+                            compression = 'gzip', compression_opts=9,
+                            dtype=np.dtype('float64'))
                         d.set_fill_value = np.nan
                         d[...] = value
 
@@ -422,13 +432,14 @@ def get_data_paths(experiment='', kind=''):
 
     # Get a list of all the date directories
     p = os.path.join(experiment, '*')
-    g = list(glob.iglob(p))
+    ptd = os.path.join(experiment, '*/touchdowns')
+    g = list(glob.iglob(p)) + list(glob.iglob(ptd))
     g.sort()
 
     paths = []
     # Iterate over dates and add all paths to given data files
-    for dir in g:
-        p = os.path.join(dir, '*%s.json' %kind)
+    for dirname in g:
+        p = os.path.join(dirname, '*%s.json' %kind)
         g2 = list(glob.iglob(p))
         g2.sort()
         paths += g2
@@ -454,7 +465,9 @@ def get_data_server_path():
     '''
     Returns full path of the data server's main directory, formatted based on OS.
     '''
-    if platform.system() == 'Windows':
+    if get_computer_name() == 'Transport':
+        return r'Z:\data'
+    elif platform.system() == 'Windows':
         return r'\\SAMBASHARE\labshare\data'
     elif platform.system() == 'Darwin': # Mac
         return '/Volumes/labshare/data/'

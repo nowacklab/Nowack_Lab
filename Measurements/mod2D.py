@@ -46,7 +46,7 @@ class Mod2D(Measurement):
         self.V = np.full((self.numpts, self.IV.numpts), np.nan)
         self.Isquid = self.IV.I
 
-    def do(self):
+    def do(self, **kwargs):
         self.calc_ramp() #easy way to clear self.V
         self.IV.V = self.IV.V*0
 

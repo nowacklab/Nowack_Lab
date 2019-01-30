@@ -457,3 +457,23 @@ class Lakeshore372(VISAInstrument):
         '''
         data = 'RAMP0,1,{}[term]'.format(rate)
         self.write(data)
+
+
+class Lakeshore425(VISAInstrument):
+    '''
+    Lakeshore 425 Gaussmeter
+    '''
+    _label = 'Lakeshore Model 425'
+    _idn = 'MODEL425'
+    _strip = '\r'
+
+    def __init__(self, com=7):
+        self._init_visa('COM{}'.format(com), parity=1,  # odd parity
+            data_bits=7, baud_rate=57600)
+
+    @property
+    def field(self):
+        '''
+        Returns field in the current units
+        '''
+        return float(self.query('RDGFIELD?'))

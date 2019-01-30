@@ -403,7 +403,10 @@ class Keithley2450(Keithley2400):
         Max sweep: maximum sweep rate (V/s)
         '''
         super().__init__(resource)
-        self.I # trigger reading to update screen
+        # if self.source == 'V':
+        #     self.I # trigger reading to update screen
+        # elif self.source == 'I':
+        #     self.V # if in "source current" mode
 
     def setup(self):
         # self.write('*LANG SCPI2400') # for Keithley2400 compatibility mode
@@ -457,7 +460,6 @@ class Keithley2450(Keithley2400):
             self.Vout = v
             time.sleep(delay)
 
-
 class KeithleyPPMS(Keithley2400):
     def __init__(self, gpib_address, zero_V, ten_V):
         '''
@@ -483,6 +485,33 @@ class KeithleyPPMS(Keithley2400):
     @property
     def output(self):
         return self.V/10*(self.ten_V-self.zero_V) + self.zero_V # calibration set in PPMS software
+
+    @property
+    def V(self):
+        return float(self.query(':FETC?'))
+
+
+class Keithley2000(Keithley2400):
+    _label = 'keithley_multimeter'
+    _idn = 'MODEL 2000'
+    def __init__(self, gpib_address):
+        '''
+        Keithley multimeter
+        '''
+        if type(gpib_address) is int:
+            gpib_address = 'GPIB::%02i::INSTR' %gpib_address
+        self.gpib_address= gpib_address
+
+        self._init_visa(gpib_address, termination='\n')
+
+        self.write(':SAMP:COUN 1')
+
+    def __getstate__(self):
+        if self._loaded:
+            return super().__getstate__() # Do not attempt to read new values
+        return {
+            'V': self.V,
+        }
 
     @property
     def V(self):

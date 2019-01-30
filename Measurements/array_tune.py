@@ -330,7 +330,7 @@ class ArrayTune(Measurement):
         self.sweep.saa_status = self.squidarray.__dict__
         self.sweep.run()
 
-    def do(self):
+    def do(self, **kwargs):
         # TODO: Measure array V/phi_0 conversion
         # TODO: take array spectrum
 
@@ -542,7 +542,7 @@ class BestLockPoint(Measurement):
         self.samplerate = samplerate
         self.testinputconv = testinputconv
 
-    def do(self):
+    def do(self, **kwargs):
         '''
         Find best lock points
         '''
@@ -959,7 +959,7 @@ class ArrayTuneBatch(Measurement):
                           ]
 
 
-    def do(self, liveplot = True):
+    def do(self, liveplot = True, **kwargs):
 
         # try out a point that you know will work.
         # This determines how large the structures should be

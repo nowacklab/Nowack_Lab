@@ -71,7 +71,7 @@ class Scanline(Measurement):
             if chan not in self._units.keys():
                 self._units[chan] = 'V'
 
-    def do(self):
+    def do(self, **kwargs):
         # Start and end points
         Vstart = {'x': self.start[0],
                 'y': self.start[1],

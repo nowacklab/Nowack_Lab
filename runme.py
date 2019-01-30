@@ -1,5 +1,4 @@
-import os, shutil, matplotlib, pip
-
+import os, shutil, matplotlib, pip, sys, subprocess
 
 
 home = os.path.expanduser('~')
@@ -22,6 +21,7 @@ with open(anaconda_path, 'w') as f:
 
 ## Install required packages
 packages = [
+    'jsonschema',
     'pint',
     'tabulate',
     'jsonpickle',
@@ -31,14 +31,15 @@ packages = [
     'tornado==4.5.3',
     'peakutils',
     'gtts',
+    'urllib3',
     'https://github.com/nowacklab/Instrumental/tarball/master',
     'https://github.com/nowacklab/PyANC350/tarball/master',
 ]
 for package in packages:
     try:
-        pip.main(['install', '--upgrade', package])
-    except:
-        pass
+        subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--upgrade', package])
+    except Exception as e:
+        print(e)
 
 # Add custom.css file to add padding to bottom of the notebook
 package_path = os.path.join(os.getcwd(),'Utilities','notebook', 'custom.css')
