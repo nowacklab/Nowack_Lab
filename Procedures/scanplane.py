@@ -56,7 +56,8 @@ class Scanplane(Measurement):
 
     def __init__(self, instruments={}, plane=None, span=[800, 800],
                  center=[0, 0], numpts=[20, 20],
-                 scanheight=15, scan_rate=120, scan_pause = 1, raster=False):
+                 scanheight=15, scan_rate=120, scan_pause = 1, raster=False,
+                 trigger = 'False'):
 
         super().__init__(instruments=instruments)
 
@@ -82,6 +83,7 @@ class Scanplane(Measurement):
         self.numpts = numpts
         self.plane = plane
         self.scan_pause = scan_pause
+        self.trigger = trigger
 
         self.V = AttrDict({
             chan: np.nan for chan in self._daq_inputs + ['piezo']
@@ -200,7 +202,7 @@ class Scanplane(Measurement):
                         'z': self.Z[-(k + 1), i]}
 
             # Go to first point of scan
-            self.piezos.sweep(self.piezos.V, Vstart)
+            self.piezos.sweep(self.piezos.V, Vstart, trigger = False)
             time.sleep(self.scan_pause)
             #self.squidarray.reset()
             #time.sleep(0.5)
@@ -209,7 +211,8 @@ class Scanplane(Measurement):
                 # Sweep over X
                 output_data, received = self.piezos.sweep(Vstart, Vend,
                                                           chan_in=self._daq_inputs,
-                                                          sweep_rate=self.scan_rate
+                                                          sweep_rate=self.scan_rate,
+                                                          trigger = self.trigger
                                                           )
             else:
                 # 50 points should be good for giving this to

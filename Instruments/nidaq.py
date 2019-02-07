@@ -285,7 +285,8 @@ class NIDAQ(Instrument):
         return received
 
 
-    def sweep(self, Vstart, Vend, chan_in=None, sample_rate=100, numsteps=1000):
+    def sweep(self, Vstart, Vend, chan_in=None, sample_rate=100, numsteps=1000,
+                trigger = False):
         '''
         Sweeps between voltages specified in Vstart and Vend, dictionaries with
         output channel labels or names as keys. (e.g. Vstart={'ao1':3, 'piezo z':4})
@@ -294,6 +295,19 @@ class NIDAQ(Instrument):
         '''
 
         output_data = {}
+        if trigger:
+            if trigger in Vstart:
+                raise Exception('Trigger output may not be swept!')
+            oversample = 100
+            dutycycle = .1
+            def squarewave(t):
+                if t % oversample < dutycycle*oversample - 1:
+                    toreturn = 1
+                else:
+                    toreturn = 0
+                return toreturn
+            numsteps = numsteps*oversample
+            output_data[trigger] =  list(map(squarewave, np.arange(numsteps)))
         for k in Vstart.keys():
             output_data[k] = np.linspace(Vstart[k], Vend[k], numsteps)
 
