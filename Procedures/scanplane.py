@@ -57,7 +57,7 @@ class Scanplane(Measurement):
     def __init__(self, instruments={}, plane=None, span=[800, 800],
                  center=[0, 0], numpts=[20, 20],
                  scanheight=15, scan_rate=120, scan_pause = 1, raster=False,
-                 trigger = 'False'):
+                 trigger = False):
 
         super().__init__(instruments=instruments)
 
@@ -84,6 +84,8 @@ class Scanplane(Measurement):
         self.plane = plane
         self.scan_pause = scan_pause
         self.trigger = trigger
+        self.triggeredaqs = {} #these are the things whose samples you want to
+                              #get and sync.
 
         self.V = AttrDict({
             chan: np.nan for chan in self._daq_inputs + ['piezo']
@@ -94,6 +96,8 @@ class Scanplane(Measurement):
         self.Vinterp = AttrDict({
             chan: np.nan for chan in self._daq_inputs + ['piezo']
         })
+
+        self.triggereddata = {}
 
         self.scanheight = scanheight
 
@@ -165,6 +169,14 @@ class Scanplane(Measurement):
             )
         Vcap_offset = np.mean(Vcap_offset)
 
+        for inst in self.triggeredaqs.keys():
+            [obj, attrs] = triggeredaqs[inst] #attrs should be a dict of the form devattr: 'yourname'
+            obj.subscribe(attrs.values())
+            obj.flush(attrs.keys())
+            for name in names:
+                self.triggereddata[] = []
+
+
         # Loop over each line in the scan
         for i in range(num_lines):
             # If we detected a keyboard interrupt stop the scan here
@@ -204,6 +216,7 @@ class Scanplane(Measurement):
             # Go to first point of scan
             self.piezos.sweep(self.piezos.V, Vstart, trigger = False)
             time.sleep(self.scan_pause)
+
             #self.squidarray.reset()
             #time.sleep(0.5)
             # Begin the sweep
@@ -214,6 +227,10 @@ class Scanplane(Measurement):
                                                           sweep_rate=self.scan_rate,
                                                           trigger = self.trigger
                                                           )
+            for inst in self.triggeredaqs.keys():
+                [obj, names, attrs] = triggeredaqs[inst]
+                data = obj.poll()
+
             else:
                 # 50 points should be good for giving this to
                 # piezos.sweep_surface

@@ -506,7 +506,8 @@ class Piezo(Instrument):
             raise Exception('Voltage out of range for %s piezo! Max is %s' %(self.label, self.Vmax))
 
 
-    def sweep(self, Vstart, Vend, chan_in=None, sweep_rate=180, meas_rate=900):
+    def sweep(self, Vstart, Vend, chan_in=None, sweep_rate=180, meas_rate=900,
+                trigger = False):
         '''
         Sweeps piezos linearly from a starting voltage to an ending voltage.
         Specify a list of input channels you want to monitor.
@@ -550,7 +551,8 @@ class Piezo(Instrument):
                                             {self.label: Vend},
                                             chan_in = chan_in,
                                             sample_rate=meas_rate,
-                                            numsteps=numsteps
+                                            numsteps=numsteps,
+                                            trigger = trigger
                                         )
 
         output_data = output_data[self.label]

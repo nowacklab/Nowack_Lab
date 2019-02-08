@@ -298,11 +298,14 @@ class NIDAQ(Instrument):
         if trigger:
             if trigger in Vstart:
                 raise Exception('Trigger output may not be swept!')
-            oversample = 100
-            dutycycle = .1
+            oversample = 100 #how many real daq steps you want per sweep step
+            dutycycle = .1 #how long the trigger should be on
+            phase = .45 #alignment of trigger to beginning of step\
+            trigger_height = 1 #amplitude of trigger in volts
             def squarewave(t):
-                if t % oversample < dutycycle*oversample - 1:
-                    toreturn = 1
+                if ((t % oversample < (dutycycle+phase)*oversample - 1) and
+                    (t % oversample > (dutycycle-phase)*oversample - 1)):
+                    toreturn = trigger_height
                 else:
                     toreturn = 0
                 return toreturn
