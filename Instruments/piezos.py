@@ -113,7 +113,7 @@ class Piezos(Instrument):
             getattr(self,p)._daq = daq
 
 
-    def sweep(self, Vstart, Vend, chan_in=None, sweep_rate=180, meas_rate=900
+    def sweep(self, Vstart, Vend, chan_in=None, sweep_rate=180, meas_rate=900,
                trigger = 'False'):
         '''
         Sweeps piezos from a starting voltage (dictionary) to an ending voltage

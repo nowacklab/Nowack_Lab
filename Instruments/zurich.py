@@ -41,6 +41,8 @@ class zurichInstrument(Instrument):
         '''
         # Accesses the DAQServer at the instructed address and port.
         self.daq = zhinst.ziPython.ziDAQServer(server_address, server_port)
+        self.zurichformatnodes = {}
+        self.daq.unsubscribe('/')
         # Gets the list of ZI devices connected to the Zurich DAQServer
         deviceList = zhinst.utils.devices(self.daq)
 
@@ -69,7 +71,7 @@ class zurichInstrument(Instrument):
         for elem in allNodes:
             #generates the name of the attribute, simply replacing the
             # / of the the zurich path with underscores. Removes the "dev1056"
-            nameofattr = elem.replace('/','_')[9:]
+            nameofattr  = '_'.join(elem.split('/')[2:])
             # Checks that the node is not a special high speed streaming node
             if not 'SAMPLE' == elem[-6:]:
                 #Sets an attribute of the class, specifically a property
@@ -87,7 +89,7 @@ class zurichInstrument(Instrument):
         zdict = self.daq.get('/', True)
         self._save_dict = {}
         for key in zdict.keys():
-            self._save_dict[key.replace('/','_')[9:].upper()]= zdict[key]
+            self._save_dict['_'.join(key.split('/')[2:]).upper()]= zdict[key]
         return self._save_dict
 
     def convert_output(self, value):
@@ -96,6 +98,69 @@ class zurichInstrument(Instrument):
             value = np.array(value)
             return np.array(value/self.AUXOUTS_0_SCALE)
         return value/self.AUXOUTS_0_SCALE
+
+    def device_id(self):
+
+        return 'Zurich_' + self.daq.device_id
+
+    def convert_node(self, node):
+        '''
+        Converts a node name from nowack lab format (underscores, no devid)
+        to zhist format (/, devid)
+        '''
+        return '/'+self.device_id.upper()+'/'+ node.replace('_', '/')
+
+    def subscribe(self, nodes):
+            '''
+            Subscribes to nodes on zurich, and stores names under which to
+            return the data.
+            nodes (dictionary):values are user specified names, keys are
+                                    the names of attributes of the zurich.
+            '''
+            for nodename in nodes.keys():
+                if nodes[nodename] in self.zurichformatnodes.values():
+                    raise Exception('Two nodes may not be given the same name')
+                self.zurichformatnodes[self.convert_node(nodename)] = nodes[
+                                                                    nodename]
+
+            self.daq.subscribe(list(self.zurichformatnodes.keys()))
+
+    def unsubscribe(self, nodes):
+            '''
+            Unsubscribes to nodes on zurich.
+            nodes (list): list of zurich nodes in _ format to unsubscribe
+            '''
+            zurichunsubnodes = []
+            for node in nodes:
+                zurichunsubnodes.append(self.convert_node(node))
+                self.zurichformatnodes.pop(self.convert_node(node))
+            self.daq.unsubscribe(zurichunsubnodes)
+
+    def poll(self):
+            '''
+            Returns stored data in all buffers.
+
+            returns (dict): keys are the names you specified in subscribe for
+                            the data. Values are dictionaries, with keys "node",
+                            instrument, and "data". "node" is the path of the
+                            returned data, instrument is the device_id,
+                            'data' is the returned data.
+            '''
+            returned_data = self.daq.poll(.05,100, 1, True)
+            formatteddata = {}
+            for key in returned_data.keys():
+                if key.upper() in self.zurichformatnodes.keys():
+                    name = self.zurichformatnodes[key.upper()]
+                    ourformatkey = '_'.join(key.upper().split('/')[2:])
+                    if key.split('/')[-1] != 'SAMPLE':
+                        formatteddata[name + '_X']  = returned_data[key]['x']
+                        formatteddata[name + '_Y']  = returned_data[key]['y']
+                    else:
+                        formatteddata[name] = returned_data['key']
+                else:
+                    raise Exception('Unrecognized data returned')
+
+            return formatteddata
 
     def setup(self, config):
             '''
@@ -214,6 +279,8 @@ class zurichInstrument(Instrument):
                     raise Exception('type not handled!')
             return config_as_set_changed
             #return zCONFIG
+
+
 class HF2LI(zurichInstrument):
       pass
 class MFLI(zurichInstrument):

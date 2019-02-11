@@ -28,7 +28,7 @@ class Scanplane(Measurement):
     """
     # DAQ channel labels required for this class.
     _daq_inputs = ['dc', 'cap', 'acx', 'acy']
-    _conversions = AttrDict({
+    _conversions = {
         # Assume high; changed in init when array loaded
         'dc': conversions.Vsquid_to_phi0['High'],
         'cap': conversions.V_to_C,
@@ -37,7 +37,7 @@ class Scanplane(Measurement):
         'x': conversions.Vx_to_um,
         'y': conversions.Vy_to_um
     })
-    _units = AttrDict({
+    _units = {
         'dc': 'phi0',
         'cap': 'C',
         'acx': 'phi0',
@@ -87,7 +87,7 @@ class Scanplane(Measurement):
         self.triggeredaqs = {} #these are the things whose samples you want to
                               #get and sync.
 
-        self.V = AttrDict({
+        self.V = {
             chan: np.nan for chan in self._daq_inputs + ['piezo']
         })
         self.Vfull = AttrDict({
@@ -171,8 +171,8 @@ class Scanplane(Measurement):
 
         for inst in self.triggeredaqs.keys():
             [obj, attrs] = triggeredaqs[inst] #attrs should be a dict of the form devattr: 'yourname'
-            obj.subscribe(attrs.values())
-            obj.flush(attrs.keys())
+            obj.subscribe(attrs)
+            obj.flush(attrs)
             for name in names:
                 self.triggereddata[] = []
 

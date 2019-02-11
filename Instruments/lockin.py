@@ -36,15 +36,15 @@ class SR830(Instrument):
             "30 ks": 19
     };
     _time_constant_values = (
-        10e-6, 30e-6, 100e-6, 300e-6, 
-         1e-3,  3e-3,  10e-3,  30e-3, 100e-3, 300e-3, 
-         1,     3,     10,     30,    100,    300, 
+        10e-6, 30e-6, 100e-6, 300e-6,
+         1e-3,  3e-3,  10e-3,  30e-3, 100e-3, 300e-3,
+         1,     3,     10,     30,    100,    300,
          1000,  3000,  10000, 30000
     );
     _sensitivity_options = (
-              2e-9, 5e-9, 10e-9, 20e-9, 50e-9, 100e-9, 200e-9, 500e-9, 
-        1e-6, 2e-6, 5e-6, 10e-6, 20e-6, 50e-6, 100e-6, 200e-6, 500e-6, 
-        1e-3, 2e-3, 5e-3, 10e-3, 20e-3, 50e-3, 100e-3, 200e-3, 500e-3, 
+              2e-9, 5e-9, 10e-9, 20e-9, 50e-9, 100e-9, 200e-9, 500e-9,
+        1e-6, 2e-6, 5e-6, 10e-6, 20e-6, 50e-6, 100e-6, 200e-6, 500e-6,
+        1e-3, 2e-3, 5e-3, 10e-3, 20e-3, 50e-3, 100e-3, 200e-3, 500e-3,
         1
     );
 
@@ -55,7 +55,7 @@ class SR830(Instrument):
         if type(gpib_address) is int:
             gpib_address = 'GPIB::%02i::INSTR' %gpib_address
         self.gpib_address = gpib_address
-
+        self.device_id = 'SR830_GPIB_' + str(self.gpib_address)
         self.init_visa()
         self._visa_handle.timeout = 3000 # default
 
