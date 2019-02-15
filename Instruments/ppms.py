@@ -25,7 +25,7 @@ class PPMS(Instrument):
     '''
     _pid = None # process id number for server
 
-    def __init__(self, host='127.0.0.1', port=50009, s=None):
+    def __init__(self, host='128.253.144.172', port=11000, s=None):
         '''
         Default host and port are for the PPMS measurement computer.
         '''
@@ -80,7 +80,7 @@ class PPMS(Instrument):
         for param in self._params:
             d[param] = getattr(self, param)
         return d
-        
+
 
     def _get_temperature(self, map23=True):
         '''
