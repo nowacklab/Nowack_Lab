@@ -290,6 +290,26 @@ class RvsT_RT_to_4K(Measurement):
         r10_4 = RvsT(self.instruments, Tstart=10, Tend=4, delay=1, sweep_rate=.2)
         r10_4.run()
 
+class RvsT_RT_to_2K(Measurement):
+    def __init__(self, instruments):
+        self.instruments = instruments
+
+    def do(self):
+        r300_10 = RvsT(self.instruments, Tstart=300, Tend=10, delay=1, sweep_rate=10)
+        r300_10.run()
+
+        print('Waiting a half hour.')
+        time.sleep(60*30)
+
+        r10_4 = RvsT(self.instruments, Tstart=10, Tend=4, delay=1, sweep_rate=2)
+        r10_4.run()
+
+        print('Waiting 10 minutes.')
+        time.sleep(60*10)
+
+        r4_2 = RvsT(self.instruments, Tstart=4, Tend=2, delay=1, sweep_rate=1)
+        r4_2.run()
+
 class RvsT_Bluefors(RvsSomething):
     instrument_list = ['lakeshore', 'lockin_V1', 'lockin_I']
     something = 'T'

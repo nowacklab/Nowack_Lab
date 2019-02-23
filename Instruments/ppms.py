@@ -25,7 +25,7 @@ class PPMS(Instrument):
     '''
     _pid = None # process id number for server
 
-    def __init__(self, host='128.253.144.172', port=11000, s=None):
+    def __init__(self, host='192.168.0.100', port=11000, s=None):
         '''
         Default host and port are for the PPMS measurement computer.
         '''
@@ -223,12 +223,12 @@ def ask_socket_raw(s, cmd):
     #empty socket buffer
     while socket_poll(s):
         s.recv(1024)
-        time.sleep(.01)
+        time.sleep(0.01)
     s.sendall(cmd.encode())
     while not socket_poll(s):
-        time.sleep(.01)
+        time.sleep(0.01)
     data = b''
     while socket_poll(s):
         data += s.recv(1024)
-        time.sleep(.01)
+        time.sleep(0.01)
     return data
