@@ -147,10 +147,13 @@ class Zurich(Instrument):
         This is the only way I could figure out how to detect an overload.
         NOTE: This isn't perfect. If overloading only on the high side (for example), won't detect reliably
         '''
-        # set zeroth TU to Input overload (V)
-        self.daq.setInt('/dev3447/tu/thresholds/0/input', 53)
-        # set up DIO to watch threshold outputs
-        self.daq.setInt('/dev3447/dios/0/mode', 3)
+        try:
+            # set zeroth TU to Input overload (V)
+            self.daq.setInt('/dev3447/tu/thresholds/0/input', 53)
+            # set up DIO to watch threshold outputs
+            self.daq.setInt('/dev3447/dios/0/mode', 3)
+        except:
+            print('OL detect not set up.')
 
 class HF2LI(Zurich):
     _label = 'Zurich HF2LI'
