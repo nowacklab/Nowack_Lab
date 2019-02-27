@@ -30,7 +30,7 @@ class Plotter(object):
         return cbar
 
 
-    def flush_events(self, fig=None):
+    def _flush_events(self, fig=None):
         '''
         Flush events for a GUI backend; not needed for notebook or inline
         '''
@@ -71,7 +71,7 @@ class Plotter(object):
                         c.draw_all()
             fig.canvas.draw()  # draw the figure
 
-            self.flush_events(fig)
+            self._flush_events(fig)
 
 
     def plot_update(self):
