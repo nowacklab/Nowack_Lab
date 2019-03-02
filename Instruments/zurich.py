@@ -114,14 +114,19 @@ class zurichInstrument(Instrument):
             '''
             Subscribes to nodes on zurich, and stores names under which to
             return the data.
-            nodes (dictionary):values are user specified names, keys are
-                                    the names of attributes of the zurich.
+            nodes (dictionary):keys are names of attributes of the
+                                zurich., keys are user specified names.
             '''
-            for nodename in nodes.keys():
-                if nodes[nodename] in self.zurichformatnodes.values():
-                    raise Exception('Two nodes may not be given the same name')
-                self.zurichformatnodes[self.convert_node(nodename)] = nodes[
-                                                                    nodename]
+            for zurichname in nodes.keys():
+                username = nodes[zurichname]
+                if zurichname in self.zurichformatnodes.keys():
+                    if username == self.zurichformatnodes[zurichname]:
+                        print('Node is already subscribed')
+                    else:
+                        raise Exception('Two nodes may not be given the'+
+                                                                  ' same name')
+                self.zurichformatnodes[self.convert_node(zurichname)] = (
+                    username)
 
             self.daq.subscribe(list(self.zurichformatnodes.keys()))
 
@@ -132,8 +137,11 @@ class zurichInstrument(Instrument):
             '''
             zurichunsubnodes = []
             for node in nodes:
-                zurichunsubnodes.append(self.convert_node(node))
-                self.zurichformatnodes.pop(self.convert_node(node))
+                if not self.convert_node(node) in self.zurichformatnodes.keys():
+                    print('Not subscribed to node %s' + node )
+                else:
+                    zurichunsubnodes.append(self.convert_node(node))
+                    self.zurichformatnodes.pop(self.convert_node(node))
             self.daq.unsubscribe(zurichunsubnodes)
 
     def poll(self):
@@ -146,15 +154,15 @@ class zurichInstrument(Instrument):
                             returned data, instrument is the device_id,
                             'data' is the returned data.
             '''
-            returned_data = self.daq.poll(.05,100, 1, True)
+            returned_data = self.daq.poll(1,100, 0x0004, True)
             formatteddata = {}
             for key in returned_data.keys():
                 if key.upper() in self.zurichformatnodes.keys():
                     name = self.zurichformatnodes[key.upper()]
                     ourformatkey = '_'.join(key.upper().split('/')[2:])
                     if key.split('/')[-1] != 'SAMPLE':
-                        formatteddata[name + '_X']  = returned_data[key]['x']
-                        formatteddata[name + '_Y']  = returned_data[key]['y']
+                        formatteddata[name]  = np.transpose([
+                    returned_data[key]['x'], returned_data[key]['y']])
                     else:
                         formatteddata[name] = returned_data['key']
                 else:

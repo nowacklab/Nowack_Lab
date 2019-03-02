@@ -1,5 +1,4 @@
 import h5py
-print('test')
 import numpy as np
 
 class Dataset():
@@ -92,7 +91,6 @@ class Dataset():
                     self._appenddatah5(self.filename, cleandatatowrite,
                                                              pathtowrite,slc)
         else:
-            print(datatowrite)
             self._writetoh5(data = cleandatatowrite, path = pathtowrite)
 
 
@@ -148,8 +146,6 @@ class Dataset():
         oldshape = np.shape(np.squeeze(oldstuff))
         if newshape !=  oldshape:
             f.close()
-            print(numpyarray)
-            print(oldstuff)
             raise Exception('Slice shape '+ str(oldshape) +
              ' does not match data shape ' + str(newshape))
         elif np.all(np.isnan(oldstuff)):

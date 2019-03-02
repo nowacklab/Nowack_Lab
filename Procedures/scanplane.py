@@ -28,7 +28,9 @@ class Scanplane(Measurement):
     """
     # DAQ channel labels required for this class.
     _daq_inputs = ['dc', 'cap', 'acx', 'acy']
-    _conversions = {
+    # DAQ channels plotted during scanning
+    _plot_channels = ['dc', 'cap', 'acx', 'acy']
+    _conversions = AttrDict({
         # Assume high; changed in init when array loaded
         'dc': conversions.Vsquid_to_phi0['High'],
         'cap': conversions.V_to_C,
@@ -37,7 +39,7 @@ class Scanplane(Measurement):
         'x': conversions.Vx_to_um,
         'y': conversions.Vy_to_um
     })
-    _units = {
+    _units = AttrDict({
         'dc': 'phi0',
         'cap': 'C',
         'acx': 'phi0',
@@ -56,8 +58,7 @@ class Scanplane(Measurement):
 
     def __init__(self, instruments={}, plane=None, span=[800, 800],
                  center=[0, 0], numpts=[20, 20],
-                 scanheight=15, scan_rate=120, scan_pause = 1, raster=False,
-                 trigger = False):
+                 scanheight=15, scan_rate=120, raster=False):
 
         super().__init__(instruments=instruments)
 
@@ -82,12 +83,8 @@ class Scanplane(Measurement):
         self.center = center
         self.numpts = numpts
         self.plane = plane
-        self.scan_pause = scan_pause
-        self.trigger = trigger
-        self.triggeredaqs = {} #these are the things whose samples you want to
-                              #get and sync.
 
-        self.V = {
+        self.V = AttrDict({
             chan: np.nan for chan in self._daq_inputs + ['piezo']
         })
         self.Vfull = AttrDict({
@@ -96,8 +93,6 @@ class Scanplane(Measurement):
         self.Vinterp = AttrDict({
             chan: np.nan for chan in self._daq_inputs + ['piezo']
         })
-
-        self.triggereddata = {}
 
         self.scanheight = scanheight
 
@@ -165,17 +160,9 @@ class Scanplane(Measurement):
         for i in range(5):
             time.sleep(0.5)
             Vcap_offset.append(
-                self.lockin_cap.convert_output(self.daq.inputs['cap'].V)
+                self.lockin_cap.convert_output(self.daq.inputs['cap'].V, "R")
             )
         Vcap_offset = np.mean(Vcap_offset)
-
-        for inst in self.triggeredaqs.keys():
-            [obj, attrs] = triggeredaqs[inst] #attrs should be a dict of the form devattr: 'yourname'
-            obj.subscribe(attrs)
-            obj.flush(attrs)
-            for name in names:
-                self.triggereddata[] = []
-
 
         # Loop over each line in the scan
         for i in range(num_lines):
@@ -214,23 +201,16 @@ class Scanplane(Measurement):
                         'z': self.Z[-(k + 1), i]}
 
             # Go to first point of scan
-            self.piezos.sweep(self.piezos.V, Vstart, trigger = False)
-            time.sleep(self.scan_pause)
-
+            self.piezos.sweep(self.piezos.V, Vstart)
             #self.squidarray.reset()
-            #time.sleep(0.5)
+            time.sleep(0.5)
             # Begin the sweep
             if not surface:
                 # Sweep over X
                 output_data, received = self.piezos.sweep(Vstart, Vend,
                                                           chan_in=self._daq_inputs,
-                                                          sweep_rate=self.scan_rate,
-                                                          trigger = self.trigger
+                                                          sweep_rate=self.scan_rate
                                                           )
-            for inst in self.triggeredaqs.keys():
-                [obj, names, attrs] = triggeredaqs[inst]
-                data = obj.poll()
-
             else:
                 # 50 points should be good for giving this to
                 # piezos.sweep_surface
@@ -255,7 +235,7 @@ class Scanplane(Measurement):
             # Return to zero for a couple of seconds:
             #self.piezos.V = 0
             #time.sleep(2)
-
+            
             # Back off with the Z piezo before moving to the next line
             self.piezos.V = {'z': 0}
             self.squidarray.reset()
@@ -272,11 +252,11 @@ class Scanplane(Measurement):
                 self.Vfull[chan] = received[chan]
 
             # Convert from DAQ volts to lockin volts where applicable
-            for chan in ['acx', 'acy']:
+            for chan, lockin_chan in zip(['acx', 'acy'], ["X", "Y"]):
                 self.Vfull[chan] = self.lockin_squid.convert_output(
-                    self.Vfull[chan])
+                    self.Vfull[chan], lockin_chan)
             self.Vfull['cap'] = self.lockin_cap.convert_output(
-                self.Vfull['cap']) - Vcap_offset
+                self.Vfull['cap'], "R")
 
             # Interpolate the data and store in the 2D arrays
             for chan in self._daq_inputs:
@@ -292,7 +272,7 @@ class Scanplane(Measurement):
                         self.Vfull[chan])(self.Vinterp['piezo']
                                           )
                     self.V[chan][:, i] = self.Vinterp[chan]
-
+                    
             self.save_line(i, Vstart)
             self.plot()
         self.piezos.V = 0
@@ -307,7 +287,7 @@ class Scanplane(Measurement):
         self.plot_line()
 
         # Iterate over the color plots and update data with new line
-        for chan in self._daq_inputs:
+        for chan in self._plot_channels:
             data_nan = np.array(self.V[chan] * self._conversions[chan],
                                 dtype=np.float)
             data_masked = np.ma.masked_where(np.isnan(data_nan), data_nan)
@@ -376,7 +356,7 @@ class Scanplane(Measurement):
 
         # Plot the DC signal, capactitance and AC signal on 2D colorplots
         for ax, chan, cmap, clabel in zip(self.axes,
-                                          self._daq_inputs,
+                                          self._plot_channels,
                                           cmaps,
                                           clabels):
             # Convert None in data to NaN
@@ -407,7 +387,7 @@ class Scanplane(Measurement):
 
         # Plot the last linecut for DC, AC and capacitance signals
         for ax, chan, clabel in zip(self.axes_cuts,
-                                    self._daq_inputs,
+                                    self._plot_channels,
                                     clabels):
             # ax.plot returns a list containing the line
             # Take the line object - not the list containing the line
@@ -443,7 +423,7 @@ class Scanplane(Measurement):
                    'Capacitance (F)',
                    'AC X ($\Phi_o$)',
                    'AC Y ($\Phi_o$)']
-        for ax, chan, clabel in zip(self.axes_cuts, self._daq_inputs, clabels):
+        for ax, chan, clabel in zip(self.axes_cuts, self._plot_channels, clabels):
             # Update X and Y data for the "full data"
             self.lines_full[chan].set_xdata(self.Vfull['piezo'])
             self.lines_full[chan].set_ydata(self.Vfull[chan] *

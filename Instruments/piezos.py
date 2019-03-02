@@ -3,6 +3,7 @@ from scipy.interpolate import interp1d
 from ..Utilities.logging import log
 from .instrument import Instrument
 import time
+import math
 try:
     import PyDAQmx as mx
 except:
@@ -113,8 +114,7 @@ class Piezos(Instrument):
             getattr(self,p)._daq = daq
 
 
-    def sweep(self, Vstart, Vend, chan_in=None, sweep_rate=180, meas_rate=900,
-               trigger = 'False'):
+    def sweep(self, Vstart, Vend, chan_in=None, sweep_rate=180, meas_rate=900):
         '''
         Sweeps piezos from a starting voltage (dictionary) to an ending voltage
          (dictionary).
@@ -188,8 +188,7 @@ class Piezos(Instrument):
         output_data, received = self._daq.sweep(Vstart, Vend,
                                                 chan_in = chan_in,
                                                 sample_rate=meas_rate,
-                                                numsteps=numsteps,
-                                                trigger = trigger
+                                                numsteps=numsteps
                             )
         # Reapply gain
         for k in output_data.keys():
@@ -200,6 +199,114 @@ class Piezos(Instrument):
             self._V[k] = Vend[k] # end of sweep, for keeping track of voltage
 
         return output_data, received
+
+    def newsweep(self, Vstart, Vend, chan_in=None, numcollect = 1000, linetime = 8,
+                 trigger = False):
+        '''
+        Sweeps piezos from a starting voltage (dictionary) to an ending voltage
+         (dictionary).
+         specify the channels you want to monitor as a list
+         Piezos will always sweep smoothly, at an integer multiple of your
+         rate (numcollect/time) such that the step size <_max_step_size.
+
+         numcollect (int): the number of datapoints you want collected on
+                            chan_in
+         time (float): how long you want the entire acquisition to take
+
+         trigger (daq channel, string): which daq channel you want to have
+                                        a pixel trigger on.
+        '''
+        # Make copies of start and end dictionaries so we can mess them up
+        Vstart = Vstart.copy()
+        Vend = Vend.copy()
+        # Sweep to Vstart.
+        #remove one point since we are adding one at the end.
+        numcollect += -1
+        # self.V calls the old sweep method.
+        if Vstart != self._V:
+            self.V = Vstart
+        # Make sure to only have the piezos we want to sweep over
+        all_keys = list(set(Vstart) & set(Vend)) # keys in common
+        for v in Vstart, Vend:
+            keys = list(v.keys()) # keys in each one
+            for key in keys:
+                if key not in all_keys:
+                    v.pop(key) # get rid of unwanted items
+        all_keys.sort()
+
+
+        ranges = []
+        for dir in Vstart.keys():
+            ranges.append(Vend[dir]- Vstart[dir])
+        largestrange = max(ranges)
+        sweep_rate = largestrange/linetime
+        if sweep_rate > self._max_sweep_rate:
+            raise Exception('Sweeping piezos too fast! Max is 180 V/s!')
+
+        for i in range(2,10000,2):
+            if largestrange/(numcollect*i) < .5*self._max_step_size:
+                oversample = i
+                break
+        msg = 'Sweeping piezos! '
+        for key in all_keys:
+            msg = msg + '\n%s: %.1f to %.1f ' %(key, Vstart[key], Vend[key])
+
+        # Check voltage limits and remove gain
+        for k in Vstart.keys():
+            getattr(self,k).check_lim(Vstart[k])
+            Vstart[k] = getattr(self,k).remove_gain(Vstart[k])
+        for k in Vend.keys():
+            getattr(self,k).check_lim(Vend[k])
+            Vend[k] = getattr(self,k).remove_gain(Vend[k])
+
+        # Convert keys to the channel names that the daq expects
+        # Remove extra keys
+        all_keys = list(set(Vstart) & set(Vend))
+        for key in Vstart.keys():
+            if key not in all_keys:
+                Vstart.pop(key)
+        for key in Vend.keys():
+            if key not in all_keys:
+                Vend.pop(key)
+        output_data = {}
+        for k in Vstart.keys():
+            output_data[k] = np.linspace(Vstart[k], Vend[k], numcollect*oversample)
+            output_data[k] = np.append(output_data[k],np.array([Vend[k]]*int(oversample - 1)))
+        if trigger:
+            if trigger in Vstart:
+                raise Exception('Trigger output may not be swept!')
+            dutycycle = .5  #how long the trigger should be on
+            phase = 0 #alignment of trigger to beginning of step\
+            trigger_height = 5 #amplitude of trigger in volts
+            def squarewave(t):
+                if ((t % oversample <= (phase + dutycycle)*oversample) and
+                    (t % oversample >= (phase)*oversample)):
+                    toreturn = trigger_height
+                else:
+                    toreturn = 0
+                return toreturn
+            output_data[trigger] =  list(map(squarewave,
+                                            np.arange((numcollect+1)*
+                                                                oversample-1)))
+        #plus one is to provide one last rising edge.
+        sample_rate = numcollect*oversample/(linetime)
+        self._daq.sweep({trigger:0}, {trigger:0}, numsteps = 1)
+        # lower the trigger for the line.
+        time.sleep(.2)
+        received = self._daq.send_receive(output_data,
+                                                chan_in = chan_in,
+                                                sample_rate=sample_rate)
+        output_data.pop(trigger)
+        for k in output_data:
+            self._V[k] = Vend[k] # end of sweep, for keeping track of voltage
+        gain_applied_output = {}
+        for k in output_data.keys():
+            gain_applied_output[k] = (getattr(self,k).apply_gain(
+                     output_data[k]))[::oversample]
+        downsampledreceived = {}
+        for k in received.keys():
+            downsampledreceived[k] = received[k][::oversample]
+        return gain_applied_output, downsampledreceived
 
     def sweep_surface(self, voltages, chan_in=None, sweep_rate=180, meas_rate=900):
         '''
@@ -506,8 +613,7 @@ class Piezo(Instrument):
             raise Exception('Voltage out of range for %s piezo! Max is %s' %(self.label, self.Vmax))
 
 
-    def sweep(self, Vstart, Vend, chan_in=None, sweep_rate=180, meas_rate=900,
-                trigger = False):
+    def sweep(self, Vstart, Vend, chan_in=None, sweep_rate=180, meas_rate=900):
         '''
         Sweeps piezos linearly from a starting voltage to an ending voltage.
         Specify a list of input channels you want to monitor.
@@ -551,8 +657,7 @@ class Piezo(Instrument):
                                             {self.label: Vend},
                                             chan_in = chan_in,
                                             sample_rate=meas_rate,
-                                            numsteps=numsteps,
-                                            trigger = trigger
+                                            numsteps=numsteps
                                         )
 
         output_data = output_data[self.label]

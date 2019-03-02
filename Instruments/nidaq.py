@@ -285,8 +285,7 @@ class NIDAQ(Instrument):
         return received
 
 
-    def sweep(self, Vstart, Vend, chan_in=None, sample_rate=100, numsteps=1000,
-                trigger = False):
+    def sweep(self, Vstart, Vend, chan_in=None, sample_rate=100, numsteps=1000):
         '''
         Sweeps between voltages specified in Vstart and Vend, dictionaries with
         output channel labels or names as keys. (e.g. Vstart={'ao1':3, 'piezo z':4})
@@ -295,22 +294,6 @@ class NIDAQ(Instrument):
         '''
 
         output_data = {}
-        if trigger:
-            if trigger in Vstart:
-                raise Exception('Trigger output may not be swept!')
-            oversample = 2 #how many real daq steps you want per sweep step
-            dutycycle = .5 #how long the trigger should be on
-            phase = 0 #alignment of trigger to beginning of step\
-            trigger_height = 5 #amplitude of trigger in volts
-            def squarewave(t):
-                if ((t % oversample < (dutycycle+phase)*oversample - 1) and
-                    (t % oversample > (dutycycle-phase)*oversample - 1)):
-                    toreturn = trigger_height
-                else:
-                    toreturn = 0
-                return toreturn
-            numsteps = numsteps*oversample
-            output_data[trigger] =  list(map(squarewave, np.arange(numsteps)))
         for k in Vstart.keys():
             output_data[k] = np.linspace(Vstart[k], Vend[k], numsteps)
 
