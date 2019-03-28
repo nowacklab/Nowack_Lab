@@ -466,7 +466,7 @@ q: Quit' %(self.atto.z.pos, self.attoshift))
 
         self.fig.tight_layout()
 
-        self.flush_events()
+        self._flush_events()
 
         self.fig.canvas.draw()
 
