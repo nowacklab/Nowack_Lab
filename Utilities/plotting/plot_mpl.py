@@ -204,6 +204,20 @@ def set_size(w, h, fig=None, ax=None, mm=False):
         figh = float(h)/(t-b)
         ax.figure.set_size_inches(figw, figh)
 
+def set_size_axes_divider(w, h, d, fig, ax, mm=False):
+    '''
+    Resize a set of axes to (w,h) given in inches.
+    Pass in an axis divider object created when making a colorbar.
+    '''
+    if mm:
+        w /= 25.4
+        h /= 25.4
+    for i in range(3): # Gives the best results
+        fig.tight_layout()
+        l, b, r, t = d.get_position()
+        figw = float(w)/(r-l)
+        figh = float(h)/(t-b)
+        ax.figure.set_size_inches(figw, figh)
 
 def update2D(im, z, center_at_zero=False, equal_aspect=True):
     '''

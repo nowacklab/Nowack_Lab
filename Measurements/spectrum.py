@@ -158,12 +158,14 @@ class DaqSpectrum(Measurement):
 
     def get_std(self, fmin=0, fmax=None):
         '''
-        Returns standard deviation of the spectral density over the given
-        frequency range [fmin, fmax].
+        Returns the standard deviation of the spectral density
+        over the given frequency range [fmin, fmax].
+        Note: when plotting std on log scale, use std/mean
         Default, over entire spectrum
         '''
         argmin, argmax = self._get_argmin_argmax(fmin, fmax)
-        return np.std(self.Vn[argmin:argmax])
+        sx = np.std(self.Vn[argmin:argmax])
+        return sx
 
     def get_time_trace(self):
         '''

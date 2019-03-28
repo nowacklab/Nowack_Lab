@@ -119,6 +119,16 @@ def get_nb_kernel():
     return k_dict['key']
 
 
+def make_numpy_arrays(*args):
+    '''
+    Takes a tuple of lists and returns a tuple of numpy arrays made from the lists
+    '''
+    tup = ()
+    for arg in args:
+        tup = tup + (np.array(arg),)
+    return tup
+
+
 def nanmin(data):
     result = np.nanmin(data)
     return result if not np.isnan(result) else 0
