@@ -2,7 +2,7 @@
 TO DO:
 - Monitor helium level using AMI1700 level meter and prevent ramping if level is <10%
 '''
-import visa, time, numpy as np, re
+import time, numpy as np, re
 from .instrument import Instrument, VISAInstrument
 
 # Parameters for the 6-1-1 vector magnet on the Bluefors system
@@ -340,8 +340,8 @@ class AMI420(AMI430):
 
         self.Bmagnet = Bmagnet
         if self.Bmagnet != self.Bset:
-            print('Warning! Power supply setpoint is different from reported \
-field in magnet!')
+            raise Exception('Warning! Power supply setpoint is different from \
+                reported field in magnet!')
 
 
     @property
@@ -608,6 +608,10 @@ class AMI420_ResistiveLoad(AMI420):
         '''
         self._resource = 'GPIB::%02i::INSTR' %gpib_address
         VISAInstrument._init_visa(self, self._resource)
+
+    @property
+    def Bmagnet(self):
+        return self.Bsupply
 
     @property
     def Brate(self):
