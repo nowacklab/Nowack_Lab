@@ -78,12 +78,13 @@ def extents(x, y):
             y.max() + np.abs(dy) / 2
             ]
 
-def no_scientific_notation(ax, which='both', minor=False):
+def no_scientific_notation(ax, which='both', minor=False, commas=False):
     '''
     Formats ticks using FormatStrFormatter to remove scientific notation for
     small exponents
     ax: axis to format
     which: 'x', 'y', or 'both'
+    commas: whether to represent numbers with commas
     '''
     x = False
     y = False
@@ -91,14 +92,22 @@ def no_scientific_notation(ax, which='both', minor=False):
         x = True
     if which in ('y', 'both'):
         y = True
+
+    if commas:
+        fmt = '{x:,g}'
+        fmter = mpl.ticker.StrMethodFormatter(fmt)
+    else:
+        fmt = '%g'
+        fmter = mpl.ticker.FormatStrFormatter(fmt)
+
     if x:
-        ax.xaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%g'))
+        ax.xaxis.set_major_formatter(fmter)
         if minor:
-            ax.xaxis.set_minor_formatter(mpl.ticker.FormatStrFormatter('%g'))
+            ax.xaxis.set_minor_formatter(fmter)
     if y:
-        ax.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%g'))
+        ax.yaxis.set_major_formatter(fmter)
         if minor:
-            ax.yaxis.set_minor_formatter(mpl.ticker.FormatStrFormatter('%g'))
+            ax.yaxis.set_minor_formatter(fmter)
 
 def plotline(ax, x, y, z):
     pass

@@ -13,7 +13,7 @@ class SpectrumSeries(Saver):
         Vtgs: array of topgate voltages (V)
         Vbias: current bias (uA)
         paths: list of paths of ZurichSpectrum objects
-        gain: gain factor to divide spectra by
+        gain: gain factor to divide spectra by - note, usually handled in spectrum objects directly
         '''
         self.Vtgs = Vtgs
         self.Vbias = Vbias
@@ -46,6 +46,42 @@ class SpectrumSeries(Saver):
             except:
                 Ibias.append(zs.keithleybias.input_current)
                 Vbias.append(zs.keithleybias.input_voltage)
+            Vn.append(zs.get_average(fmin, fmax))
+            Vnstd.append(zs.get_std(fmin, fmax))
+
+        self.Vav = np.array(Vav)
+        self.Ibias = np.array(Ibias)
+        self.R2p = np.array(Vbias)/Ibias
+        self.Vn = np.array(Vn)
+        self.Vnstd = np.array(Vnstd)
+
+
+    def get_averages_welch(self, fmin=0, fmax=None, window='hanning', nperseg=30*2**7):
+        '''
+        Recalculate frequency and voltage noise arrays for each spectrum using
+        Welch's method, then take average and std. (like `get_averages`)
+        kwargs passed to `zs.welch_from_timetraces`
+        '''
+
+        Vav = []
+        Ibias = []
+        Vbias = []
+        V2ps = []
+        Vn = []
+        Vnstd = []
+
+        for j, Vtg in enumerate(self.Vtgs):
+            self.zs = ZurichSpectrum.load(self.paths[j])
+            zs = self.zs
+            zs.Vn /= self.gain
+            Vav.append(np.array(zs.timetraces_V).mean() / self.gain)
+            try:
+                Ibias.append(zs.kbias.input_current)
+                Vbias.append(zs.kbias.input_voltage)
+            except:
+                Ibias.append(zs.keithleybias.input_current)
+                Vbias.append(zs.keithleybias.input_voltage)
+            zs.f, zs.Vn = zs.welch_from_timetraces(window=window, nperseg=nperseg)
             Vn.append(zs.get_average(fmin, fmax))
             Vnstd.append(zs.get_std(fmin, fmax))
 

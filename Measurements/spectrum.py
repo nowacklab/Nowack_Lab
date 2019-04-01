@@ -97,11 +97,11 @@ class DaqSpectrum(Measurement):
 
     def get_average(self, fmin=0, fmax=None):
         '''
-        Returns an average spectral density over the given frequency range [fmin, fmax].
-        Default, returns average spectral density over entire spectrum
+        Returns an RMS voltage spectral density over the given frequency range
+        [fmin, fmax]. Default, average over entire spectrum.
         '''
         argmin, argmax = self._get_argmin_argmax(fmin, fmax)
-        return np.mean(self.Vn[argmin:argmax])
+        return np.sqrt(np.mean(self.Vn[argmin:argmax]**2))
 
     def _get_argmin_argmax(self, fmin=0, fmax=None):
         '''
@@ -158,14 +158,16 @@ class DaqSpectrum(Measurement):
 
     def get_std(self, fmin=0, fmax=None):
         '''
-        Returns the standard deviation of the spectral density
+        Returns the standard deviation of the voltage spectral density
         over the given frequency range [fmin, fmax].
         Note: when plotting std on log scale, use std/mean
         Default, over entire spectrum
+
+        kwarg: take the variance of the psd and then squareroot twice?
         '''
         argmin, argmax = self._get_argmin_argmax(fmin, fmax)
-        sx = np.std(self.Vn[argmin:argmax])
-        return sx
+        std = np.std(self.Vn[argmin:argmax])
+        return std
 
     def get_time_trace(self):
         '''
@@ -224,6 +226,34 @@ class DaqSpectrum(Measurement):
             return
         self.preamp.dc_coupling()
         self.preamp.diff_input(False)
+
+    def welch_from_timetraces(self, window='hanning', nperseg=30*2**7):
+        '''
+        Compute the PSD using Welch's method (post data-taking)
+        kwargs for `scipy.signal.welch`
+
+        Returns:
+        f (np.ndarray): Array of frequency values
+        Vn (np.ndarray): Square root of the power spectral density
+        '''
+        N = len(self.timetraces_V[0])
+        psdAve = None
+
+        for i in range(self.averages):
+            t = self.timetraces_t[i]
+            V = self.timetraces_V[i]
+
+            f, psd = signal.welch(V, self.measure_freq, window=window,
+                nperseg=nperseg)
+            if psdAve is None:
+                psdAve = psd
+            else:
+                psdAve = psdAve + psd
+
+        # Normalize by the number of averages
+        psdAve = psdAve / self.averages
+        # Convert spectrum to V/sqrt(Hz)
+        return f, np.sqrt(psdAve)
 
 
 class ZurichSpectrum(DaqSpectrum):
