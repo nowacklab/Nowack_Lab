@@ -278,11 +278,12 @@ class NIDAQ(Instrument):
                 received[chan] = np.delete(value, 0) #removes first data point, which is wrong
             else:
                 received[chan] = np.delete(value,-1) #removes last data point, a duplicate
+        i = 0
+        receivedtobemodified = received.copy()
         for chan, value in received.items():
             if chan not in input_labels and chan is not 't':
-                received[getattr(self, chan).label] = received.pop(chan) # change back to the given channel labels if different from the real channel names
-
-        return received
+                receivedtobemodified[getattr(self, chan).label] = receivedtobemodified.pop(chan) # change back to the given channel labels if different from the real channel names
+        return receivedtobemodified
 
 
     def sweep(self, Vstart, Vend, chan_in=None, sample_rate=100, numsteps=1000):
