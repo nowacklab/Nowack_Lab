@@ -22,7 +22,7 @@ reload(Nowack_Lab.Utilities.alexsave_david_meas)
 from Nowack_Lab.Utilities.alexsave_david_meas import Preamp_Util
 
 class SQUID_Noise():
-    _daq_inputs=['dc', 'saa', 'fieldcoil', 'test']
+    _daq_inputs=['dc', 'saa', 'fieldcoil', 'test', 'sflux']
     _daq_outputs=['fieldcoil']
 
     def __init__(self,
@@ -196,9 +196,10 @@ class SQUID_Noise():
         return [False, np.nan, -1]
 
     def tune_squid(self, sbias, attempts=5, aflux_offset=0, stune_tol=None):
-        """
-        Tune the SQUID and adjust the DC SAA flux.  Array locked,
-        lock on a specific value of the SQUID characteristic.
+        """ Tune the SQUID and adjust the DC SAA flux.  
+        
+        Array locked, lock on a specific value of the SQUID characteristic.
+        Measures the squid characteristic
 
         State Before:
         ~~~~~~~~~~~~~
@@ -217,6 +218,7 @@ class SQUID_Noise():
          rec (dict): 't': measure times
                      'saa': saa voltages
                      'test': test signal voltages
+                     'sflux': squid flux voltages
         ]
         """
         if stune_tol == None:
@@ -224,7 +226,7 @@ class SQUID_Noise():
         self._tune_squid_setup(sbias)
         [error, rec] = self._minimize_attr("A_flux", 
                                     evalchannel='saa',
-                                    channels=['saa','test'], 
+                                    channels=['saa','test','sflux'], 
                                     offset=aflux_offset, 
                                     tol=stune_tol)
 
@@ -661,6 +663,8 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
                  phi0perVmed=.565,
                  slock_tol=.05,
                  stune_tol=.01,
+                 sflux_R = 1000,
+                 sflux_gain = 1,
                  set_preamp_gain=None,
                  set_preamp_filter=None,
                  set_preamp_dccouple=None,
@@ -687,6 +691,8 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
         self.sbias = np.asarray(sbias)
         self.num_aflux = int(num_aflux)
         self.phi0perVmed = phi0perVmed
+        self.sflux_R = sflux_R
+        self.sflux_gain = sflux_gain
 
         f, len_fft = self._len_of_fft()
 
@@ -705,7 +711,7 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
                           np.linspace(0,self.fast_dur,
                                       int(self.fast_rate*self.fast_dur)))
         self.saver.create_attr('/t_Vsquidchar/', 'units', 'seconds')
-        self.saver.append('/_vsquidchar_data_names/', ['test', 'Vsaa'])
+        self.saver.append('/_vsquidchar_data_names/', ['test', 'Vsaa', 'sflux'])
         self.saver.append('/f/', f)
         self.saver.create_attr('/f/', 'units', 'Hz')
         self.saver.append('/_Vfc_sweep_data_names/', ['Vsrc', 'Vmeas'])
@@ -724,6 +730,24 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
         self.saver.make_dim('/Vspectrum/', 2, 't_Vspectrum', '/t_Vspectrum/', 
                             'Vspectrum time (seconds)')
         self.saver.create_attr('/Vspectrum/', 'units', 'Volts')
+
+        self.saver.append('/Vsfluxspectrum/', 
+                            np.full((self.sbias.shape[0],
+                                     self.num_aflux,
+                                     int(self.sample_rate*self.sample_dur),
+                                     ), np.nan))
+        self.saver.make_dim('/Vsfluxspectrum/', 0, 'sbias', '/sbias/', 'sbias (uA)')
+        self.saver.make_dim('/Vsfluxspectrum/', 1, 'aflux_num', '/_num_aflux/', 'index')
+        self.saver.make_dim('/Vsfluxspectrum/', 2, 't_Vspectrum', '/t_Vspectrum/', 
+                            'Vsfluxspectrum time (seconds)')
+        self.saver.create_attr('/Vsfluxspectrum/', 'units', 'Volts')
+
+        self.saver.append('/Vsfluxspectrum_mean/', 
+                            np.full((self.sbias.shape[0],
+                                     self.num_aflux), np.nan))
+        self.saver.make_dim('/Vsfluxspectrum_mean/', 0, 'sbias', '/sbias/', 'sbias (uA)')
+        self.saver.make_dim('/Vsfluxspectrum_mean/', 1, 'aflux_num', '/_num_aflux/', 'index')
+        self.saver.create_attr('/Vsfluxspectrum_mean/', 'units', 'Volts')
 
         self.saver.append('/aflux/', 
                             np.full((self.sbias.shape[0],
@@ -765,7 +789,7 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
         self.saver.append('/Vsquidchar/', 
                             np.full((self.sbias.shape[0],
                                          self.num_aflux,
-                                         2, # 0 test, 1 saa 
+                                         3, # 0 test, 1 saa, 2 sflux
                                          int(self.fast_dur*self.fast_rate)),
                                          np.nan))
         self.saver.make_dim('/Vsquidchar/', 0, 'sbias', '/sbias/', 'sbias (uA)')
@@ -887,6 +911,8 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
                  'fc_R': fc_R,
                  'fc_rate': fc_rate,
                  'rms_range': self.rms_range,
+                 'sflux_gain': self.sflux_gain
+                 'sflux_R': self.sflux_R
                 })
 
     def _make_aflux(self, i, sbias):
@@ -917,14 +943,18 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
         '''
         # take and save spectrum
         starttime = time.time()
-        r = self.daq.monitor(['dc'], self.sample_dur, 
+        r = self.daq.monitor(['dc', 'sflux'], self.sample_dur, 
                              sample_rate=self.sample_rate)
+        self.saver.append('/wasoverloaded/', self.preamp.is_OL(), 
+                            slc=(i,j))
         self.saver.append('/Vspectrum/', r['dc']/self.preamp.gain,
                             slc=(i,j))
-        self.saver.append('/wasoverloaded/', self.preamp.is_OL(), 
+        self.saver.append('/Vsfluxspectrum/', r['sflux']/self.sflux_gain,
                             slc=(i,j))
         self.saver.append('/gain/', self.preamp.gain, slc=(i,j))
         self.saver.append('/Vspectrum_starttimes/', starttime, slc=(i,j))
+        self.saver.append('/Vsfluxspectrum_mean/', np.mean(r['sflux']/self.sflux_gain),
+                            slc=(i,j))
         
         # save amplitude spectral density
         [f, psd] = Welch.welchf(r['dc']/self.preamp.gain, self.sample_rate,
@@ -1005,10 +1035,11 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
         self.saver.append('/Vfc_sweep_starttimes/', starttime, slc=(i,j))
 
     def _tune(self, aflux, sbias, i, j):
-        '''
-        tunes the squid at aflux, sbias
+        ''' tunes the squid at aflux, sbias
+
         i,j are the sbias, aflux_offset index
-        saves squid characteristic
+        saves squid characteristic and the current across the squid mod 
+        (saves in voltage, divide by sflux_R)
         '''
         [istunned, r] = self.tune_squid(sbias, aflux_offset=aflux)
         self.saver.append('/wastuned/', int(istunned),
@@ -1018,11 +1049,12 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
                             slc=(i,j,0))
         self.saver.append('/Vsquidchar/', r['saa'],
                             slc=(i,j,1))
+        self.saver.append('/Vsquidchar/', r['sflux']/self.sflux_gain,
+                            slc=(i,j,2))
         return istunned
 
     def _lock(self, i, j, sensitivity='Med'):
-        '''
-        lock the squid at aflux aflux_offset
+        ''' lock the squid at aflux aflux_offset
         i,j are the sbias, aflux_offset index
         saves state (islocked)
 
@@ -1059,8 +1091,7 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
 
 
     def run(self):
-        '''
-        Run Measurement!
+        ''' Run Measurement!
 
         State Before:
         ~~~~~~~~~~~~
@@ -1122,3 +1153,4 @@ class xarray_fncts:
         #ds.get(dataarrayname).coords['afluxfull'] = afluxfull
 
         return [afluxfull, sbiasfull]
+

@@ -785,6 +785,88 @@ class Xarray:
         return ds
 
     @staticmethod
+    def twospectrum(path):
+        from Nowack_Lab.Procedures.daqspectrum import TwoSpectrum
+        spec = TwoSpectrum.load(path)
+
+
+        spec1_V = xr.DataArray(spec.V1,
+                            dims = ['t'],
+                            coords={ 't': spec.t, },
+                            name='Measured Voltages of 1st daq channel',
+                            attrs={'data units': 'Volts',
+                                   't units': 'seconds',
+                                   }
+                            )
+
+        spec2_V = xr.DataArray(spec.V2,
+                            dims = ['t'],
+                            coords={ 't': spec.t, },
+                            name='Measured Voltages of 2nd daq channel',
+                            attrs={'data units': 'Volts',
+                                   't units': 'seconds',
+                                   }
+                            )
+        spec1_psd = xr.DataArray(spec.psd1,
+                            dims=['f1'],
+                            coords={'f1':spec.f1},
+                            name='Power Spectral Density',
+                            attrs={'data units': r'Volts$^2/\sqrt{Hz}$',
+                                   'f units': 'Hz',
+                                   }
+                            )
+        spec2_psd = xr.DataArray(spec.psd2,
+                            dims=['f2'],
+                            coords={'f2':spec.f2},
+                            name='Power Spectral Density',
+                            attrs={'data units': r'Volts$^2/\sqrt{Hz}$',
+                                   'f units': 'Hz',
+                                   }
+                            )
+        spec1_asd = xr.DataArray(spec.psdAve1,
+                            dims=['f1'],
+                            coords={'f1':spec.f1},
+                            name='Amplitude Spectral Density',
+                            attrs={'data units': r'Volts$/\sqrt{Hz}$',
+                                   'f units': 'Hz',
+                                   }
+                            )
+        spec2_asd = xr.DataArray(spec.psdAve2,
+                            dims=['f2'],
+                            coords={'f2':spec.f2},
+                            name='Amplitude Spectral Density',
+                            attrs={'data units': r'Volts$/\sqrt{Hz}$',
+                                   'f units': 'Hz',
+                                   }
+                            )
+
+
+        ds = xr.Dataset({'spec1_V': spec1_V,
+                         'spec2_V': spec2_V,
+                         'spec1_psd': spec1_psd,
+                         'spec2_psd': spec2_psd,
+                         'spec1_asd': spec1_asd,
+                         'spec2_asd': spec2_asd,
+                         'preamp':Xarray.toblankdataarray(spec.preamp, 
+                                                          'preamp'),
+                         },
+                         attrs={
+                             'filename': spec.filename,
+                             'measure_freq': spec.measure_freq,
+                             'measure_time': spec.measure_time,
+                             'time_elapsed_s': spec.time_elapsed_s,
+                             'timestamp': spec.timestamp,
+                             'loadpath':path,
+                             'unitsperV': spec.conversion,
+                             'unit': spec.units,
+                             'non_preamp_gain': spec.nonpreamp_gain,
+                             'daq_1': 'has preamp',
+                             'daq_2': 'non preamp',
+                             }
+                         )
+        return ds
+
+    @staticmethod
     def save(ds, filename):
         ds.to_netcdf(filename, format='NETCDF4', engine='h5netcdf')
 
@@ -801,7 +883,7 @@ class Xarray:
 
 
     @staticmethod
-    def plotlines(fig, ax, dataarray, x, y, hue, c=None, **kwargs):
+    def plotlines(fig, ax, dataarray, x, y, hue, c=None, colorbar=True,**kwargs):
         '''
         params:
         ~~~~~~
@@ -838,8 +920,10 @@ class Xarray:
             c = np.asarray(getattr(dataarray, hue).values)
             
         
-        ax.set_xlim([getattr(dataarray,x).min(), getattr(dataarray,x).max()])
-        ax.set_ylim([getattr(dataarray,y).min(), getattr(dataarray,y).max()])
+        ax.set_xlim([np.nanmin(getattr(dataarray,x)), 
+                     np.nanmax(getattr(dataarray,x))])
+        ax.set_ylim([np.nanmin(getattr(dataarray,y)), 
+                     np.nanmax(getattr(dataarray,y))])
 
         line_segments = [np.column_stack(
                             [getattr(dataarray.isel({hue:h}),x),
@@ -852,8 +936,11 @@ class Xarray:
 
         ax.add_collection(lc)
 
-        cbar = fig.colorbar(lc)
-        cbar.set_label(hue)
+        if colorbar:
+            cbar = fig.colorbar(lc)
+            cbar.set_label(hue)
+        else:
+            cbar = None
 
         ax.set_xlabel(x)
         ax.set_ylabel(y)
@@ -892,3 +979,14 @@ class Xarray:
 
         return xr.DataArray(offset, dims=[dim_sm], coords={dim_sm:getattr(da, dim_sm)})
 
+    @staticmethod
+    def scl_makefull(ds):
+        '''
+        make sbiasfull, afluxfull for squid closed loop noise
+        '''
+        afluxfull = (('sbias', '_num_aflux'), ds.aflux)
+        sbiasfull = (('sbias', '_num_aflux'),
+                    np.tile(ds.sbias.values, (ds._num_aflux.shape[0],1)).T)
+        ds = ds.assign_coords(afluxfull=afluxfull)
+        ds = ds.assign_coords(sbiasfull=sbiasfull)
+        return ds

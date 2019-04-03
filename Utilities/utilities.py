@@ -4,6 +4,8 @@ For random utilities
 import json, numpy as np, os
 from numpy.linalg import lstsq
 
+from datetime import datetime
+
 class AttrDict(dict):
     '''
     Class that behaves exactly like a dict, except that you can access values as
@@ -312,3 +314,11 @@ def preamp_gain(maxabs, mult_safety=2):
                       *(all_gains < targetgain)
                       ), 0)
     return all_gains[index]
+
+def make_timestamp():
+    ''' 
+    Makes a timestamp and filename from the current time. 
+    '''
+    timestamp = datetime.now().strftime('%Y-%m-%d_%H%M%S_')
+    return timestamp
+
