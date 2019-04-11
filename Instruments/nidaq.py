@@ -18,6 +18,8 @@ except:
 import time
 from copy import copy
 
+from pint import 
+
 import Nowack_Lab.Utilities
 reload(Nowack_Lab.Utilities)
 from Nowack_Lab.Utilities import logging
@@ -25,6 +27,7 @@ from Nowack_Lab.Utilities import logging
 import Nowack_Lab.Instruments.instrument
 reload(Nowack_Lab.Instruments.instrument)
 from Nowack_Lab.Instruments.instrument import Instrument
+
 
 class NIDAQ(Instrument):
     '''
@@ -207,6 +210,43 @@ class NIDAQ(Instrument):
 
         return received
 
+    def periodic_output(self, chan_out, v_1period, max_duration, sample_rate):
+        '''
+        Output a periodic voltage signal from a single channel for 
+        max_duration seconds or until you exit.  Does not occupy python
+        while running.  You CANNOT take data with the daq or output other
+        signals while this running.  ONLY USE AS PART OF A WITH
+
+        Params:
+        ~~~~~~~
+        chan_out: (string) channel name for output
+        v_1period (ndarray) array of voltages for 1 period
+        max_duration (float) time in seconds of max duration of this output
+        sample_rate (float) sample rate in samples/s
+
+        Returns:
+        ~~~~~~~~
+        Obj
+        
+        Obj: (MyTask): An object that has an enter and exit method for
+        use inside a with statement.  On enter, the daq begins sweeping
+        voltage channel chan_out according to v_1period.  On exit,
+        the daq stops sweeping (stays wherever it last got to) and 
+        cleans up
+        '''
+        #TODO fix channel name to be one of the named channels, not ao2
+        class MyTask ():
+            def __init__(chan_out, v_1period, max_duration, sample_rate):
+                self.task = ni.Task(chan_out)
+                self.task.set_timing(duration = max_duration*u.s, fsamp=sample_rate*u.Hz)
+                self.task.write(v_1period * u.V, autostart=False)
+            def __enter__(self):
+                self.task.start()
+                return self.task
+            def __exit__(self):
+                self.task.stop()
+                self.task.clear()
+        return MyTask(chan_out, v_1period, max_duration, sample_rate)
 
     def send_receive(self, data, chan_in=None, sample_rate=100):
         '''
@@ -322,6 +362,38 @@ class NIDAQ(Instrument):
                 chan_in = chan_in,
                 sample_rate = sample_rate,
                 numsteps = numsteps)
+
+    def trianglesweep(self, Vmin, Vmax, 
+                      outputchan, chan_in, 
+                      bidirectional=False,
+                      sample_rate=100, numpts=1000):
+        '''
+        Sweeps from current value to Vmin to Vmax to current value,
+        returning all the data
+        '''
+        initialV = self.outputs[outputchan].V
+
+        if bidirectional:
+            n = int(np.ceil(numsteps / 6))
+            dataout = np.concatenate(
+                    (np.linspace(initialV, Vmin, n),
+                     np.linspace(Vmin, Vmax, 2*n),
+                     np.linspace(Vmax, Vmin, 2*n),
+                     np.linspace(Vmin, initialV, n),
+                    ))
+        else:
+            n = int(np.ceil(numsteps / 4))
+            dataout = np.concatenate(
+                    (np.linspace(initialV, Vmin, n),
+                     np.linspace(Vmin, Vmax, 2*n),
+                     np.linspace(Vmax, initialV, n),
+                    ))
+        return self.send_receive(
+                {outputchan: dataout},
+                chan_in=chan_in,
+                sample_rate=sample_rate
+                )
+
 
     def zero(self, rate=100000, numsteps=100000):
         for chan in self.outputs.values(): # loop over output channel objects

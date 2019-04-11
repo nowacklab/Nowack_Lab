@@ -698,6 +698,10 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
 
         self.saver = Saver(name='SQUID_Noise_Closed_Loop')
 
+        self.compression = 'gzip'
+        self.compression_opts=9
+        self.chunks=True
+
         # dimensions / coordinates
         self.saver.append('/sbias/', self.sbias)
         self.saver.create_attr('/sbias/', 'units', 'saa uA')
@@ -724,7 +728,10 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
                             np.full((self.sbias.shape[0],
                                      self.num_aflux,
                                      int(self.sample_rate*self.sample_dur),
-                                     ), np.nan))
+                                     ), np.nan),
+                            chunks=self.chunks,
+                            compression=self.compression,
+                            compression_opts=self.compression_opts)
         self.saver.make_dim('/Vspectrum/', 0, 'sbias', '/sbias/', 'sbias (uA)')
         self.saver.make_dim('/Vspectrum/', 1, 'aflux_num', '/_num_aflux/', 'index')
         self.saver.make_dim('/Vspectrum/', 2, 't_Vspectrum', '/t_Vspectrum/', 
@@ -735,7 +742,10 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
                             np.full((self.sbias.shape[0],
                                      self.num_aflux,
                                      int(self.sample_rate*self.sample_dur),
-                                     ), np.nan))
+                                     ), np.nan),
+                            chunks=self.chunks,
+                            compression=self.compression,
+                            compression_opts=self.compression_opts)
         self.saver.make_dim('/Vsfluxspectrum/', 0, 'sbias', '/sbias/', 'sbias (uA)')
         self.saver.make_dim('/Vsfluxspectrum/', 1, 'aflux_num', '/_num_aflux/', 'index')
         self.saver.make_dim('/Vsfluxspectrum/', 2, 't_Vspectrum', '/t_Vspectrum/', 
@@ -812,7 +822,10 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
                                      self.num_aflux,
                                      2, # 1 Vsrc, 2 Vmeas
                                      int(self.fc_Is.shape[0])
-                                     ), np.nan))
+                                     ), np.nan),
+                            chunks=self.chunks,
+                            compression=self.compression,
+                            compression_opts=self.compression_opts)
         self.saver.make_dim('/Vfc_sweep/', 0, 'sbias', '/sbias/', 'sbias (uA)')
         self.saver.make_dim('/Vfc_sweep/', 1, 'aflux_num', '/_num_aflux/', 'index')
         self.saver.make_dim('/Vfc_sweep/', 2, 'vfc_sweep_data_names', 
@@ -879,7 +892,10 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
                                      self.num_aflux,
                                      len_fft,
                                      ),
-                                    np.nan))
+                                    np.nan),
+                            chunks=self.chunks,
+                            compression=self.compression,
+                            compression_opts=self.compression_opts)
         self.saver.make_dim('/Vspectrum_asd/', 0, 'sbias', '/sbias/', 
                             'sbias (uA)')
         self.saver.make_dim('/Vspectrum_asd/', 1, 'aflux_num', 
@@ -1050,7 +1066,7 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
         self.saver.append('/Vsquidchar/', r['saa'],
                             slc=(i,j,1))
         self.saver.append('/Vsquidchar/', r['sflux']/self.sflux_gain,
-                            slc=(i,j,2))
+g                           slc=(i,j,2))
         return istunned
 
     def _lock(self, i, j, sensitivity='Med'):

@@ -67,7 +67,7 @@ class Dataset():
         return toreturn
 
     def append(self, pathtowrite, datatowrite, slc = False,
-               chunks=None):
+               chunks=None, compression=None, compression_opts=None):
         '''
         Adds new data to dataset at path. Data may be a string, number, numpy
         array, or a nested dict. If a nested dict, leaves must be strings,
@@ -94,7 +94,9 @@ class Dataset():
                 h5path = pathtowrite + sep.join([str(place) for place in path])
                 if not isinstance(obj, dict):
                     self._writetoh5(data = obj, path = h5path, dtype=dtype,
-                                    chunks=chunks)
+                                    chunks=chunks,
+                                    compression=compression,
+                                    compression_opts=compression_opts)
             self.dictvisititems(cleandatatowrite, _loadhdf5)
         elif isinstance(cleandatatowrite, (np.ndarray, list) +
                                             tuple(self.allowedtypes))  and slc:
@@ -105,7 +107,9 @@ class Dataset():
             self._writetoh5(data=cleandatatowrite, 
                             path=pathtowrite, 
                             dtype=dtype,
-                            chunks=chunks)
+                            chunks=chunks,
+                            compression=compression,
+                            compression_opts=compression_opts)
 
 
 
@@ -134,7 +138,10 @@ class Dataset():
         except KeyError:
             f.create_dataset(kwargs['path'], data = kwargs['data'], 
                              dtype=kwargs['dtype'], 
-                             chunks=kwargs['chunks'])
+                             chunks=kwargs['chunks'],
+                             compression=kwargs['compression'],
+                             compression_opts=kwargs['compression_opts']
+                             )
             f.close()
 
 
