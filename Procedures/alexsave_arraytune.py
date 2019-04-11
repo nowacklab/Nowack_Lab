@@ -911,7 +911,7 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
                  'fc_R': fc_R,
                  'fc_rate': fc_rate,
                  'rms_range': self.rms_range,
-                 'sflux_gain': self.sflux_gain
+                 'sflux_gain': self.sflux_gain,
                  'sflux_R': self.sflux_R
                 })
 
