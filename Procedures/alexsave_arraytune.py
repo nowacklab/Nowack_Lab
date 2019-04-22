@@ -1103,9 +1103,9 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
         islocked = self.lock_squid(attempts=4)
         if not islocked:
             print('Cannot Lock at {0}.  Giving a Push'.format(sensitivity))
-            offset = 100
-            if self.saa.S_flux > self.saa.S_flux_lim/2:
-                offset = -100
+            offset = 80
+            if self.saa.S_flux > self.sflux_start + offset
+                offset = -offset
             self.saa.S_flux = self.saa.S_flux + offset
             islocked = self.lock_squid(attempts=3)
 
