@@ -1066,7 +1066,7 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
         self.saver.append('/Vsquidchar/', r['saa'],
                             slc=(i,j,1))
         self.saver.append('/Vsquidchar/', r['sflux']/self.sflux_gain,
-g                           slc=(i,j,2))
+                            slc=(i,j,2))
         return istunned
 
     def _lock(self, i, j, sensitivity='Med'):
