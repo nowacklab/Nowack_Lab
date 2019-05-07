@@ -26,9 +26,8 @@ class Piezos(Instrument):
     _V = {}
     _daq = None
     _max_sweep_rate = 180 # Vpiezo/s
-    _max_step_size = 0.2 #Vpiezo = 0.0025 Vdaq * 2 * 40, assuming these are typical values for bipolar and gain.
-                        # 0.0025 V is approximately the resolution of the daq, so it doesn't make sense to go much slower than that.
-                        # 0.2 is a nice number
+    _max_step_size = 0.2 # Vpiezo = 0.0025 Vdaq * 2 * 40, 
+
 
     def __init__(self, daq=None, zero = False):
         '''
