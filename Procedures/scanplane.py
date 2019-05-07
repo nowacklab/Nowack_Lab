@@ -7,9 +7,11 @@ from scipy.interpolate import interp1d
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
+import matplotlib.tri as tri
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from IPython import display
 from numpy import ma
+from collections import namedtuple
 from ..Utilities.plotting import plot_mpl
 from ..Instruments import piezos, montana, squidarray
 from ..Utilities.save import Measurement, get_todays_data_dir, get_local_data_path
@@ -202,7 +204,7 @@ class Scanplane(Measurement):
 
             # Go to first point of scan
             self.piezos.sweep(self.piezos.V, Vstart)
-            #self.squidarray.reset()
+            self.squidarray.reset()
             time.sleep(0.5)
             # Begin the sweep
             if not surface:
@@ -238,7 +240,6 @@ class Scanplane(Measurement):
             
             # Back off with the Z piezo before moving to the next line
             self.piezos.V = {'z': 0}
-            self.squidarray.reset()
 
             # Interpolate to the number of lines
             self.Vfull['piezo'] = output_data[fast_axis]
@@ -340,7 +341,7 @@ class Scanplane(Measurement):
         # Convert the axis numpy arrays to list so they aren't saved as data.
         self.axes = list(self.axes.flatten())
         self.axes_cuts = list(self.axes_cuts.flatten())
-        cmaps = ['RdBu',
+        cmaps = ['viridis',
                  'afmhot',
                  'magma',
                  'magma']
@@ -459,6 +460,120 @@ class Scanplane(Measurement):
         line.save()
 
 
+
+class ScanLines(Measurement):
+    """
+    """
+    instrument_list = ['piezos',
+                       'montana',
+                       'squidarray',
+                       'preamp',
+                       'lockin_squid',
+                       'lockin_cap',
+                       'atto',
+                       'daq']
+
+    _daq_inputs = ["dc", "cap", "acx", "acy"]
+
+    def __init__(self, instruments, starts, ends, rate=120, freq=900, callback=None, samples=100):
+        """
+        """
+        super().__init__(instruments=instruments)
+        self.instruments = instruments
+        self.rate = rate
+        self.freq = freq
+        self.samples = samples
+
+        # Create dictionaries that describe the start/end of each line
+        self.starts = [{"x": start[0],
+                        "y": start[1],
+                        "z": start[2]} for start in starts]
+        self.ends = [{"x": end[0],
+                      "y": end[1],
+                      "z": end[2]} for end in ends]
+
+        # Structures for storing data
+        self.v_out = {"x": [], "y": [], "z": []}
+        self.v_in = {key: [] for key in self._daq_inputs}
+        self.output = namedtuple("output", ["x", "y", "z"] + self._daq_inputs)
+
+
+    def do(self):
+        for start, stop in zip(self.starts, self.ends):
+            if self.interrupt:
+                break
+            # Go to the start of the line
+            self.piezos.sweep(self.piezos.V, start)
+            # Reset the SQUID
+            self.squidarray.reset()
+            # Pause
+            time.sleep(0.1)
+            # Take data
+            out, rec = self.linecut(start, stop)
+            # Store data
+            for key in ["x", "y", "z"]:
+                self.v_out[key].append(self.downsample(out[key], self.samples))
+            for key in self._daq_inputs:
+                self.v_in[key].append(self.downsample(rec[key], self.samples))
+            # Back away from the sample
+            self.piezos.V = {"z":0}
+        return self.output(**{**self.v_out, **self.v_in})
+            
+    def plot(self):
+        """
+        """
+
+        """
+        # Make the data a np array
+        self.v_in = np.array(self.v_in)
+        # Get the X and Y coordinates
+        self.v_out = np.array(self.v_out)
+        x = self.v_out[:, 0]
+        y = self.v_out[:, 1]
+        # Make a triangulation for plotting data
+        triang = tri.Triangulation(x, y)
+        for i, ax in enumerate(axes.flatten()):
+            z = self.v_in[:, i]
+            ax.tripcolor(triang, z)
+        """
+        pass
+    
+    def linecut(self, start, stop):
+        out, rec = self.piezos.sweep(start, stop, chan_in = self._daq_inputs,
+                                     sweep_rate = self.rate, meas_rate = self.freq)
+        return out, rec
+        
+    def save(self, *args, **kwargs):
+        pass
+
+    def _save(self, *args, **kwargs):
+        pass
+    
+    @classmethod
+    def rot_scan(cls, instruments, plane, height, p1, p2, p3, n12, **kwargs):
+        # Find the 4th point on the rectangle
+        p4 = (p3[0] + (p2[0] - p1[0]), p3[1] + (p2[1] - p1[1]))
+        # Compute the starting points x0, y0 of the lines
+        x0 = np.linspace(p1[0], p2[0], n12)
+        y0 = np.linspace(p1[1], p2[1], n12)
+        # Compute the endpoints xf, yf of the lines
+        xf = np.linspace(p3[0], p4[0], n12)
+        yf = np.linspace(p3[1], p4[1], n12)
+        # Find the Z coordinates of the lines
+        z0 = plane.plane(x0, y0) - height
+        zf = plane.plane(xf, yf) - height
+        starts = [(x, y, z) for x, y, z in zip(x0, y0, z0)]
+        ends = [(x, y, z) for x, y, z in zip(xf, yf, zf)]
+        return cls(instruments, starts, ends, **kwargs)
+
+    @staticmethod
+    def downsample(array, numpts):
+        """Downsample a 1d array."""
+        return np.interp(
+            np.linspace(0, 1, numpts),
+            np.linspace(0, 1, len(array)),
+            array)
+        
 class Line(Measurement):
     def __init__(self):
         super().__init__()
@@ -470,3 +585,4 @@ class Line(Measurement):
             'extras',
             self.filename)
         self._save(filename_in_extras, **kwargs)
+
