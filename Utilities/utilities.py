@@ -4,6 +4,14 @@ For random utilities
 import json, numpy as np, os
 from numpy.linalg import lstsq
 
+from datetime import datetime
+
+from importlib import reload
+import Nowack_Lab.Utilities.welch
+reload(Nowack_Lab.Utilities.welch)
+from Nowack_Lab.Utilities.welch import Welch
+
+
 class AttrDict(dict):
     '''
     Class that behaves exactly like a dict, except that you can access values as
@@ -194,6 +202,23 @@ def reject_outliers_quick(data, m=2):
     new_data = np.ma.masked_where(abs(data - mean) > m*std, data)
     return new_data
 
+def keeprange(master, slaves, m0, mend):
+    index0 = np.argmin(np.abs(master-m0))
+    indexe = np.argmin(np.abs(master-mend))
+
+    ret = [master[index0:indexe]]
+
+    for s in slaves:
+        ret.append(s[index0:indexe])
+
+    return ret
+
+def reject_outliers_spectrum(f, specden, m=2):
+    d = np.abs(specden - np.median(specden))
+    mdev = np.median(d)
+    s = d/mdev if mdev else 0.
+    return f[s<m], specden[s<m]
+
 
 def hide_code_button():
     '''
@@ -214,3 +239,96 @@ def hide_code_button():
     $( document ).ready(code_toggle);
     </script>
     <form action="javascript:code_toggle()"><input type="submit" value="Click here to toggle on/off the raw code."></form>''')
+
+def running_std(array1d, windowlen=16, mode='same'):
+    '''
+    calculate runing standard deviation
+
+    parameters
+    ----------
+    array1d : numpy.ndarray
+        array of numbers to compute running standard deviation on
+    windowlen : int
+        window length
+    mode : string ["full", "same", "valid"]
+        see numpy convolution
+
+    returns
+    -------
+    out : numpy.ndarray
+        running standard deviation for the given array1d
+
+    adapted from project spikefuel, author duguyue100
+    found https://www.programcreek.com/python/example/11429/numpy.convolve
+    '''
+
+    # computing shifted data, avoid catastrophic cancellation
+    # https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+    array1d = array1d - np.mean(array1d)
+
+    # calculate sum of squares within the window for each point
+    q = np.convolve(array1d**2, np.ones(windowlen), mode=mode) 
+
+    # calculate the sum within the window for each point
+    s = np.convolve(array1d,    np.ones(windowlen), mode=mode)
+
+    # std^2 = (sum_i^n x_i^2 - (sum_j^n x_j)^2/n)/(n-1)
+    # std^2 = (sum of squares - average)/(n-1) # bessel's correction
+    out = np.sqrt((q-s**2/windowlen)/(windowlen-1))
+
+    return out
+
+def make_rms(f, psd, rms_range, sigma=2):
+    ''' 
+    Make rms of (self.psd) from self.psd and self.f given
+    the range of frequencies defined by rms_range (tuple)
+
+    returns:
+    ~~~~~~~~
+    [rms, rms_sigma]
+    rms is the root mean squared of the amplitude spectral density
+    in units of self.units
+
+    rms_sigma is rms but rejecting outliers.  Large sigma means less
+    rejected points
+    '''
+    rms = _rms_ranged(f, psd, rms_range)
+
+    rms_sigma = _rms_ranged(*reject_outliers_spectrum(f, psd, m=sigma), 
+		            rms_range)
+
+    return [rms, rms_sigma]
+
+def _rms_ranged(f, psd, rms_range):
+    i_start = np.argmin(np.abs(f - rms_range[0]))
+    i_end   = np.argmin(np.abs(f - rms_range[-1]))
+    rms     = np.sqrt(np.mean( psd[i_start:i_end]))
+    return rms 
+
+def preamp_gain(maxabs, mult_safety=2):
+    course_gains = [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000]
+    fine_gains = [1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0]
+    all_gains = [1,2,3,4]
+    for cg in course_gains:
+        for fg in fine_gains:
+            all_gains.append(int(cg*fg))
+
+    all_gains = np.asarray(all_gains)
+
+    targetgain = 5/(maxabs*mult_safety)
+    index = max(np.argmin(np.abs(all_gains - targetgain)
+                      *(all_gains < targetgain)
+                      ), 0)
+    return all_gains[index]
+
+def make_timestamp():
+    ''' 
+    Makes a timestamp and filename from the current time. 
+    '''
+    timestamp = datetime.now().strftime('%Y-%m-%d_%H%M%S_')
+    return timestamp
+
+def f_of_fft(duration, rate, spacing):
+    v = np.ones(duration * rate)
+    [f, psd] = Welch.welchf(v, rate, spacing)
+    return f
