@@ -506,7 +506,7 @@ class SQUID_Noise_Open_Loop(SQUID_Noise):
         self.saver.make_dim('/asd_rms/', 1, 'sflux', '/sflux/', 'sflux (uA)')
         self.saver.make_dim('/asd_rms/', 2, 'rms_data_names', 
                             '/_rms_data_names/', 'rms data names')
-        self.saver.create_attr('/asd_rms/', 'units', r'$\Phi_0/\sqrt{Hz\rm}#')
+        self.saver.create_attr('/asd_rms/', 'units', r'$\Phi_0/\sqrt{Hz\rm}$')
 
         self.saver.append('/wasoverloaded/', 
                             np.full((self.sbias.shape[0],
