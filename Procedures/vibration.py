@@ -71,6 +71,7 @@ class Spectra_Image():
         self.preamp = instruments['preamp']
         self.saa = instruments['saa']
         self.lockin_cap = instruments['lockin_cap']
+        self.piezos = instruments['piezos']
 
         self.plane = plane
         self.saver = Saver(name='Spectra_Image')
@@ -83,7 +84,7 @@ class Spectra_Image():
         self.measure_time = measure_time
         self.measure_freq = measure_freq
 
-        self.accel_chs = accel_ch
+        self.accel_chs = accel_chs
         self.accel_names = accel_names
 
         self.xs = np.asarray(xs)
@@ -114,7 +115,7 @@ class Spectra_Image():
             i = 2
 
             for ex in extras:
-                self.saver.make_dim(i, ex[0], ex[1], ex[2])
+                self.saver.make_dim(name, i, ex[0], ex[1], ex[2])
                 i += 1
 
         # dimenions / coordinates
@@ -164,7 +165,7 @@ class Spectra_Image():
                          compression=self.compression,
                          compression_opts=self.compression_opts
                           )
-        makedim('/accelerometer'/, [('accel_names', '/accel_names/', 'name'),
+        makedim('/accelerometer/', [('accel_names', '/accel_names/', 'name'),
                                     ('t', '/t_spectra/', 'time (s)')
                                    ]
                )
@@ -175,7 +176,7 @@ class Spectra_Image():
         self.saver.create_attr('/capacitance/', 'units', 'Volts') #hello
 
         self.saver.append('/truepositions/', emptydata((3,)))
-        makedim('/truepositions'/, [('pos_names', '/pos_names/', 'name')])
+        makedim('/truepositions/', [('pos_names', '/pos_names/', 'name')])
         self.saver.create_attr('/truepositions/', 'units', 'Volts')
 
         self.saver.append('/wasOL/', emptydata(None))
@@ -199,19 +200,6 @@ class Spectra_Image():
     def run(self, fastaxis='x'):
         '''
         '''
-        self.freqs   = []
-        self.psdaves = []
-        self.filenames=[]
-        self.positions=[]
-
-        self.X,self.Y = np.meshgrid(self.xs,self.ys)
-        self.Z        = self.plane.plane(self.X,self.Y)-self.scanheight
-        self.dc       = np.zeros(self.Z.shape)
-        self.cap      = np.zeros(self.Z.shape)
-        self.indexes  = np.zeros(self.Z.shape)
-
-        gain = self.preamp.gain
-        
         y_index = 0
         x_index = 0
         lastfig = 0
@@ -220,39 +208,31 @@ class Spectra_Image():
             inner = self.xs
             outer = self.ys
 
-            def fast_plane(self, o, i):
-                return self.plane.plane(i, o)
-
-            def sweep_pz(self, o, i, z):
-                self.piezos.sweep(self.piezos.V,
-                                  {'x': i,
-                                   'y': o,
-                                   'z': z},
-                                  )
-            def makeslc(o, i):
-                return (i, o)
+            fast_plane = lambda self, o, i: self.plane.plane(i, o)
+            sweep_pz = lambda self, o, i, z: self.piezos.sweep(self.piezos.V,
+                                                               {'x': i,
+                                                                'y': o,
+                                                                'z': z},
+                                                               )
+            makeslc = lambda o, i: (i, o)
         else:
             inner = self.ys
             outer = self.xs
 
-            def fast_plane(self, o, i):
-                return self.plane.plane(o, i)
-
-            def sweep_pz(self, o, i, z):
-                self.piezos.sweep(self.piezos.V,
-                                  {'x': o,
-                                   'y': i,
-                                   'z': z},
-                                  )
-            def makeslc(o, i):
-                return (o, i)
+            fast_plane = lambda self, o, i: self.plane.plane(o, i)
+            sweep_pz = lambda self, o, i, z: self.piezos.sweep(self.piezos.V,
+                                                               {'x': o,
+                                                                'y': i,
+                                                                'z': z},
+                                                               )
+            makeslc = lambda o, i: (o, i)
 
         o_i = 0 #outer index
         for o in outer:
             i_i = 0 #inner index
             for i in inner:
-                z = self.plane.plane(o, i) - self.scanheight
-                self.sweep_pz(o, i, z)
+                z = fast_plane(self, o_i, i_i) - self.scanheight
+                sweep_pz(self, o, i, z)
 
                 self.saver.append('/truepositions/', 
                                   np.array([self.piezos.V['x'],
@@ -266,19 +246,19 @@ class Spectra_Image():
                     
                 # take and save time traces
                 chs = ['dc', ] + self.accel_chs
-                time = time.time()
+                t = time.time()
                 r = self.daq.monitor(chs, self.measure_time, 
                                      sample_rate=self.measure_freq)
                 self.saver.append('/timetraces/', r['dc']/self.preamp.gain,
                                   slc=makeslc(o_i,i_i))
                 for j in range(len(self.accel_chs)):
                     self.saver.append('/accelerometer/',
-                                      r[self.accel_chs[i]]/100,
+                                      r[self.accel_chs[j]]/100,
                                       slc=makeslc(o_i, i_i) + (j,)
                                       )
                 self.saver.append('/wasOL/', self.preamp.is_OL(), 
                                   slc=makeslc(o_i, i_i))
-                self.saver.append('/spectra_starttimes/', time, 
+                self.saver.append('/spectra_starttimes/', t, 
                                   slc=makeslc(o_i, i_i))
                 i_i += 1
             o_i += 1
