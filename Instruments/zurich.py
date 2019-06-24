@@ -69,7 +69,7 @@ class zurichInstrument(Instrument):
         for elem in allNodes:
             #generates the name of the attribute, simply replacing the
             # / of the the zurich path with underscores. Removes the "dev1056"
-            nameofattr = elem.replace('/','_')[9:]
+            nameofattr  = '_'.join(elem.split('/')[2:])
             # Checks that the node is not a special high speed streaming node
             if not 'SAMPLE' == elem[-6:]:
                 #Sets an attribute of the class, specifically a property
@@ -214,7 +214,15 @@ class zurichInstrument(Instrument):
                     raise Exception('type not handled!')
             return config_as_set_changed
             #return zCONFIG
-class HF2LI(zurichInstrument):
+class HF2LI1(zurichInstrument):
       pass
-class MFLI(zurichInstrument):
+class HF2LI2(zurichInstrument):
+      pass
+class HF2LI3(zurichInstrument):
+      pass
+class MFLI1(zurichInstrument):
+      pass
+class MFLI2(zurichInstrument):
+      pass
+class MFLI3(zurichInstrument):
       pass
