@@ -4,6 +4,7 @@ import time
 from numpy import array as array
 import os
 import contextlib
+import subprocess
 
 class Scanplane():
 
@@ -11,7 +12,8 @@ class Scanplane():
     def __init__(self, instruments={}, plane=None, xrange=[-400, 400],
                  yrange = [-400,400], numpts=[20, 20],
                  scan_height=35, line_time = 10, scan_pause = 1, fast_axis = 'x',
-                 name = 'Scanplane', channelstomonitor = {}, trigaquired = {}):
+                 toplot = False, name = 'Scanplane', channelstomonitor = {},
+                 trigaquired = {}):
         '''
         Initializes the scanplane.
 
@@ -41,6 +43,7 @@ class Scanplane():
         self.scan_pause =scan_pause
         self.fast_axis = fast_axis
         self.name = name
+        self.toplot = toplot
 
     def setupsave(self):
         '''
@@ -55,10 +58,7 @@ class Scanplane():
         self.saver.append('config/scan_height', self.scan_height)
         self.saver.append('config/scan_pause', self.scan_pause)
         self.saver.append('config/fast_axis', self.fast_axis)
-        if self.fast_axis == 'x':
-            datashape = self.numpts[::-1]
-        else:
-            datashape = self.numpts
+        datashape = self.numpts[::-1]
         for channelname in self.channelstomonitor.keys():
             self.saver.append('/DAQ/'+channelname, np.full(datashape,
                                                             np.float64(np.nan)))
@@ -74,7 +74,17 @@ class Scanplane():
         for instrument in self.instruments.keys():
             self.saver.append('config/instruments/%s/' % instrument,
                 self.instruments[instrument].__getstate__())
-
+    def launchplotters(self):
+        '''
+        Uses OS to launch a plotting kernel in a seperate python thread.
+        '''
+        if  self.toplot:
+            plotargs = ' '
+            plotargs = plotargs.join(self.toplot)
+            subprocess.Popen('ipython C:/Users/Hemlock/Documents/GitHub/Nowack_Lab/Procedures/'+
+                    'alexplotscanplane.py ' + self.saver.datasets['local'].filename
+                    + ' ' + plotargs )
+            time.sleep(1)
 
     def _setupplane(self):
         '''
@@ -108,9 +118,9 @@ class Scanplane():
                 zend = self.plane.plane(xend, yend)
             elif self.fast_axis == 'y':
                 xstart = self.xrange[0]+xstep*i
-                ystart = self.yrange[0]
+                ystart = self.yrange[1]
                 xend = self.xrange[0]+xstep*i
-                yend = self.yrange[1]
+                yend = self.yrange[0]
             else:
                 raise Exception('Fast axis not recognized')
             zstart = self.plane.plane(xstart,ystart) - self.scan_height
@@ -141,7 +151,10 @@ class Scanplane():
     def replacewithempty(self, dictionary):
         numlines = len(self.lines)
         if isinstance(dictionary, (list, np.ndarray)):
-            dictionary = np.full((numlines,) + np.shape(dictionary), np.nan)
+            a = list(np.shape(dictionary))
+            a.insert(int(self.fast_axis == 'y'), numlines)
+            datashape = tuple(a)
+            dictionary = np.full(datashape, np.nan)
         elif isinstance(dictionary, (int,float)):
             dictionary = np.full(numlines, np.nan)
         return dictionary
@@ -154,12 +167,14 @@ class Scanplane():
 
         data: polled data from one node (not instrument!).
         '''
-
+        numlines = len(self.lines)
         if isinstance(data, (float, int)):
-            self.saver.append(dataname, np.full(len(self.lines), np.nan))
+            self.saver.append(dataname, np.full(numlines, np.nan))
         elif isinstance(data, (np.ndarray, list)):
-            self.saver.append(dataname, np.full((len(self.lines),) +
-                                                np.shape(data), np.nan))
+            a = list(np.shape(dictionary))
+            a.insert(int(self.fast_axis == 'y'), numlines)
+            datashape = tuple(a)
+            self.saver.append(dataname, np.full(datashape, np.nan))
         elif isinstance(data, dict):
             emptydic = data.copy()
             self.dictvisititems(emptydic, self.replacewithempty)
@@ -182,7 +197,14 @@ class Scanplane():
 
         for i in np.arange(len(self.lines)):
             line = self.lines[i]
+            if self.fast_axis == 'x':
+                pos = len(self.lines) - i
+                dataslice = slice(pos-1, pos)
+            else:
+                pos = i + 1
+                dataslice = (slice(0, self.numpts[0]), slice(pos-1,pos))
             #go to beginning of line
+
             self.instruments['piezos'].sweep(self.instruments['piezos'].V,
                                              line['Vstart'])
             time.sleep(self.scan_pause)
@@ -195,7 +217,7 @@ class Scanplane():
                 for chan in self.channelstomonitor.items():
                     if chan[1] == inputchan:
                         self.saver.append('/DAQ/'+ chan[0], received[inputchan],
-                                                            slc = slice(i, i+1))
+                                                            slc = dataslice)
                         break
             for inst in self.trigaquired:
                 [obj, attrs] = inst
@@ -206,7 +228,9 @@ class Scanplane():
                             if i == 0: # is this the first loop?
                                 self.setuptrigsave('/%s/' % datakey, polleddata[datakey])
                             self.saver.append('/%s/' % datakey, polleddata[datakey],
-                                                            slc = slice(i, i+1))
+                                                       slc = dataslice)
+            if i== 0:
+                self.launchplotters()
         for inst in self.trigaquired:
             [obj, attrs] = inst
             for node in attrs.items():

@@ -146,14 +146,13 @@ class Dataset():
         '''
         f = h5py.File(filename,'r+')
         dataset = f[pathtowrite]
-        newshape = np.shape(numpyarray)
         oldstuff = dataset[slc]
-        oldshape = np.shape(np.squeeze(oldstuff))
-        if newshape !=  oldshape:
+        try:
+            numpyarray = np.reshape(numpyarray, oldstuff.shape)
+        except:
             f.close()
-            raise Exception('Slice shape '+ str(oldshape) +
-             ' does not match data shape ' + str(newshape))
-        elif np.all(np.isnan(oldstuff)):
+            raise Exception('Slice shape does not match data shape')
+        if np.all(np.isnan(oldstuff)):
             dataset[slc] = numpyarray
             f.close()
         else:

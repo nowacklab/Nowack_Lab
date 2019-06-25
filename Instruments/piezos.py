@@ -243,7 +243,7 @@ class Piezos(Instrument):
         if sweep_rate > self._max_sweep_rate:
             raise Exception('Sweeping piezos too fast! Max is 180 V/s!')
 
-        for i in range(2,10000,2):
+        for i in range(100,10000,2):
             if largestrange/(numcollect*i) < .5*self._max_step_size:
                 oversample = i
                 break
