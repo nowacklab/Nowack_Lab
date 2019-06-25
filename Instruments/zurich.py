@@ -42,6 +42,7 @@ class zurichInstrument(Instrument):
         # Accesses the DAQServer at the instructed address and port.
         self.daq = zhinst.ziPython.ziDAQServer(server_address, server_port)
         self.zurichformatnodes = {}
+        self.auxnames = {'auxin0':'auxin0', 'auxin1':'auxin1'}
         self.daq.unsubscribe('/')
         # Gets the list of ZI devices connected to the Zurich DAQServer
         deviceList = zhinst.utils.devices(self.daq)
@@ -115,18 +116,28 @@ class zurichInstrument(Instrument):
             Subscribes to nodes on zurich, and stores names under which to
             return the data.
             nodes (dictionary):keys are names of attributes of the
-                                zurich., keys are user specified names.
+                                zurich., items are user specified names.
+
+                                A special use case is to rename auxins as user
+                                defined strings in the demod returns. In this
+                                use case, the keys are 'auxin#', and the items
+                                are the user names. Of course, these may also
+                                be subscribed in the general way, but then
+                                acquisition will not be synchronized.
             '''
             for zurichname in nodes.keys():
-                username = nodes[zurichname]
-                if zurichname in self.zurichformatnodes.keys():
-                    if username == self.zurichformatnodes[zurichname]:
-                        print('Node is already subscribed')
-                    else:
-                        raise Exception('Two nodes may not be given the'+
-                                                                  ' same name')
-                self.zurichformatnodes[self.convert_node(zurichname)] = (
-                    username)
+                if zurichname in self.auxnames.keys():
+                    self.auxnames[zurichname] = nodes[zurichname]
+                else:
+                    username = nodes[zurichname]
+                    if zurichname in self.zurichformatnodes.keys():
+                        if username == self.zurichformatnodes[zurichname]:
+                            print('Node is already subscribed')
+                        else:
+                            raise Exception('Two nodes may not be given the'+
+                                                                      ' same name')
+                    self.zurichformatnodes[self.convert_node(zurichname)] = (
+                        username)
 
             self.daq.subscribe(list(self.zurichformatnodes.keys()))
 
@@ -149,147 +160,37 @@ class zurichInstrument(Instrument):
             Returns stored data in all buffers.
 
             returns (dict): keys are the names you specified in subscribe for
-                            the data. Values are dictionaries, with keys "node",
-                            instrument, and "data". "node" is the path of the
-                            returned data, instrument is the device_id,
-                            'data' is the returned data.
+                            the data. Values are 1D arrays of data.
             '''
             returned_data = self.daq.poll(1,100, 0x0004, True)
             formatteddata = {}
             for key in returned_data.keys():
                 if key.upper() in self.zurichformatnodes.keys():
                     name = self.zurichformatnodes[key.upper()]
-                    ourformatkey = '_'.join(key.upper().split('/')[2:])
-                    if key.split('/')[-1] != 'SAMPLE':
-                        formatteddata[name]  = np.transpose([
-                    returned_data[key]['x'], returned_data[key]['y']])
+                    #ourformatkey = '_'.join(key.upper().split('/')[2:])
+                    if key.split('/')[-1] == 'sample':
+                        formatteddata[name] = {}
+                        formatteddata[name]['x']  = returned_data[key]['x']
+                        formatteddata[name]['y']  = returned_data[key]['y']
+                        formatteddata[name][self.auxnames['auxin0']]  = (
+                                                returned_data[key]['auxin0'])
+                        formatteddata[name][self.auxnames['auxin1']]  = (
+                                                returned_data[key]['auxin1'])
                     else:
-                        formatteddata[name] = returned_data['key']
+                        formatteddata[name] = returned_data[key]
                 else:
                     raise Exception('Unrecognized data returned')
-
             return formatteddata
 
-    def setup(self, config):
-            '''
-            Pass in a dictionary with the desired configuration. If an element
-            is ommited from the dictionary, no change. Dictionary will be
-            compared to a check array. To determine formatting, structure your
-            dictionary the same way as the checkarray, but the inner most
-            element in the dict (a list) replaced by the value you want. The
-            value must be of the type given in the first element of the array
-            at that dict location, and if the second element of the list is an
-            array, it must be an element of that array. Conversely, if the
-            second element is a number, the value must be inclusive between
-            the second and third elements.
-            Obey the following conventions:
-
-            checkarray = {'sigin': {'ac': [bool], 'range': [float, 1e-4, 2],
-                                                                'diff':[bool]},
-
-                          'demod': {'enable':[bool], 'rate': [float],
-                            'oscselect':[int, [0,1]], 'order': [int, 1,8],
-                            'timeconstant':[float], 'harmonic':[int, 1, 1023]},
-
-                          'osc':{'freq': [float, 0, 1e8]},
-
-                          'sigout':{'enable':[bool],
-                                                'range':[float, [.01,.1,1,10]],
-                             'amplitude':[float, -1,1],'offset':[float, -1,1]},
-
-                          'TAMP':{
-                            'currentgain': [int,[1e2,1e3,1e4,1e5,1e6,1e7,1e8]],
-                            'dc':[bool], 'voltagegain': [int, [1,10]],
-                            'offset':[float]}
-                          }
-            '''
-            zCONFIG = []
-            checkarray = {'sigin': {'ac': [bool], 'range': [float, 1e-4, 2],
-                                                                'diff':[bool]},
-
-                          'demod': {'enable':[bool], 'rate': [float],
-                            'oscselect':[int, [0,1]], 'order': [int, 1,8],
-                            'timeconstant':[float], 'harmonic':[int, 1, 1023]},
-
-                          'osc':{'freq': [float, 0, 1e8]},
-
-                          'sigout':{'enable':[bool],
-                                                'range':[float, [.01,.1,1,10]],
-                             'amplitude':[float, -1,1],'offset':[float, -1,1]},
-
-                          'TAMP':{
-                            'currentgain': [int,[1e2,1e3,1e4,1e5,1e6,1e7,1e8]],
-                            'dc':[bool], 'voltagegain': [int, [1,10]],
-                            'offset':[float]}
-                          }
-            tampchannel = -1
-            for i in [0,1]:
-                if self.daq.getInt('/%s/ZCTRLS/%d/TAMP/AVAILABLE'
-                                                        % (self.device_id, i)):
-                                                        tampchannel = i
-            for subsystem in config.keys():
-                if subsystem[:-1] in checkarray.keys():
-                    subconfig = config[subsystem]
-                    subcheck = checkarray[subsystem[:-1]]
-                    for param in subconfig.keys():
-                        value = subconfig[param]
-                        paramchk = subcheck[param]
-                        if param in subcheck.keys():
-                            if type(value) is paramchk[0]:
-                                if type(value) is bool:
-                                    value = int(value)
-                                if (len(paramchk) == 1
-                                    or
-                                    (len(paramchk) == 2 and
-                                    value in paramchk[1])
-                                    or
-                                    (len(paramchk)== 3   and
-                                    value <= paramchk[2] and
-                                    value >= paramchk[1])
-                                    ):
-                                    if subsystem[:-1] == 'TAMP':
-                                        if tampchannel == -1:
-                                            raise Exception('No TA connected!')
-                                        else:
-                                            zCONFIG.append([
-                                            '/%s/ZCTRLS/%i/TAMP/%i/%s'
-                                            % (self.device_id,tampchannel,
-                                                subsystem[-1], param), value])
-                                    else:
-                                        zCONFIG.append(['/%s/%ss/%s/%s'
-                                        % (self.device_id,subsystem[:-1],
-                                            subsystem[-1], param), value])
-                                else:
-                                    raise Exception('Parameter ' + param +' of '
-                                               + subsystem + 'is out of domain')
-                            else:
-                                raise Exception('Parameter ' + param +' of ' +
-                                    subsystem + ' is the wrong type, should be'
-                                    + str(paramchk[0]))
-                        else:
-                            raise Exception(param +
-                                    'is not a valid parameter for' + subsystem)
-                else:
-                    raise Exception(subsystem + 'is not a Zurich subsystem')
-            self.daq.set(zCONFIG)
-            config_as_set_changed = []
-            for subconfig in zCONFIG:
-                if type(subconfig[1]) is int:
-                    config_as_set_changed.append([subconfig[0],
-                                            self.daq.getInt(subconfig[0])])
-                elif type(subconfig[1]) is str:
-                    config_as_set_changed.append([subconfig[0],
-                                            self.daq.getString(subconfig[0])])
-                elif type(subconfig[1]) is float:
-                    config_as_set_changed.append([subconfig[0],
-                                            self.daq.getDouble(subconfig[0])])
-                else:
-                    raise Exception('type not handled!')
-            return config_as_set_changed
-            #return zCONFIG
-
-
-class HF2LI(zurichInstrument):
+class HF2LI1(zurichInstrument):
       pass
-class MFLI(zurichInstrument):
+class HF2LI2(zurichInstrument):
+      pass
+class HF2LI3(zurichInstrument):
+      pass
+class MFLI1(zurichInstrument):
+      pass
+class MFLI2(zurichInstrument):
+      pass
+class MFLI3(zurichInstrument):
       pass

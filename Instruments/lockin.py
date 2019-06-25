@@ -355,6 +355,55 @@ class SR830(Instrument):
         self._visa_handle.read_termination = '\n'
         self._visa_handle.write('OUTX 1') #1=GPIB
 
+    def device_id(self):
+        return ('SR830_GPIB_' + str(self.gpib_address))
+
+    def subscribe(self, nodes):
+        '''
+        'Subscribes' to X,Y on the SR830.
+
+        nodes: key is ignored, exists only for similarity with zurich code. item
+        is the desired name for the data retreived from the lockin.
+        '''
+        self.dataname = list(nodes.items())[0][1]
+        self.write('DDEF 1,0,0')
+        self.write('DDEF 2,0,0') #set display buffers to X,Y mode
+        self.write('SRAT 14')    #set acquisition to 'on trigger'
+        self.write('REST')       #clear the buffers
+        self.write('STRT')       #start the acquisition
+
+    def unsubscribe(self, nodes):
+        '''
+        'Unsubscribes' to X,Y on the SR830.
+
+        Stops the scan and returns SR830 to internal trigger mode.
+        nodes: is entirely ignored. included for compatibility with Zurich.
+        '''
+        self.write('REST')
+        self.write('SRAT 4')
+
+    def poll(self):
+        '''
+        Returns the data stored in the display buffers and clears them.
+        '''
+
+        self.write('PAUS')
+        numpoints = self.ask('SPTS?')
+        returneddata = {}
+        returneddata[self.dataname] = {}
+        if int(numpoints) > 0:
+            xdatastr = self.ask('TRCA? 1,0, %i' % int(numpoints), timeout = 2e4)
+            ydatastr = self.ask('TRCA? 2,0, %i' % int(numpoints), timeout = 2e4)
+            xdata = list(map(float, xdatastr.split(sep=',')[0:-1]))
+            ydata = list(map(float, ydatastr.split(sep=',')[0:-1]))
+            returneddata[self.dataname]['x'] = xdata
+            returneddata[self.dataname]['y'] = ydata
+        self.write('REST')
+        self.write('STRT')
+        return returneddata
+
+
+
     def is_OL(self, thresh=1):
         '''
         Looks at the magnitude and x and y components to determine whether or not we are overloading the lockin.

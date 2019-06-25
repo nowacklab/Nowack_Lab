@@ -1,6 +1,9 @@
 from Nowack_Lab.Utilities.datasaver import Saver
 import numpy as np
 import time
+from numpy import array as array
+import os
+import contextlib
 
 class Scanplane():
 
@@ -16,23 +19,13 @@ class Scanplane():
                                   what DAQ inputs do, values are the hardware
                                   names of those inputs. Ex: {'squid DC': 'ai0'}
 
-        trigaquired(list): [[obj1, {name1: {'node': node2, 'dtype': dtype1},
-                                        name2:{'node':....}}], [obj2, ....]]
+        trigaquired(list): [[obj1, {name1: node1, name2:node2}],[obj2, ....]]
                 obj# (object): an instrument object with device_id, subscribe,
                                 poll, and unsubscribe methods
                 name# (string): a name of your own construction, describing the
                                 data
-                dtype#:  can be:
-                                    'float': each trigger returns a single
-                                            number. Polls return 1D arrays.
-                                            Data saved as 2D arrays
-                                    an int: each trigger returns a 1D array.
-                                            int is the length of that array.
-                                            Polls return 2D arrays. Data
-                                            saved as 3D array.
-                                    'dict': each trigger returns a dict. Polls
-                                            return a dict. These will not
-                                            be converted into an array.
+                node# (string): the node to be monitored. For SR830's this is
+                                ignored and may be anything.
         '''
         pass
         self.instruments = instruments
@@ -67,26 +60,17 @@ class Scanplane():
         else:
             datashape = self.numpts
         for channelname in self.channelstomonitor.keys():
-            self.saver.append('DAQ_'+channelname, np.full(datashape,
+            self.saver.append('/DAQ/'+channelname, np.full(datashape,
                                                             np.float64(np.nan)))
         for oneinst in self.trigaquired:
             dictofnodes = oneinst[1]
             self.saver.append('config/triginstruments/%s/' %
                               oneinst[0].device_id, oneinst[0].__getstate__())
             for nodename in dictofnodes.keys():
-                thisnode = dictofnodes[nodename]
                 self.saver.append('config/'+ nodename + '/node',
-                                                            thisnode['node'])
+                                                        dictofnodes[nodename])
                 self.saver.append('config/'+ nodename + '/device',
                                                           oneinst[0].device_id)
-                if thisnode['dtype'] == 'float':
-                    self.saver.append(nodename, np.full(datashape,
-                                                            np.float64(np.nan)))
-                elif isinstance(thisnode['dtype'], int):
-                    thisdatashape = datashape.copy()
-                    thisdatashape.append(thisnode['dtype'])
-                    self.saver.append(nodename, np.full(
-                        thisdatashape,np.float64(np.nan)))
         for instrument in self.instruments.keys():
             self.saver.append('config/instruments/%s/' % instrument,
                 self.instruments[instrument].__getstate__())
@@ -112,8 +96,8 @@ class Scanplane():
         Vstart and Vend. Each of them has three elements, X, Y, Z, with the
         starting and ending voltages (respectively) of each.
         '''
-        xstep = (self.xrange[1]-self.xrange[0])/self.numpts[0]
-        ystep = (self.yrange[1]-self.yrange[0])/self.numpts[1]
+        xstep = (self.xrange[1]-self.xrange[0])/(self.numpts[0]-1)
+        ystep = (self.yrange[1]-self.yrange[0])/(self.numpts[1]-1)
         lines = []
         for i in range(self.numpts[int(self.fast_axis == 'x')]):
             if self.fast_axis == 'x':
@@ -122,7 +106,7 @@ class Scanplane():
                 xend = self.xrange[1]
                 yend = self.yrange[0]+ystep*i
                 zend = self.plane.plane(xend, yend)
-            elif fast_axis == 'y':
+            elif self.fast_axis == 'y':
                 xstart = self.xrange[0]+xstep*i
                 ystart = self.yrange[0]
                 xend = self.xrange[0]+xstep*i
@@ -141,22 +125,63 @@ class Scanplane():
 
         return lines
 
+    def dictvisititems(self,dictionary, function):
+            '''
+            Applies function at every node of nested dict. Modifies dictionary by
+            reference.
+            '''
+            def recursivevisit(dictionary, function):
+                for key in dictionary.keys():
+                    dictionary[key] = function(dictionary[key])
+                    if isinstance(dictionary[key], dict):
+                        dictionary[key] = recursivevisit(dictionary[key], function)
+                return dictionary
+            recursivevisit(dictionary, function)
 
+    def replacewithempty(self, dictionary):
+        numlines = len(self.lines)
+        if isinstance(dictionary, (list, np.ndarray)):
+            dictionary = np.full((numlines,) + np.shape(dictionary), np.nan)
+        elif isinstance(dictionary, (int,float)):
+            dictionary = np.full(numlines, np.nan)
+        return dictionary
 
+    def setuptrigsave(self, dataname, data):
+        '''
+        Adds the empty datastructures to the hdf5 data to store data from the
+        triggered instruments. Runs after the first line, because the structure
+        of these returns is unknown at the beginning.
+
+        data: polled data from one node (not instrument!).
+        '''
+
+        if isinstance(data, (float, int)):
+            self.saver.append(dataname, np.full(len(self.lines), np.nan))
+        elif isinstance(data, (np.ndarray, list)):
+            self.saver.append(dataname, np.full((len(self.lines),) +
+                                                np.shape(data), np.nan))
+        elif isinstance(data, dict):
+            emptydic = data.copy()
+            self.dictvisititems(emptydic, self.replacewithempty)
+            self.saver.append(dataname, emptydic)
+        else:
+            raise Exception('Unrecognized data type!')
     def run(self):
         '''
         Runs the scanplane
         '''
-        self.setupsave()
+        #suppress saving prints
+        with open(os.devnull, "w") as f, contextlib.redirect_stdout(f):
+            self.setupsave()
 
-        lines = self._setupplane()
-
+        self.lines = self._setupplane()
         for inst in self.trigaquired:
             [obj, attrs] = inst
             for node in attrs.items():
-                obj.subscribe({node[1]['node']:node[0]})
-        for i in np.arange(len(lines)):
-            line = lines[i]
+                obj.subscribe({node[1]:node[0]})
+
+        for i in np.arange(len(self.lines)):
+            line = self.lines[i]
             #go to beginning of line
             self.instruments['piezos'].sweep(self.instruments['piezos'].V,
                                              line['Vstart'])
@@ -169,7 +194,7 @@ class Scanplane():
             for inputchan in received.keys():
                 for chan in self.channelstomonitor.items():
                     if chan[1] == inputchan:
-                        self.saver.append('DAQ_'+ chan[0], received[inputchan],
+                        self.saver.append('/DAQ/'+ chan[0], received[inputchan],
                                                             slc = slice(i, i+1))
                         break
             for inst in self.trigaquired:
@@ -178,14 +203,11 @@ class Scanplane():
                 for datakey in polleddata.keys():
                     for name in attrs.keys():
                         if datakey == name:
-                            if (attrs[name]['dtype'] == 'float' or
-                                isinstance(attrs[name]['dtype'], int)):
-                                self.saver.append(name, polleddata[datakey],
+                            if i == 0: # is this the first loop?
+                                self.setuptrigsave('/%s/' % datakey, polleddata[datakey])
+                            self.saver.append('/%s/' % datakey, polleddata[datakey],
                                                             slc = slice(i, i+1))
-                            else:
-                                self.saver.append(name + '/Line_' + str(i),
-                                                            polleddata[datakey])
         for inst in self.trigaquired:
             [obj, attrs] = inst
             for node in attrs.items():
-                obj.unsubscribe([node[1]['node']])
+                obj.unsubscribe([node[1]])

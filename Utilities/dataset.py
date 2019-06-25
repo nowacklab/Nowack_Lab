@@ -72,6 +72,7 @@ class Dataset():
         used that go through HDF5 groups that already exist.
 
         '''
+        self.slc = slc
         cleandatatowrite = self.sanitize(datatowrite)
         if isinstance(cleandatatowrite, dict):
             def _loadhdf5(path, obj):
@@ -84,7 +85,11 @@ class Dataset():
                 sep = '/'
                 h5path = pathtowrite + sep.join([str(place) for place in path])
                 if not isinstance(obj, dict):
-                    self._writetoh5(data = obj, path = h5path)
+                    if isinstance(obj, (np.ndarray, list) +
+                                      tuple(self.allowedtypes))  and self.slc:
+                        self._appenddatah5(self.filename, obj, h5path,self.slc)
+                    else:
+                        self._writetoh5(data = obj, path = h5path)
             self.dictvisititems(cleandatatowrite, _loadhdf5)
         elif isinstance(cleandatatowrite, (np.ndarray, list) +
                                             tuple(self.allowedtypes))  and slc:
@@ -192,21 +197,8 @@ class Dataset():
                           +' Saving as a string')
                     cleandata = str(data)
         elif type(data) == list:
-            if all([any([isinstance(elem, sometype) for sometype in
-                                        self.allowedtypes]) for elem in data]):
-                cleandata = data
-            else:
-                print('List with unauthorized types. Most likely dicts' +
-                                ' or strings. Attempting to convert to string.')
-                try:
-                    cleandata = str(data)
-                    print('Success!')
-                except:
-                    shouldcontinue = input('COULD NOT CONVERT TO STRING. '
-                    + 'DATA WILL NOT BE SAVED. Continue y/(n)')
-                    if shouldcontinue != 'y':
-                        raise Exception('TypeError: could not convert to h5')
-                    cleandata = 'unconvertable'
+            intdata = np.array(data)
+            cleandata = self.sanitize(intdata)
         elif isinstance(data, dict):
             cleandata = {}
             for key in data.keys():
