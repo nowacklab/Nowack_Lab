@@ -6,6 +6,8 @@ import numpy as np
 import sys
 f = h5py.File(sys.argv[1],'r')
 toplot = sys.argv[2:]
+fpath = ''.join((sys.argv[1].split('.'))[:-1]) + '_'
+ext = np.concatenate((f['/config/xrange'],f['/config/yrange'])))
 ims = []
 datalocs = []
 figs = []
@@ -33,5 +35,9 @@ while True:
         max = np.nanmax(np.array(data))
         ims[i].set_clim(vmin = min, vmax = max)
     if not np.isnan(data).any():
+        for i in range(len(toplot)):
+            fig = figs[i]
+            addendum =  toplot[i].replace('/', '_')
+            fig.savefig(fpath + addendum +'.pdf')
         break
     plt.pause(1)
