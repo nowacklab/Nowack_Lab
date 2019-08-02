@@ -360,14 +360,22 @@ class Keithley2450(Keithley2400):
 
 
     def __getstate__(self):
-        self._save_dict = {
-            'output current': self._Iout,
-            'output current range': self._Iout_range,
-            'current compliance': self._I_compliance,
-            'output voltage': self._Vout,
-            'output voltage range': self._Vout_range,
-            'voltage compliance': self._V_compliance
-        }
+        if self.source == 'V':
+            self._save_dict = {
+                'output current': self.I,
+                'current compliance': self.I_compliance,
+                'output voltage setpoint': self.Vout,
+                'output voltage range': self.Vout_range,
+                'actual voltage output': self.V
+            }
+        elif self.source == 'I':
+            self._save_dict = {
+                'output voltage': self.V,
+                'voltage compliance': self.V_compliance,
+                'output current setpoint': self.Iout,
+                'output current range': self.Iout_range,
+                'actual current output': self.I
+            }
         return self._save_dict
 
     def __setstate__(self, state):

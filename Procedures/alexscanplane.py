@@ -44,6 +44,7 @@ class Scanplane():
         self.fast_axis = fast_axis
         self.name = name
         self.toplot = toplot
+        self.interrupt = False
 
     def setupsave(self):
         '''
@@ -194,44 +195,52 @@ class Scanplane():
             [obj, attrs] = inst
             for node in attrs.items():
                 obj.subscribe({node[1]:node[0]})
+        try:
+            for i in np.arange(len(self.lines)):
+                if self.interrupt:
+                    print('Interrupted by keystroke')
+                    break
+                line = self.lines[i]
+                if self.fast_axis == 'x':
+                    pos = len(self.lines) - i
+                    dataslice = slice(pos-1, pos)
+                else:
+                    pos = i + 1
+                    dataslice = (slice(0, self.numpts[1]), slice(pos-1,pos))
+                #go to beginning of line
 
-        for i in np.arange(len(self.lines)):
-            line = self.lines[i]
-            if self.fast_axis == 'x':
-                pos = len(self.lines) - i
-                dataslice = slice(pos-1, pos)
-            else:
-                pos = i + 1
-                dataslice = (slice(0, self.numpts[0]), slice(pos-1,pos))
-            #go to beginning of line
-
-            self.instruments['piezos'].sweep(self.instruments['piezos'].V,
-                                             line['Vstart'])
-            time.sleep(self.scan_pause)
-            output_data, received = self.instruments['piezos'].newsweep(
-                        line['Vstart'], line['Vend'], chan_in=
-                        list(self.channelstomonitor.values()), numcollect =
-                        self.numpts[int(self.fast_axis == 'y')],
-                                    linetime = self.line_time, trigger = 'ao3')
-            for inputchan in received.keys():
-                for chan in self.channelstomonitor.items():
-                    if chan[1] == inputchan:
-                        self.saver.append('/DAQ/'+ chan[0], received[inputchan],
-                                                            slc = dataslice)
-                        break
-            for inst in self.trigaquired:
-                [obj, attrs] = inst
-                polleddata = obj.poll()
-                for datakey in polleddata.keys():
-                    for name in attrs.keys():
-                        if datakey == name:
-                            if i == 0: # is this the first loop?
-                                self.setuptrigsave('/%s/' % datakey, polleddata[datakey])
-                            self.saver.append('/%s/' % datakey, polleddata[datakey],
-                                                       slc = dataslice)
-            if i== 0:
-                self.launchplotters()
+                self.instruments['piezos'].sweep(self.instruments['piezos'].V,
+                                                 line['Vstart'])
+                time.sleep(self.scan_pause)
+                output_data, received = self.instruments['piezos'].newsweep(
+                            line['Vstart'], line['Vend'], chan_in=
+                            list(self.channelstomonitor.values()), numcollect =
+                            self.numpts[int(self.fast_axis == 'y')],
+                                        linetime = self.line_time, trigger = 'ao3')
+                for inputchan in received.keys():
+                    for chan in self.channelstomonitor.items():
+                        if chan[1] == inputchan:
+                            self.saver.append('/DAQ/'+ chan[0], received[inputchan],
+                                                                slc = dataslice)
+                            break
+                for inst in self.trigaquired:
+                    [obj, attrs] = inst
+                    polleddata = obj.poll()
+                    for datakey in polleddata.keys():
+                        for name in attrs.keys():
+                            if datakey == name:
+                                if i == 0: # is this the first loop?
+                                    self.setuptrigsave('/%s/' % datakey, polleddata[datakey])
+                                self.saver.append('/%s/' % datakey, polleddata[datakey],
+                                                           slc = dataslice)
+                if i== 0:
+                    self.launchplotters()
+        except KeyboardInterrupt:
+            self.interrupt = True
         for inst in self.trigaquired:
             [obj, attrs] = inst
             for node in attrs.items():
                 obj.unsubscribe([node[1]])
+        self.instruments['piezos'].z.V = -400
+        self.instruments['piezos'].y.V = 0
+        self.instruments['piezos'].x.V = 0

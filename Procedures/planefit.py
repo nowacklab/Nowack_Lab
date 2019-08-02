@@ -116,23 +116,23 @@ class Planefit(Measurement):
         self.piezos.y.check_lim(self.Y)
 
         # Initial touchdown at center of plane
-        self.piezos.V = {'x': self.center[0],
-                         'y': self.center[1], 'z': -self.Vz_max}
-        td = Touchdown(self.instruments, Vz_max=self.Vz_max, planescan=True,
-                        runonce=self.runonce)
-        td.run()
+        #self.piezos.V = {'x': self.center[0],
+        #                 'y': self.center[1], 'z': -self.Vz_max}
+        #td = Touchdown(self.instruments, Vz_max=self.Vz_max, planescan=True,
+        #                runonce=self.runonce)
+        #td.run()
         # If the initial touchdown generates a poor fit, try again
-        n = 0
-        while td.flagged and n < 5:
-            td = Touchdown(self.instruments, Vz_max=self.Vz_max, planescan=True,
-                            runonce=self.runonce)
-            td.run()
-            n = n + 1
+        #n = 0
+        #while td.flagged and n < 5:
+        #    td = Touchdown(self.instruments, Vz_max=self.Vz_max, planescan=True,
+        #                    runonce=self.runonce)
+        #    td.run()
+        #    n = n + 1
 
-        if td.flagged:
-            raise Exception("Can't fit capacitance signal.")
-        else:
-            center_z_value = td.Vtd
+        #if td.flagged:
+        #    raise Exception("Can't fit capacitance signal.")
+        #else:
+        #    center_z_value = td.Vtd
 
         # If only taking plane from edges, make masked array
         if edges_only:

@@ -70,9 +70,9 @@ class ANC350(Instrument):
 
     def __getstate__(self):
         self._save_dict = {
-            'x attocube': self.x,
-            'y attocube': self.y,
-            'z attocube': self.z
+            'x attocube': self.x.__getstate__(),
+            'y attocube': self.y.__getstate__(),
+            'z attocube': self.z.__getstate__(),
         }
         return self._save_dict
 

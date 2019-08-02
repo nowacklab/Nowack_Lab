@@ -87,10 +87,10 @@ class zurichInstrument(Instrument):
                 "lambda self: {'x': self.daq.getSample('%s')['x'][0]," % elem
                             + "'y':self.daq.getSample('%s')['y'][0]}" % elem)))
     def __getstate__(self):
-        zdict = self.daq.get('/', True)
+        zdict = self.daq.get('/'+ self.device_id + '/', True)
         self._save_dict = {}
         for key in zdict.keys():
-            self._save_dict['_'.join(key.split('/')[2:]).upper()]= zdict[key]
+            self._save_dict['_'.join(key.split('/')).upper()]= zdict[key]
         return self._save_dict
 
     def convert_output(self, value):
