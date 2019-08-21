@@ -289,6 +289,38 @@ class BlueforsRvsT(RvsSomething):
         '''
         pass
 
+class MonitorAttrs(Measurement):
+    def __init__(self, instruments, attrs, duration, wait):
+        super().__init__(instruments)
+        self.wait = wait
+        self.duration = duration
+        self.data = {}
+        self.callables = []
+        for attr in attrs:
+            self.callables.append(CallableAttribute(*attr))
+            self.data[attr[2]] = []
+        self.attrs = attrs
+        self.time_data = []
+        self.start = time.time()
+
+    def do(self, plot=False):
+        while ((self.start + self.duration) > time.time()):
+            time.sleep(self.wait)
+            # Record data\
+            self.time_data.append(time.time())
+            for call in self.callables:
+                self.data[call.name].append(call())
+
+    def save(self, filename=None, savefig=False, **kwargs):
+        self.time_data = np.array(self.time_data)
+        for call in self.callables:
+            setattr(self, call.name, np.array(self.data[call.name]))
+        try:
+            self._save(filename, savefig, **kwargs)
+        except:
+            pass
+
+
 class PID_T(Measurement):
     """PID control temperature while monitoring instrument attributes.
     """
@@ -361,14 +393,15 @@ class PID_T(Measurement):
             if done:
                 break
         return data
-                
+
+
 
 class CallableAttribute(object):
     """Make an instrument attribute a callable function."""
     def __init__(self, instrument, attribute, name):
         self.instrument = instrument
         self.attribute = attribute
-        self.name = name
+        self.name = name.
 
     def __call__(self):
         """Return the attribute of the instrument."""

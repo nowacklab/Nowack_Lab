@@ -6,6 +6,12 @@ from numpy.linalg import lstsq
 
 from datetime import datetime
 
+from importlib import reload
+import Nowack_Lab.Utilities.welch
+reload(Nowack_Lab.Utilities.welch)
+from Nowack_Lab.Utilities.welch import Welch
+
+
 class AttrDict(dict):
     '''
     Class that behaves exactly like a dict, except that you can access values as
@@ -322,3 +328,7 @@ def make_timestamp():
     timestamp = datetime.now().strftime('%Y-%m-%d_%H%M%S_')
     return timestamp
 
+def f_of_fft(duration, rate, spacing):
+    v = np.ones(duration * rate)
+    [f, psd] = Welch.welchf(v, rate, spacing)
+    return f
