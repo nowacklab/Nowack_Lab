@@ -212,12 +212,25 @@ class NIDAQ(Instrument):
         '''
         Output a periodic voltage signal from a single channel for 
         max_duration seconds or until you exit.  Does not occupy python
-        while running.  You CANNOT take data with the daq or output other
-        signals while this running.  ONLY USE AS PART OF A WITH
+        while running.  ONLY USE AS PART OF A WITH
+
+        Sample code:
+        ---------------------------------------------------
+            ni = NIDAQ()
+            v_1period = np.sin(np.linspace(0,2*np.pi,100))
+            data_ai0 = []
+            with ni.periodic_output(ni._daq.ao0, v_1period, 10.0, 100.0) as n:
+                starttime = time.time()
+                while time.time() - starttime < 10:
+                    data_ai0.append(ni.ai3.V)
+                    if data_ai0[-1] > 0:
+                        ni.ao1.V = 1
+                    else:
+                        ni.ao1.V = 0
 
         Params:
         ~~~~~~~
-        chan_out: (string) channel name for output
+        chan_out: (ni._daq channel) channel for output
         v_1period (ndarray) array of voltages for 1 period
         max_duration (float) time in seconds of max duration of this output
         sample_rate (float) sample rate in samples/s
@@ -234,14 +247,14 @@ class NIDAQ(Instrument):
         '''
         #TODO fix channel name to be one of the named channels, not ao2
         class MyTask ():
-            def __init__(chan_out, v_1period, max_duration, sample_rate):
+            def __init__(self, chan_out, v_1period, max_duration, sample_rate):
                 self.task = ni.Task(chan_out)
                 self.task.set_timing(duration = max_duration*u.s, fsamp=sample_rate*u.Hz)
-                self.task.write(v_1period * u.V, autostart=False)
+                self.task.write({chan_out.name: v_1period * u.V}, autostart=False)
             def __enter__(self):
                 self.task.start()
                 return self.task
-            def __exit__(self):
+            def __exit__(self, *args, **kwargs):
                 self.task.stop()
                 self.task.clear()
         return MyTask(chan_out, v_1period, max_duration, sample_rate)
