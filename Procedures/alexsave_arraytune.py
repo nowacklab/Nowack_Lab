@@ -291,8 +291,8 @@ class SQUID_Noise():
         # reset or set to zero
         if value + error * conversion < 0:
             setattr(self.saa, attr, value + 50)
-        elif value + error * conversion > 150:
-            setattr(self.saa, attr, 0)
+        elif value + error * conversion > getattr(self.saa, attr+'_lim'):
+            setattr(self.saa, attr, value-180)
         else:
             # Directly correct the error
             setattr(self.saa, attr, value + conversion * error)
@@ -1104,7 +1104,7 @@ class SQUID_Noise_Closed_Loop(SQUID_Noise):
         if not islocked:
             print('Cannot Lock at {0}.  Giving a Push'.format(sensitivity))
             offset = 80
-            if self.saa.S_flux > self.sflux_start + offset
+            if self.saa.S_flux > self.sflux_start + offset:
                 offset = -offset
             self.saa.S_flux = self.saa.S_flux + offset
             islocked = self.lock_squid(attempts=3)
