@@ -35,7 +35,7 @@ while True:
         min = np.nanmin(np.array(data))
         max = np.nanmax(np.array(data))
         ims[i].set_clim(vmin = min, vmax = max)
-    if not np.isnan(data).any():
+    if not np.isnan(f['config/isFinished'][0]):
         for i in range(len(toplot)):
             data = f[toplot[i]]
             ims[i].set_data(data)

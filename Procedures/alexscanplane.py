@@ -53,12 +53,15 @@ class Scanplane():
         individual datasets for each line.
         '''
 
+        self.saver.append('config/isFinished', [np.nan, np.nan])
         self.saver.append('config/xrange', self.xrange)
         self.saver.append('config/yrange', self.yrange)
         self.saver.append('config/numpts', self.numpts)
         self.saver.append('config/scan_height', self.scan_height)
         self.saver.append('config/scan_pause', self.scan_pause)
         self.saver.append('config/fast_axis', self.fast_axis)
+        planeconfig = {'a' : self.plane.a,'b' : self.plane.b,'c' : self.plane.c}
+        self.saver.append('config/plane', planeconfig)
         datashape = self.numpts[::-1]
         for channelname in self.channelstomonitor.keys():
             self.saver.append('/DAQ/'+channelname, np.full(datashape,
@@ -198,8 +201,10 @@ class Scanplane():
         try:
             for i in np.arange(len(self.lines)):
                 if self.interrupt:
+                    self.saver.append('config/isFinished/', 1, slc = slice(0,1)) #let the plotting kernal know the scan is done
                     print('Interrupted by keystroke')
                     break
+                self.instruments['squidarray'].reset()
                 line = self.lines[i]
                 if self.fast_axis == 'x':
                     pos = len(self.lines) - i
@@ -244,3 +249,4 @@ class Scanplane():
         self.instruments['piezos'].z.V = -400
         self.instruments['piezos'].y.V = 0
         self.instruments['piezos'].x.V = 0
+        self.saver.append('config/isFinished/', 1, slc = slice(0,1))

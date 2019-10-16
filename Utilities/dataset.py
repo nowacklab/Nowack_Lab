@@ -70,7 +70,6 @@ class Dataset():
         array, or a nested dict. If a nested dict, leaves must be strings,
         numbers or numpy arrays. Data may not overwrite, however, dicts can be
         used that go through HDF5 groups that already exist.
-
         '''
         self.slc = slc
         cleandatatowrite = self.sanitize(datatowrite)

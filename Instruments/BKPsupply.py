@@ -20,6 +20,13 @@ class powersupply(VISAInstrument):
         self._init_visa(usb_address, termination='\n')
         self.address = usb_address
 
+    def __getstate__(self):
+        self._save_dict = {
+            'output current': self.I,
+            'output voltage': self.V,
+        }
+        return self._save_dict
+
     @property
     def I(self):
         '''

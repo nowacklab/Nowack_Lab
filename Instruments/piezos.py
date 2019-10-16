@@ -58,9 +58,9 @@ class Piezos(Instrument):
             self.zero()
 
     def __getstate__(self):
-        self._save_dict = {"x": self.x,
-                            "y": self.y,
-                            "z": self.z,
+        self._save_dict = {"x": self.x.__getstate__(),
+                            "y": self.y.__getstate__(),
+                            "z": self.z.__getstate__(),
                             "daq": self._daq,
                             "max sweep rate": self._max_sweep_rate,
                             "max step size": self._max_step_size

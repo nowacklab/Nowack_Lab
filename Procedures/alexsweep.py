@@ -7,6 +7,7 @@ import sys
 from ..Utilities.dataset import Dataset
 from ..Utilities.datasaver import Saver
 from datetime import datetime
+import copy
 
 class Recorder(Measurement):
     '''
@@ -93,7 +94,6 @@ class Active(Measurement):
             pass
 
     def _getconfig(self):
-        print('ran config')
         config = {'Values swept over' : self.array,
                                                 'Property swept': self.prop,}
         if self.savestate:
@@ -116,110 +116,140 @@ class Sweep(Measurement):
         self.name = name
         self.ns = []
         self.bi = bi
+        self.sweep_data = {}
         self.runcount = runcount
         self.returns = True
         self.saveasyougo = saveasyougo
         self.pathtosave = pathtosave
         self.pausebeforesweep = pausebeforesweep
-        if (saveasyougo or saveatend) and not svr:
+        if (saveconfig or saveasyougo or saveatend) and not svr:
             self.savedata = Saver(name)
         elif svr:
             self.savedata = svr
         self.saveatend = saveatend
         self.saveconfig = saveconfig
 
-    def _setupsave(self, init, iter):
-        '''
-        Sets up saving of data
-        '''
-        sweep_data = {}
-        sweep_data['config'] = {}
-        if self.bi:
-            directions = ['forward', 'reverse']
-        else:
-            directions = ['forward']
+    def _getconfig(self):
+        config = {}
         repeaterorder = []
-        if self.saveconfig:
-            for r in self.repeaters:
-                repeaterorder.append(r.name)
-                if hasattr(r, "_getconfig"):
-                    cur_config =  r._getconfig()
-                    if self.saveasyougo or self.saveatend:
-                        self.savedata.append(self.pathtosave +
-                        'initialization: %s/iteration: %s/params/%s/'
-                        %(str(init),str(iter), r.name), cur_config)
-                    else:
-                        sweep_data['config'][r.name] = cur_config
-            if self.saveasyougo or self.saveatend:
-                self.savedata.append(self.pathtosave +
-                'initialization: %s/iteration: %s/params/repeater order/'
-                %(str(init),str(iter)), repeaterorder)
+        for r in self.repeaters:
+            repeaterorder.append(r.name)
+            if hasattr(r, "_getconfig"):
+                cur_config =  r._getconfig()
+                config[r.name] = cur_config
+        config['repeater order'] = repeaterorder
+        return config
+
+    def _setuprepeatersave(self, init, iter, repeater, testdata):
+        '''
+        Sets up saving of data for one repeater
+        '''
+        if repeater.returns:
+            repeater.issliced = True
+            if isinstance(testdata,dict):
+                emptytestdata = copy.deepcopy(testdata)
+                self.dictvisititems(emptytestdata, self._replacewithempty)
+            elif isinstance(testdata, (float, int)):
+                emptytestdata = np.full(self.points, np.nan)
+            elif isinstance(testdata, (np.ndarray, list)):
+                a = list(np.shape(testdata))
+                a.insert(0, self.points)
+                datashape = tuple(a)
+                emptytestdata = np.full(datashape, np.nan)
             else:
-                sweep_data['config']['repeater order'] = repeaterorder
-        for direction in directions:
-            sweep_data[direction] = {}
-            for r in self.repeaters:
-                if r.returns:
-                    print(r.name)
-                    if isinstance(r, Sweep):
-                        sweep_data[direction][r.name]={}
-                        if self.saveasyougo:
-                            self.savedata.append(self.pathtosave +
-                            'initialization: %s/iteration: %s/%s/%s/'
-                            % (str(init),str(iter), direction, r.name), {})
-                    else:
-                        testdata = r(0)
-                        if isinstance(testdata,dict):
-                            sweep_data[direction][r.name]={}
-                            for key in testdata.keys():
-                                arrayedtestdata = np.asarray(testdata[key])
-                                sweep_data[direction][r.name
-                                    ][key] = np.full((self.points,) +
-                                    arrayedtestdata.shape, np.float64(np.nan))
-                                if self.saveasyougo:
-                                    self.savedata.append(self.pathtosave +
-                                    'initialization: %s/iteration: %s/%s/%s/%s'
-                                    %(str(init),str(iter), direction, r.name,
-                                            str(key)), np.full((self.points,)
-                                + arrayedtestdata.shape, np.float64(np.nan)))
-                        else:
-                            arrayedtestdata = np.asarray(testdata)
-                            sweep_data[direction][r.name]=(
-                                np.full((self.points,)
-                             + arrayedtestdata.shape, np.float64(np.nan)))
-                            if self.saveasyougo:
-                                self.savedata.append(self.pathtosave
-                                        + 'initialization: %s/iteration: %s/%s/%s/'
-                                    % (str(init),str(iter), direction, r.name),
-                                                 np.full((self.points,)
-                                 + arrayedtestdata.shape, np.float64(np.nan)))
-        return sweep_data
+                repeater.issliced = False
+                self.sweep_data['iteration: ' + str(iter)]['forward'][repeater.name] = {}
+                if self.bi:
+                    self.sweep_data['iteration: ' + str(iter)]['reverse'][repeater.name] = {}
+            if repeater.issliced:
+                self.sweep_data['iteration: ' + str(iter)]['forward'][repeater.name] = emptytestdata
+                if self.saveasyougo:
+                    self.savedata.append(self.pathtosave +
+                    'initialization: %s/iteration: %s/forward/%s/'
+                    %(str(init),str(iter),  repeater.name), emptytestdata)
+                if self.bi:
+                    self.sweep_data['iteration: ' + str(iter)]['reverse'][repeater.name] = copy.deepcopy(emptytestdata)
+                    if self.saveasyougo:
+                        self.savedata.append(self.pathtosave +
+                        'initialization: %s/iteration: %s/reverse/%s/'
+                        %(str(init),str(iter),  repeater.name), copy.deepcopy(emptytestdata))
+
+    def dictvisititems(self, dictionary, function):
+        '''
+        Applies function at every node of nested dict, passing the path as a
+        list as the first argument, and the object itself as the second.
+        '''
+        def recursivevisit(dictionary, function, keylist):
+            for key in dictionary.keys():
+                if isinstance(dictionary[key], dict):
+                    recursivevisit(dictionary[key], function, keylist + [key])
+                else:
+                    dictionary[key] = function(keylist + [key], dictionary[key])
+        recursivevisit(dictionary, function, [])
+
+
+    def _replacewithempty(self, keys, element):
+        '''
+        If element is a list, removes all data, and adds a new first dimension
+        of length numpoints. If element is an int or a float, returns a
+        array of length numpoints.
+        '''
+
+        if isinstance(element, (list, np.ndarray)):
+            a = list(np.shape(element))
+            a.insert(0, self.points)
+            datashape = tuple(a)
+            element = np.full(datashape, np.nan)
+        elif isinstance(element, (int,float)):
+            element = np.full(self.points, np.nan)
+        return element
+
+    def _sliceload(self, superdataset, subdataset, slice):
+        '''
+        Superdataset and subdataset must have the same structure, except each
+        leaf of superdataset must have an extra first dimension. Each leaf in
+        subdataset will be loaded into slice of each leaf of superdict.
+        '''
+        subdataset = copy.deepcopy(subdataset)
+        if isinstance(subdataset, dict):
+            def _loaddict(path, obj):
+                '''
+                Takes the path to an object in an subdataset and the object
+                itself. If the object is a dict, does nothing, but if the
+                object is not, loads it into slice at the same location in
+                superdataset
+                '''
+                if not isinstance(obj, dict):
+                    currentdictlevel = superdataset
+                    for key in path[:-1]:
+                        currentdictlevel = currentdictlevel[key]
+                    currentdictlevel[path[-1]][slice] = obj
+            self.dictvisititems(subdataset, _loaddict)
+        elif isinstance(subdataset, (np.ndarray, list, int, float)):
+            superdataset[slice] = subdataset
+        return superdataset
+
 
     def __call__(self, n):
         '''
         Runs the sweep, appending the sweep data to self.sweeps_data.
+        Config will only be returned on the first call (that is, n = 0)
         '''
         #procedural instrument saving. Experimental. Still save by hand as well.
-
-        sweep_data = {}
+        if n == 0 and self.saveconfig:
+            self.savedata.append('/config/', self._getconfig())
         for k in range(self.runcount):
-            sweep_data["iteration: " + str(k)] = {}
+            if self.bi:
+                self.sweep_data['iteration: ' + str(k)] = {'forward':{}, 'reverse':{}}
+            else:
+                self.sweep_data['iteration: ' + str(k)] = {'forward':{}}
             time.sleep(self.pausebeforesweep)
-            if n in self.ns:
-                shoulduse = input('This n has already been swept. If you want to use'
-                                  +' it anyway, overwriting data, type OVERWRITE. '
-                                  + 'Otherwise, type another n to use')
-                if shoulduse == 'OVERWRITE':
-                    pass
-                else:
-                    n = shoulduse
-            self.ns.append(n)
-            sweep_data["iteration: " + str(k)]  = (
-                            self.__class__._setupsave(self, n, k))
+            init = n
+            iter = k
             if self.waiter:
                 self.waiter.reset()
             for point in  range(self.points):
-                clear_output()
+                #clear_output()
                 #print('On point ' + str(point) +
                 #                            ' out of ' + str(self.points))
                 for r in self.repeaters:
@@ -227,78 +257,65 @@ class Sweep(Measurement):
                         break
                     if r.returns:
                         returneddata = r(point)
-                        if isinstance(r, Sweep):
-                            sweep_data["iteration: " + str(k)]['forward'][
-                                r.name][point] = returneddata
+                        if point == 0:
+                             self._setuprepeatersave(init, iter, r,
+                                                          returneddata)
+                        if r.issliced:
+                            self._sliceload(
+                                    self.sweep_data['iteration: ' + str(iter)]
+                                    ['forward'][r.name], returneddata,
+                                    slice(point, point+1))
                             if self.saveasyougo:
-                                self.savedata.append(self.pathtosave
-                                + 'initialization: %s/iteration: %s/forward/%s/'
-                                % (str(n),str(k), r.name), returneddata)
-                        elif isinstance(returneddata, dict):
-                            for key in returneddata:
-                                sweep_data["iteration: " + str(k)]['forward'][
-                                    r.name][key][point] = returneddata[key]
-                                if self.saveasyougo:
-                                    self.savedata.append(self.pathtosave +
-                                    'initialization: %s/iteration: %s/forward/%s/%s'
-                            %(str(n),str(k), r.name, str(key)),
-                            returneddata[key],
-                                                slc= slice(point, point + 1))
+                                self.savedata.append(self.pathtosave +
+                                'initialization: %s/iteration: %s/forward/%s/'
+                                %(str(init),str(iter),  r.name),
+                                returneddata, slice(point, point+1))
                         else:
-                            sweep_data["iteration: " + str(k)]['forward'][
-                                                    r.name][point] =  returneddata
+                            self.sweep_data['iteration: ' + str(iter)]['forward'][r.name][str(point)] = (
+                                                        returneddata)
                             if self.saveasyougo:
-                                self.savedata.append(self.pathtosave
-                                + 'initialization: %s/iteration: %s/forward/%s/'
-                                % (str(n),str(k), r.name), returneddata,
-                                                   slc= slice(point, point + 1))
+                                self.savedata.append(self.pathtosave +
+                                'initialization: %s/iteration: %s/forward/%s/%s/'
+                                %(str(init),str(iter),  r.name,
+                                  str(point)),  returneddata)
                     else:
                         r(point)
             if self.bi:
                 time.sleep(self.pausebeforesweep)
                 for point in  range(self.points):
-                    clear_output()
+                    #clear_output()
                     #print('On point ' + str(point) +
-                    #                        ' out of ' + str(self.points))
+                    #                            ' out of ' + str(self.points))
                     for r in self.repeaters:
                         if(self.waiter and self.waiter.test(n)):
                             break
                         if r.returns:
                             returneddata = r(self.points - point - 1)
-                            if isinstance(r, Sweep):
-                                sweep_data["iteration: " + str(k)]['reverse'][
-                                    r.name][point] = returneddata
+                            if r.issliced:
+                                self._sliceload(
+                                        self.sweep_data['iteration: ' + str(iter)]
+                                        ['reverse'][r.name], returneddata,
+                                        slice(point, point+1))
                                 if self.saveasyougo:
-                                    self.savedata.append(self.pathtosave
-                                    + 'initialization: %s/iteration: %s/reverse/%s/'
-                                    % (str(n),str(k), r.name), returneddata)
-                            elif isinstance(returneddata, dict):
-                                for key in returneddata:
-                                    sweep_data["iteration: " + str(k)]['reverse'][
-                                        r.name][key][point] = returneddata[key]
-                                    if self.saveasyougo:
-                                        self.savedata.append(self.pathtosave +
-                                        'initialization: %s/iteration: %s/reverse/%s/%s'
-                                %(str(n),str(k), r.name, str(key)),
-                                returneddata[key], slc= slice(point, point + 1))
+                                    self.savedata.append(self.pathtosave +
+                                    'initialization: %s/iteration: %s/reverse/%s/'
+                                    %(str(init),str(iter),  r.name),
+                                    returneddata, slice(point, point+1))
                             else:
-                                sweep_data["iteration: " + str(k)]['reverse'][
-                                                        r.name][point] =  returneddata
+                                self.sweep_data['iteration: ' + str(iter)]['reverse'][r.name][str(point)] = (
+                                                            returneddata)
                                 if self.saveasyougo:
-                                    self.savedata.append(self.pathtosave
-                                    + 'initialization: %s/iteration: %s/reverse/%s/'
-                                    % (str(n),str(k), r.name),returneddata,
-                                                    slc= slice(point, point + 1))
+                                    self.savedata.append(self.pathtosave +
+                                    'initialization: %s/iteration: %s/reverse/%s/%s/'
+                                    %(str(init),str(iter),  r.name,
+                                      str(point)),  returneddata)
                         else:
                             r(self.points - point - 1)
-
-
-
         if self.saveatend:
             self.savedata.append(self.pathtosave + 'initialization: %s/'
-                                                        % str(n), sweep_data)
+                                                % str(n), self.sweep_data)
             #self.save()
-        return sweep_data
+        return self.sweep_data
 
     def run(self):
         '''
@@ -329,8 +346,11 @@ class Sweep(Measurement):
             elif isinstance(repeater, Wait):
                 description += ('waits for trip %s' % repeater.name)
             elif isinstance(repeater, Delayer):
-                description += ('delays execution for %f seconds '
-                                % repeater.delay )
+                if isinstance(repeater.delay, (np.ndarray,list)):
+                    description += ('delays execution for a variable time')
+                else:
+                    description += ('delays execution for %f seconds '
+                                    % repeater.delay )
             description += ('then ')
         description += ('repeats.')
         print(description)
@@ -398,7 +418,7 @@ class Time(Measurement):
         self.returns = True
     def restart(self, n):
         '''
-        Resets the zero of time to the next time seconds or waittime is called
+        Resets the zero of time to the next time seconds or the class is called
         '''
         self.hasbeencalled = False
     def seconds(self):
@@ -438,10 +458,10 @@ class Delayer(Measurement):
         self.returns = False
 
     def __call__(self, n):
-        starttime = time.time()
-        while(time.time() - starttime<self.delay):
-            pass
-
+        if isinstance(self.delay, (np.ndarray,list)):
+            time.sleep(self.delay[n])
+        else:
+            time.sleep(self.delay)
 
 class Wait(Measurement):
 
