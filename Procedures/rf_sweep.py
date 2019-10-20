@@ -189,9 +189,9 @@ class RF_sweep_current: # should this extend class Measurement?
         timestamp = now.strftime('%Y-%m-%d_%H%M%S')
 
         #initialize empty array to store data in TODO: change from empty to NAN?
-        re_im = np.empty((self.k_Isteps, 2, int(self.v1.numpoints)))
+        re_im = np.empty((self.k_Isteps, 2,self.v_numpoints))
         if self.hysteresis:
-            re_im_rev = np.empty((self.k_Isteps, 2, int(self.v1.numpoints)))
+            re_im_rev = np.empty((self.k_Isteps, 2, self.v_numpoints))
 
         # sweep foward in current
         index = 0
@@ -381,15 +381,15 @@ class RF_sweep_current: # should this extend class Measurement?
 
 class RF_CW_sweep_power():
     """ """
-    def __init__(self, k_Istart, k_Istop, k_Isteps, v_cw_freq, v_avg_factor,
+    def __init__(self, k_Istart, k_Istop, k_Isteps, v_cw_freq,
                 v_power_start, v_power_stop, v_power_step, filepath,
-                v_sweeptime = 1, v_numpoints=1601,
-                notes="No notes", plot=False):
+                v_sweeptime = .1, v_numpoints=201,v_avg_factor = 1,
+                notes="No notes", plot=False, hysteresis = False):
 
         # Set object variables
         self.k_Istart = k_Istart
-        self.k_Istop = k_Istop
-        self.k_Isteps = k_Isteps
+        self.k_Istop =k_Istop
+        self.k_Isteps =k_Isteps
         self.v_cw_freq = v_cw_freq      # this is the cw frequency you want to sweep at
         self.v_sweeptime = v_sweeptime  # how long the time trace is
         self.v_avg_factor = v_avg_factor
@@ -401,6 +401,8 @@ class RF_CW_sweep_power():
         self.v_sweeptime = v_sweeptime
         self.notes = notes
         self.plot = plot
+        self.hysteresis = False
+
 
 
         self.valid_numpoints = [3, 11, 21, 26, 51, 101, 201, 401, 801, 1601]
@@ -418,6 +420,16 @@ class RF_CW_sweep_power():
 
     def do(self):
 
+        # Set up current source settings
+        if(self.k3.output == 'off'):
+            self.k3.output = 'on'
+        self.k3.source = 'I'
+        time.sleep(3)
+        self.k3.Iout_range = 2e-3  # 2 mA range # TODO: figure out what exactly range is
+        self.k3.Iout = self.k_Istart
+        self.k3.V_compliance = 21  # 21 volt compliance
+
+
         # Set up VNA settings
         self.v1.sweepmode = "CW"    # Sets to continuous sweep mode
         self.v1.sweeptime = self.v_sweeptime
@@ -429,14 +441,72 @@ class RF_CW_sweep_power():
         self.v1.averaging_factor = self.v_avg_factor
         self.v1.numpoints = self.v_numpoints  # set num freq pnts for VNA
 
-        # creates a timestamp that will be in the h5 file name for this run
+        #creates a timestamp that will be in the h5 file name for this run
         now = datetime.now()
         timestamp = now.strftime('%Y-%m-%d_%H%M%S')
 
 
+        I_stepsize = (float(self.k_Istop-self.k_Istart))/self.k_Isteps
+        print('Incrementing current in step sizes of ', str(I_stepsize*1000) + ' milliamps')
+
+        Power_stepsize = (float(self.v_power_stop-self.v_power_start))/self.v_power_step
+        print('Incrementing power in step sizes of ', str(Power_stepsize*1000) + ' milliamps')
+
+
+        #initialize empty array to store data in TODO: change from empty to NAN?
+        re_im = np.empty((self.v_power_step, int(self.k_Isteps), 2, self.v_numpoints))
+        if self.hysteresis:
+            re_im_rev = np.empty((self.v_power_step,int(self.k_Isteps), 2, self.v_numpoints))
+
+        self.v1.power = self.v_power_start - Power_stepsize
+        for powerIndex in range(0, self.v_power_step):
+            self.v1.power += Power_stepsize
+            if powerIndex % 10 == 0:
+                print("Power source step #" + str(powerIndex+1) + " out of " + str(self.v_power_step))
+            self.k3.Iout = self.k_Istart
+            # sweep foward in current
+            for step in range(0, self.k_Isteps):
+                if step % 10 == 0:
+                    print("Current source step #" + str(step+1) + " out of " + str(self.k_Isteps))
+                self.k3.Iout += I_stepsize    # increment current
+                self.v1.averaging_restart()  # restart averaging
+                re_im[powerIndex][step] = self.v1.save_Re_Im()
+
+
+
+        # sweep backwards in current
+        if self.hysteresis:
+            self.v1.power = self.v_power_start - Power_stepsize
+            for powerIndex in range(0, self.v_power_step):
+                self.v1.power += Power_stepsize
+                if powerIndex % 10 == 0:
+                    print("Power source step #" + str(powerIndex+1) + " out of " + str(self.v_power_step))
+                self.k3.Iout = self.k_Istart
+                for step in range(0, self.k_Isteps):
+                    if step % 10 == 0:
+                        print("Current source step #" + str(step+1) + " out of " + str(self.k_Isteps))
+                    self.k3.Iout = self.k3.Iout - I_stepsize  # increment current
+                    self.v1.averaging_restart()  # restart averaging
+                    re_im_rev[powerIndex][step] = self.v1.save_Re_Im()
+
+
+        if self.hysteresis:
+            self.save_data(timestamp, re_im, re_im_rev=re_im_rev)
+        else:
+            self.save_data(timestamp, re_im)    # save data to h5
+
+        self.k3.Iout = 0
+        self.k3.output = 'off'  # turn off keithley output
+        self.v1.powerstate = 0  # turn off VNA source power
+
+        if self.plot:
+            RF_CW_sweep_power.plotPowerSweep(self.filepath + "\\" + timestamp + "_RF_CW_sweep_power.hdf5")
+            if self.hysteresis:
+                RF_CW_sweep_power.plotPowerSweep(self.filepath + "\\" + timestamp + "_RF_CW_sweep_power.hdf5", rev=False)
+
 
     def save_data(self, timestamp, re_im):
-        name = timestamp + 'RF_CW_sweep_power'
+        name = timestamp + '_RF_CW_sweep_power'
         path = os.path.join(self.filepath, name + '.hdf5')
         info = dataset.Dataset(path)
         info.append(path + '/Istart', self.k_Istart)
@@ -452,94 +522,63 @@ class RF_CW_sweep_power():
         info.append(path + '/re_im/description', "shape [Data, Re Im]")
         info.append(path + '/notes', self.notes)
 
-        # Should use the usual v1.save_Re_Im() to get np array with shape (2, numpoints)
-        #   where first dimension is for real and imaginary parts, 2nd dimension is for point along time trace
-    def save_data(self):
-        pass
-
-class graph_plot():
-    """Additional static methods for graphing from filename"""
+    @staticmethod
+    def plotPowerSweep(filename, rev=False):
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+        data = dataset.Dataset(filename)
+        if not rev:
+            current = np.linspace(data.get(filename + '/Istart')*1000,
+                        data.get(filename + '/Istop')*1000,
+                        data.get(filename + '/Isteps'))
+        else:
+            current = np.linspace(data.get(filename + '/Istop')*1000,
+                        data.get(filename + '/Istart')*1000,
+                        data.get(filename + '/Isteps'))
+        power = np.linspace(data.get(filename + '/v_power_start'),
+                    data.get(filename + '/v_power_stop'),
+                    data.get(filename + '/v_power_step'))
+        freq = data.get(filename + '/v_cw_freq')/1e9
+        Y, X = np.meshgrid(current, power)
+        dB = RF_CW_sweep_power.dB_data_pow_sweep(filename, rev = rev)
+        dB_avg = np.empty((int(data.get(filename + '/v_power_step')),int(data.get(filename + '/Isteps'))))
+        n = 0
+        for array in dB:
+            m=0
+            for currentArray in array:
+                dB_avg[n][m] = np.mean(currentArray)
+                m +=1
+            n += 1
+        im=ax.pcolor(X, Y, dB_avg, cmap="inferno")
+        cbar = fig.colorbar(im)
+        ax.set_ylabel('field coil current (mA)')
+        ax.set_xlabel('power (dBm)')
+        if not rev:
+            ax.set_title(filename + "\nFrequency = " +
+                str(data.get(filename + '/v_cw_freq')/1e9) + " GHz")
+        else:
+            ax.set_title(filename + "\nSweep back in current" +
+                        "\nPower from VNA = " + str(data.get(filename + '/power'))
+                        + " dBm")
+        cbar.set_label('Attenuation [dB]')
+        if not rev:
+            graph_path = filename.replace(".hdf5", "pow.png")
+        else:
+            graph_path = filename.replace(".hdf5", "pow_rev.png")
+        fig.savefig(graph_path)
 
     @staticmethod
-    def current_power_dB(filename_list, selected_freq, rev=False):
-        """Input list of filenames that correspond to current-frequency sweeps (same currents and frequencies) at different powers.
-        Take line cuts at selected_frequency for every filename. Graph these into current-power "sweeps".
-        """
-
-        # Get information from first filename
-        first_filename = filename_list[0]
-        data = dataset.Dataset(first_filename)
-        data_Istart = data.get(first_filename + '/Istart')
-        data_Istop = data.get(first_filename + '/Istop')
-        data_Isteps = data.get(first_filename + '/Isteps')
-        data_freqmin = data.get(first_filename + '/freqmin')
-        data_freqmax = data.get(first_filename + '/freqmax')
-        data_freqsteps = data.get(first_filename + '/freqsteps')
-
-        num_powersteps = len(filename_list)
-
-        # initialize np array for recording slices of re, im data
-        slices_arr = np.empty((data_Isteps, num_powersteps, 2))     # shape is (current steps, power steps, 2 (for re im) )
-
-        # record current range (will be x-axis)
+    def dB_data_pow_sweep(filename, rev = False):
+        data = dataset.Dataset(filename)
         if not rev:
-            currents_list = np.linspace(data_Istart*1000, data_Istop*1000, data_Isteps)
+            re_im_info = data.get(filename + '/re_im/data')
         else:
-            currents_list = np.linspace(data_Istop*1000, data_Istart*1000, data_Isteps)
-
-        # initialize np array for recording list of powers to plot (will be y-axis)
-        powers_list = np.empty((1, len(filename_list)))
-        list_index = 0
-        # for each filename, extract a line cut at the frequency and record the power
-        # TODO should check file similarity in better way
-        for single_filename in filename_list:
-            data = dataset.Dataset(single_filename)
-            data_Istart = data.get(single_filename + '/Istart')
-            data_Istop = data.get(single_filename + '/Istop')
-            data_Isteps = data.get(single_filename + '/Isteps')
-            data_power = data.get(single_filename + '/power/')
-            data_re_im = data.get(single_filename + 're_im/data')
-            data_re_im_rev = data.get(single_filename + 're_im_rev/data')
-
-            # get list of currents for x-axis, ensure that is same as currents for first filename
-            if not rev:     # if forward current sweep
-                new_currents_list = np.linspace(data_Istart*1000, data_Istop*1000, data_Isteps)
-            else:           # reverse current sweep
-                new_currents_list = np.linspace(data_Istop*1000, data_Istart*1000, data_Isteps)
-
-            # if detect (unusable) difference between data files, break
-            if currents_list != new_currents_list:
-                print("Currents do not match up, not plotting anything")
-                print("mismatch at file: ", single_filename)
-                break
-
-            # record power (powers_list will be y-axis)
-            powers_list[list_index] = data_power
-
-
-            # record line cut at desired frequency from re_im_data or re_im_rev data
-            selected_freq_index = math.floor((selected_freq - data_freqmin)/(data_freqmax - data_freqmin) * data_freqsteps)
-
-            # save both re_im, all bias current, just one frequency (shape of data_re_im?) data_re_im[]
-            if not rev:
-                slices_arr[list_index, :, :] = data_re_im[:, selected_freq_index, :]
-            if rev:
-                slices_arr[list_index, :, :] = data_re_im_rev[:, selected_freq_index, :]
-            list_index += 1
-        # Now have everything needed to plot. Gain more important for now, but also do phase
-        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
-
-        X_arr, Y_arr = np.meshgrid(currents_list, powers_list)
-
-        slices_arr_dB = np.empty((num_powersteps, data_Isteps))
-        for power_step in range(len(filename_list)):
-            for current_step in range(data_Isteps):
-                re = slices_arr[power_step, current_step, 0]
-                im = slices_arr[power_step, current_step, 1]
-                slices_arr_dB[power_step, current_step] = 20*math.log(math.sqrt(re**2 + im**2), 10)
-
-        im = ax.pcolor(X_arr, np.flip(Y_arr, 1), np.flip(slices_arr, 1), cmap="viridis")
-        cbar = fig.colorbar(im)
-        ax.set_xlabel('field coil current (mA)')
-        ax.set_ylabel('power (dBm)')
-        cbar.set_label('Gain (dB)')
+            re_im_info = data.get(filename + '/re_im_rev/data')
+        attenuation = np.empty((data.get(filename + '/v_power_step'),int(data.get(filename + '/Isteps')), data.get(filename + '/numpoints')))
+        n = 0
+        for array in re_im_info:
+            m=0
+            for currentArray in array:
+                attenuation[n][m] = VNA8722ES.Re_Im_to_dB(currentArray)
+                m +=1
+            n += 1
+        return attenuation
