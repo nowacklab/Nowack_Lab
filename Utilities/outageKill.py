@@ -1,4 +1,4 @@
-'''Doc String:
+"""Doc String:
 
 This code kills all other kernels to gain control of the daq and 
 attocubes then zeros the daq over one second and backs off the 
@@ -6,7 +6,7 @@ attocubes by 1000 steps.
 
 Author: Alex Jarjour
 Warning: this code will kill ALL OTHER PYTHON THREADS.
-'''
+"""
 
 
 

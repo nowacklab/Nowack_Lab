@@ -6,28 +6,28 @@ import numpy as np
 class Dataset:
     _subsets = []
     def __init__(self, filename=None):
-        '''
+        """
         Creates the hdf5 file for saving.
-        '''
+        """
         self.filename = filename
 
     def get(self, path,slice = False):
-        '''
+        """
         Gets the element of the hdf5 at path. Path must be a string of
         keys seperated by '/'. If path does not descend to a dataset in the h5,
         then it will return a dictionary with nested keys in the structure of
         the subgroup of the h5. If path does reach a dataset, and that dataset
         is an array, you may give a slice object to specify what data you want
         from the array
-        '''
+        """
         datadict = {}
         def _loaddict(path, obj):
-            '''
+            """
             Takes the path to an object in an h5 file and the object itself.
             If the object is a group, does nothing, but if the object is a
             dataset, finds the equivalent place in datadict (creating nested
             dics if needed), and puts the contents of obj there.
-            '''
+            """
             if isinstance(obj, h5py._hl.dataset.Dataset):
                 listpath = path.split('/')#split the path into individual keys
                 currentdictlevel = datadict
@@ -58,21 +58,21 @@ class Dataset:
         return toreturn
 
     def append(self, pathtowrite, datatowrite, slice = False):
-        '''
+        """
         Adds new data to dataset at path. Data may be a string, number, numpy
         array, or a nested dict. If a nested dict, leaves must be strings,
         numbers or numpy arrays. Data may not overwrite, however, dicts can be
         used that go through HDF5 groups that already exist.
-        '''
+        """
         cleandatatowrite = self.sanitize(datatowrite)
         if isinstance(cleandatatowrite, dict):
             def _loadhdf5(path, obj):
-                '''
+                """
                 Takes the path to an object in an dict file and the object
                 itself. If the object is a dict, does nothing, but if the
                 object is not, finds the equivalent place in f (creating nested
                 groups if needed), and puts the contents of obj there.
-                '''
+                """
                 sep = '/'
                 h5path = pathtowrite + sep.join(path)
                 if not isinstance(obj, dict):
@@ -87,7 +87,7 @@ class Dataset:
 
 
     def _writetoh5(self, **kwargs):
-        '''
+        """
         Tries to write to h5, giving an opportunity to change path
         if there is already data at the path. This only writes complete
         objects to fresh datasets.
@@ -99,7 +99,7 @@ class Dataset:
                                             objects.
 
         path (str): location to write data. should be in hdf5 path format.
-        '''
+        """
         f = h5py.File(self.filename,'a')
         try:
             f[kwargs['path']]
@@ -114,10 +114,10 @@ class Dataset:
 
 
     def dictvisititems(self, dictionary, function):
-        '''
+        """
         Applies function at every node of nested dict, passing the path as a
         list as the first argument, and the object itself as the second.
-        '''
+        """
         def recursivevisit(dictionary, function, keylist):
             for key in dictionary.keys():
                 function(keylist + [key], dictionary[key])
@@ -126,10 +126,10 @@ class Dataset:
         recursivevisit(dictionary, function, [])
 
     def _appenddatah5(self, filename, numpyarray, pathtowrite, slice):
-        '''
+        """
         Adds data to an existing array in a h5 file. Can only overwrite nan's,
         such arrays should be instantiated with writetoh5
-        '''
+        """
         f = h5py.File(filename,'r+')
         dataset = f[pathtowrite]
         if np.shape(numpyarray) !=  np.shape(dataset[slice]):
@@ -162,10 +162,10 @@ class Dataset:
                                             pathtowrite, slice)
 
     def sanitize(self,data):
-        '''
+        """
         Sanitizes input before loading into an h5 file. If sanitization fails,
         prints a message and converts to a string.
-        '''
+        """
         allowedtypes = ['float', 'int','complex', 'uint']
         allowednonnumpytypes = [str, float, int, list]
         if type(data) in allowedtypes + allowednonnumpytypes:
@@ -204,9 +204,9 @@ class Dataset:
         return computer_name
 
     def get_data_server_path():
-        '''
+        """
         Returns full path of the data server's main directory, formatted based on OS.
-        '''
+        """
         if platform.system() == 'Windows':
             return r'\\SAMBASHARE\labshare\data'
         elif platform.system() == 'Darwin': # Mac
@@ -218,9 +218,9 @@ class Dataset:
 
 
     def get_local_data_path():
-        '''
+        """
         Returns full path of the local data directory.
-        '''
+        """
         return os.path.join(
                     os.path.expanduser('~'),
                     'data',
@@ -230,9 +230,9 @@ class Dataset:
 
 
     def get_remote_data_path():
-        '''
+        """
         Returns full path of the remote data directory.
-        '''
+        """
         return os.path.join(
                     get_data_server_path(),
                     get_computer_name(),

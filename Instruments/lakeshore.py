@@ -33,38 +33,49 @@ class LakeshoreChannel(VISAInstrument):
 
 
     def __getstate__(self):
+        if self._loaded:
+            return super().__getstate__() # Do not attempt to read new values
         self._save_dict = {
-            'Channel number': self._num,
-            'Channel label': self._label,
-            'Channel enabled?': self.enabled,
-            'Channel being scanned?': self.scanned,
+            'Channel_number': self._num,
+            'Channel_label': self._label,
+            'Channel_enabled?': self.enabled,
+            'Channel_being_scanned?': self.scanned,
             'power': self.P,
             'resistance': self.R,
             'temperature': self.T,
             'status': self.status,
-            'dwell time': self.dwell,
+            'dwell_time': self.dwell,
             'pause': self.pause,
-            'curve number': self.curve_num,
-            'temperature coefficient 1pos, 2neg': self.temp_coef,
+            'curve_number': self.curve_num,
+            'temperature_coefficient_1pos_2neg': self.temp_coef,
         }
         return self._save_dict
 
 
     def __setstate__(self, state):
-        state['_num'] = state.pop('Channel number')
-        state['_label'] = state.pop('Channel label')
-        state['_enabled'] = state.pop('Channel enabled?')
-        state['_scanned'] = state.pop('Channel being scanned?')
-        state['_P'] = state.pop('power')
-        state['_R'] = state.pop('resistance')
-        state['_T'] = state.pop('temperature')
-        state['_status'] = state.pop('status')
-        state['_dwell'] = state.pop('dwell time')
-        state['_pause'] = state.pop('pause')
-        state['_curve_num'] = state.pop('curve number')
-        state['_temp_coef'] = state.pop('temperature coefficient 1pos, 2neg')
+        keys = [
+            ('_num', 'Channel_number'),
+            ('_label', 'Channel_label'),
+            ('_enabled', 'Channel_enabled?'),
+            ('_scanned', 'Channel_being_scanned?'),
+            ('_P', 'power'),
+            ('_R', 'resistance'),
+            ('_T', 'temperature'),
+            ('_status', 'status'),
+            ('_dwell', 'dwell_time'),
+            ('_pause', 'pause'),
+            ('_curve_num', 'curve_number'),
+            ('_temp_coef', 'temperature_coefficient_1pos_2neg'),
+        ]
+
+        for new, old in keys:
+            try:
+                state[new] = state.pop(old)
+            except:
+                pass
 
         self.__dict__.update(state)
+        self._loaded = True
 
 
     def _get_inset(self):
@@ -73,7 +84,7 @@ class LakeshoreChannel(VISAInstrument):
         These are channel settings in an array:
             [enabled/disabled, dwell, pause, curve number, tempco]
         '''
-        inset = self.ask('INSET? %i' %self._num)
+        inset = self.query('INSET? %i' %self._num)
         inset = [int(x) for x in inset.split(',')]
         inset[0] = bool(inset[0]) # make enabled True/False
         for i, var in enumerate(self._insets):
@@ -112,7 +123,7 @@ class LakeshoreChannel(VISAInstrument):
         Get the power (W) of this input channel.
         '''
         if self.status == 'OK':
-            self._P = float(self.ask('RDGPWR? %i' %self._num))
+            self._P = float(self.query('RDGPWR? %i' %self._num))
         else:
             self._P = np.nan
         return self._P
@@ -123,7 +134,7 @@ class LakeshoreChannel(VISAInstrument):
         Get the resistance (R) of this input channel.
         '''
         if self.status == 'OK':
-            self._R = float(self.ask('RDGR? %i' %self._num))
+            self._R = float(self.query('RDGR? %i' %self._num))
         else:
             self._R = np.nan
         return self._R
@@ -135,7 +146,7 @@ class LakeshoreChannel(VISAInstrument):
         Returns True/False
         '''
         # SCAN? returns ##,#. The first number is channel being scanned
-        scan = self.ask('SCAN?')
+        scan = self.query('SCAN?')
         scan = int(scan.split(',')[0])
         self._scanned = (scan == self._num) # True or False
         return self._scanned
@@ -165,7 +176,7 @@ class LakeshoreChannel(VISAInstrument):
             'VCM OVL',
             'CS OVL'
         ]
-        b = int(self.ask('RDGST? %i' %self._num)) # "ReaDinG STatus"
+        b = int(self.query('RDGST? %i' %self._num)) # "ReaDinG STatus"
 
         status_message = ''
         binlist = [int(x) for x in '{:08b}'.format(b)] # to list of 1s and 0s
@@ -183,7 +194,7 @@ class LakeshoreChannel(VISAInstrument):
         Get the temperature (K) reading of input channels as a dictionary.
         '''
         if self.status == 'OK':
-            self._T = float(self.ask('RDGK? %i' %self._num))
+            self._T = float(self.query('RDGK? %i' %self._num))
         else:
             self._T = np.nan
         return self._T
@@ -194,6 +205,7 @@ class Lakeshore372(VISAInstrument):
     Driver to communicate with LakeShore Model 372 AC Resistance Bridge & Temperature Controller for the BlueFors dilution refrigerator
     '''
     _label = 'Lakeshore Model 372'
+    _idn = 'MODEL372'
     _strip = '\r'
     _channel_names = {
         1: '50K',
@@ -205,8 +217,12 @@ class Lakeshore372(VISAInstrument):
         8: 'User2'
     }
 
-    def __init__(self, host = '192.168.100.143', port=7777):
-        self._init_visa('TCPIP::%s::%i::SOCKET' %(host, port), termination='\n')
+    def __init__(self, host = '192.168.82.72', port=7777, usb=True, com=72):
+        if usb:
+            self._init_visa('COM{}'.format(com), parity=1,  # odd parity
+                data_bits=7, baud_rate=57600)
+        else:
+            self._init_visa('TCPIP::%s::%i::SOCKET' %(host, port), termination='\n')
 
         # Make channel objects
         for c, n in self._channel_names.items():
@@ -223,12 +239,19 @@ class Lakeshore372(VISAInstrument):
             )
 
     def __getstate__(self):
-        self._save_dict = {
+        _save_dict = {
             'chan%i' %i: getattr(self, 'chan%i' %i)
             for i in self._channel_names.keys()
         }
+        _save_dict.update({
+            'ramp': self.ramp,
+            'heater_range': self.heater_range,
+            'sample_heater_ch': self.sample_heater_ch,
+            'sample_heater': self.sample_heater,
+            'pid_setpoint': self.pid_setpoint
+        })
 
-        return self._save_dict
+        return _save_dict
 
 
     def _get_param(self, param):
@@ -286,13 +309,13 @@ class Lakeshore372(VISAInstrument):
         '''
         Get setpoint for PID
         '''
-        return float(self.ask('SETP? 0')) #0 is sample heater
+        return float(self.query('SETP? 0')) #0 is sample heater
 
     @pid_setpoint.setter
     def pid_setpoint(self, setpoint):
         '''
         Set setpoint for PID.  Should be float.  In preferred units
-        of the setpoint.  Kelvin, unless changed
+        of the setpoint (Kelvin, unless changed)
         '''
         self.write('SETP 0,{0}'.format(float(setpoint)))
 
@@ -308,12 +331,20 @@ class Lakeshore372(VISAInstrument):
 
     @property
     def sample_heater(self):
-        s = self.ask('OUTMODE? 0').split(',')
+        '''
+        Get control mode for sample heater.
+        '''
+
+        s = self.query('OUTMODE? 0').split(',')
         return self._MODE_LOOKUP[int(s[0])]
 
     @sample_heater.setter
     def sample_heater(self, s):
-        mode = -1 
+        '''
+        Set control mode for sample heater. Must be key or value in _MODE_LOOKUP
+        '''
+
+        mode = -1
         try:
             mode = int(s)
         except:
@@ -322,13 +353,13 @@ class Lakeshore372(VISAInstrument):
                 if s.lower() == value.lower():
                     mode = key
         if mode == -1:
-            print("Invalid mode: {0}".format(s))
-            print("Mode must be in a key or value in _MODE_LOOKUP:")
+            print('Invalid mode: {0}'.format(s))
+            print('Mode must be in a key or value in _MODE_LOOKUP:')
             print(self._MODE_LOOKUP)
-            return 
+            return
 
-        settings = self.ask("OUTMODE? 0").split(',')
-        self.write("OUTMODE 0,{0},{1},{2},{3},{4},{5}".format(
+        settings = self.query('OUTMODE? 0').split(',')
+        self.write('OUTMODE 0,{0},{1},{2},{3},{4},{5}'.format(
                     mode,
                     settings[1],
                     settings[2],
@@ -337,15 +368,27 @@ class Lakeshore372(VISAInstrument):
                     settings[5]
                    ))
         return
+
     @property
     def sample_heater_ch(self):
-        return int(self.ask('OUTMODE? 0').split(',')[1])
+        '''
+        Get the channel number monitored for PID temperature control.
+        TODO: rename this property!
+        '''
+
+        return int(self.query('OUTMODE? 0').split(',')[1])
 
     @sample_heater_ch.setter
     def sample_heater_ch(self, ch):
+        '''
+        Set the channel number monitored for PID temperature control.
+        TODO: rename this property!
+        '''
+        raise Exception('WRITE DOCSTRING FOR sample_heater_ch setter')
+
         if type(ch) == int and ch>=1 and ch<=16:
-            settings = self.ask("OUTMODE? 0").split(',')
-            self.write("OUTMODE 0,{0},{1},{2},{3},{4},{5}".format(
+            settings = self.query('OUTMODE? 0').split(',')
+            self.write('OUTMODE 0,{0},{1},{2},{3},{4},{5}'.format(
                         settings[0],
                         ch,
                         settings[2],
@@ -355,7 +398,7 @@ class Lakeshore372(VISAInstrument):
                       )
             )
         else:
-            print("Invalid channel: {0}".format(ch))
+            print('Invalid channel: {0}'.format(ch))
 
     _RANGE_LOOKUP = {
             0: 'Off',
@@ -370,12 +413,19 @@ class Lakeshore372(VISAInstrument):
     }
     @property
     def heater_range(self):
-        s = self.ask('RANGE? 0').split(',')
+        '''
+        Get the heater range (current)
+        '''
+        s = self.query('RANGE? 0').split(',')
         return self._RANGE_LOOKUP[int(s[0])]
 
     @heater_range.setter
     def heater_range(self, s):
-        mode = -1 
+        '''
+        Set the heater range current. Must use string or key in _RANGE_LOOKUP.
+        TODO: Accept float.
+        '''
+        mode = -1
         try:
             mode = int(s)
         except:
@@ -384,10 +434,26 @@ class Lakeshore372(VISAInstrument):
                 if s.lower() == value.lower():
                     mode = key
         if mode == -1:
-            print("Invalid range: {0}".format(s))
-            print("Range must be in a key or value in _RANGE_LOOKUP:")
+            print('Invalid range: {0}'.format(s))
+            print('Range must be in a key or value in _RANGE_LOOKUP:')
             print(self._RANGE_LOOKUP)
-            return 
+            return
 
-        self.write("RANGE 0,{0}".format(mode))
+        self.write('RANGE 0,{0}'.format(mode))
         return
+
+    @property
+    def ramp(self):
+        '''
+        Ramp rate for temperature control.
+        '''
+        return self.query('RAMP? 0').split(',')
+
+
+    @ramp.setter
+    def ramp(self, rate):
+        '''
+        Set the ramp rate.
+        '''
+        data = 'RAMP0,1,{}[term]'.format(rate)
+        self.write(data)

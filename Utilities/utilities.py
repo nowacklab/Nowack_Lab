@@ -1,11 +1,11 @@
-'''
+"""
 For random utilities
-'''
+"""
 import json, numpy as np, os
 from numpy.linalg import lstsq
 
 class AttrDict(dict):
-    '''
+    """
     Class that behaves exactly like a dict, except that you can access values as
     if the keys were attributes of the dictionary class. For example:
         >> d = AttrDict(a = 1, b = 2, c = 3)
@@ -15,17 +15,20 @@ class AttrDict(dict):
     attributes of a value of the dictionary by typing "d." and pressing tab.
 
     Idea from http://stackoverflow.com/questions/4984647/accessing-dict-keys-like-an-attribute-in-python
-    '''
+    """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.__dict__ = self
 
 
 def fit_plane(x,y,z):
-    '''
+    """
     Calculates plane parameters a, b, and c for 2D data.
     z = ax + by + c
-    '''
+    """
+    if x.ndim == 1 and y.ndim ==1:
+        x, y = np.meshgrid(x,y)
+
     X = x.flatten()
     Y = y.flatten()
     Z = z.copy()
@@ -47,16 +50,16 @@ def fit_plane(x,y,z):
 
 
     A = np.vstack([X, Y, np.ones(len(X))]).T
-    return lstsq(A, Z)[0] # a,b,c
+    return lstsq(A[~np.isnan(Z)], Z[~np.isnan(Z)])[0] # a,b,c
 
 
 def get_browser_height():
-    '''
+    """
     THIS DOESN'T WORK RELIABLY
     Get the height of the current notebook browser window (in pixels).
     Doesn't actually return anything,
     but the value of the height will be stored in the variable "height".
-    '''
+    """
     from IPython.core.display import Javascript, display
     display(Javascript("""function getHeight() {
       if (self.innerHeight) {
@@ -75,12 +78,12 @@ def get_browser_height():
 
 
 def get_browser_width():
-    '''
+    """
     THIS DOESN'T WORK RELIABLY
     Get the width of the current notebook browser window (in pixels).
     Doesn't actually return anything,
     but the value of the width will be stored in the variable "width".
-    '''
+    """
     from IPython.core.display import Javascript, display
     display(Javascript("""function getWidth() {
       if (self.innerWidth) {
@@ -99,28 +102,21 @@ def get_browser_width():
 
 
 def get_computer_name():
-    '''
+    """
     Gets the computer's name. Should hopefully be unique!
-    '''
+    """
     import socket
     return socket.gethostname()
 
 
 def get_nb_kernel():
-    '''
+    """
     Returns a string with the kernel key for unique identification of a kernel.
-    '''
+    """
     from ipykernel import get_connection_info
     k = get_connection_info()
     k_dict = json.loads(k)
     return k_dict['key']
-
-
-def get_superclasses(obj):
-    '''
-    Get a tuple of names of all superclasses of an object.
-    '''
-    return [c.__name__ for c in obj.__class__.__mro__]
 
 
 def nanmin(data):
@@ -134,7 +130,7 @@ def nanmax(data):
 
 
 def reject_outliers(data, radius=[None,None], m=2):
-    '''
+    """
     Rejects outliers from a 2D numpy array (`data`).
     Looks at each point in the array and sees whether it
     is an outlier compared to data in the vicinity.
@@ -145,7 +141,7 @@ def reject_outliers(data, radius=[None,None], m=2):
     This takes a long time... might just want to do this occasionally.
 
     TODO: use chauvenet's criterion for "justified" rejection of data
-    '''
+    """
     new_data = np.copy(data)
 
     # Set a radius if None
@@ -167,9 +163,9 @@ def reject_outliers(data, radius=[None,None], m=2):
 
 
 def reject_outliers_plane(z, m=2):
-    '''
+    """
     Reject outliers from 2D data that lies mainly on a plane.
-    '''
+    """
     x = np.array(range(z.shape[1])) # xy indexing!!!
     y = np.array(range(z.shape[0]))
     X, Y = np.meshgrid(x,y)
@@ -186,9 +182,9 @@ def reject_outliers_plane(z, m=2):
 
 
 def reject_outliers_quick(data, m=2):
-    '''
+    """
     Quicker way to reject outlier using a masked array
-    '''
+    """
     mean =  np.nanmean(data)
     std = np.nanstd(data)
     new_data = np.ma.masked_where(abs(data - mean) > m*std, data)
@@ -212,13 +208,40 @@ def reject_outliers_spectrum(f, specden, m=2):
     return f[s<m], specden[s<m]
 
 
+def keeprange(master, slaves, m0, mend):
+    '''
+    WHAT DOES THIS DO?
+    '''
+    raise Exception('ADD DOCSTRING')
+    index0 = np.argmin(np.abs(master-m0))
+    indexe = np.argmin(np.abs(master-mend))
+
+    ret = [master[index0:indexe]]
+
+    for s in slaves:
+        ret.append(s[index0:indexe])
+
+    return ret
+
+
+def reject_outliers_spectrum(f, specden, m=2):
+    '''
+    WHAT DOES THIS DO?
+    '''
+    raise Exception('ADD DOCSTRING')
+    d = np.abs(specden - np.median(specden))
+    mdev = np.median(d)
+    s = d/mdev if mdev else 0.
+    return f[s<m], specden[s<m]
+
+
 def hide_code_button():
-    '''
+    """
     Generates an HTML button that toggles on and off the code cells in the notebook.
-    '''
+    """
     from IPython.display import HTML
 
-    HTML('''<script>
+    HTML("""<script>
     code_show=true;
     function code_toggle() {
      if (code_show){
@@ -230,7 +253,7 @@ def hide_code_button():
     }
     $( document ).ready(code_toggle);
     </script>
-    <form action="javascript:code_toggle()"><input type="submit" value="Click here to toggle on/off the raw code."></form>''')
+    <form action="javascript:code_toggle()"><input type="submit" value="Click here to toggle on/off the raw code."></form>""")
 
 def running_std(array1d, windowlen=16, mode='same'):
     '''
@@ -259,7 +282,7 @@ def running_std(array1d, windowlen=16, mode='same'):
     array1d = array1d - np.mean(array1d)
 
     # calculate sum of squares within the window for each point
-    q = np.convolve(array1d**2, np.ones(windowlen), mode=mode) 
+    q = np.convolve(array1d**2, np.ones(windowlen), mode=mode)
 
     # calculate the sum within the window for each point
     s = np.convolve(array1d,    np.ones(windowlen), mode=mode)

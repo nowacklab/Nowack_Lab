@@ -10,9 +10,14 @@ class VNA8722ES(Instrument):
     Instrument driver for HP 8722ES Vector Network Analyzer
     """
     _label = 'VNA_ES'
+<<<<<<< HEAD
 
     # TODO: more safety precautions re: VNA source power
     # and amplifier/squid limitations
+=======
+    """Instrument driver for HP 8722ES Vector Network Analyzer"""
+# TODO: more safety precautions re: VNA source power and amplifier/squid limitations
+>>>>>>> d99e1de301e3800d2489085bc49bf9b2b49c954a
     _power_state = None
     _power = None
 
@@ -31,6 +36,8 @@ class VNA8722ES(Instrument):
 
     _smoothing_state = None
     _smoothing_factor = None
+
+    _if_bandwidth = None
 
     # TODO: fix all @property things: should query then set and return etc.
     # TODO: need to change preset: dangerous to have it jump to -10dB with
@@ -85,6 +92,7 @@ class VNA8722ES(Instrument):
     def __getstate__(self):
         self._save_dict = {
 <<<<<<< HEAD
+<<<<<<< HEAD
             'power state': self._power_state,
             'power': self._power,
             'sweep mode': self._sweepmode,
@@ -94,6 +102,8 @@ class VNA8722ES(Instrument):
             'averaging state': self._averaging_state,
             'averaging factor': self._averaging_factor
 =======
+=======
+>>>>>>> d99e1de301e3800d2489085bc49bf9b2b49c954a
                 'power state': self._power_state,
                 'power': self._power,
                 'sweep mode': self._sweepmode,
@@ -102,6 +112,9 @@ class VNA8722ES(Instrument):
                 'number of frequency points': self._numpoints,
                 'averaging state': self._averaging_state,
                 'averaging factor': self._averaging_factor
+<<<<<<< HEAD
+>>>>>>> d99e1de301e3800d2489085bc49bf9b2b49c954a
+=======
 >>>>>>> d99e1de301e3800d2489085bc49bf9b2b49c954a
         }
         return self._save_dict
@@ -138,6 +151,7 @@ class VNA8722ES(Instrument):
     @power.setter
     def power(self, value):
 <<<<<<< HEAD
+<<<<<<< HEAD
         '''Set the power (dBm)'''
         assert type(value) is float or int
         if value > -5 or value < -80:
@@ -150,6 +164,8 @@ class VNA8722ES(Instrument):
         time.sleep(8)
         self.write('POWE%f' %value)  # then can change power
 =======
+=======
+>>>>>>> d99e1de301e3800d2489085bc49bf9b2b49c954a
         """Set the power (dBm)"""
         if value >= -20:
             rangenum = 0
@@ -160,6 +176,9 @@ class VNA8722ES(Instrument):
         print("Setting power range to %d..." % rangenum)
         time.sleep(8)
         self.write('POWE%f' % value)  # then can change power
+<<<<<<< HEAD
+>>>>>>> d99e1de301e3800d2489085bc49bf9b2b49c954a
+=======
 >>>>>>> d99e1de301e3800d2489085bc49bf9b2b49c954a
         print("Setting power to ", value)
         # print(self.ask('POWE?'))
@@ -170,6 +189,7 @@ class VNA8722ES(Instrument):
         """
         Get the sweep mode
 <<<<<<< HEAD
+<<<<<<< HEAD
         '''
         options = {  # what is this variable for
             "": "LIN",
@@ -178,6 +198,9 @@ class VNA8722ES(Instrument):
             "": "POWER",
             "": "CW"
         }
+=======
+        """
+>>>>>>> d99e1de301e3800d2489085bc49bf9b2b49c954a
 =======
         """
 >>>>>>> d99e1de301e3800d2489085bc49bf9b2b49c954a
@@ -372,9 +395,13 @@ class VNA8722ES(Instrument):
         assert value in nplist, "Network parameter should be one of " + str(nplist)
         if value == 'S12' or value == 'S22':
 <<<<<<< HEAD
+<<<<<<< HEAD
             raise Exception('''Don\'t send current thru amplifer backwards
             (just for cold amplifer testing, remove this in code if
             situation changes)''')
+=======
+            print("Note: sending power out of VNA port 2")
+>>>>>>> d99e1de301e3800d2489085bc49bf9b2b49c954a
 =======
             print("Note: sending power out of VNA port 2")
 >>>>>>> d99e1de301e3800d2489085bc49bf9b2b49c954a
@@ -396,12 +423,15 @@ class VNA8722ES(Instrument):
         shape of array: 1x(number of frequency sweep points)
         """
 <<<<<<< HEAD
+<<<<<<< HEAD
 
         self.write('FORM4')  # Prepare to output correct data format
             # TODO description from programming guide
         self.write('LOGM')  # Temporarily set VNA to log magnitude display
         # to enable saving log magnitude
 =======
+=======
+>>>>>>> d99e1de301e3800d2489085bc49bf9b2b49c954a
         self.write('FORM4')  # Prepare to output correct data format TODO description from programming guide
         self.write('LOGM')  # Temporarily set VNA to log magnitude display to enable saving log magnitude
 >>>>>>> d99e1de301e3800d2489085bc49bf9b2b49c954a
@@ -411,9 +441,14 @@ class VNA8722ES(Instrument):
 
         rm = visa.ResourceManager()
 <<<<<<< HEAD
+<<<<<<< HEAD
         '''Important:not actually initializing another instance of this class
         (i.e. VNA class) because that would temporarily
         set power too high when factory resets.'''
+=======
+        """Important:not actually initializing another instance of this class (i.e. VNA class) because that would temporarily
+        set power too high when factory resets."""
+>>>>>>> d99e1de301e3800d2489085bc49bf9b2b49c954a
         instrument_for_saving = rm.get_instrument('GPIB0::16')
         instrument_for_saving.write('OUTPFORM')
         # todo description from programming guide
@@ -432,10 +467,15 @@ class VNA8722ES(Instrument):
         rawdata = instrument_for_saving.read(termination='~')  # i.e. character that will never be found in the raw data
         split_rawdata = rawdata.split('\n')     # split into lines, with two values each
         # programming guide says which display format allows which data type read
+<<<<<<< HEAD
 >>>>>>> d99e1de301e3800d2489085bc49bf9b2b49c954a
 
         dB_array = np.empty((1, self._numpoints))
         # 1xn empty array (row vector)
+=======
+
+        dB_array = np.empty((1, self._numpoints))  # 1xn empty array (row vector)
+>>>>>>> d99e1de301e3800d2489085bc49bf9b2b49c954a
 
         for i in range(len(split_rawdata)):
             split_line = split_rawdata[i].split(',')
@@ -469,10 +509,13 @@ class VNA8722ES(Instrument):
         return phase_array
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     def save_Re_Im(self):
         """Return real and imaginary parts of VNA response in (2D) np array by
         querying VNA through GPIB commands
 =======
+=======
+>>>>>>> d99e1de301e3800d2489085bc49bf9b2b49c954a
     def save_re_im(self):
         """Return real and imaginary parts of VNA response in (2D) np array by querying VNA through GPIB commands
 >>>>>>> d99e1de301e3800d2489085bc49bf9b2b49c954a
@@ -558,6 +601,7 @@ class VNA8722ES(Instrument):
 
     def close(self):
         self._visa_handle.close()
+<<<<<<< HEAD
 <<<<<<< HEAD
         del(self._visa_handle)
 
@@ -958,6 +1002,9 @@ class VNA8753D(Instrument):
     def close(self):
         self._visa_handle.close()
         del(self._visa_handle)
+=======
+        del self._visa_handle
+>>>>>>> d99e1de301e3800d2489085bc49bf9b2b49c954a
 =======
         del self._visa_handle
 >>>>>>> d99e1de301e3800d2489085bc49bf9b2b49c954a

@@ -1,20 +1,14 @@
 from jsonpickle.ext import numpy as jspnp
-import json
-import os
-import pickle
-import bz2 
-import jsonpickle as jsp 
-import numpy as np 
-import re
-from datetime import datetime
-jspnp.register_handlers()
-from copy import copy
-import h5py, glob, matplotlib, inspect, platform, hashlib, shutil, time
+import json, os, jsonpickle as jsp, numpy as np, subprocess, numpy
+from datetime import datetime as dt
+jspnp.register_handlers() # what is purpose of this line?
+import h5py, glob, matplotlib, platform, hashlib, shutil, socket
 import matplotlib.pyplot as plt
 from . import utilities
+import Nowack_Lab # Necessary for saving as Nowack_Lab-defined types
 
 
-'''
+"""
 How saving and loading works:
 1) Walks through object's __dict__, subdictionaries, and subobjects, picks out
 numpy arrays, and saves them in a hirearchy in HDF5. Dictionaries are
@@ -26,336 +20,330 @@ to None, and the object is saved to JSON.
 3a) First, the JSON file is loaded to set up the dictionary hierarchy.
 3b) Second, we walk through the HDF5 file (identifying objects and dictionaries
 as necessary) and populate the numpy arrays.
-'''
+"""
 
 
-class Measurement:
-    _daq_inputs = [] # DAQ input labels expected by this class
-    _daq_outputs = [] # DAQ input labels expected by this class
-    instrument_list = []
-    fig = None
-    interrupt = False # boolean variable used to interrupt loops in the do.
+class Saver(object):
+    subdirectory = ''  # Formerly "appendedpath".
+    # Name of subdirectory off the main data directory where data is saved.
 
-    def __init__(self, instruments = {}):
+    def __init__(self):
+        super().__init__()  # To deal with multiple inheritance mro
         self.make_timestamp_and_filename()
-        self._load_instruments(instruments)
 
     def __getstate__(self):
         '''
-        Returns a dictionary of everything we want to save to JSON.
-        This excludes numpy arrays which are saved to HDF5
+        Returns a dictionary of everything that will save to JSON.
+        This excludes numpy arrays which are saved to HDF5.
         '''
         def walk(d):
-            d = d.copy() # make sure we don't modify original dictionary
-            variables = list(d.keys()) # list of all the variables in the dictionary
+            '''
+            Walk through dictionary and remove numpy arrays and matplotlib objs.
+            '''
+            d = d.copy()  # make sure we don't modify original dictionary
+            keys = list(d.keys())  # make list to avoid dictionary changing size
 
-            for var in variables: # copy so we don't change size of array during iteration
-                ## Don't save numpy arrays to JSON
-                if type(d[var]) is np.ndarray:
-                    d[var] = None
+            for k in keys:
+                # Don't save numpy arrays to JSON
+                if type(d[k]) is np.ndarray:
+                    d[k] = None
 
-                ## Don't save matplotlib objects to JSON
-                if hasattr(d[var], '__module__'): # built-in types won't have __module__
-                    m = d[var].__module__
-                    m = m[:m.find('.')] # will strip out "matplotlib", if there
-                    if m == 'matplotlib':
-                        d[var] = None
-                elif type(d[var]) is list: # check for lists of mpl objects
-                    try:
-                        if hasattr(d[var][0], '__module__'): # built-in types won't have __module__
-                            m = d[var][0].__module__
-                            m = m[:m.find('.')] # will strip out "matplotlib"
-                            if m == 'matplotlib':
-                                d[var] = None
-                    except:
-                        print('Error saving ', var)
-                        print(str(self))
-                        d[var] = ['This list was empty.  Empty list do not save well']
+                # Don't save matplotlib objects to JSON
+                d[k] = _remove_mpl(d[k])
 
-                ## Walk through dictionaries
-                if 'dict' in utilities.get_superclasses(d[var]):
-                    d[var] = walk(d[var]) # This unfortunately erases the dictionary...
+                # Walk through dictionaries
+                if isinstance(d[k], dict):
+                    d[k] = walk(d[k])
 
-            return d # only return ones that are the right type.
+            return d
 
         return walk(self.__dict__)
 
-
     def __setstate__(self, state):
-        '''
+        """
         Default method for loading from JSON.
         `state` is a dictionary.
-        '''
+        """
         self.__dict__.update(state)
 
-    def _load_hdf5(self, filename, unwanted_keys = []):
+    def _copy_to_remote(self, localpath, remotepath):
         '''
+        Copies h5, json, and pdf files at localpath.xxx to remotepath.xxx and
+        verifies the copy with a md5 checksum.
+        '''
+        if remotepath is not None:
+            try:
+                # Loop over filetypes
+                for ext in ['.h5','.json','.pdf']:
+                    if os.path.isfile(localpath + ext):
+                        local_checksum = _md5(localpath + ext)
+                        shutil.copyfile(localpath + ext, remotepath + ext)
+                        remote_checksum = _md5(remotepath + ext)
+
+                        # Compare checksums
+                        if local_checksum != remote_checksum:
+                            print('%s checksum failed! \
+                            Cannot trust remote file %s' %(ext, remotepath + ext))
+
+            except Exception as e:
+                print('Saving to data server failed!\n\n\
+                Exception details: %s\n\n\
+                remote path: %s\n\
+                local path: %s' %(e, remotepath, localpath)
+                )
+        else:
+            print('Not connected to %s, data not saved remotely!'\
+                                %get_data_server_path())
+
+    @classmethod
+    def _load(cls, filename=None):
+        '''
+        Basic load method. Loads from JSON, then HDF5.
+
+        Options for filename:
+        - None: Load last saved object of this class
+        - An index: Select from a list of objects of this class and select
+        an object to load with the index (e.g. -2 gives the second-to-last)
+        - a filename: Attempt to load file from current experiment directory.
+        - a full path: Load file from given path
+        '''
+
+        if filename is None: # tries to find the last saved object
+            filename = -1
+
+        if type(filename) is int:
+            experiment = os.path.join(get_local_data_path(),
+                        get_todays_data_dir(), '..')
+            paths = get_data_paths(experiment, cls.__name__)
+
+            try:
+                filename = paths[filename] # filename was an int originally
+            except:
+                raise Exception('could not find %s to load.' %cls.__name__)
+
+        elif os.path.dirname(filename) == '': # if no path specified
+            os.path.join(get_local_data_path(), get_todays_data_dir(), filename)
+
+        # Remove file extensions
+        filename = os.path.splitext(filename)[0]
+
+        obj = Saver._load_json(filename+'.json')
+        obj._load_hdf5(filename+'.h5')
+        return obj
+
+    def _load_hdf5(self, filename):
+        """
         Loads data from HDF5 files. Will walk through the HDF5 file and populate
         the object's dictionary and subdictionaries (already loaded by JSON)
-        '''
+        """
         with h5py.File(filename, 'r') as f:
             def walk(d, f):
+                '''
+                Walk through dictionary and populate with h5 data.
+                '''
                 for key in f.keys():
-                    if key not in unwanted_keys:
-                        # check if it's a dictionary or object
-                        if f.get(key, getclass=True) is h5py._hl.group.Group:
-                            if key[0] == '!': # it's an object
-                                # Current version of python on linux does not 
-                                # have a __dict__ of a dict object
-                                try:
-                                    walk(d[key[1:]].__dict__, f[key])
-                                    # [:1] strips the !; walks through the subobject
-                                except:
-                                    walk(d[key[1:]], f[key])
-                            else: # it's a dictionary
-                                # walk through the subdictionary
+                    # Dictionary or object
+                    if f.get(key, getclass=True) is h5py._hl.group.Group:
+                        if key[0] == '!': # it's an object
+                            # [1:] strips the !; walk through the subobject
+                            if d != {} and key[1:] in d:
+                                walk(d[key[1:]].__dict__, f[key])
+                        else:  # it's a dictionary
+                            if key not in d:  # Needed for Zurich _save_dict
+                                d[key] = dict()  # Empty dict to accept data
+                            walk(d[key], f.get(key))
 
-                                # Current version of python on linux does not 
-                                # like to call fields that do not exist.  
-                                try:
-                                    walk(d[key], f.get(key))
-                                except:
-                                    d[key] = {};
-                                    walk(d[key], f.get(key))
-                        else:
-                            d[key] = f[key][:] # we've arrived at a dataset
+                    # Dataset
+                    else:
+                        d[key] = f[key][:]
 
-                    ## If a dictionary key was an int, convert it back
+                    # If a dictionary key was an int, convert it back
                     try:
-                        newkey = int(key) # test if can convert to an integer
-                        value = d.pop(key) # replace the key with integer version
-                        d[newkey] = value # do this all stepwise in case of error
+                        newkey = int(key)  # test if can convert to an integer
+                        value = d.pop(key)  # grab the value
+                        d[newkey] = value  # new key that is integer
                     except:
                         pass
 
                 return d
 
-            walk(self.__dict__, f) # start walkin'
-
-
-    def _load_instruments(self, instruments={}):
-        '''
-        Loads instruments from a dictionary.
-        '''
-        for instrument in instruments:
-            setattr(self, instrument, instruments[instrument])
-            if instrument == 'daq':
-                for ch in self._daq_inputs:
-                    if ch not in self.daq.inputs:
-                        raise Exception('Need to set daq input labels! Need a %s' %ch)
-                for ch in self._daq_outputs:
-                    if ch not in self.daq.outputs:
-                        raise Exception('Need to set daq output labels! Need a %s' %ch)
-
+            walk(self.__dict__, f)  # start walkin'
 
     @staticmethod
-    def _load_json(json_file, unwanted_keys = []):
-        import Nowack_Lab.Procedures.planefit
+    def _load_json(json_file):
         '''
         Loads an object from JSON.
         '''
-        with open(json_file, encoding='utf-8') as f:
-            obj_dict = json.load(f)
-
         def walk(d):
             '''
-            Walk through dictionary to prune out Instruments
+            Walk through dictionary to check for classes not in the namespace.
+            These will all be loaded as Savers.
             '''
-            for key in list(d.keys()): # convert to list because dictionary changes size
-                #print(key)
-                #print(key)
-                if key in unwanted_keys: # get rid of keys you don't want to load
-                    d[key] = None
-                elif 'py/' in key:
-                    if 'py/object' in d:
-                        if 'Instruments' in d['py/object']: # if this is an instrument
-                            d = None # Don't load it.
-                            break
-                    elif 'py/id' in d: # This is probably another instance of an Instrument.
-                        d = None # Don't load it.
-                        break
-                if 'dict' in utilities.get_superclasses(d[key]):
+            keys = list(d.keys())  # static list; dictionary changes size
+            for key in keys:
+                if 'py/object' in key:  # we found some sort of object
+                    classname = d['py/object']
+                    try:
+                        exec(classname)  # see if class is in the namespace
+                    except:
+                        if 'Procedures' in classname:
+                            d['py/object'] = classname.replace('Procedures',
+                                    'Measurements')  # for legacy loading
+                        else:
+                            print('Cannot find class definition {0}: '.format(
+                                classname) + 'using Saver object')
+                            d['py/object'] = 'Nowack_Lab.Utilities.save.Saver'
+                if isinstance(d[key], dict):
                     d[key] = walk(d[key])
             return d
 
+        with open(json_file, encoding='utf-8') as f:
+            obj_dict = json.load(f)
+
         obj_dict = walk(obj_dict)
 
-        # If the class of the object is custom defined in __main__ or in a
-        # different branch, then just load it as a Measurement.
-        try:
-            exec(obj_dict['py/object']) # see if class is in the namespace
-        except:
-            print('Cannot find class definition {0}: '.format(
-                obj_dict['py/object']) + 'using measurement object')
-            obj_dict['py/object'] = 'Nowack_Lab.Utilities.save.Measurement'
-
-        # Decode with jsonpickle
+        # Decode with jsonpickle.
         obj_string = json.dumps(obj_dict)
         obj = jsp.decode(obj_string)
 
         return obj
 
-    def _save(self, filename=None, savefig=True, ignored = [], appendedpath='',
-                localpath='', remotepath = '', savepath = False):
+    def _make_paths(self, filename):
         '''
-        Saves data. numpy arrays are saved to one file as hdf5, everything else
-        is saved to JSON
+        Generates paths for the local and remote save directories.
 
-        Keyword arguments:
-        filename -- The path where the datafile will be saved. One hdf5 file and
-        one JSON file with the specified filename will be saved. If no filename
-        is supplied then the filename is generated from the timestamp
+        Arguments:
+        filename (string): Desired filename or path. None: auto-generated
 
-        savefig -- If "True" figures are saved. If "False" only data and config
-        are saved
-
-        ignored -- Array of objects to be ignored during saving. Passed to
-        _save_hdf5 and _save_json.
-
-        Saved data stored locally but also copied to the data server.
-        If you specify no filename, one will be automatically generated.
-
-        Locally, saves to ~/data/; remotely, saves to /labshare/data/
-
-        If you specify a relative (partial) path, the data will still be saved
-        in the data directory, but in subdirectories specified in the filename.
-        For example, if the filename is 'custom/custom_filename', the data will
-        be saved in (today's data directory)/custom/custom_filename.
-
-        If you specify a full path, the object will save to that path locally
-        and to [get_data_server_path()]/[get_computer_name()]/other/[hirearchy past root directory]
+        Returns:
+        localpath, remotepath - paths to local and remote directories
+        remotepath is None if data server not accessible
         '''
-
         # Saving to the experiment-specified directory
         if filename is None:
-            if not hasattr(self, 'filename'): # if you forgot to make a filename
+            if not hasattr(self, 'filename'):  # if you did not make a filename
                 self.make_timestamp_and_filename()
             filename = self.filename
 
         # If you did not specify a filename with a path, generate a path
-        if os.path.dirname(filename) == '': 
-            # If you specified a local AND remote path, set them correctly
-            if localpath != '' and remotepath != '':
-                local_path  = os.path.join(localpath, filename)
-                remote_path = os.path.join(remotepath, filename)
-            else:
-                local_path = os.path.join(get_local_data_path(), 
-                                          get_todays_data_dir(), 
-                                          appendedpath, 
+        if os.path.dirname(filename) == '':
+                local_path = os.path.join(get_local_data_path(),
+                                          get_todays_data_dir(),
+                                          self.subdirectory,
                                           filename)
-                remote_path = os.path.join(get_remote_data_path(), 
-                                           get_todays_data_dir(), 
-                                           appendedpath, 
+                remote_path = os.path.join(get_remote_data_path(),
+                                           get_todays_data_dir(),
+                                           self.subdirectory,
                                            filename)
-        # Else, you specified some sort of path but no remote path (legacy)
-        else: 
+        # Else, you specified some sort of path
+        else:
             local_path = filename
-            remote_path = os.path.join(get_remote_data_path(), 
-                                        '..', 'other', 
-                                        *filename.replace('\\', '/').split('/')[1:]) 
+            remote_path = os.path.join(get_remote_data_path(),
+                                        '..', 'other',
+                                        *filename.replace('\\', '/').split('/')[1:])
             # removes anything before the first slash. e.g. ~/data/stuff -> data/stuff
             # All in all, remote_path should look something like: .../labshare/data/bluefors/other/
 
-        if savepath:
-            self._localpath = os.path.dirname(local_path)
-            self._remotepath = os.path.dirname(remote_path)
-
-        # Save locally:
-        local_dir = os.path.split(local_path)[0]
+        # Make local directory
+        local_dir = os.path.split(local_path)[0]  # split off the filename
         if not os.path.exists(local_dir):
             os.makedirs(local_dir)
-        self._save_hdf5(local_path, ignored = ignored)
-        self._save_json(local_path)
 
-        nopdf = True
-        if savefig and self.fig is not None:
-            self.fig.savefig(local_path+'.pdf', bbox_inches='tight')
-            nopdf = False
-
-        # Save remotely
+        # Make remote directory
         if os.path.exists(get_data_server_path()):
-            try:
-                # Make sure directories exist
-                remote_dir = os.path.split(remote_path)[0]
-                if not os.path.exists(remote_dir):
-                    os.makedirs(remote_dir)
-
-                # Loop over filetypes
-                for ext in ['.h5','.json','.pdf']:
-                    if ext == '.pdf' and nopdf:
-                        continue
-                    # First make a checksum
-                    local_checksum = _md5(local_path + ext)
-
-                    # Copy the files
-                    shutil.copyfile(local_path + ext, remote_path + ext)
-
-                    # Make comparison checksums
-                    remote_checksum = _md5(remote_path + ext)
-
-                    # Check checksums
-                    if local_checksum != remote_checksum:
-                        print('%s checksum failed! Cannot trust remote file %s' %(ext, remote_path + ext))
-
-            except Exception as e:
-                if not os.path.exists(get_data_server_path()):
-                    print('SAMBASHARE not connected. Could not find path %s. Object saved locally but not remotely.' %get_data_server_path())
-                else:
-                    print('Saving to data server failed!\n\nException details: %s\n\nremote path: %s\nlocal path:%s' %(e, remote_path, local_path))
+            remote_dir = os.path.split(remote_path)[0]
+            if not os.path.exists(remote_dir):
+                os.makedirs(remote_dir)
         else:
-            print('Not connected to %s, data not saved remotely!' %get_data_server_path())
+            remote_path = None
 
-        ## See if saving worked properly
+        return local_path, remote_path
+
+    def _save(self, filename=None):
+        '''
+        Saves data in different formats:
+        - JSON: contains the full dictionary structure of the saved object,
+            minus numpy arrays which are saved to h5 instead.
+        - h5: contains dictionary structure of variables involving numpy arrays,
+            as well as all the data contained in the numpy arrays
+        - pdf: quick PDF copy of the figure under self.fig
+
+        Keyword arguments:
+        filename -- Options:
+        - None (recommended): filename is generated automatically from the timestamp
+        - a filename: saved to default experiment directory with the given filename
+        - partial path (e.g. /testing/myfile): saved to default experiment
+        directory under the specified subdirectory (e.g. testing)
+        - full path (e.g. C:/Documents/testing/myfile): saved to the specified full path
+
+        Default location of experiments directory:
+        - Local: ~/data/
+        - Remote: /labshare/data/
+
+        If custom paths are used, they will be saved remotely to the "other"
+        directory rather than the "experiments" directory.
+        '''
+
+        localpath, remotepath = self._make_paths(filename)
+
+        # Save locally
+        self._save_hdf5(localpath)  # must save h5 first
+        self._save_json(localpath)
+        if hasattr(self, 'fig'):
+            if self.fig is not None:
+                self.fig.savefig(localpath+'.pdf', bbox_inches='tight')
+
+        self._copy_to_remote(localpath, remotepath)
+
+        # Test loading
         try:
-            self.load(local_path)
+            self.load(localpath)
         except:
             raise Exception('Reloading failed, but object was saved!')
 
 
-    def _save_hdf5(self, filename, ignored = []):
+    def _save_hdf5(self, filename):
         '''
         Save numpy arrays to h5py. Walks through the object's dictionary
         and any subdictionaries and subobjects, picks out numpy arrays,
         and saves them in the hierarchical HDF5 format.
 
-        A subobject is designated by a ! at the beginning of the varaible name.
+        A subobject is designated by a ! at the beginning of the variable name.
         '''
 
         with h5py.File(filename+'.h5', 'w') as f:
             # Walk through the dictionary
             def walk(d, group):
                 for key, value in d.items():
-                    # If the key is in ignored then skip over it
-                    if key in ignored:
-                        continue
-                    if type(key) is int:
-                        key = str(key) # convert int keys to string. Will be converted back when loading
-                    # If a numpy array is found
+                    key = str(key)  # Some may be ints; convert to str
+                    key = key.replace('/','-')  ## HACK: Zurich dict keys have / and will create unwanted groups in the base of the tree
+
                     if type(value) is np.ndarray:
                         # Save the numpy array as a dataset
                         d = group.create_dataset(key, value.shape,
                             compression = 'gzip', compression_opts=9)
                         d.set_fill_value = np.nan
-                        # Fill the dataset with the corresponding value
                         d[...] = value
-                    # If a dictionary is found
-                    elif 'dict' in utilities.get_superclasses(value):
+
+                    # If a dictionary
+                    elif isinstance(value, dict):
                         new_group = group.create_group(key) # make a group with the dictionary name
                         walk(value, new_group) # walk through the dictionary
-                    # If the there is some other object
+
+                    # If some other object
                     elif hasattr(value, '__dict__'):
-                        if 'Measurement' in utilities.get_superclasses(value): # restrict saving Measurements.
-                            new_group = group.create_group('!'+key) # make a group with !(object name)
-                            walk(value.__dict__, new_group) # walk through the object dictionary
+                        if isinstance(value, Saver):  # only Savers
+                            # mark object by "!" and make a new group
+                            new_group = group.create_group('!'+key)
+                            walk(value.__dict__, new_group)  # walk through obj
 
             walk(self.__dict__, f)
 
 
     def _save_json(self, filename):
         '''
-        Saves an object to JSON. Specify a custom filename,
-        or use the `filename` variable under that object.
-        Through __getstate__, ignores any numpy arrays when saving.
+        Saves the Saver object to JSON with given filename.
+        __getstate__ determines what variables are saved.
         '''
         if not exists(filename+'.json'):
             obj_string = jsp.encode(self)
@@ -363,171 +351,103 @@ class Measurement:
             with open(filename+'.json', 'w', encoding='utf-8') as f:
                 json.dump(obj_dict, f, sort_keys=True, indent=4)
 
-    def do(self):
-        '''
-        Do the main part of the measurement. Write this function for subclasses.
-        run() wraps this function to enable keyboard interrupts.
-        run() also includes saving and elapsed time logging.
-        '''
-        pass
-
 
     @classmethod
-    def load(cls, filename=None, instruments={}, unwanted_keys=[]):
+    def load(cls, filename=None):
         '''
-        Basic load method. Calls _load_json, not loading instruments, then loads from HDF5, then loads instruments.
-        Overwrite this for each subclass if necessary.
-        Pass in an array of the names of things you don't want to load.
-        By default, we won't load any instruments, but you can pass in an instruments dictionary to load them.
+        Basic load method. Just calls _load. May overwrite this for subclasses.
+        Be sure to use subclass._load method, not Saver._load
         '''
-
-        if filename is None: # tries to find the last saved object; not guaranteed to work
-            try:
-                filename =  max(glob.iglob(os.path.join(get_local_data_path(), get_todays_data_dir(),'*_%s.json' %cls.__name__)),
-                                        key=os.path.getctime)
-            except: # we must have taken one during the previous day's work
-                folders = list(glob.iglob(os.path.join(get_local_data_path(), get_todays_data_dir(),'..','*')))
-                # -2 should be the previous day (-1 is today)
-                filename =  max(glob.iglob(os.path.join(folders[-2],'*_%s.json' %cls.__name__)),
-                                        key=os.path.getctime)
-        elif os.path.dirname(filename) == '': # if no path specified
-            os.path.join(get_local_data_path(), get_todays_data_dir(), filename)
-
-        # Remove file extensions
-        # This is done somewhat manually in case filename has periods in it for some reason.
-        if filename[-5:] == '.json': # ends in .json
-            filename = filename[:-5] # strip extension
-        elif filename[-3:] == '.h5': # ends in .h5
-            filename = filename[:-3] # strip extension
-        elif filename[-4:] == '.pdf': # ends in .pdf
-            filename = filename[:-4] # strip extension
-
-        obj = Measurement._load_json(filename+'.json', unwanted_keys)
-        obj._load_hdf5(filename+'.h5')
-        obj._load_instruments(instruments)
+        obj = Saver._load(filename)
         return obj
+
 
     def make_timestamp_and_filename(self):
         '''
         Makes a timestamp and filename from the current time.
         '''
-        now = datetime.now()
+        now = dt.now()
         self.timestamp = now.strftime("%Y-%m-%d %I:%M:%S %p")
         self.filename = now.strftime('%Y-%m-%d_%H%M%S')
         self.filename += '_' + self.__class__.__name__
 
 
-    def plot(self):
+    def save(self, filename=None, **kwargs):
         '''
-        Update all plots.
+        Basic save method. Just calls _save. May overwrite this for subclasses.
         '''
-        if self.fig is None:
-            self.setup_plots()
-
-
-    def run(self, plot=True, save_appendedpath='', **kwargs):
-        '''
-        Wrapper function for do() that catches keyboard interrrupts
-        without leaving open DAQ tasks running. Allows scans to be
-        interrupted without restarting the python instance afterwards
-
-        Keyword arguments:
-            plot: boolean; to plot or not to plot?
-
-        Check the do() function for additional available kwargs.
-        '''
-        self.interrupt = False
-        self._save_appendedpath = save_appendedpath
-        done = None
-
-        ## Before the do.
-        if plot:
-            self.setup_plots()
-        time_start = time.time()
-
-        ## The do.
-        try:
-            done = self.do(**kwargs)
-        except KeyboardInterrupt:
-            self.interrupt = True
-
-        ## After the do.
-        time_end = time.time()
-        self.time_elapsed_s = time_end-time_start
-
-        if self.time_elapsed_s < 60: # less than a minute
-            t = self.time_elapsed_s
-            t_unit = 'seconds'
-        elif self.time_elapsed_s < 3600: # less than an hour
-            t = self.time_elapsed_s/60
-            t_unit = 'minutes'
-        else:
-            t = self.time_elapsed_s/3600
-            t_unit = 'hours'
-        # Print elapsed time e.g. "Scanplane took 2.3 hours."
-        print('%s took %.1f %s.' %(self.__class__.__name__, t, t_unit))
-        #print(save_appendedpath)
-
-        self.save(appendedpath = save_appendedpath)
-
-        return done
-
-    def save(self, filename=None, savefig=True, **kwargs):
-        '''
-        Basic save method. Just calls _save. Overwrite this for each subclass.
-        '''
-        self._save(filename, savefig=True, **kwargs)
-
-
-    def setup_plots(self):
-        '''
-        Set up all plots.
-        '''
-        self.fig, self.ax = plt.subplots() # example: just one figure
-
+        self._save(filename, **kwargs)
 
 
 def exists(filename):
-    inp='y'
+    inp = 'y'
     if os.path.exists(filename+'.json'):
         inp = input('File %s already exists! Overwrite? (y/n)' %(filename+'.json'))
-    if inp not in ('y','Y'):
+    if inp not in ('y', 'Y'):
         print('File not saved!')
         return True
     return False
 
+
 def get_computer_name():
-    computer_name = utilities.get_computer_name()
-    aliases = {'SPRUCE': 'bluefors', 'HEMLOCK': 'montana'} # different names we want to give the directories for each computer
+    computer_name = socket.gethostname()
+    aliases = {'SPRUCE': 'bluefors', 'HEMLOCK': 'montana'}  # different names we want to give the directories for each computer
     if computer_name in aliases.keys():
         computer_name = aliases[computer_name]
     return computer_name
 
 
+def get_data_paths(experiment='', kind=''):
+    '''
+    Returns a list of the paths to every data file from a given experiment
+    directory. Returns all kinds of saved objects unless one is specified by the
+    kind kwarg.
+
+    Keyword arguments:
+    experiment (string): Full path of the experiment directory
+        (uses current experiment if none given)
+    kind (string): name of the Saver subclass
+    '''
+    # Use current experiment if none given
+    if experiment == '':
+        experiment = os.path.join(get_local_data_path(),
+                                get_experiment_data_dir()
+                            )
+
+    # Get a list of all the date directories
+    p = os.path.join(experiment, '*')
+    g = list(glob.iglob(p))
+    g.sort()
+
+    paths = []
+    # Iterate over dates and add all paths to given data files
+    for dir in g:
+        p = os.path.join(dir, '*%s.json' %kind)
+        g2 = list(glob.iglob(p))
+        g2.sort()
+        paths += g2
+
+    return paths
+
+
 def get_experiment_data_dir():
     '''
-    Finds the most recently modified (current) experiment data directory. (Not the full path)
+    Returns the current experiment data directory. (Not the full path)
     '''
+    path = os.path.join(os.path.dirname(__file__),
+                                'setup',
+                                get_computer_name() + '.txt'
+                            )
+    with open(path, 'r') as f:
+        exp = f.read()
 
-    latest_subdir = max(glob.glob(os.path.join(get_local_data_path(), '*/')), key=os.path.getmtime)
-
-    return os.path.relpath(latest_subdir, get_local_data_path()) # strip just the directory name
-
-    ## If we're sure that there will only be one directory per date. Bad assumption.
-    # exp_dirs = []
-    # for name in os.listdir(get_local_data_path()): # all experiment directories
-    #     if re.match(r'\d{4}-', name[:5]): # make sure directory starts with "20XX-"
-    #         exp_dirs.append(name)
-
-    # exp_dirs.sort(key=lambda x: datetime.strptime(x[:10], '%Y-%m-%d')) # sort by date
-    #
-    # return exp_dirs[-1] # this is the most recent
+    return exp.rstrip()  # rstrip to remove /n, /r etc.
 
 
 def get_data_server_path():
-    '''
+    """
     Returns full path of the data server's main directory, formatted based on OS.
-    '''
+    """
     if platform.system() == 'Windows':
         return r'\\SAMBASHARE\labshare\data'
     elif platform.system() == 'Darwin': # Mac
@@ -539,9 +459,9 @@ def get_data_server_path():
 
 
 def get_local_data_path():
-    '''
+    """
     Returns full path of the local data directory.
-    '''
+    """
     return os.path.join(
                 os.path.expanduser('~'),
                 'data',
@@ -551,9 +471,9 @@ def get_local_data_path():
 
 
 def get_remote_data_path():
-    '''
+    """
     Returns full path of the remote data directory.
-    '''
+    """
     return os.path.join(
                 get_data_server_path(),
                 get_computer_name(),
@@ -562,11 +482,11 @@ def get_remote_data_path():
 
 
 def get_todays_data_dir():
-    '''
+    """
     Returns name of today's data directory.
-    '''
+    """
     experiment_path = get_experiment_data_dir()
-    now = datetime.now()
+    now = dt.now()
     todays_data_path = os.path.join(experiment_path, now.strftime('%Y-%m-%d'))
 
     # Make local and remote directory
@@ -584,13 +504,22 @@ def get_todays_data_dir():
     return todays_data_path
 
 
+def open_experiment_data_dir():
+    filename = get_local_data_path()
+    if platform.system() == "Windows":
+        os.startfile(filename)
+    else:
+        opener ="open" if platform.system() == "Darwin" else "xdg-open"
+        subprocess.call([opener, filename])
+
+
 def set_experiment_data_dir(description=''):
-    '''
+    """
     Run this when you start a new experiment (e.g. a cooldown).
     Makes a new directory in the data folder corresponding to your computer
     with the current date and a description of the experiment.
-    '''
-    now = datetime.now()
+    """
+    now = dt.now()
     now_fmt = now.strftime('%Y-%m-%d')
 
     # Make local and remote directories:
@@ -605,13 +534,37 @@ def set_experiment_data_dir(description=''):
         except:
             print('Error making directory %s' %d)
 
+    path = os.path.join(os.path.dirname(__file__),
+                                'setup',
+                                get_computer_name() + '.txt'
+                            )
+    with open(path, 'w') as f:
+        f.write(now_fmt + '_' + description)
+
 
 def _md5(filename):
-    '''
+    """
     Calculates an MD5 checksum for the given file
-    '''
+    """
     hash_md5 = hashlib.md5()
     with open(filename, 'rb') as f:
         for chunk in iter(lambda: f.read(4096), b''):
             hash_md5.update(chunk)
     return hash_md5.hexdigest()
+
+def _remove_mpl(obj):
+    def _is_mpl_object(obj):
+        if hasattr(obj, '__module__'):  # Check if NOT a built-in type
+            if 'matplotlib' in obj.__module__:
+                return True
+
+    if _is_mpl_object(obj):
+        obj = None
+
+    # check for lists of mpl objects
+    elif type(obj) is list:
+        if len(obj) > 0:
+            if _is_mpl_object(obj[0]):
+                obj = None
+
+    return obj

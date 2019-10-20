@@ -22,7 +22,7 @@ def getLog(filename):
     return out;
 
 def getClosestVals_raw(times, vals, matchtimes, T_INTERVAL=30):
-    '''
+    """
     Gets values and times closest to the given matchtimes
 
     Inputs:
@@ -37,7 +37,7 @@ def getClosestVals_raw(times, vals, matchtimes, T_INTERVAL=30):
                       within T_INTERVAL of elements in matchtimes.  Size is
                       the same as matchtimes.
         matchedvals:  list of vals associated to the matchedtimes
-    '''
+    """
 
     matchedtimes = [];
     matchedvals = [];
@@ -82,7 +82,7 @@ def getClosestVals_raw(times, vals, matchtimes, T_INTERVAL=30):
 
 
 def getClosestVals(filename, times, T_INTERVAL=30):
-    '''
+    """
     Legacy: wrapper for getClosestVals_raw with a filename.
 
     Inputs:
@@ -96,7 +96,7 @@ def getClosestVals(filename, times, T_INTERVAL=30):
                       within T_INTERVAL of elements in times.  Size is
                       the same as times.
         matchedvals:  list of vals associated to the matchedtimes
-    '''
+    """
     log = getLog(filename);
 #    vals = [];
 #    for t in times:
@@ -130,7 +130,7 @@ def getClosestVals(filename, times, T_INTERVAL=30):
     return getClosestVals_raw(mytimes, myvals, times,T_INTERVAL);
 
 def getClosestVals_comp(filename1, filename2):
-    '''
+    """
     Legacy: compares the two filenames, matches the values as best as it can.
 
     Inputs:
@@ -142,7 +142,7 @@ def getClosestVals_comp(filename1, filename2):
                   filename2
         log2vals: associated vals that are close in time to those in
                   filename1
-    '''
+    """
     log1 = getLog(filename1);
     log1times = [entry[0] for entry in log1];
     log1vals  = [entry[1] for entry in log1];
@@ -150,7 +150,7 @@ def getClosestVals_comp(filename1, filename2):
     return [log1vals, log2vals];
 
 def thermometercalibration(filename_res, filename_temp, tcutoff=4):
-    '''
+    """
     Calibrates theromometers when both are taken by bluefors
     lakeshore software.  Requires 2 filenames.  Returns raw data
     as well as a calibration curve.
@@ -167,7 +167,7 @@ def thermometercalibration(filename_res, filename_temp, tcutoff=4):
         popt:   parameters found through least squares regression fit for f
                 given data res, temp.
         pcov:   covariance matrix for the fit
-    '''
+    """
     [rawres, rawtemp]= getClosestVals_comp(filename_res, filename_temp);
     res = [];
     temp = [];
@@ -195,10 +195,10 @@ def thermometercalibration(filename_res, filename_temp, tcutoff=4):
 
 def thermcal(datestr='17-04-10', resname=r'CH7 R ', tempname=r'CH6 T ',
              tcutoff=4, numpts = 200, binsize = 3):
-    '''
+    """
     Wrapper for thermometercalibration.  An attempt is made to output a
     smoothed data set for better calibration.  WORK IN PROGRESS
-    '''
+    """
     [res,temp,f,popt,pcov] =  thermometercalibration(
                                 os.path.join(save.get_data_server_path(),
                                             'bluefors', 'blueforslogs',
@@ -234,7 +234,7 @@ def thermcal_lockin(times, res,
                     tcutoff=[4,200],
                     T_INTERVAL=3,
                    ):
-    '''
+    """
     Calibrate thermometer when the resistances are taken not by lakeshore
 
     Parameters:
@@ -248,7 +248,7 @@ def thermcal_lockin(times, res,
     Returns:
         [temptimes, tempvals, times, res, rawtemptimes, rawtempvals]
         
-    '''
+    """
     tempdatasets = [];
 
     # get data from lakeshore
@@ -313,9 +313,9 @@ def plotlogs(datestr='17-03-03', extratemps = [r'CH7 T ', r'CH8 T ']):
 
 """
 def thermometercalibration2(datestr='17-03-03', resname=r'CH7 R ', tempname='CH6 T ', tcutoff=[4,100]):
-    '''
+    """
     Don't use
-    '''
+    """
     rawlog = [];
     for t in [resname, tempname]:
         rawlog.append(getLog(

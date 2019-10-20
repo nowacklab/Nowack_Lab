@@ -14,9 +14,9 @@ class RvsB(RvsSomething):
     something_units = 'T'
 
     def __init__(self, instruments = {}, Bstart = 0, Bend = 14, delay=1, sweep_rate=.01):
-        '''
+        """
         Sweep rate and field in T. PPMS uses Oe. Delay is in seconds. Rate is T/second
-        '''
+        """
         super().__init__(instruments=instruments)
 
         self.Bstart = Bstart
@@ -53,10 +53,10 @@ class RvsB(RvsSomething):
             self.do_measurement(delay=self.delay, plot=plot)
 
     def calc_n_Hall(self, Bmax=2, Rxy_channel=1):
-        '''
+        """
         Calculate the carrier density using the Hall coefficient at low field.
         R_H = B/ne
-        '''
+        """
         where = np.where(self.B < Bmax)
         m, b, _, _, _ = linregress(self.B[where], self.R[Rxy_channel][where])
 
@@ -70,7 +70,7 @@ class RvsB(RvsSomething):
 
 
     def calc_n_QHE(self, nu=2,Rxx_channel=0, thres=0.1, min_dist=100, Brange = [1,13]):
-        '''
+        """
         Calculate the carrier density using the spacing between Landau levels.
         This will only work if there are clear peaks in Rxx.
         nu: total spin/valley degeneracy (spacing between LL's in
@@ -82,7 +82,7 @@ class RvsB(RvsSomething):
         min_dist: Minimum distance between each detected peak.
         The peak with the highest amplitude is preferred to satisfy this constraint. (see peakutils.indexes)
         Brange: [Bmin, Bmax] field range over which to look for peaks
-        '''
+        """
         ## Calculate 1/B and generate equally spaced array in 1/B space.
         Bmin = Brange[0]
         Bmax = Brange[1]
@@ -114,10 +114,10 @@ class RvsB(RvsSomething):
 
 
     def plot_quantized_conductance(self, nu=1, Rxy_channel=1, Rxx_channel=0):
-        '''
+        """
         Generate a plot with Gxy in units of nu*e^2/h. By default, the 1st lockin (the one
         used to source current) measures Rxy.
-        '''
+        """
         fig, ax = plt.subplots()
         ax2 = ax.twinx()
         ax.set_xlabel('B (T)', fontsize=20)
@@ -132,9 +132,9 @@ class RvsB(RvsSomething):
         return fig, ax, ax2
 
     def setup_label(self):
-        '''
+        """
         Add sweep step size and delay to legend
-        '''
+        """
         super().setup_label()
 
         def add_text_to_legend(text):
@@ -151,7 +151,7 @@ class RvsVg_B(RvsVg):
 
     def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1,
                 delay=1, Bstart = 0, Bend = 14, Bstep=1, Bdelay=1,sweep_rate=.01, Vg_sweep=None):
-        '''
+        """
         Does gatesweeps at a series of magnetic fields.
         Stores the full gatesweeps at each field, as well as a RvsB curve done
         at a particular gate voltage between gatesweeps.
@@ -166,7 +166,7 @@ class RvsVg_B(RvsVg):
         Bdelay: delay between resistance measurements during fieldsweep
         sweep_rate: field sweep rate (Tesla/s)
         Vg_sweep: gate voltage at which to do the field sweep (V). Leave at None if you don't care.
-        '''
+        """
         super().__init__(instruments=instruments, Vstart=Vstart, Vend=Vend, Vstep=Vstep, delay=delay)
         self.__dict__.update(locals()) # cute way to set attributes from arguments
         del self.self # but includes self, get rid of this!
@@ -185,11 +185,11 @@ class RvsVg_B(RvsVg):
             setattr(self, 'R%ifull' %j, np.array([]))
 
     def calc_n(self, Rxy_channel=1, Vg_range=[-40, 40]):
-        '''
+        """
         Calculate carrier density from the slopes of all cuts of Rxy vs B.
         Returns conversion factor between gate voltage and density. (in cm^-2/V)
         Vg_range: interval of Vgs over which to get carrier density conversion.
-        '''
+        """
         from scipy.stats import linregress as lr
         slopes = np.array([])
         n = np.array([])
@@ -226,10 +226,10 @@ class RvsVg_B(RvsVg):
         return abs(slope) # this will be a conversion in cm^-2/V from gate voltage to carrier density.
 
     def find_CNP(self, Rxx_channel=0):
-        '''
+        """
         Finds the index of gate voltage corresponding to charge neutrality point.
         Uses the gate sweep at minimum field.
-        '''
+        """
         return np.where(self.R2D[Rxx_channel][0]==self.R2D[Rxx_channel][0].max())[0][0] # find CNP
 
     def do(self, ):
@@ -261,14 +261,14 @@ class RvsVg_B(RvsVg):
             self.plot()
 
     def mask_CNP(self, numpts=5):
-        '''
+        """
         Converts R2D into a masked array, with a mask around the charge
         neutrality point. This makes the rest of the data easier to view.
 
         numpts is the number of data points to either side of the CNP you want to mask.
 
         Currently works only for the log plot...?
-        '''
+        """
         CNP = self.find_CNP()
         print(CNP, numpts)
         mask = np.full(self.R2D[0].shape, False)
@@ -291,13 +291,13 @@ class RvsVg_B(RvsVg):
         self.fig.canvas.draw()
 
     def plot_mobility(self, Rxy_channel=1, Rxx_channel=0):
-        '''
+        """
         Makes a plot of the Hall coefficient and carrier mobility vs gate voltage.
         The voltage channel measuring Rxy is by default 1, and Rxx is 0.
         Right now we assume geometrical factor of 1, so Rxx = rho_xx
         mu = R_H/<R_xx>, average value of R_xx
         R_H = Rxy/B
-        '''
+        """
         from scipy.stats import linregress as lr
         slopes = np.array([])
         mobility = np.array([])

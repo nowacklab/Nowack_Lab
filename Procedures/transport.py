@@ -5,7 +5,7 @@ from matplotlib import cm
 from ..Utilities.constants import e, h
 
 class RvsSomething(Measurement):
-    '''
+    """
     Monitor R = lockin_V.X/lockin_I.Y from two different lockins.
     Can supply additional lockin_V2, lockin_V3, etc to montior more voltages
     (plotted as resistance)
@@ -14,7 +14,7 @@ class RvsSomething(Measurement):
     By default, this class measures vs. time (useful for timing subclasses!)
 
     Make sure to change the name of the "something" you're measuring vs!
-    '''
+    """
     instrument_list = ['lockin_V', 'lockin_I']
     something='time'
     something_units = 's'
@@ -35,12 +35,12 @@ class RvsSomething(Measurement):
             self.setup_lockins()
 
     def _load_instruments(self, instruments={}):
-        '''
+        """
         Loads instruments from a dictionary.
         Specify instruments needed using self.instrument_list.
         This is unique for this class because you can supply up to two
         additional lockins to monitor inputs from.
-        '''
+        """
         super()._load_instruments(instruments)
         for name, handle in instruments.items():
             if name[:-1] == 'lockin_V': # e.g. lockin_V2, cut off the "2"
@@ -61,10 +61,10 @@ class RvsSomething(Measurement):
         return self._num_lockins
 
     def do(self, duration=None, delay=1, num_avg = 1, delay_avg = 0, plot=True, auto_gain=False):
-        '''
+        """
         Duration and delay both in seconds.
         Use do_measurement() for each resistance measurement.
-        '''
+        """
         if duration is None:
             while True:
                 self.time = np.append(self.time, time.time()-self.time_start)
@@ -76,7 +76,7 @@ class RvsSomething(Measurement):
 
     def do_measurement(self, delay = 0, num_avg = 1, delay_avg = 0,
                                 all_positive=False, plot=True, auto_gain=True):
-        '''
+        """
         Take a resistance measurement. Usually this will happen in a loop.
         Optional argument to set a delay before the measurement happens.
         plot argument determines whether data is plotted or not
@@ -86,7 +86,7 @@ class RvsSomething(Measurement):
 
         Doesn't make a whole lot of sense to average for a measurement vs time,
         but the averaging could be useful for a subclass.
-        '''
+        """
 
         if delay > 0:
             time.sleep(delay)
@@ -140,19 +140,19 @@ class RvsSomething(Measurement):
 
 
     def run(self, plot=True, **kwargs):
-        '''
+        """
         Run the measurement. Sets up plot label then uses Measurement.run
-        '''
+        """
         self.setup_label()
         super().run(plot=plot, **kwargs)
 
 
     def setup_label(self):
-        '''
+        """
         Add info about PPMS or Keithley status, if relevant.
         Fixed variables (e.g. temperature, field for a gatesweep) will show up
         in the plot legend as the legend title.
-        '''
+        """
         self.legendtitle = None
 
         def add_text_to_legend(text):
@@ -196,9 +196,9 @@ class RvsSomething(Measurement):
         self.ax.set_title(self.filename)
 
 class RvsTime(RvsSomething):
-    '''
+    """
     Alias for RvsSomething
-    '''
+    """
     pass
 
 class RvsT(RvsSomething):
@@ -207,9 +207,9 @@ class RvsT(RvsSomething):
     something_units = 'K'
 
     def __init__(self, instruments = {}, Tstart = 300, Tend = 10, delay=1, sweep_rate=10):
-        '''
+        """
         Sweep rate and temperature in K. Delay is in seconds. Rate is K/min
-        '''
+        """
         super().__init__(instruments=instruments)
 
         self.Tstart = Tstart
@@ -251,14 +251,14 @@ class BlueforsRvsT(RvsSomething):
 
     def __init__(self, instruments = {}, duration=36000, interval=1,
                 channel = 8):
-        '''
+        """
         Bluefors R vs T.  No PID (no control).
 
         Parameters:
         instruments:    (dict) dict of instruments
         duration:       (int) time to measure in seconds
         interval:       (int) time to wait between each measurement
-        '''
+        """
         super().__init__(instruments=instruments)
         self.duration = duration
         self.interval = interval
@@ -277,10 +277,10 @@ class BlueforsRvsT(RvsSomething):
 
 
     def setup_lockins(self):
-        '''
+        """
         Overload setup_lockins and just pass to allow user to set 
         lockins manually
-        '''
+        """
         pass
 class SimpleRvsTime(Measurement):
     def __init__(self, instruments={}, duration=100, delay=1):
@@ -332,14 +332,14 @@ class VvsF(Measurement):
     instrument_list = ['lockin_V']
 
     def __init__(self, instruments={}, freqs = [], dwelltime = 1):
-        '''
+        """
         Measure voltage on lockin as a funtion of lockin frequency
 
         parameters:
         instruments:    (dict) dict of instruments, only 1 lockin
         freqs:          (list) list of frequencies to scan with lockin
         dwelltime       (float) time to wait between measurements (s)
-        '''
+        """
         super().__init__(instruments=instruments)
         self.freqs = freqs
         self.dwelltime = dwelltime
@@ -369,8 +369,8 @@ class VvsIdc(Measurement):
     instrument_list = ['nidaq', 'keithley', 'preamp']
 
     def __init__(self, daqchannel, instruments={}, iouts=[], dwelltime=.01):
-        '''
-        '''
+        """
+        """
         super().__init__(instruments=instruments)
         self.iouts=iouts
         self.dwelltime=dwelltime
@@ -498,21 +498,21 @@ class VvsIdc_daq(VvsIdc):
 
 
 class RvsVg(RvsSomething):
-    '''
+    """
     Monitor R = lockin_V.X/lockin_I.Y from two different lockins.
     Can supply additional lockin_V2, lockin_V3, etc to montior more voltages
     (plotted as resistance)
-    '''
+    """
     instrument_list = ['keithley', 'lockin_V', 'lockin_I']
     something = 'Vg'
     something_units = 'V'
 
     def __init__(self, instruments = {}, Vstart = -40, Vend = 40, Vstep=.1, delay=1, fine_range=None):
-        '''
+        """
         fine_range - [Vmin, Vmax], a list of two voltages that define a range
         in which we will take N times as many data points. N=5.
         Note that Vmin is closer to Vstart and Vmax is closer to Vend.
-        '''
+        """
         super().__init__(instruments=instruments)
 
         self.Vstart = Vstart
@@ -565,7 +565,7 @@ class RvsVg(RvsSomething):
 
 
     def calc_mobility(self, num_squares=1):
-        '''
+        """
         Calculate the carrier mobility from the carrier density n and the device
          resistivity. Since we measured resistance, this function divides by the
          number of squares to calculate a 2D resistivity (sheet resistance).
@@ -573,7 +573,7 @@ class RvsVg(RvsSomething):
         mu = sigma/(ne), sigma = 1/Rs, Rs = R/(number of squares)
 
         Units are cm^2/(V*s)
-        '''
+        """
         if not hasattr(self, 'n'):
             raise Exception('need to calculate carrier density using calc_n')
         Rs = self.R[0]/num_squares
@@ -581,21 +581,21 @@ class RvsVg(RvsSomething):
         self.mobility = abs(sigma/(self.n*e))
 
     def calc_n_conversion(self, c):
-        '''
+        """
         Converts gate voltage to carrier density using a conversion, given in
         cm^-2/V. Centers CNP at 0.
-        '''
+        """
         CNP = self.find_CNP()
         self.n = c*(self.Vg-self.Vg[CNP])
 
     def calc_n_geo(self, t_ox = 300, center_CNP=True):
-        '''
+        """
         Converts gate voltage to an approximate carrier density using geometry.
         Carrier density is stored as the attribute n.
         t_ox is the thickness of the oxide in nm. Default 300 nm.
         Charge neutrality point centered by default.
         Units are cm^-2
-        '''
+        """
         eps_SiO2 = 3.9
         eps0 = 8.854187817e-12 #F/m
         self.n = self.Vg*eps0*eps_SiO2/(t_ox*1e-9*e)/100**2 # convert to cm^-2
@@ -604,7 +604,7 @@ class RvsVg(RvsSomething):
             self.n -= self.n[CNP] # set CNP = 0 carrier density
 
     def calc_n_LL(self, B_LL, nu, Vg=0):
-        '''
+        """
         Converts gate voltage to a carrier density using conversion factor
         determined by location of center of quantum Hall plateaux.
         n = nu*e*B_LL/h, where e and h are electron charge and Planck constant,
@@ -612,7 +612,7 @@ class RvsVg(RvsSomething):
         filling factor.
         B_LL and nu should be arrays of landau level centers and filling factors.
         Vg is the gate voltage at which the measurements were taken.
-        '''
+        """
         if type(B_LL) is not np.ndarray:
             B_LL = np.array(B_LL)
 
@@ -627,10 +627,10 @@ class RvsVg(RvsSomething):
         self.n = n_at_Vg*(self.Vg-self.Vg[CNP])/(Vg-self.Vg[CNP])
 
     def calc_n_QHE(self, Vg, n):
-        '''
+        """
         Calibrate carrier density using density determined via QHE (vs. B) at
         a particular gate voltage.
-        '''
+        """
         CNP = self.find_CNP()
         VgCNP = self.Vg[CNP]
 
@@ -638,9 +638,9 @@ class RvsVg(RvsSomething):
         return n/(Vg-VgCNP)
 
     def find_CNP(self):
-        '''
+        """
         Finds the index of gate voltage corresponding to charge neutrality point
-        '''
+        """
         return np.where(self.R[0]==np.nanmax(self.R[0]))[0] # find CNP
 
 
@@ -663,9 +663,9 @@ class RvsVg(RvsSomething):
         # self.keithley.Vout_range = max(abs(self.Vstart), abs(self.Vend))
 
     def setup_label(self):
-        '''
+        """
         Add sweep step size and delay to legend
-        '''
+        """
         super().setup_label()
 
         def add_text_to_legend(text):
