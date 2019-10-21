@@ -402,7 +402,7 @@ class Keithley2450(Keithley2400):
         Max step: maximum sweep step size (V)
         Max sweep: maximum sweep rate (V/s)
         '''
-        super().__init__(resource)
+        super().__init__(resource, max_step, max_sweep)
         # if self.source == 'V':
         #     self.I # trigger reading to update screen
         # elif self.source == 'I':

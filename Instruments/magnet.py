@@ -24,20 +24,20 @@ class AMI430(VISAInstrument):
     readings/setpoints are always related by the coil constant.
     '''
     _label = 'ami430'
-    _idn = None #TODO
+    _idn = 'American Magnetics Model 430'
 
     _params = ['B', 'Bset', 'Brate', 'I', 'Iset', 'Irate', 'Isupply',
                     'p_switch']
     _Bmax = 1  # T
     _Imax = 50.63  # A
     _coilconst = .1182  # T/A
-    _Iratemax = .0357*60  # A/min
+    _Iratemax = .0357*60/2  # A/min # BTS: max ramp rate of half spec to prevent overheating, conversation with GMF 10/21/19
     _Bratemax = _coilconst*_Iratemax
     _Vmax = 2.2
 
     _interrupted = False  # used to monitor KeyboardInterrupts during ramping
 
-    def __init__(self, resource=None, axis = 'z'):
+    def __init__(self, Bmagnet, resource=None, axis = 'z'):
         raise Exception('Integrate safety changes in AMI420 and add _idn')
         if resource is None:
             resource = 'TCPIP::ami430_%saxis.nowacklab.edu::7180::SOCKET' %axis
@@ -48,22 +48,10 @@ class AMI430(VISAInstrument):
 
         self.axis = axis
 
-    # def __getstate__(self):
-    #     '''
-    #     Set up save dictionary.
-    #     '''
-    #     self._save_dict = {param:getattr(self, param) for param in self._params}
-    #     return self._save_dict
-
-    # def __setstate__(self, state):
-    #     '''
-    #     Load private variables for properties
-    #     '''
-    #
-    #     for param in self._params:
-    #         state['_'+param] = state.pop(param)
-    #
-    #     self.__dict__.update(state)
+        self.Bmagnet = Bmagnet
+        if self.Bmagnet != self.Bset:
+            raise Exception('Warning! Power supply setpoint is different from \
+                reported field in magnet!')
 
     def _init_visa(self, resource):
         '''

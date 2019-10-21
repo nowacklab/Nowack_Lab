@@ -22,7 +22,7 @@ def piecewise_linear(x, x0, y0, m1, m2):
     Args
     x (array-like): the domain of the function.
     x0 (float): the x-coordinate where the function changes slope.
-    y0 (float): the y-coordinage where the function changes slope.
+    y0 (float): the y-coordinate where the function changes slope.
     m1 (float): the slope of the function for x < x0.
     m2 (float): the slope of the function for x > x0.
 
