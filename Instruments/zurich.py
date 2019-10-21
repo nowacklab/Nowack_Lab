@@ -147,10 +147,13 @@ class Zurich(Instrument):
         This is the only way I could figure out how to detect an overload.
         NOTE: This isn't perfect. If overloading only on the high side (for example), won't detect reliably
         '''
-        # set zeroth TU to Input overload (V)
-        self.daq.setInt('/dev3447/tu/thresholds/0/input', 53)
-        # set up DIO to watch threshold outputs
-        self.daq.setInt('/dev3447/dios/0/mode', 3)
+        try:
+            # set zeroth TU to Input overload (V)
+            self.daq.setInt('/dev3447/tu/thresholds/0/input', 53)
+            # set up DIO to watch threshold outputs
+            self.daq.setInt('/dev3447/dios/0/mode', 3)
+        except:
+            print('OL detect not set up.')
 
 class HF2LI(Zurich):
     _label = 'Zurich HF2LI'
@@ -205,6 +208,42 @@ class MFLI(Zurich):
         scope.set('scopeModule/clearhistory', 1)
 
 
+    def get_demod_continuous(self, freq=60e6, N=16384, demod=0):
+        '''
+        Returns arrays of time values, X components, and Y components.
+
+        freq - sampling rate (Hz). Arbitrary value.
+        N - length (pts). 2^14 = 16384 by default.
+        demod - Demod number. 0 by default.
+        '''
+        h = self.daq.dataAcquisitionModule()
+        h.set("dataAcquisitionModule/device", self.device_id)
+        h.set("dataAcquisitionModule/type", 0) # continuous acquisition
+        h.set("dataAcquisitionModule/grid/mode", 2) # linear interpolation between samples if sampling rate does not match
+        h.set("dataAcquisitionModule/count", 1) # get all data in one shot
+        h.set("dataAcquisitionModule/duration", N/freq) # acquisition time (seconds)
+        h.set("dataAcquisitionModule/grid/cols", N) # number of points = sample rate * duration
+
+        px = '/%s/demods/%i/sample.x' %(self.device_id, demod)
+        py = '/%s/demods/%i/sample.y' %(self.device_id, demod)
+        h.subscribe(px)
+        h.subscribe(py)
+
+        # Start recording data.
+        h.execute()
+        while not h.finished():
+            time.sleep(.1)
+        data = h.read(True)
+        # Destroy the instance of the module.
+        h.clear()
+
+        clockbase = float(self.daq.getInt("/{}/clockbase".format(self.device_id)))
+        timestamps = data[px][0]['timestamp'][0]
+        ts = (timestamps-timestamps[0])/clockbase
+        xs = data[px][0]['value'][0]
+        ys = data[py][0]['value'][0]
+
+        return ts, xs, ys
 
     def get_scope_trace(self, freq=60e6, N=16384, input_ch=0):
         '''

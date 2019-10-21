@@ -78,12 +78,13 @@ def extents(x, y):
             y.max() + np.abs(dy) / 2
             ]
 
-def no_scientific_notation(ax, which='both', minor=False):
+def no_scientific_notation(ax, which='both', minor=False, commas=False):
     '''
     Formats ticks using FormatStrFormatter to remove scientific notation for
     small exponents
     ax: axis to format
     which: 'x', 'y', or 'both'
+    commas: whether to represent numbers with commas
     '''
     x = False
     y = False
@@ -91,14 +92,22 @@ def no_scientific_notation(ax, which='both', minor=False):
         x = True
     if which in ('y', 'both'):
         y = True
+
+    if commas:
+        fmt = '{x:,g}'
+        fmter = mpl.ticker.StrMethodFormatter(fmt)
+    else:
+        fmt = '%g'
+        fmter = mpl.ticker.FormatStrFormatter(fmt)
+
     if x:
-        ax.xaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%g'))
+        ax.xaxis.set_major_formatter(fmter)
         if minor:
-            ax.xaxis.set_minor_formatter(mpl.ticker.FormatStrFormatter('%g'))
+            ax.xaxis.set_minor_formatter(fmter)
     if y:
-        ax.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%g'))
+        ax.yaxis.set_major_formatter(fmter)
         if minor:
-            ax.yaxis.set_minor_formatter(mpl.ticker.FormatStrFormatter('%g'))
+            ax.yaxis.set_minor_formatter(fmter)
 
 def plotline(ax, x, y, z):
     pass
@@ -204,6 +213,20 @@ def set_size(w, h, fig=None, ax=None, mm=False):
         figh = float(h)/(t-b)
         ax.figure.set_size_inches(figw, figh)
 
+def set_size_axes_divider(w, h, d, fig, ax, mm=False):
+    '''
+    Resize a set of axes to (w,h) given in inches.
+    Pass in an axis divider object created when making a colorbar.
+    '''
+    if mm:
+        w /= 25.4
+        h /= 25.4
+    for i in range(3): # Gives the best results
+        fig.tight_layout()
+        l, b, r, t = d.get_position()
+        figw = float(w)/(r-l)
+        figh = float(h)/(t-b)
+        ax.figure.set_size_inches(figw, figh)
 
 def update2D(im, z, center_at_zero=False, equal_aspect=True):
     '''

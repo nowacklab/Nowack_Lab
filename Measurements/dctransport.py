@@ -301,7 +301,7 @@ class RvsSomething_DC(RvsSomething):
 
             t, V = self.zurich.get_scope_trace(self.zurich.freq_opts[10])
             v += V.mean()
-            r += v/self.I[-1]
+            r = v/self.I[-1]
             if i != num_avg-1: # no reason to sleep the last time!
                 time.sleep(delay_avg)
         v /= num_avg
@@ -458,7 +458,8 @@ class RvsSomething_DC_KeithleyYoko(RvsSomething_DC):
         self.fig.tight_layout()
 
 
-class RvsB_Phil_DC(RvsSomething_DC, RvsB_Phil):
+
+class RvsB_Phil_DC(RvsSomething_DC):
     '''
     DC version of RvsB_Phil
     '''
@@ -467,14 +468,39 @@ class RvsB_Phil_DC(RvsSomething_DC, RvsB_Phil):
     something_units = 'T'
 
     def __init__(self, instruments = {}, Bend = 1, delay=1, sweep_rate=.1,
-                persistent=True, **kwargs):
+                persistent=True):
         '''
         Sweep rate and field in T. Delay is in seconds. Rate is T/min
         persistent: whether to enter persistent mode after the measurement
         '''
-        RvsB_Phil.__init__(self, instruments, Bend, delay, sweep_rate)
-        RvsSomething_DC.__init__(self, instruments, **kwargs)
+        super().__init__(instruments=instruments)
+
+        # self.Bstart = Bstart
+        self.Bend = Bend
+        self.delay = delay
+        self.sweep_rate = sweep_rate
         self.persistent = persistent
+
+
+    def do(self, plot=True, auto_gain=False, **kwargs):
+
+        if abs(self.magnet.Bmagnet-self.Bend) < 10e-6:
+            return # sweeping between the same two fields, no point in doing the measurement
+
+        print('Starting field sweep...')
+
+        # Set sweep to final field
+        self.magnet.ramp_to_field(self.Bend, Brate=self.sweep_rate, wait=False)
+
+        # Measure while sweeping
+        while self.magnet.status == 'RAMPING':
+            self.do_measurement(delay=self.delay, plot=plot, auto_gain=auto_gain)
+
+        while abs(self.magnet.Vmag-0.02) > 0.01:
+            self.do_measurement(delay=self.delay, plot=plot, auto_gain=auto_gain)
+
+        if self.persistent:
+            self.magnet.enter_persistent_mode()
 
 
 class RvsTime_DC(RvsSomething_DC):
