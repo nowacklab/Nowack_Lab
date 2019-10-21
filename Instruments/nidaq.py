@@ -201,8 +201,8 @@ class NIDAQ(Instrument):
         # and tell the DAQ to output that value of ao0 for every data
         # point.
         numsteps = int(duration*sample_rate)
-        current_ao0 = self.ao0.V
-        data = {'ao0': np.array([current_ao0]*numsteps)}
+        current_ao3 = self.ao3.V
+        data = {'ao3': np.array([current_ao3]*numsteps)}
 
         received = self.send_receive(data, chan_in=chan_in, sample_rate=sample_rate)
 
@@ -316,7 +316,7 @@ class NIDAQ(Instrument):
         ## Undo added data point
         ## The daq gives data late by one.
         ## This only happens on the lowest numbered input channel.
-        ## the nowacklab branch of Instrumental is modified so that channels
+        ## the nowacklab branch of Instrumnetal is modified so that channels
         ## are ordered, and in this case it's the lowest numbered channel.
         # First we find the input channel numbers as ints, then find the min.
         ch_nums = [int(''.join(x for x in y if x.isdigit())) for y in chan_in]

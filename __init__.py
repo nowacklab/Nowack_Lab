@@ -2,34 +2,47 @@ from Nowack_Lab import DisableInits
 import sys
 import os
 import time
+import json
+from Nowack_Lab.Utilities.datasaver import Saver
 
 def set_experiment_data_path():
     from Nowack_Lab.Utilities import save
+    print('here')
 
     ## Set experiment data path
     try:
+        paths = Saver.getsavepaths()
+        print('Current experimental save paths:')
+        for key in paths.keys():
+            print(paths[key]['exppath'])
         print('Current experiment: %s' %save.get_experiment_data_dir())
+
     except:
-        pass
+        raise
     inp = input('New experiment? y/(n): ')
     if inp in ('y', 'Y'):
         while True:
             inp2 = input('Enter description of experiment: ')
             if inp2.find(' ') != -1:
-                print('This is going to be a folder name. ' + 
+                print('This is going to be a folder name. ' +
                       'Please don\'t use spaces!')
             else:
                 break
+        for key in paths.keys():
+            paths[key]["exppath"] = (paths[key]["path"]
+                                + Saver.make_timestamp(subday = False) +inp2)
+        Saver.setsavepaths(paths)
         save.set_experiment_data_dir(inp2)
 
 def check_remote_data_server_connection():
+    from Nowack_Lab.Utilities import save
     ## Check for remote data server connection
     if not os.path.exists(save.get_data_server_path()):
         print(
-            "SAMBASHARE not connected. Could not find path {}. ".format( 
+            "SAMBASHARE not connected. Could not find path {}. ".format(
                 save.get_data_server_path()
             ) +
-            "If you want to change the expected path, modify the " + 
+            "If you want to change the expected path, modify the " +
             "get_data_server_path function in Nowack_Lab/Utilities/save.py"
             );
 
@@ -84,15 +97,12 @@ if (DisableInits.disable_all_inits is False):
 
     from matplotlib import rcParams
     # If set to True, will autoformat layout and prevent axis labels from getting cut off.
-    rcParams.update({'figure.autolayout': False}) 
+    rcParams.update({'figure.autolayout': False})
 
     # import warnings
-    # warnings.filterwarnings("ignore") 
+    # warnings.filterwarnings("ignore")
     # # This was to hide nanmin warnings, maybe not so good to have in general.
 
 
     if (DisableInits.disable_nl_imports is False):
         import_packages()
-
-
-

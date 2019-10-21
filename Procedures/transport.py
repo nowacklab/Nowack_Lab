@@ -395,7 +395,7 @@ class CallableAttribute(object):
     def __init__(self, instrument, attribute, name):
         self.instrument = instrument
         self.attribute = attribute
-        self.name = name.
+        self.name = name
 
     def __call__(self):
         """Return the attribute of the instrument."""

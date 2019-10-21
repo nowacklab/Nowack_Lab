@@ -60,7 +60,7 @@ class Scanplane(Measurement):
 
     def __init__(self, instruments={}, plane=None, span=[800, 800],
                  center=[0, 0], numpts=[20, 20],
-                 scanheight=15, scan_rate=120, raster=False):
+                 scanheight=15, scan_rate=120, meas_rate = 900, raster=False):
 
         super().__init__(instruments=instruments)
 
@@ -85,6 +85,7 @@ class Scanplane(Measurement):
         self.center = center
         self.numpts = numpts
         self.plane = plane
+        self.meas_rate = meas_rate
 
         self.V = AttrDict({
             chan: np.nan for chan in self._daq_inputs + ['piezo']
@@ -211,7 +212,8 @@ class Scanplane(Measurement):
                 # Sweep over X
                 output_data, received = self.piezos.sweep(Vstart, Vend,
                                                           chan_in=self._daq_inputs,
-                                                          sweep_rate=self.scan_rate
+                                                          sweep_rate=self.scan_rate,
+                                                          meas_rate = self.meas_rate
                                                           )
             else:
                 # 50 points should be good for giving this to
@@ -483,6 +485,7 @@ class ScanLines(Measurement):
         self.rate = rate
         self.freq = freq
         self.samples = samples
+        self.callback = callback
 
         # Create dictionaries that describe the start/end of each line
         self.starts = [{"x": start[0],
@@ -517,6 +520,8 @@ class ScanLines(Measurement):
                 self.v_in[key].append(self.downsample(rec[key], self.samples))
             # Back away from the sample
             self.piezos.V = {"z":0}
+            # Callback
+            self.callback()
         return self.output(**{**self.v_out, **self.v_in})
             
     def plot(self):

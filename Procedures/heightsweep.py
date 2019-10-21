@@ -20,7 +20,7 @@ class Heightsweep(Measurement):
 
 
     def __init__(self, instruments = {}, plane=None, x=0, y=0, z0=0, scan_rate=120,
-                 conv=None, current=None):
+                 conv=None, current=None, meas_rate=900):
         super().__init__(instruments=instruments)
 
         self.x = x
@@ -28,6 +28,7 @@ class Heightsweep(Measurement):
         self.z0 = z0
         self.plane = plane
         self.scan_rate = scan_rate
+        self.meas_rate = meas_rate
         self.Vup = AttrDict({
             chan: np.nan for chan in self._daq_inputs + ['piezo', 'z']
         })
@@ -48,13 +49,16 @@ class Heightsweep(Measurement):
         time.sleep(1) # wait before sweeping
 
         output_data, received = self.piezos.sweep(Vstart, Vend,
-                                        chan_in = self._daq_inputs,
-                                        sweep_rate = self.scan_rate)
+                                                  chan_in = self._daq_inputs,
+                                                  sweep_rate = self.scan_rate,
+                                                  meas_rate = self.meas_rate
+        )
 
         self.Vup["acx"] = self.lockin_squid.convert_output(received["acx"], "X")
         self.Vup["acy"] = self.lockin_squid.convert_output(received["acy"], "Y")
-        self.Vup["dc"] = received["dc"]
-        self.Vup["cap"] = received["cap"]
+        for key in self._daq_inputs:
+            if key not in ("acx", "acy"):
+                self.Vup[key] = received[key]
         self.Vup['z'] = np.array(output_data['z'])
 
         time.sleep(1)
@@ -65,8 +69,9 @@ class Heightsweep(Measurement):
 
         self.Vdown["acx"] = self.lockin_squid.convert_output(received["acx"], "X")
         self.Vdown["acy"] = self.lockin_squid.convert_output(received["acy"], "Y")
-        self.Vdown["dc"] = received["dc"]
-        self.Vdown["cap"] = received["cap"]
+        for key in self._daq_inputs:
+            if key not in ("acx", "acy"):
+                self.Vdown[key] = received[key]
         self.Vdown['z'] = np.array(output_data['z'])
 
         self.piezos.zero()

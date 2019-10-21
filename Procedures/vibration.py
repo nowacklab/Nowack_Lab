@@ -69,7 +69,7 @@ class Spectra_Image():
 
         self.daq = instruments['daq']
         self.preamp = instruments['preamp']
-        self.saa = instruments['saa']
+        self.saa = instruments['squidarray']
         self.lockin_cap = instruments['lockin_cap']
         self.piezos = instruments['piezos']
 
@@ -94,12 +94,12 @@ class Spectra_Image():
             print('Error: fft_fspace too small for measure_time')
             fft_fspace = 2/measure_time
 
-        spectralen = self.measure_freq * self.measure_time
+        spectralen = int(self.measure_freq * self.measure_time)
         #f = f_of_fft(measure_time, measure_freq, fft_fspace)
 
         def emptydata(datalen=None):
-            shape = (self.xs.shape[0],
-                     self.ys.shape[0] 
+            shape = (int(self.xs.shape[0]),
+                     int(self.ys.shape[0]) 
                     )
             if datalen is not None:
                 shape = shape + datalen
@@ -126,7 +126,7 @@ class Spectra_Image():
         self.saver.create_attr('/y/', 'units', 'Volts')
 
         self.saver.append('/t_spectra/', 
-                          np.linspace(0, self.measure_freq, 
+                          np.linspace(0, self.measure_time, 
                                       spectralen)
                           )
         self.saver.create_attr('/t_spectra/', 'units', 'seconds')
