@@ -382,6 +382,7 @@ class SR830(VISAInstrument):
             self.write('FPOP%i,0' %chan)
 
     def convert_output(self, value):
+        ### NOTE: this does not work with offset/expand. Matt/David figured out how to account for that.
         if not np.isscalar(value):
             value = np.array(value)
             return np.array(value/10*self.sensitivity) # will give actual output in volts, since output is scaled to 10 V == sensitivity

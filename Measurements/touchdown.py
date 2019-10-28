@@ -7,7 +7,7 @@ from ..Utilities.utilities import AttrDict
 _Z_PIEZO_STEP = 4  # V piezo
 _Z_PIEZO_STEP_SLOW = 4  # V piezo
 _CAPACITANCE_THRESHOLD = 1  # fF
-_VAR_THRESHOLD = 0.005
+_VAR_THRESHOLD = 0.02
 
 # Time UNTIL capacitance bridge is BALanced.  When piezos move, the
 # capacitance shifts.  This time is supposed to wait for those shifts to
@@ -36,7 +36,7 @@ def piecewise_linear(x, x0, y0, m1, m2):
 
 class Touchdown(Measurement):
     _daq_inputs = ['cap', 'capx', 'capy', 'theta']
-    instrument_list = ['lockin_cap', 'atto', 'piezos', 'daq']
+    instrument_list = ['lockin_cap', 'piezos', 'daq']
 
     Vtd = None
     touchdown = False
@@ -51,10 +51,10 @@ class Touchdown(Measurement):
 
     subdirectory = 'touchdowns'
 
-    def __init__(self, instruments={}, disable_atto=False, Vz_max=None):
+    def __init__(self, instruments={}, disable_atto=True, Vz_max=None):
         '''
         Approach the sample to the SQUID while recording the capacitance
-        of the cantelever in a lockin measurement to detect touchdown.
+        of the cantilever in a lockin measurement to detect touchdown.
 
         Arguments:
         instruments -- dictionary containing instruments for the touchdown.
@@ -84,6 +84,8 @@ class Touchdown(Measurement):
 
         self._init_arrays()
         self.disable_atto = disable_atto
+        if 'atto' in instruments.keys():
+            self.disable_atto = True  # in case of user error
         self.error_flag = False
 
 
@@ -205,8 +207,6 @@ q: Quit' %(self.atto.z.pos, self.attoshift))
         if self.C0 == None:
             # Wait for the lockin reading to stabalize
             time.sleep(_TIME_UNTIL_STABLE)
-        else:
-            time.sleep(0.5)
 
         # Read the voltage from the daq
         Vcap = self.daq.inputs['cap'].V
@@ -242,7 +242,7 @@ q: Quit' %(self.atto.z.pos, self.attoshift))
         '''
         # Read daq voltage and convert to real lockin voltage
         Vcap = self.daq.inputs['cap'].V
-        Vcap = self.lockin_cap.convert_output(Vcap)
+        Vcap = self.lockin_cap.convert_output(Vcap) # note, does not work with offset/expand
 
         if Vcap > V_unbalanced:
             inp = input(
@@ -289,15 +289,17 @@ q: Quit' %(self.atto.z.pos, self.attoshift))
         '''
         Set up lockin_cap amplifier for a touchdown.
         '''
-        self.lockin_cap.amplitude = 3
-        self.lockin_cap.frequency = 26759  # prime number
-        self.lockin_cap.set_out(1, 'R')
-        self.lockin_cap.set_out(2, 'theta')
-        self.lockin_cap.sensitivity = 2e-6
-        self.lockin_cap.time_constant = 0.300
-        self.lockin_cap.reserve = 'Low Noise'
-        self.lockin_cap.ac_coupling()
-        # self.lockin_cap.auto_phase
+        pass # 10/27/2019 BTS - Dil frige uses 9.817 kHz and ~3 V, 30 ms time const
+
+        # self.lockin_cap.amplitude = 3
+        # self.lockin_cap.frequency = 26759  # prime number
+        # self.lockin_cap.set_out(1, 'R')
+        # self.lockin_cap.set_out(2, 'theta')
+        # self.lockin_cap.sensitivity = 2e-6
+        # self.lockin_cap.time_constant = 0.300
+        # self.lockin_cap.reserve = 'Low Noise'
+        # self.lockin_cap.ac_coupling()
+        # # self.lockin_cap.auto_phase
 
     def do(self, start=None, plot=True, **kwargs):
         '''
@@ -354,7 +356,7 @@ q: Quit' %(self.atto.z.pos, self.attoshift))
             if self.interrupt:
                 break
 
-            i = int(i) # i is a list
+            i = int(i) # np.arghwere returns an array of lists.
 
             # Set the current voltage and wait
             self.piezos.z.V = self.V[i]
@@ -374,7 +376,7 @@ q: Quit' %(self.atto.z.pos, self.attoshift))
                 self.Vtd = self.get_td_v()
 
                 # If the fit is not "good", flag the touchdown.
-                if self.err[0] > 10.:
+                if self.err[0] > 4.:
                     self.error_flag = True
 
                 # Added 11/1/2016 to try to handle exceptions in calculating
