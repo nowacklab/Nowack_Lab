@@ -1,6 +1,7 @@
 '''
 TO DO:
-- Monitor helium level using AMI1700 level meter and prevent ramping if level is <10%
+- [Phil] Monitor helium level using AMI1700 level meter and prevent ramping if level is <10%
+- [Bluefors] Monitor temperature using Lakeshore temperature controller and prevent ramping if magnet temperature above ~5.2 K
 '''
 import time, numpy as np, re
 from .instrument import Instrument, VISAInstrument
@@ -37,8 +38,8 @@ class AMI430(VISAInstrument):
 
     _interrupted = False  # used to monitor KeyboardInterrupts during ramping
 
-    def __init__(self, Bmagnet, resource=None, axis = 'z'):
-        raise Exception('Integrate safety changes in AMI420 and add _idn')
+    def __init__(self, Bmagnet, resource=None, axis='z', lakeshore=None):
+        raise Exception('Integrate safety changes from AMI420. Check ramp/wait. Check p switch and enter_persistent_mode. Vmag and supply to AMI430? Check B vs Bsupply (i.e. field actually in magnet versus supplied by power supply). Also for current')
         if resource is None:
             resource = 'TCPIP::ami430_%saxis.nowacklab.edu::7180::SOCKET' %axis
         self._resource = resource
@@ -47,6 +48,7 @@ class AMI430(VISAInstrument):
         self.write('CONF:FIELD:UNITS 1') # ensure units are in Tesla
 
         self.axis = axis
+        self.lakeshore = lakeshore
 
         self.Bmagnet = Bmagnet
         if self.Bmagnet != self.Bset:
@@ -257,31 +259,35 @@ class AMI430(VISAInstrument):
         if wait:
             self.wait()
 
-    def shutdown(self, ramp_rate=None):
-        '''
-        Turn on persistent switch, ramp to zero, turn off persistent switch.
-        ramp_rate in T/min. None = use rate already set.
-        '''
-        self.p_switch = True
-        self.wait()
-        if rate is not None:
-            self.Brate = rate
-        self.zero()
-        self.wait()
-        self.p_switch = False
+    # def shutdown(self, ramp_rate=None):
+    #     '''
+    #     Turn on persistent switch, ramp to zero, turn off persistent switch.
+    #     ramp_rate in T/min. None = use rate already set.
+    #     '''
+    #     self.p_switch = True
+    #     self.wait()
+    #     if rate is not None:
+    #         self.Brate = rate
+    #     self.zero()
+    #     self.wait()
+    #     self.p_switch = False
 
 
-    def wait(self, timeout=180000, interval=0.1):
+    def wait(self, Vmagoffset=0.02, Vmagthresh=0.01):
         '''
-        Wait for holding.
+        Wait until the magnet has stopped ramping.
+
+        Vmagoffset: offset in Vmag when not ramping
+        Vmagthres: if |Vmag-Vmagoffset|) < Vmagthres, decide ramping is done
         '''
-        print('Magnet waiting for holding.')
-        tstart = time.time()
-        while self.status not in ('HOLDING', 'PAUSED', 'AT ZERO CURRENT'):
-            time.sleep(interval)
-            if time.time()-tstart > timeout:
-                raise Exception('Timed out waiting for holding.')
-        print('Done waiting.')
+        try:
+            while self.status == 'RAMPING':
+                time.sleep(0.5)
+        except KeyboardInterrupt:  # If we interrupt the ramp, we need to make sure we know the field still
+            self._interrupted = True  # This flag will prevent p-switch operation
+            raise KeyboardInterrupt
+        while abs(self.Vmag-Vmagoffset) > Vmagthresh:
+            time.sleep(.5) # wait for field to stabilize
 
 
     def zero(self):
@@ -550,27 +556,20 @@ class AMI420(AMI430):
         self.Brate = Brate
         self.Bset = Bset
         self.ramp()
-        # time.sleep(1)
-        # if abs(self.Vmag-0.02) < 0.05:
-        #     self.pause()
-        #     raise Exception('Magnet voltage too low (or you are using a slow ramp rate <0.05 T/min). Pausing ramp.')
-
 
         if wait:
-            try:
-                while self.status == 'RAMPING':
-                    time.sleep(0.5)
-            except KeyboardInterrupt:  # If we interrupt the ramp, we need to make sure we know the field still
-                self._interrupted = True  # This flag will prevent p-switch operation
-                raise KeyboardInterrupt
-            while abs(self.Vmag-0.02) > 0.01:
-                time.sleep(.5) # wait for field to stabilize
-
+            self.wait()
             self.enter_persistent_mode()
 
         else:
             print('Magnet ramping to %.2f T. Will not enter persistent mode afterwards.' %Bset)
             self.Bmagnet = Bset
+
+    def wait(self, Vmagoffset=0.02, Vmagthresh=0.01):
+        '''
+        Vmagoffset and Vmagthresh for AMI420
+        '''
+        return super().wait(Vmagoffset, Vmagthresh)
 
 
 class AMI420_ResistiveLoad(AMI420):

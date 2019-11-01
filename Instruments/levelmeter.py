@@ -5,6 +5,7 @@ class AMI1700(VISAInstrument):
     '''
     AMI Model 1700 Helium level meter
     '''
+    _label = 'AMI1700 level meter'
     _level = None
     def __init__(self, ip='10.84.231.40', port=7180):
         '''
