@@ -538,6 +538,9 @@ def set_experiment_data_dir(description=''):
     Makes a new directory in the data folder corresponding to your computer
     with the current date and a description of the experiment.
     '''
+    if description in get_experiment_data_dir():
+        print('Experiment name is same as last experiment! Did not create new directory.')
+
     now = dt.now()
     now_fmt = now.strftime('%Y-%m-%d')
 

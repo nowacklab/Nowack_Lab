@@ -33,15 +33,14 @@ class AMI430(VISAInstrument):
     _Imax = 50.63  # A
     _coilconst = .1182  # T/A
     _Iratemax = .0357*60/2  # A/min # BTS: max ramp rate of half spec to prevent overheating, conversation with GMF 10/21/19
-    _Bratemax = _coilconst*_Iratemax
+    _Bratemax = _coilconst*_Iratemax # 0.125 T/min
     _Vmax = 2.2
 
     _interrupted = False  # used to monitor KeyboardInterrupts during ramping
 
     def __init__(self, Bmagnet, resource=None, axis='z', lakeshore=None):
-        raise Exception('Integrate safety changes from AMI420. Check ramp/wait. Check p switch and enter_persistent_mode. Vmag and supply to AMI430? Check B vs Bsupply (i.e. field actually in magnet versus supplied by power supply). Also for current')
-        if resource is None:
-            resource = 'TCPIP::ami430_%saxis.nowacklab.edu::7180::SOCKET' %axis
+        print('AMI430 STILL NOT WORKING AS INTENDED - USE WITH CAUTION')
+        resource = 'TCPIP::ami430_%saxis.nowacklab.edu::7180::SOCKET' %axis
         self._resource = resource
         self._init_visa(resource)
 
@@ -166,7 +165,7 @@ class AMI430(VISAInstrument):
         '''
         Get the power supply current (A)
         '''
-        self._Isupply = self.query('CURR:SUPP?')
+        self._Isupply = float(self.query('CURR:SUPP?'))
         return self._Isupply
 
     @property
@@ -186,17 +185,19 @@ class AMI430(VISAInstrument):
             raise Exception('Ramping was interrupted. Verify Bmagnet.')
 
         if self.p_switch == False and value == True:
-            self.write('PSwitch %i' %value)
-
             print('Waiting for persistent switch to heat...')
+            self.write('PSwitch %i' %value)
             time.sleep(0.5)
             while self.status == 'Heating Persistent Switch':
                 time.sleep(0.1)
+            print('Done waiting to heat persistent switch')
+
         if self.p_switch == True and value == False:
             self.write('PSwitch %i' %value)
 
             print('Waiting for persistent switch to cool...')
             time.sleep(10)  # WAITING IS VERY IMPORTANT. A few seconds should be fine, but 10 seconds for safety.
+            print('Done waiting to cool persistent switch. Power supply will cool switch for 10 more minutes')
 
 
     @property
@@ -221,6 +222,37 @@ class AMI430(VISAInstrument):
         self._status = states[state_num]
         return self._status
 
+    @property
+    def Vmag(self):
+        '''
+        Get the magnet voltage.
+        '''
+        self._Vmag = float(self.query('VOLT:MAG?'))
+        return self._Vmag
+
+
+    @property
+    def Vsupply(self):
+        '''
+        Get the supply voltage.
+        '''
+        self._Vsupply = float(self.query('VOLT:SUPP?'))
+        return self._Vsupply
+
+
+    def enter_persistent_mode(self):
+        '''
+        Enters persistent mode if in driven mode.
+        Does nothing if already in persistent mode.
+        '''
+        if self.p_switch == True:
+            print('Waiting for magnet voltage to stabilize...')
+            time.sleep(5)
+            if abs(self.Vmag-0.02) > 0.04:
+                raise Exception('Cannot enter persistent mode with nonzero magnet voltage')
+            self.Bmagnet = self.Bset  # record the actual field in the magnet
+            self.p_switch = False  # to enter persistent mode (built-in delay for cooling)
+
 
     def pause(self):
         '''
@@ -236,42 +268,35 @@ class AMI430(VISAInstrument):
         if self.p_switch:  # in driven mode
             if self.Brate > self._Bratemax*1.001:  # 1.001 for rounding issues
                 raise Exception('Ramp rate %.2f A/min too high for driven mode! Will not start ramp.'  %self.Brate)
-        else:
-            if self.Brate > self._Bratemax_persistent*1.001:
-                raise Exception('Ramp rate %.2f A/min too high for persistent mode! Will not start ramp.' %self.Brate)
         self.write('RAMP')
 
 
-    def ramp_to_field(self, B, wait=False, rate=None):
+    def ramp_to_field(self, Bset, Brate, wait=True):
         '''
-        Heat up persistent switch and ramp the field with set ramp rate.
-        rate in T/min. None = use rate already set.
+        Heat up persistent switch and ramp the field.
+
+        Parameters:
+        Bset - field setpoint (T)
+        Brate - field ramp rate (T/min)
+        wait (bool) - If True, wait for ramp to finish and enter persistent mode.
+        If False, will free up the kernel for other commands, e.g. measurements.
+        Be sure to manually enter persistent mode and ramp down the power supply if desired.
         '''
+        if self.B == Bset:
+            print('%s T already in the magnet. Did not ramp.' %Bset)
+            return
+
         self.p_switch = True
-        self.B = B
-        if rate is not None:
-            self.Brate = rate
-        print('Waiting to heat persistent switch')
-        while self.status == 'Heating Persistent Switch':
-            time.sleep(1)
-        print('Done waiting to heat persistent switch')
+        self.B = Bset
+        self.Brate = Brate
+
         self.ramp()
         if wait:
             self.wait()
-
-    # def shutdown(self, ramp_rate=None):
-    #     '''
-    #     Turn on persistent switch, ramp to zero, turn off persistent switch.
-    #     ramp_rate in T/min. None = use rate already set.
-    #     '''
-    #     self.p_switch = True
-    #     self.wait()
-    #     if rate is not None:
-    #         self.Brate = rate
-    #     self.zero()
-    #     self.wait()
-    #     self.p_switch = False
-
+            self.enter_persistent_mode()
+        else:
+            print('Magnet ramping to %.2f T. Will not enter persistent mode afterwards.' %Bset)
+            self.Bmagnet = Bset
 
     def wait(self, Vmagoffset=0.02, Vmagthresh=0.01):
         '''
@@ -473,37 +498,13 @@ class AMI420(AMI430):
         return self._status
 
 
-    @property
-    def Vmag(self):
-        '''
-        Get the magnet voltage.
-        '''
-        self._Vmag = float(self.query('VOLT:MAG?'))
-        return self._Vmag
-
-
-    @property
-    def Vsupply(self):
-        '''
-        Get the supply voltage.
-        '''
-        self._Vsupply = float(self.query('VOLT:SUPP?'))
-        return self._Vsupply
-
-
     def enter_persistent_mode(self):
         '''
         Enters persistent mode if in driven mode.
         Does nothing if already in persistent mode.
         '''
-        if self.p_switch == True:
-            print('Waiting for magnet voltage to stabilize...')
-            time.sleep(5)
-            if abs(self.Vmag-0.02) > 0.04:
-                raise Exception('Cannot enter persistent mode with nonzero magnet voltage')
-            self.Bmagnet = self.Bset  # record the actual field in the magnet
-            self.p_switch = False  # to enter persistent mode (built-in delay for cooling)
-            self.zero()  # Zero the supply without erasing Bset. Does not wait.
+        super().enter_persistent_mode()
+        self.zero()  # Zero the supply without erasing Bset. Does not wait.
 
 
     def ramp_to_field(self, Bset, Brate, wait=True):
