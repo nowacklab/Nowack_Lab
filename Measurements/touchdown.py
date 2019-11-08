@@ -7,7 +7,7 @@ from ..Utilities.utilities import AttrDict
 _Z_PIEZO_STEP = 4  # V piezo
 _Z_PIEZO_STEP_SLOW = 4  # V piezo
 _CAPACITANCE_THRESHOLD = 1  # fF
-_VAR_THRESHOLD = 0.02
+_VAR_THRESHOLD = 0.25 # 0.02
 
 # Time UNTIL capacitance bridge is BALanced.  When piezos move, the
 # capacitance shifts.  This time is supposed to wait for those shifts to
@@ -342,7 +342,7 @@ q: Quit' %(self.atto.z.pos, self.attoshift))
             self._move_attocube()
             start = -self.Vz_max # start far away next time
 
-        self.piezos.z.V = 0  # bring the piezo back to zero
+        self.piezos.z.V = -self.Vz_max  # bring the piezo back to bottom
 
 
     def do_sweep(self, start):
@@ -435,7 +435,7 @@ q: Quit' %(self.atto.z.pos, self.attoshift))
             Cp = np.gradient(C)
             Cpp = np.gradient(Cp)
             i = np.nanargmax(Cpp)  # spike in second derivative = slope change
-            p0 = [self.V[i], 0, 0, 0]  # x0, y0, m1, m2
+            p0 = [V[i], 0, 0, 0]  # x0, y0, m1, m2
             self.p, e = curve_fit(piecewise_linear, V, C, p0=p0)
             if e[0,0] == np.inf:
                 print('Could not fit touchdown!')
@@ -464,7 +464,7 @@ q: Quit' %(self.atto.z.pos, self.attoshift))
 
         # Update plot with new capacitance values
         self.line.set_ydata(self.C)
-        self.ax.set_ylim(-0.5, max(np.nanmax(self.C), 1))
+        self.ax.set_ylim(-2, max(np.nanmax(self.C), 2))
 
         self.fig.tight_layout()
 
