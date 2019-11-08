@@ -39,7 +39,7 @@ class AMI430(VISAInstrument):
     _interrupted = False  # used to monitor KeyboardInterrupts during ramping
 
     def __init__(self, Bmagnet, resource=None, axis='z', lakeshore=None):
-        print('AMI430 STILL NOT WORKING AS INTENDED - USE WITH CAUTION')
+        print('AMI430 STILL NOT WORKING AS INTENDED - USE WITH CAUTION. Is magnet voltage connected?')
         resource = 'TCPIP::ami430_%saxis.nowacklab.edu::7180::SOCKET' %axis
         self._resource = resource
         self._init_visa(resource)

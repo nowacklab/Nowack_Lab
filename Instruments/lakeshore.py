@@ -239,6 +239,8 @@ class Lakeshore372(VISAInstrument):
             )
 
     def __getstate__(self):
+        if self._loaded:
+            return super().__getstate__() # Do not attempt to read new values
         _save_dict = {
             'chan%i' %i: getattr(self, 'chan%i' %i)
             for i in self._channel_names.keys()
