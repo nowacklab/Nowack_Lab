@@ -14,18 +14,23 @@ class Scanline(Measurement):
         'cap': conversions.V_to_C,
         'acx': conversions.Vsquid_to_phi0['High'],
         'acy': conversions.Vsquid_to_phi0['High'],
-        'x': conversions.Vx_to_um,
-        'y': conversions.Vy_to_um
+        'x': 1,
+        'y': 1
     })
     _units = AttrDict({
         'dc': 'phi0',
         'cap': 'C',
         'acx': 'phi0',
         'acy': 'phi0',
-        'x': '~um',
-        'y': '~um',
+        'x': 'V',
+        'y': 'V',
     })
-    instrument_list = ['piezos','montana','squidarray','preamp','lockin_squid','lockin_cap','atto']
+    instrument_list = ['piezos',
+                        # 'squidarray',
+                        # 'preamp',
+                        'lockin_squid',
+                        'lockin_cap',
+                        'atto']
 
     def __init__(self, instruments={}, plane=None, start=(-100,-100),
                  end=(100,100), scanheight=15, scan_rate=120, zero=True):
@@ -41,7 +46,8 @@ class Scanline(Measurement):
             # this will be recorded
             self._conversions['dc'] = Vsquid_to_phi0
             # Divide out the preamp gain for the DC channel
-            self._conversions['dc'] /= self.preamp.gain
+            if hasattr(self, 'preamp'):
+                self._conversions['dc'] /= self.preamp.gain
         except:
             pass
 
@@ -84,7 +90,8 @@ class Scanline(Measurement):
 
         # Explicitly go to first point of scan
         self.piezos.V = Vstart
-        self.squidarray.reset()
+        if hasattr(self, 'squidarray'):
+            self.squidarray.reset()
         time.sleep(3*self.lockin_squid.time_constant)
 
         # Do the sweep

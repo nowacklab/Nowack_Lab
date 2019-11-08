@@ -24,21 +24,20 @@ class Scanplane(Measurement):
         'cap': conversions.V_to_C,
         'acx': conversions.Vsquid_to_phi0['High'],
         'acy': conversions.Vsquid_to_phi0['High'],
-        'x': conversions.Vx_to_um,
-        'y': conversions.Vy_to_um
+        'x': 1,
+        'y': 1
     })
     _units = AttrDict({
         'dc': 'phi0',
         'cap': 'C',
         'acx': 'phi0',
         'acy': 'phi0',
-        'x': '~um',
-        'y': '~um',
+        'x': 'V',
+        'y': 'V',
     })
     instrument_list = ['piezos',
-                       'montana',
-                       'squidarray',
-                       'preamp',
+                       # 'squidarray',
+                       # 'preamp',
                        'lockin_squid',
                        'lockin_cap',
                        'atto',
@@ -70,7 +69,8 @@ class Scanplane(Measurement):
             # this will be recorded
             self._conversions['dc'] = Vsquid_to_phi0
             # Divide out the preamp gain for the DC channel
-            self._conversions['dc'] /= self.preamp.gain
+            if hasattr(self, 'preamp'):
+                self._conversions['dc'] /= self.preamp.gain
         except:
             pass
 
@@ -112,7 +112,7 @@ class Scanplane(Measurement):
         try:
             self.Z = self.plane.plane(self.X, self.Y) - self.scanheight
         except:
-            print('plane not loaded')
+            raise Exception('plane not loaded')
 
         for chan in self._daq_inputs:
             # Initialize one array per DAQ channel
@@ -175,20 +175,22 @@ class Scanplane(Measurement):
         # Loop over each line in the scan
         for i in range(num_lines):
 
-            if not self.montana.check_status(): # returns False if problem
-                self.piezos.zero()
-                self.squidarray.zero()
+            # Check montana status
+            if hasattr(self, 'montana'):
+                if not self.montana.check_status(): # returns False if problem
+                    self.piezos.zero()
+                    self.squidarray.zero()
 
-                tstart = time.time()
-                # play annoying sounds for 10 minutes
-                print ('Montana error! Will back off attocubes in 10 minutes \
-                       unless kernel interrupted')
-                while time.time()-tstart < 10*60:
-                    winsound.Beep(int(440*2**(1/2)),200) # play a tone
-                    winsound.Beep(440,200) # play a tone
+                    tstart = time.time()
+                    # play annoying sounds for 10 minutes
+                    print ('Montana error! Will back off attocubes in 10 minutes \
+                           unless kernel interrupted')
+                    while time.time()-tstart < 10*60:
+                        winsound.Beep(int(440*2**(1/2)),200) # play a tone
+                        winsound.Beep(440,200) # play a tone
 
-                self.atto.z.move(-1000)
-                raise Exception('Montana error!')
+                    self.atto.z.move(-1000)
+                    raise Exception('Montana error!')
 
             # If we detected a keyboard interrupt stop the scan here
             # The DAQ is not in use at this point so ending the scan
@@ -244,7 +246,8 @@ class Scanplane(Measurement):
 
             # Back off with the Z piezo before moving to the next line
             self.piezos.z.V = 0
-            self.squidarray.reset()
+            if hasattr(self, 'squidarray'):
+                self.squidarray.reset()
 
             # Interpolate to the number of lines
             self.Vfull['piezo'] = output_data[fast_axis]
