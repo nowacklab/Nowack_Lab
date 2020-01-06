@@ -19,8 +19,8 @@ from ..Utilities.utilities import AttrDict
 
 _Z_PIEZO_STEP = 4  # V piezo
 _Z_PIEZO_STEP_SLOW = 4  # V piezo
-_CAPACITANCE_THRESHOLD = 1  # fF
-_ATTO_TOWARDS_SAMPLE = -1
+_CAPACITANCE_THRESHOLD = .1  # fF
+_ATTO_TOWARDS_SAMPLE = 1
 
 def piecewise_linear(x, x0, y0, m1, m2):
         '''A continuous piecewise linear function
@@ -50,7 +50,7 @@ class Touchdown(Measurement):
     V = np.array([])
     rs = np.array([])
     C0 = 0
-    _VAR_THRESHOLD = 0.01
+    _VAR_THRESHOLD = 0.05
 
     # Time to wait before reading lockin to determine
     # capacitance.  Time > 5*time constant for 6dB
@@ -82,7 +82,7 @@ class Touchdown(Measurement):
     start_offset = 0
 
     def __init__(self, instruments={}, planescan=False, Vz_max=None, runonce=False):
-        '''Approach the sample to the SQUID while recording the capacitance 
+        '''Approach the sample to the SQUID while recording the capacitance
         of the cantelever in a lockin measurement to detect touchdown.
 
         Arguments:
@@ -153,16 +153,16 @@ class Touchdown(Measurement):
     def check_touchdown(self):
         '''Checks for a touchdown.
 
-        If the last numfit points are monotically increasing and the 
-        capacitance increases by an ammount larger than 
-        _CAPACITANCE_THRESHOLD over the last numfit points then a 
+        If the last numfit points are monotically increasing and the
+        capacitance increases by an ammount larger than
+        _CAPACITANCE_THRESHOLD over the last numfit points then a
         touchdown is detected
 
         Returns:
         bool : True when touchdown is detected
         '''
         # i is the index of last data point taken
-        i = np.where(~np.isnan(self.C))[0][-1]  
+        i = np.where(~np.isnan(self.C))[0][-1]
         # Check that enough data has been collected to do a linear fit
         if i > self.numfit + self.start_offset:
             # Check if the variance of the capacitance trace is high enough.
@@ -178,7 +178,7 @@ class Touchdown(Measurement):
                 print("level condition")
                 return True
         # If we haven't taken enough points
-        return False            
+        return False
 
     def configure_lockin(self):
         '''Set up lockin_cap amplifier for a touchdown.'''
@@ -422,7 +422,7 @@ class Touchdown(Measurement):
                 if (start is not None and self.V[i] < start):
                     self.C[i] = np.inf
                     # In the end, this is how many points we skipped
-                    self.start_offset = i 
+                    self.start_offset = i
                     continue # skip all of these
 
                 # Set the current voltage and wait
@@ -442,7 +442,7 @@ class Touchdown(Measurement):
                 self.plot() # plot the new point
 
                 self.touchdown = self.check_touchdown()
-                
+
                 if self.touchdown:
                     # Extract the touchdown voltage.
                     self.p, self.e = self.get_td_v()
@@ -450,9 +450,9 @@ class Touchdown(Measurement):
                     self.err = np.sqrt(np.diag(self.e))
 
                     # Check if the fit is "good" if not, flag the touchdown.
-                    if self.err[0] > 4.:
+                    if self.err[0] > 2.:
                         self.flagged = True
-                    
+
                     self.ax.plot(self.V, piecewise_linear(self.V, *self.p))
                     self.ax.axvline(self.p[0], color='r')
 
@@ -500,10 +500,10 @@ class Touchdown(Measurement):
 
         self.Vtd = Vtd
 
-    
+
     def get_td_v(self):
         '''Determine the touchdown voltage
-        
+
         Fit a continuous piecewise linear function to the capacitance trace. The
         point where the function transitions between the two lines is recorded
         as the touchdown voltage.
@@ -520,10 +520,10 @@ class Touchdown(Measurement):
         '''
         Determines the touchdown voltage.
 
-        1. Finds the best fit for the touchdown curve fitting from i to 
+        1. Finds the best fit for the touchdown curve fitting from i to
         the last point.
-        2. Finds the best fit for the approach curve fitting from j to 
-        the best i. Considers minimizing slope in determining good 
+        2. Finds the best fit for the approach curve fitting from j to
+        the best i. Considers minimizing slope in determining good
         approach fit.
         3. Returns the intersection of these two lines.
         '''
@@ -628,7 +628,7 @@ class Touchdown(Measurement):
 
         plt.xlim(self.V.min(), self.V.max())
 
-        self.ax.annotate("X:{0:2.2f}, Y:{1:2.2f}".format(self.piezos.x.V, self.piezos.y.V), 
+        self.ax.annotate("X:{0:2.2f}, Y:{1:2.2f}".format(self.piezos.x.V, self.piezos.y.V),
                 xy=(0.05, 0.05),
                   xycoords="axes fraction", fontsize=8)
 
@@ -653,4 +653,3 @@ class Touchdown(Measurement):
             axes.axvline(self.p[0], color='r')
             axes.annotate("{0:.2f}".format(self.p[0]), xy=(0.05, 0.90),
                       xycoords="axes fraction", fontsize=8)
-        

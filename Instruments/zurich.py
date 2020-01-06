@@ -111,6 +111,7 @@ class zurichInstrument(Instrument):
         '''
         return '/'+self.device_id.upper()+'/'+ node.replace('_', '/')
 
+
     def subscribe(self, nodes):
             '''
             Subscribes to nodes on zurich, and stores names under which to

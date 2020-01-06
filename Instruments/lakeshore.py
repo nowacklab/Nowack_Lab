@@ -462,6 +462,58 @@ class Lakeshore330(VISAInstrument):
             range = 0
         self.write('RANG %i' % range)
 
+    @property
+    def units(self):
+        '''
+        Get the units of the readout
+        '''
+        return self.ask('SUNI?')
+
+    @units.setter
+    def units(self, unit):
+        '''
+        Set the units of the readout (C, K or S where S is sensor units).
+        '''
+        if not unit in ['K', 'C', 'S']:
+            raise Exception('Unrecognized unit')
+        else:
+            self.write('SUNI %s' % unit)
+
+    @property
+    def curve_number(self):
+        '''
+        Get the current curve number
+        '''
+        return int(self.ask('BCUR?'))
+
+
+    @curve_number.setter
+    def curve_number(self, value):
+        '''
+        Set the current curve number
+        '''
+        self.write('BCUR %i' % int(value))
+
+    def get_curve_data(self, curvenum):
+        '''
+        Get the current curve data
+        '''
+        a = self.ask('CURV? %i' % curvenum)
+        a2 = np.array([float(i) for i in a.split(',')[4:]])
+        return  a2.reshape((int(len(a2)/2),2))
+
+    def set_curve_data(self, curvenum, volts, temps):
+        '''
+        Set the current curve data.
+        '''
+        voltsformatted = ['%1.5f' % f for f in volts]
+        tempsformatted = ['%3.1f' % f for f in temps]
+        lsdata  = np.array(
+                    np.transpose([voltsformatted, tempsformatted])).flatten()
+        data = ','.join(i for i in lsdata)
+        strtosend = 'CURV %i,S00ALEXCAL,%s*' % (curvenum,data)
+        print(strtosend)
+        self.write(strtosend)
 
 
     @property
@@ -512,6 +564,123 @@ class Lakeshore330(VISAInstrument):
         Set the current setpoint. Identical to the setpoint setter.
         '''
         self.write('SETP %.2f' % temp)
+    @property
+    def setpoint(self):
+        '''
+        Get the current setpoint
+        '''
+        return float(self.ask('SETP?')[1:])
+
+    @setpoint.setter
+    def setpoint(self, stp):
+        '''
+        Set the current setpoint
+        '''
+        self.write('SETP %.2f' % stp)
+    def init_visa(self):
+        self._visa_handle = visa.ResourceManager().open_resource(self.gpib_address)
+        self._visa_handle.read_termination = '\n'
+
+class Lakeshore325(VISAInstrument):
+    '''
+    Class to communicate with Montana's Lakeshore 330. Always uses channel
+    A for everything, as we only have one thermometer.
+    '''
+
+    def __init__(self, gpib_address = 15):
+        if type(gpib_address) is int:
+            gpib_address = 'GPIB::%02i::INSTR' %gpib_address
+        self.gpib_address = gpib_address
+        self.init_visa()
+        self._visa_handle.timeout = 3000 #
+        #if int(self.ask('RANGE? 1')) > 1:
+        #    print("WARNING, HEATER IS NOT IN LOW RANGE!")
+
+
+    def __getstate__(self):
+
+        self._save_dict = {
+            'temperature': self.temperature,
+            #'ramp rate': self.ramp_rate,
+            'setpoint': self.setpoint
+        }
+        return self._save_dict
+    @property
+    def heater_status(self):
+        '''Returns the status of the heater'''
+        rtrn = self.ask('RANGE 1?')
+        if rtrn == 3:
+            rtrn = 'HIGH'
+        elif rtrn == 2:
+            rtrn = 'MED'
+        elif rtrn == 1:
+            rtrn = 'LOW'
+        elif rtrn == 0:
+            rtrn = 'OFF'
+        return rtrn
+
+    @heater_status.setter
+    def heater_status(self, range):
+        if range == 'HIGH':
+            range = 3
+        elif range == 'MED':
+            range = 2
+        elif range == 'LOW':
+            range = 1
+        elif range == 'OFF':
+            range = 0
+        self.write('RANG %i' % range)
+
+
+
+    @property
+    def ramp(self):
+        '''
+        Get whether the controller is set to ramp between temperatures
+        '''
+        return bool(self.ask('RAMP?'))
+
+    @ramp.setter
+    def ramp(self, toramp):
+        '''
+        Set whether the controller should ramp
+        '''
+        self.write('RAMP %i' % int(toramp))
+
+    @property
+    def ramp_rate(self):
+        '''
+        Get the current ramp rate in kelvin per minute
+        '''
+        return float(self.ask('RAMPR?'))
+
+    @ramp_rate.setter
+    def ramp_rate(self, rate):
+        '''
+        Set the ramp rate in kelvin per minute
+        '''
+        self.write('RAMPR %.2f' % rate)
+
+    @property
+    def is_ramping(self):
+        '''
+        Get whether the controller is currently ramping
+        '''
+        return bool(self.ask('RAMPS?'))
+
+    @property
+    def temperature(self):
+        '''
+        Get the current temperature
+        '''
+        return float(self.ask('KRDG? A')[1:])
+
+    @temperature.setter
+    def temperature(self, temp):
+        '''
+        Set the current setpoint. Identical to the setpoint setter.
+        '''
+        self.write('SETP 1, %.2f' % temp)
     @property
     def setpoint(self):
         '''

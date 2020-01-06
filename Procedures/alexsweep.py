@@ -71,7 +71,7 @@ class Active(Measurement):
     gettable class will return its gotten value after setting. Delays code by
     .1 ms to allow properties time to change.
     '''
-    def __init__(self, obj, prop, name, array, delay = 1e-3):
+    def __init__(self, obj, prop, name, array, delay = 1e-2):
         self.prop = prop
         self.obj = obj
         self.array = array
