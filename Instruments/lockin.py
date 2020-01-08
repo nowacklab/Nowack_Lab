@@ -41,11 +41,9 @@ class SR830(VISAInstrument):
     Instrument driver for SR830, modified from Guen's squidpy driver
     '''
     def __init__(self, gpib_address=''):
-        if type(gpib_address) is int:
-            gpib_address = 'GPIB::%02i::INSTR' %gpib_address
         self.gpib_address = gpib_address
 
-        self._init_visa(gpib_address)
+        self._init_visa(gpib_address, interface='GPIB')
         self._visa_handle.timeout = 3000 # default
 
     def __getstate__(self):
@@ -331,8 +329,8 @@ class SR830(VISAInstrument):
         return tabulate(table, headers = ['Parameter', 'Value'])
 
 
-    def _init_visa(self, resource):
-        super()._init_visa(resource) # creates self._visa_handle
+    def _init_visa(self, resource, **kwargs):
+        super()._init_visa(resource, **kwargs) # creates self._visa_handle
         self._visa_handle.write('OUTX 1') #1=GPIB
 
     def is_OL(self, thresh=1):

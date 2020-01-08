@@ -20,6 +20,7 @@ class Keithley2400(VISAInstrument):
 
     def __init__(self, gpib_address='', max_step=0.1, max_sweep=1):
         '''
+        GPIB_address (int or str): GPIB address number or string
         Parameters affect sweeps and zeroing
         Max step: maximum sweep step size (V)
         Max sweep: maximum sweep rate (V/s)
@@ -27,11 +28,9 @@ class Keithley2400(VISAInstrument):
         self.max_step = max_step
         self.max_sweep = max_sweep
 
-        if type(gpib_address) is int:
-            gpib_address = 'GPIB::%02i::INSTR' %gpib_address
         self.gpib_address= gpib_address
 
-        self._init_visa(gpib_address, termination='\n')
+        self._init_visa(gpib_address, termination='\n', interface='GPIB')
 
         self.setup()
 
@@ -466,8 +465,6 @@ class KeithleyPPMS(Keithley2400):
         Keithley multimeter to measure PPMS temperature.
         Can configure 0-10 V scale in PPMS software (Analog Output).
         '''
-        if type(gpib_address) is int:
-            gpib_address = 'GPIB::%02i::INSTR' %gpib_address
         self.gpib_address= gpib_address
         self._visa_handle = visa.ResourceManager().open_resource(self.gpib_address)
         self._visa_handle.read_termination = '\n'
@@ -498,11 +495,9 @@ class Keithley2000(Keithley2400):
         '''
         Keithley multimeter
         '''
-        if type(gpib_address) is int:
-            gpib_address = 'GPIB::%02i::INSTR' %gpib_address
         self.gpib_address= gpib_address
 
-        self._init_visa(gpib_address, termination='\n')
+        self._init_visa(gpib_address, termination='\n', interface='GPIB')
 
         self.write(':SAMP:COUN 1')
 

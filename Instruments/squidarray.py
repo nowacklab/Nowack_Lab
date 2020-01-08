@@ -11,12 +11,10 @@ from .instrument import VISAInstrument, Instrument
 
 class PCI100(VISAInstrument):
     def __init__(self, port='COM3'):
-        if isinstance(port, int):
-            port = 'COM%i' % port
         self.port = port
 
         try:
-            self._init_visa(port)
+            self._init_visa(port, interface='COM')
         except BaseException:
             raise Exception(
                 "Cannot connect to STAR Cryoelectronics SQUID interface")
@@ -26,7 +24,7 @@ class PCI100(VISAInstrument):
         '''
         Write to the PCI; create and destroy visa handles every time.
         '''
-        self._init_visa(self.port)
+        self._init_visa(self.port, interface='COM')
         try:
             super().write(cmd)
         except BaseException:

@@ -7,7 +7,7 @@ from ..Utilities.utilities import AttrDict
 _Z_PIEZO_STEP = 4  # V piezo
 _Z_PIEZO_STEP_SLOW = 4  # V piezo
 _CAPACITANCE_THRESHOLD = 1  # fF
-_VAR_THRESHOLD = 0.25 # 0.02
+_VAR_THRESHOLD = 0.04 # 0.25 for dil fridge # 0.02 earlier
 
 # Time UNTIL capacitance bridge is BALanced.  When piezos move, the
 # capacitance shifts.  This time is supposed to wait for those shifts to
@@ -279,7 +279,6 @@ q: Quit' %(self.atto.z.pos, self.attoshift))
                     if self.C[j + 1] - self.C[j] < 0:
                         return False
                 # If the for loop passed, then touchdown
-                print('level condition')
                 return True
         # If we haven't taken enough points
         return False

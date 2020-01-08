@@ -37,7 +37,7 @@ class VISAInstrument(Instrument):
         return d
 
     def _init_visa(self, resource, termination='\n', parity=None,
-        data_bits=None, baud_rate=None):
+        data_bits=None, baud_rate=None, interface=None):
         r'''
         Initialize the VISA connection.
         Pass in the resource name. This can be:
@@ -52,7 +52,15 @@ class VISAInstrument(Instrument):
         termination: e.g. \r\n: read termination.
         parity, data_bits, baud_rate: if not None, will set these properties for
             the visa handle
+        interface: Currently only 'GPIB' or 'COM'. Allows you to pass in an int
+            for GPIB adddress or COM port
         '''
+        if type(resource) is int:
+            if interface == 'GPIB':
+                resource = 'GPIB::%02i::INSTR' %resource
+            elif interface == 'COM':
+                resource = 'COM%i' %resource
+
         self._visa_handle = visa.ResourceManager().open_resource(resource)
         self._visa_handle.read_termination = termination
 
@@ -67,6 +75,10 @@ class VISAInstrument(Instrument):
             idn = self.query('*IDN?')
             if self._idn not in idn:
                 raise Exception('Instrument not recognized. Expected string %s in *IDN?: %s' %(self._idn, idn))
+
+    def ask(self, *args, **kwargs):
+        raise Exception('Use query instead of ask. \
+pyvisa 1.10 changed the name of this function.')
 
     def query(self, cmd, timeout=3000):  # pyvisa 1.10 ask -> query
         '''

@@ -354,8 +354,8 @@ class AMI420(AMI430):
         Bmagnet - known field in the magnet (T). May be different from supply.
         gpib_address - GPIB address.
         '''
-        self._resource = 'GPIB::%02i::INSTR' %gpib_address
-        VISAInstrument._init_visa(self, self._resource)
+        self._resource = gpib_address
+        VISAInstrument._init_visa(self, self._resource, interface='GPIB')
 
         self.Bmagnet = Bmagnet
         if self.Bmagnet != self.Bset:
@@ -594,8 +594,8 @@ class AMI420_ResistiveLoad(AMI420):
         Parameters:
         gpib_address - GPIB address.
         '''
-        self._resource = 'GPIB::%02i::INSTR' %gpib_address
-        VISAInstrument._init_visa(self, self._resource)
+        self._resource = gpib_address
+        VISAInstrument._init_visa(self, self._resource, interface='GPIB')
 
     @property
     def Bmagnet(self):

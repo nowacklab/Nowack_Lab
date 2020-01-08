@@ -219,8 +219,8 @@ class Lakeshore372(VISAInstrument):
 
     def __init__(self, host = '192.168.82.72', port=7777, usb=True, com=72):
         if usb:
-            self._init_visa('COM{}'.format(com), parity=1,  # odd parity
-                data_bits=7, baud_rate=57600)
+            self._init_visa(com, parity=1,  # odd parity
+                data_bits=7, baud_rate=57600, interface='COM')
         else:
             self._init_visa('TCPIP::%s::%i::SOCKET' %(host, port), termination='\n')
 
@@ -470,8 +470,8 @@ class Lakeshore425(VISAInstrument):
     _strip = '\r'
 
     def __init__(self, com=7):
-        self._init_visa('COM{}'.format(com), parity=1,  # odd parity
-            data_bits=7, baud_rate=57600)
+        self._init_visa(com, parity=1,  # odd parity
+            data_bits=7, baud_rate=57600, interface='COM')
 
     @property
     def field(self):
@@ -479,3 +479,155 @@ class Lakeshore425(VISAInstrument):
         Returns field in the current units
         '''
         return float(self.query('RDGFIELD?'))
+
+class Lakeshore330(VISAInstrument):
+    '''
+    Class to communicate with Montana's Lakeshore 330. Always uses channel
+    B for everything, as we only have one thermometer.
+    '''
+
+    def __init__(self, gpib_address = 7):
+        self.gpib_address = gpib_address
+        self._init_visa(gpib_address, interface='GPIB')
+        self._visa_handle.timeout = 3000 #
+        if self.heater_status in ['HIGH', 'MED']:
+            print("WARNING, HEATER IS NOT IN LOW RANGE!")
+
+    def __getstate__(self):
+        if self._loaded:
+            return super().__getstate__() # Do not attempt to read new values
+        self._save_dict = {
+            'temperature': self.temperature,
+            'ramp rate': self.ramp_rate,
+            'setpoint': self.setpoint,
+            'units': self.units,
+        }
+        return self._save_dict
+
+    @property
+    def heater_status(self):
+        '''Returns the status of the heater'''
+        opts = ['OFF', 'LOW', 'MED', 'HIGH']
+        return opts[int(self.query('RANG?'))]
+
+    @heater_status.setter
+    def heater_status(self, range):
+        opts = ['OFF', 'LOW', 'MED', 'HIGH']
+        idx = opts.index(range)
+        self.write('RANG %i' % idx)
+
+    @property
+    def units(self):
+        '''
+        Get the units of the readout
+        '''
+        return self.query('SUNI?')
+
+    @units.setter
+    def units(self, unit):
+        '''
+        Set the units of the readout (C, K or S where S is sensor units).
+        '''
+        if not unit in ['K', 'C', 'S']:
+            raise Exception('Unrecognized unit')
+        else:
+            self.write('SUNI %s' % unit)
+
+    @property
+    def curve_number(self):
+        '''
+        Get the current curve number
+        '''
+        return int(self.query('BCUR?'))
+
+    @curve_number.setter
+    def curve_number(self, value):
+        '''
+        Set the current curve number
+        '''
+        self.write('BCUR %i' % int(value))
+
+    def get_curve_data(self, curvenum):
+        '''
+        Get the current curve data
+        '''
+        a = self.query('CURV? %i' % curvenum)
+        a2 = np.array([float(i) for i in a.split(',')[4:]])
+        return  a2.reshape((int(len(a2)/2),2))
+
+    def set_curve_data(self, curvenum, volts, temps):
+        '''
+        Set the current curve data.
+        '''
+        voltsformatted = ['%1.5f' % f for f in volts]
+        tempsformatted = ['%3.1f' % f for f in temps]
+        lsdata  = np.array(
+                    np.transpose([voltsformatted, tempsformatted])).flatten()
+        data = ','.join(i for i in lsdata)
+        strtosend = 'CURV %i,S00ALEXCAL,%s*' % (curvenum,data)
+        print(strtosend)
+        self.write(strtosend)
+
+    @property
+    def ramp(self):
+        '''
+        Get whether the controller is set to ramp between temperatures
+        '''
+        return bool(self.query('RAMP?'))
+
+    @ramp.setter
+    def ramp(self, toramp):
+        '''
+        Set whether the controller should ramp
+        '''
+        print('Note: ramp function did not work when tried 1/8/2020')
+        self.write('RAMP %i' % int(toramp))
+
+    @property
+    def ramp_rate(self):
+        '''
+        Get the current ramp rate in kelvin per minute
+        '''
+        return float(self.query('RAMPR?'))
+
+    @ramp_rate.setter
+    def ramp_rate(self, rate):
+        '''
+        Set the ramp rate in kelvin per minute
+        '''
+        self.write('RAMPR %.2f' % rate)
+
+    @property
+    def is_ramping(self):
+        '''
+        Get whether the controller is currently ramping
+        '''
+        return bool(self.query('RAMPS?'))
+
+    @property
+    def temperature(self):
+        '''
+        Get the current temperature
+        '''
+        return float(self.query('SDAT?')[1:])
+
+    @temperature.setter
+    def temperature(self, temp):
+        '''
+        Set the current setpoint using the setpoint setter.
+        '''
+        self.setpoint = temp
+
+    @property
+    def setpoint(self):
+        '''
+        Get the current setpoint
+        '''
+        return float(self.query('SETP?')[1:])
+
+    @setpoint.setter
+    def setpoint(self, stp):
+        '''
+        Set the current setpoint
+        '''
+        self.write('SETP %.2f' % stp)

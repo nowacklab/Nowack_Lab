@@ -6,11 +6,9 @@ class SR760(VISAInstrument):
     _NUM_BINS = 400
 
     def __init__(self, gpib_address=''):
-        if type(gpib_address) is int:
-            gpib_address = 'GPIB::%02i::INSTR' %gpib_address
         self.gpib_address = gpib_address
 
-        self._init_visa(gpib_address, termination='\n')
+        self._init_visa(gpib_address, termination='\n', interface='GPIB')
 
     def query(self, cmd, timeout=3000):
         '''

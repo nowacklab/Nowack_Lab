@@ -22,14 +22,12 @@ class SR5113(VISAInstrument):
 
         autosleep: time delay before preamp enters sleep mode. False if no auto
         '''
-        if type(port) is int:
-            port = 'COM%i' %port
         self.port = port
 
         try:
-            self._init_visa(port, termination = '\r')
+            self._init_visa(port, termination = '\r', interface='COM')
         except:
-            self._init_visa(port, termination = '\r')
+            self._init_visa(port, termination = '\r', interface='COM')
 
         self.autosleep = autosleep
         # assume the preamp is asleep
