@@ -235,7 +235,7 @@ q: Quit' %(self.atto.z.pos, self.attoshift))
         self.fig.canvas.draw()
 
 
-    def check_balance(self, V_unbalanced=2e-6):
+    def check_balance(self, V_unbalanced=4e-6):
         '''
         Checks the balance of the capacitance bridge.
         Voltage must be less than V_unbalanced (V).

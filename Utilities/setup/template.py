@@ -38,6 +38,7 @@ from Nowack_Lab.Measurements.transport import RvsVg, RvsTime, RvsT, RvsVg_Vtg, R
 from Nowack_Lab.Measurements.magnetotransport import RvsB, RvsVg_B, RvsB_BlueFors, RvsVg_B_BlueFors, RvsB_Phil, RvsVg_B_Phil
 from Nowack_Lab.Instruments.attocube import Attocube
 from Nowack_Lab.Instruments.awg import Agilent33521A
+from Nowack_Lab.Instruments.BKPsupply import BKP9201
 from Nowack_Lab.Instruments.keithley import Keithley2400, Keithley2450, KeithleyPPMS
 from Nowack_Lab.Instruments.lakeshore import Lakeshore372, Lakeshore330
 from Nowack_Lab.Instruments.levelmeter import AMI1700
