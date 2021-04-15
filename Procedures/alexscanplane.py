@@ -1,4 +1,5 @@
 from Nowack_Lab.Utilities.datasaver import Saver
+from Nowack_Lab.Instruments.zurich import zurichInstrument
 import numpy as np
 import time
 from numpy import array as array
@@ -66,18 +67,21 @@ class Scanplane():
         for channelname in self.channelstomonitor.keys():
             self.saver.append('/DAQ/'+channelname, np.full(datashape,
                                                             np.float64(np.nan)))
+        for instrument in self.instruments.keys():
+            self.saver.append('config/instruments/%s/' % instrument,
+                self.instruments[instrument].__getstate__())
+
         for oneinst in self.trigaquired:
             dictofnodes = oneinst[1]
-            self.saver.append('config/triginstruments/%s/' %
+            if not oneinst[0]  in self.instruments.values():
+                self.saver.append('config/triginstruments/%s/' %
                               oneinst[0].device_id, oneinst[0].__getstate__())
+
             for nodename in dictofnodes.keys():
                 self.saver.append('config/'+ nodename + '/node',
                                                         dictofnodes[nodename])
                 self.saver.append('config/'+ nodename + '/device',
                                                           oneinst[0].device_id)
-        for instrument in self.instruments.keys():
-            self.saver.append('config/instruments/%s/' % instrument,
-                self.instruments[instrument].__getstate__())
     def launchplotters(self):
         '''
         Uses OS to launch a plotting kernel in a seperate python thread.
@@ -197,6 +201,9 @@ class Scanplane():
         for inst in self.trigaquired:
             [obj, attrs] = inst
             for node in attrs.items():
+                if (isinstance(obj, zurichInstrument)
+                    and  'DEMODS' == node[1][:6]):
+                    setattr(obj, node[1][:9]+'TRIGGER',1)
                 obj.subscribe({node[1]:node[0]})
         try:
             for i in np.arange(len(self.lines)):
@@ -245,6 +252,9 @@ class Scanplane():
         for inst in self.trigaquired:
             [obj, attrs] = inst
             for node in attrs.items():
+                if (isinstance(obj, zurichInstrument)
+                              and  'DEMODS' == node[1][:6]):
+                    setattr(obj, node[1][:9]+'TRIGGER',0)
                 obj.unsubscribe([node[1]])
         self.instruments['piezos'].z.V = -400
         self.instruments['piezos'].y.V = 0

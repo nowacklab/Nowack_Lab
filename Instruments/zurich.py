@@ -86,6 +86,7 @@ class zurichInstrument(Instrument):
                 setattr(self.__class__, nameofattr, property(fget=eval(
                 "lambda self: {'x': self.daq.getSample('%s')['x'][0]," % elem
                             + "'y':self.daq.getSample('%s')['y'][0]}" % elem)))
+
     def __getstate__(self):
         zdict = self.daq.get('/'+ self.device_id + '/', True)
         self._save_dict = {}
@@ -182,6 +183,38 @@ class zurichInstrument(Instrument):
                 else:
                     raise Exception('Unrecognized data returned')
             return formatteddata
+
+    @property
+    def sigin1dcval(self):
+        '''
+        Gets the average value of Signal Input 1, averaged over 320ms.
+        Will hold execution for 320ms.
+        '''
+        self.SCOPES_0_ENABLE = 0
+        self.SCOPES_0_TIME = 15
+        self.SCOPES_0_CHANNEL = 0
+        self.SCOPES_0_ENABLE = 1
+        time.sleep(.5)
+        self.subscribe({'SCOPES_0_WAVE':'SIGIN1_DC_VALUE_RESERVED'})
+        data = self.poll()['SIGIN1_DC_VALUE_RESERVED']
+        self.unsubscribe(['SCOPES_0_WAVE'])
+        return np.mean((data [-1]['wave']/(2**15 - 1))*self.SIGINS_0_RANGE)
+
+    @property
+    def sigin2dcval(self):
+        '''
+        Gets the average value of Signal Input 2, averaged over 320ms.
+        Will hold execution for 320ms.
+        '''
+        self.SCOPES_0_ENABLE = 0
+        self.SCOPES_0_TIME = 15
+        self.SCOPES_0_CHANNEL = 1
+        self.SCOPES_0_ENABLE = 1
+        time.sleep(.5)
+        self.subscribe({'SCOPES_0_WAVE':'SIGIN2_DC_VALUE_RESERVED'})
+        data = self.poll()['SIGIN2_DC_VALUE_RESERVED']
+        self.unsubscribe(['SCOPES_0_WAVE'])
+        return np.mean((data [-1]['wave']/(2**15 - 1))*self.SIGINS_1_RANGE)
 
 class HF2LI1(zurichInstrument):
       pass

@@ -15,26 +15,35 @@ class Keithley2400(VISAInstrument):
     _Vout_range = None
     _V_compliance = None
 
-    def __init__(self, gpib_address=''):
+    def __init__(self, gpib_address='', maxramp = 5):
         if type(gpib_address) is int:
             gpib_address = 'GPIB::%02i::INSTR' %gpib_address
         self.gpib_address= gpib_address
-
+        self.maxramp = maxramp
         self._init_visa(gpib_address, termination='\n')
 
         self.setup()
 
 
     def __getstate__(self):
-        self._save_dict = {
-            'output current': self._Iout,
-            'output current range': self._Iout_range,
-            'current compliance': self._I_compliance,
-            'output voltage': self._Vout,
-            'output voltage range': self._Vout_range,
-            'voltage compliance': self._V_compliance
-        }
+        if self.source == 'V':
+            self._save_dict = {
+                'output current': self.I,
+                'current compliance': self.I_compliance,
+                'output voltage setpoint': self.Vout,
+                'output voltage range': self.Vout_range,
+                'actual voltage output': self.V
+            }
+        elif self.source == 'I':
+            self._save_dict = {
+                'output voltage': self.V,
+                'voltage compliance': self.V_compliance,
+                'output current setpoint': self.Iout,
+                'output current range': self.Iout_range,
+                'actual current output': self.I
+            }
         return self._save_dict
+
 
     def __setstate__(self, state):
         pass
@@ -193,6 +202,29 @@ class Keithley2400(VISAInstrument):
         self._Vout = value
         self.I # trigger a reading to update the screen, assuming we measure I
 
+    @property
+    def Vout_ramper(self):
+        '''
+        Identical functionality to Vout, but setter will ramp source at maxramp
+        (in volts per second)
+        '''
+        if self.source != 'V':
+            raise Exception('Cannot read source voltage if sourcing current!')
+        self._Vout = float(self.ask(':SOUR:VOLT:LEV:AMPL?'))
+        return self._Vout
+
+    @Vout_ramper.setter
+    def Vout_ramper(self, value):
+        '''
+        Set the output voltage (if in voltage source mode).
+        '''
+        current_value = self.V
+        deltaV = abs(value - self.V)
+        timetosweep = deltaV/(self.maxramp)
+        volts = np.linspace(current_value, value, 5*timetosweep)
+        for v in volts:
+            self.Vout = v
+            time.sleep(.2)
 
     @property
     def Vout_range(self):
@@ -350,8 +382,8 @@ class Keithley2400(VISAInstrument):
 
 class Keithley2450(Keithley2400):
 
-    def __init__(self, resource='USB0::0x05E6::0x2450::04110400::INSTR'):
-        super().__init__(resource)
+    def __init__(self, resource='USB0::0x05E6::0x2450::04110400::INSTR', maxramp = 5):
+        super().__init__(resource, maxramp = maxramp)
         self.I # trigger reading to update screen
 
     def setup(self):

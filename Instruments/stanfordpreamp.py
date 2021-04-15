@@ -1,5 +1,6 @@
 import visa, time, numpy as np
 from .instrument import Instrument
+from pyvisa.constants import StopBits
 
 GAINS = [1,2,5,10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000]
 FILTER = [0.03, 0.1, 0.3, 1, 3, 10, 30, 1e2, 3e2, 1e3, 3e3, 1e4, 3e4, 1e5, 3e5,1e6]
@@ -26,8 +27,9 @@ class SR560(Instrument):
         #they are chosen in the Measurement
         self._save_dict = {"gain": self._gain,
                           "filter": self._filter,
-                          "dccoupled": self.is_dc_coupled(),
-                          "overloaded": self.is_OL()
+                          "dccoupled": self._coupling,
+                           "filter_mode": self._filter_mode,
+                           "diff_mode": self._diff_input
                           }
         return self._save_dict
 
@@ -86,7 +88,8 @@ class SR560(Instrument):
         Connects to preamp via serial port
         '''
         rm = visa.ResourceManager()
-        self._inst = rm.open_resource(port)
+        self._inst = rm.open_resource(port, write_termination = '\r\n',
+                                      stop_bits = StopBits.two)
 
 
     def id(self):
@@ -127,6 +130,7 @@ class SR560(Instrument):
             fm = rolloff/6
         elif pass_type == 'high':
             fm = rolloff/6 + 2
+        self._filter_mode = pass_type
         self.write('FLTM %i' %fm)
 
     def diff_input(self, AminusB=True, binput = False):
@@ -138,6 +142,7 @@ class SR560(Instrument):
             srcm = 2
         else:
             srcm = 0
+        self._diff_input = srcm
         self.write('SRCE %i' %(srcm)) # 0 = A, 1 = A-B
 
     def recover(self):

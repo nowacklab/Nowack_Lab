@@ -10,7 +10,7 @@ for cg in COARSE_GAIN:
 FILTER = [0, 0.03, 0.1, 0.3, 1, 3, 10, 30, 100, 300, 1000, 3000, 10000, 30000, 100000, 300000]
 
 class SR5113(Instrument):
-    _label = 'preamp' 
+    _label = 'preamp'
 
     #Put the gains as class variable tuples
 
@@ -121,6 +121,7 @@ class SR5113(Instrument):
         '''
         rm = visa.ResourceManager()
         self._inst = rm.open_resource(port)
+        self._inst.timeout = 5000
 
 
     def id(self):
@@ -199,7 +200,7 @@ class SR5113(Instrument):
             return response.rstrip() #rstrip gets rid of \n
 
 class FakeSR5113(Instrument):
-    _label = 'preamp' 
+    _label = 'preamp'
     def __init__(self, port='COM1', gain=1, filter=(0,100e3), dc_coupling=True):
         self.gain = gain;
         self.filter = filter;

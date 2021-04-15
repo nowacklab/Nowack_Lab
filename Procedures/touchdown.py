@@ -19,7 +19,7 @@ from ..Utilities.utilities import AttrDict
 
 _Z_PIEZO_STEP = 4  # V piezo
 _Z_PIEZO_STEP_SLOW = 4  # V piezo
-_CAPACITANCE_THRESHOLD = .1  # fF
+_CAPACITANCE_THRESHOLD = .3  # fF
 _ATTO_TOWARDS_SAMPLE = 1
 
 def piecewise_linear(x, x0, y0, m1, m2):
@@ -50,7 +50,7 @@ class Touchdown(Measurement):
     V = np.array([])
     rs = np.array([])
     C0 = 0
-    _VAR_THRESHOLD = 0.05
+    _VAR_THRESHOLD = 0.4;
 
     # Time to wait before reading lockin to determine
     # capacitance.  Time > 5*time constant for 6dB
