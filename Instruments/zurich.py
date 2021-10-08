@@ -88,7 +88,7 @@ class zurichInstrument(Instrument):
                             + "'y':self.daq.getSample('%s')['y'][0]}" % elem)))
 
     def __getstate__(self):
-        zdict = self.daq.get('/'+ self.device_id + '/', True)
+        zdict = self.daq.get('/'+ self.device_id + '/', flat = True, all = True)
         self._save_dict = {}
         for key in zdict.keys():
             self._save_dict['_'.join(key.split('/')).upper()]= zdict[key]

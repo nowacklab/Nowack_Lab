@@ -472,7 +472,7 @@ class Wait(Measurement):
     values(n). Must satisfy this condition for timetoaccept.
     '''
 
-    def __init__(self, name, obj, prop, values, elem = False, valence = -1,
+    def __init__(self, obj, prop, name, values, elem = False, valence = -1,
                     tolerance = 0, timeout = 10, interval = 1,
                                                         timetoaccept = 1e-3):
 

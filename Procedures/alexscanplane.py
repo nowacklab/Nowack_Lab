@@ -203,7 +203,9 @@ class Scanplane():
             for node in attrs.items():
                 if (isinstance(obj, zurichInstrument)
                     and  'DEMODS' == node[1][:6]):
+                    setattr(obj, node[1][:9]+'TRIGGER',0)
                     setattr(obj, node[1][:9]+'TRIGGER',1)
+                    time.sleep(.1)
                 obj.subscribe({node[1]:node[0]})
         try:
             for i in np.arange(len(self.lines)):

@@ -581,9 +581,9 @@ class Lakeshore330(VISAInstrument):
         self._visa_handle = visa.ResourceManager().open_resource(self.gpib_address)
         self._visa_handle.read_termination = '\n'
 
-class Lakeshore325(VISAInstrument):
+class Lakeshore335(VISAInstrument):
     '''
-    Class to communicate with Montana's Lakeshore 330. Always uses channel
+    Class to communicate with Montana's Lakeshore 335. Always uses channel
     A for everything, as we only have one thermometer.
     '''
 
@@ -592,6 +592,7 @@ class Lakeshore325(VISAInstrument):
             gpib_address = 'GPIB::%02i::INSTR' %gpib_address
         self.gpib_address = gpib_address
         self.init_visa()
+        self._visa_handle.read_termination = '\r\n'
         self._visa_handle.timeout = 3000 #
         #if int(self.ask('RANGE? 1')) > 1:
         #    print("WARNING, HEATER IS NOT IN LOW RANGE!")
@@ -608,7 +609,7 @@ class Lakeshore325(VISAInstrument):
     @property
     def heater_status(self):
         '''Returns the status of the heater'''
-        rtrn = self.ask('RANGE 1?')
+        rtrn = self.ask('RANGE? 2')
         if rtrn == 3:
             rtrn = 'HIGH'
         elif rtrn == 2:
@@ -629,37 +630,39 @@ class Lakeshore325(VISAInstrument):
             range = 1
         elif range == 'OFF':
             range = 0
-        self.write('RANG %i' % range)
-
-
+        self.write('RANGE 2,%i' % range)
 
     @property
     def ramp(self):
         '''
         Get whether the controller is set to ramp between temperatures
         '''
-        return bool(self.ask('RAMP?'))
+        return bool(float(self.ask('RAMP? 2')[0]))
 
     @ramp.setter
     def ramp(self, toramp):
         '''
         Set whether the controller should ramp
         '''
-        self.write('RAMP %i' % int(toramp))
+        #get current ramp rate
+        currentrate = float(self.ask('RAMP? 2')[3:])
+        self.write('RAMP 2,%i,+%.04f' % (int(toramp), currentrate))
 
     @property
     def ramp_rate(self):
         '''
         Get the current ramp rate in kelvin per minute
         '''
-        return float(self.ask('RAMPR?'))
+        return float(self.ask('RAMP? 2')[3:])
 
     @ramp_rate.setter
     def ramp_rate(self, rate):
         '''
         Set the ramp rate in kelvin per minute
         '''
-        self.write('RAMPR %.2f' % rate)
+        #get current ramp status
+        currentramp = int(self.ask('RAMP? 2')[0])
+        self.write('RAMP 2,%i,+%.04f' % (currentramp, rate))
 
     @property
     def is_ramping(self):
@@ -680,20 +683,27 @@ class Lakeshore325(VISAInstrument):
         '''
         Set the current setpoint. Identical to the setpoint setter.
         '''
-        self.write('SETP 1, %.2f' % temp)
+        self.write('SETP 2, %.2f' % temp)
+
+    @property
+    def voltage(self):
+        '''
+        Gets the reading in sensor units
+        '''
+        return float(self.ask('SRDG?')[1:])
     @property
     def setpoint(self):
         '''
         Get the current setpoint
         '''
-        return float(self.ask('SETP?')[1:])
+        return float(self.ask('SETP? 2')[1:])
 
     @setpoint.setter
     def setpoint(self, stp):
         '''
         Set the current setpoint
         '''
-        self.write('SETP %.2f' % stp)
+        self.write('SETP 2,+%.2f' % stp)
     def init_visa(self):
         self._visa_handle = visa.ResourceManager().open_resource(self.gpib_address)
         self._visa_handle.read_termination = '\n'
