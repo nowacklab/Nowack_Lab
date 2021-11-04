@@ -18,7 +18,6 @@ from Nowack_Lab.Utilities.utilities import keeprange
 import time
 
 
-
 class DaqSpectrum(Measurement):
     """Monitor a DAQ channel and compute the power spectral density
 
@@ -251,17 +250,41 @@ class DaqSpectrum(Measurement):
             if self.preamp_dccouple is False:
                 time.sleep(12) # >10, in case slow communication
 
-    def findmeanstd(self):
+    def findmeanstd(self,m0=10,mend = 1000):
         '''
         returns mean and std in units after conversion
         rejects outliers
         '''
         [f, psdAve] = keeprange(self.f, [self.psdAve*self.conversion], 
-                                m0=10, mend=1000)
+                                m0, mend)
         [f, psdAve] = reject_outliers_spectrum(f, psdAve)
         return [np.mean(psdAve), np.std(psdAve)]
+    
+    def findnoiselevel(self):
+        self.setup_preamp()
+        self.psdAve = self.get_spectrum()
+        [self.psd_mean,self.psd_std] = self.findmeanstd(500,1000)
+        
 
-
+    def simpleplot(self):
+        fig = plt.figure(figsize=(12, 6))
+        axloglog = fig.add_subplot(121)
+        axloglog.set_xlabel('Frequency (Hz)')
+        axloglog.set_ylabel(r'Power Spectral Density ($\mathrm{%s/\sqrt{Hz}}$)' %self.units)
+        axloglog.loglog(self.f, self.psdAve*self.conversion)
+        #ax['loglog'].annotate(params, xy=(0.02,.45), xycoords='axes fraction',fontsize=8, ha='left', va='top', family='monospace')
+        
+        axsemilog = fig.add_subplot(122)
+        axsemilog.set_xlabel('Frequency (Hz)')
+        axsemilog.set_ylabel(r'Power Spectral Density ($\mathrm{%s/\sqrt{Hz}}$)' %self.units)
+        axsemilog.semilogy(self.f, self.psdAve*self.conversion)
+        axsemilog.semilogy(self.f, self.psd_mean*np.ones(len(self.f)))
+        axsemilog.set_xlim([self.f[0],1e3])
+        axsemilog.annotate(str(self.psd_mean)+' $\mathrm{%s/\sqrt{Hz}}$' %self.units)
+        #ax['loglog'].annotate(self.notes, xy=(0.02,.45), xycoords='axes fraction',fontsize=8, ha='left', va='top', family='monospace')
+        plt.show()
+        
+########################################################################################
 class TwoSpectrum(DaqSpectrum):
 
     instrument_list = ['daq', 'preamp']
