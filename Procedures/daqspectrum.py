@@ -280,8 +280,7 @@ class DaqSpectrum(Measurement):
         axsemilog.semilogy(self.f, self.psdAve*self.conversion)
         axsemilog.semilogy(self.f, self.psd_mean*np.ones(len(self.f)))
         axsemilog.set_xlim([self.f[0],1e3])
-        axsemilog.annotate(str(self.psd_mean)+' $\mathrm{%s/\sqrt{Hz}}$' %self.units)
-        #ax['loglog'].annotate(self.notes, xy=(0.02,.45), xycoords='axes fraction',fontsize=8, ha='left', va='top', family='monospace')
+        axsemilog.annotate(str(self.psd_mean)+' $\mathrm{%s/\sqrt{Hz}}$' %self.units, xy=(0.02,.45), xycoords='axes fraction',fontsize=8, ha='left', va='top', family='monospace')
         plt.show()
         
 ########################################################################################

@@ -167,36 +167,52 @@ class NIDAQ(Instrument):
             self._output_names[getattr(self, chan).label] = chan
         return self._output_names
 
-
     def monitor(self, chan_in, duration, sample_rate=100):
-        '''
-        Monitor any number of channels for a given duration.
-
-        Example:
-
-        Arguments:
-            chan_in (list): channels for DAQ to monitor
-            duration (float): acquisition time in seconds
-            sample_rate (float): frequency of measurement
-
-        Returns:
-            dict: Voltages and measurement times for each channel
-        '''
         if np.isscalar(chan_in):
             chan_in = [chan_in]
-
-        # Prepare "data" for the Task. Send the current value of ao0
-        # and tell the DAQ to output that value of ao0 for every data
-        # point.
+            
+        # Need to copy chan_in to ensure names don't change!
+        chan_in = chan_in.copy()
+        
+        # Convert to real channel names
+        input_labels = chan_in.copy()
+        for label in input_labels:
+            if label in self.input_names: # this means we've used a custom label
+                chan_in.remove(label)
+                chan_in.append(self.input_names[label])
+                
+        # prepare a NIDAQ Task
+        taskargs = tuple([getattr(self._daq, ch) for ch in chan_in])
+        task = ni.Task(*taskargs)
         numsteps = int(duration*sample_rate)
-        current_ao0 = self.ao0.V
-        data = {'ao0': np.array([current_ao0]*numsteps)}
+        #some_data = next(iter(data.values())) # All data must be equal length, so just choose one.
+        task.set_timing(n_samples = numsteps, fsamp='%fHz' %sample_rate)
 
-        received = self.send_receive(data, chan_in=chan_in, sample_rate=sample_rate)
+        ## run the task and remove units
+        received = task.run()
+        for key, value in received.items():
+            received[key] = value.magnitude
 
-        return received
+        ## Undo added data point
+        ## The daq gives data late by one.
+        ## This only happens on the lowest numbered input channel.
+        ## the nowacklab branch of Instrumental is modified so that channels
+        ## are ordered, and in this case it's the lowest numbered channel.
+        # First we find the input channel numbers as ints, then find the min.
+        ch_nums = [int(''.join(x for x in y if x.isdigit())) for y in chan_in]
+        min_chan = 'ai%i' %min(ch_nums)
 
+        for chan, value in received.items():
+            if chan == min_chan:
+                received[chan] = np.delete(value, 0) #removes first data point, which is wrong
+            else:
+                received[chan] = np.delete(value,-1) #removes last data point, a duplicate
+        for chan, value in received.items():
+            if chan not in input_labels and chan is not 't':
+                received[getattr(self, chan).label] = received.pop(chan) # change back to the given channel labels if different from the real channel names
 
+        return received 
+        
     def send_receive(self, data, chan_in=None, sample_rate=100):
         '''
         Send data to daq outputs and receive data on input channels.
