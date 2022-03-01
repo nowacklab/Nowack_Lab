@@ -272,6 +272,12 @@ class MFLI1(zurichInstrument):
                 setattr(self.__class__, nameofattr, property(fget=eval(
                 "lambda self: {'x': self.daq.getSample('%s')['x'][0]," % elem
                             + "'y':self.daq.getSample('%s')['y'][0]}" % elem)))
+    def __getstate__(self):
+        zdict = self.daq.get('/'+ self.device_id + '/', True, True)
+        self._save_dict = {}
+        for key in zdict.keys():
+            self._save_dict['_'.join(key.split('/')).upper()]= zdict[key]
+        return self._save_dict
 
 class MFLI2(zurichInstrument):
     def __init__(self, device_serial = '', api_level = 6):
@@ -331,6 +337,13 @@ class MFLI2(zurichInstrument):
                 setattr(self.__class__, nameofattr, property(fget=eval(
                 "lambda self: {'x': self.daq.getSample('%s')['x'][0]," % elem
                             + "'y':self.daq.getSample('%s')['y'][0]}" % elem)))
+    def __getstate__(self):
+        zdict = self.daq.get('/'+ self.device_id + '/', True, True)
+        self._save_dict = {}
+        for key in zdict.keys():
+            self._save_dict['_'.join(key.split('/')).upper()]= zdict[key]
+        return self._save_dict
+
 class MFLI3(zurichInstrument):
     def __init__(self, device_serial = '', api_level = 6):
         '''
@@ -389,3 +402,9 @@ class MFLI3(zurichInstrument):
                 setattr(self.__class__, nameofattr, property(fget=eval(
                 "lambda self: {'x': self.daq.getSample('%s')['x'][0]," % elem
                             + "'y':self.daq.getSample('%s')['y'][0]}" % elem)))
+    def __getstate__(self):
+        zdict = self.daq.get('/'+ self.device_id + '/', True, True)
+        self._save_dict = {}
+        for key in zdict.keys():
+            self._save_dict['_'.join(key.split('/')).upper()]= zdict[key]
+        return self._save_dict
