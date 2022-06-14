@@ -12,9 +12,6 @@ Procedures/__pycache__/planefit.cpython-35.pyc
 # Squid array amplifier settings #
 Instruments/squidarray_params.json
 
-# Ipython notebooks #
-*.ipynb
-
 # Emacs autosaves #
 *~
 \#*\#
