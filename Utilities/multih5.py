@@ -21,7 +21,7 @@ class Files():
 
     def __exit__(self, type, value, traceback):
         self.__getattribute__('close')()
-        return self.filenames
+        return value is None
 
     def close(self):
         for x in super().__getattribute__(''):
