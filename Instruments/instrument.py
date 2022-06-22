@@ -2,21 +2,36 @@
 Instrument base classes.
 '''
 import visa
+import numpy as np
 
 class Instrument:
     _label = 'instrument'
 
     def __getstate__(self):
-    	return self.__dict__
+        allowed_types = (
+                str,
+                bool,
+                int,
+                float,
+                complex,
+                list,
+                np.ndarray,
+                )
+        properties = {key: getattr(self, key)
+                for key, value in self.__class__.__dict__.items()
+                if isinstance(value, property)}
+        return {key: value
+                for key, value in properties.items()
+                if isinstance(value, allowed_types)}
 
     def __setstate__(self, state):
-    	'''
-    	Setstate for an instrument by default does not load an instrument.
-    	You must custom-write setstates if you want private variables to be loaded.
-    	It is not recommended to load directly into properties, in case this makes
-    	an unwanted change to the physical instrument.
-    	'''
-    	pass
+        '''
+        Setstate for an instrument by default does not load an instrument.
+        You must custom-write setstates if you want private variables to be loaded.
+        It is not recommended to load directly into properties, in case this makes
+        an unwanted change to the physical instrument.
+        '''
+        pass
 
 class VISAInstrument(Instrument):
     _label = 'VISAinstrument'
@@ -43,7 +58,15 @@ class VISAInstrument(Instrument):
         self._visa_handle = visa.ResourceManager().open_resource(resource)
         self._visa_handle.read_termination = termination
 
-    def ask(self, cmd, timeout=3000, strip=None):
+    def ask(self, *args, **kwargs):
+        '''
+        Write and read combined operation.
+        Default timeout 3000 ms. None for infinite timeout
+        Strip: terminating characters to strip from the response. None = default for class.
+        '''
+        return self.query(*args, **kwargs)
+
+    def query(self, cmd, timeout=3000, delay=None, strip=None):
         '''
         Write and read combined operation.
         Default timeout 3000 ms. None for infinite timeout
@@ -53,7 +76,7 @@ class VISAInstrument(Instrument):
             strip = self._strip
 
         self._visa_handle.timeout = timeout
-        data = self._visa_handle.ask(cmd)
+        data = self._visa_handle.query(cmd, delay=delay)
         return data.rstrip(strip)
 
     def close(self):
