@@ -3,118 +3,127 @@ import numpy as np
 import time
 import math
 from .instrument import Instrument, VISAInstrument
+import warnings
 
-class VNA8753D(Instrument):
-    """Instrument driver for HP 87353D Vector Network Analyzer
+class VNA8753D(VISAInstrument):
+    '''
+    Instrument driver for HP 87353D Vector Network Analyzer
     In programming guide: starting from ~ page 174
-    Key Select Codes"""
-    _label = 'VNA_D'
+    Key Select Codes
+    '''
+    _label = 'HP_8753D_VNA'
 
-    _power_state = None
-    _power = None
+    # Higher ranges span lower powers, so look at higher ranges first
+    ranges = [r for r in reversed(range(8))]
+    range_powers = {r: (-15 - 10*r, +10 - 10*r) for r in ranges}
 
-    _networkparam = None  # which network parameter: 'S11' 'S21' 'S12' 'S22'
-    _savemode = None  # e.g. FORM4
-    _sweepmode = None
-    _minfreq = None
-    _maxfreq = None
-    _numpoints = None
-    _sweeptime = None
-
-    _cw_freq = None     # for continuous wave time trace
-
-    _averaging_state = None
-    _averaging_factor = None
-
-    _smoothing_state = None
-    _smoothing_factor = None
-
-    _visa_handle = None
-
-    _minfreq = None
-    _maxfreq = None
-
-    def __init__(self, gpib_address=16):
-        # TODO gpib address may not always be 16, may need to adjust manually
-        if type(gpib_address) is int:
-            gpib_address = 'GPIB::%02i::INSTR' %gpib_address
-        else:
-            print("invalid GPIB address")
-        self.gpib_address = gpib_address
-        self._visa_handle = visa.ResourceManager().open_resource(self.gpib_address,
-            read_termination='a')
-        self._visa_handle.read_termination = '\n'
-
-        # TODO: following stuff
-        # TODO: should these all use the getter/setters?
-        self.write('SOUPOFF') # immediately turn power off
-        self._power_state = 0
-        self.write('POWE -75') # set to -75 dbm
-        self._power = -75
-        self.write('PWR PMAN')# set power range to manual
-        self.write('PRAN11') # manually change to power range 11
-        # From here: continue setting things
-        print('Initialized')
-
-    # writing all getters/setters first
+    def __init__(self, gpib_address = 16):
+        self._gpib_address = gpib_address
+        self._init_visa('GPIB::%02i::INSTR' %gpib_address)
+        self.source_power_on = False
 
     @property
-    def powerstate(self):
-        """Get whter power is on/off, i.e. 1/0"""
-        self._power_state = int(self.ask('SOUP?'))
-        return self._power_state
+    def power_range_auto(self):
+        q = self.query('PWRR?')
+        if q == '0':
+            self._power_range_auto = False
+        elif q == '1':
+            self._power_range_auto = True
+        else:
+            raise RuntimeError('Unexpected response for power range (auto / manual)')
+        return self._power_range_auto
 
-    @powerstate.setter
-    def powerstate(self, value):
-        """Set power to on/off, i.e. 1/0"""
-        val = int(value)
-        assert val in [1, 0], "powerstate must be 1 or 0"
-        if val == 1:
+    @power_range_auto.setter
+    def power_range_auto(self, isauto):
+        if isauto == True:
+            self.write('PWRR PAUTO')
+        elif isauto == False:
+            self.write('PWRR PMAN')
+        else:
+            raise TypeError('Expected isauto to be a bool')
+        self._power_range_auto = isauto
+
+    @property
+    def power_range(self):
+        for r in self.ranges:
+            q = self.query('PRAN%d?' %r) 
+            if q == '1':
+                self._power_range = r
+                return r
+        raise RuntimeError('No power range was set (invalid instrument state)')
+
+    @power_range.setter
+    def power_range(self, value):
+        assert value in self.ranges, "Power range must in " + str(self.ranges)
+        self.write('PRAN%d' %value)
+        self._power_range = value
+
+    @property
+    def source_power_on(self):
+        '''
+        Source power state.
+          1: on
+          0: off
+        '''
+        state = self.query('SOUP?')
+        if state == '0':
+            self._source_power_on = False
+        elif state == '1':
+            self._source_power_on = True
+        else:
+            raise RuntimeError('Invalid source power state')
+        return self._source_power_on
+
+    @source_power_on.setter
+    def source_power_on(self, value):
+        """Set power to on/off, i.e. True/False"""
+        if type(value) != bool:
+            raise TypeError('Source power must be on (True) or off (False)')
+        if value:
             self.write('SOUP1')
-            print('Turning on VNA source power')
         else:
             self.write('SOUP0')
-            print('Powering down VNA')
-        self._power_state = val
+        self._source_power_on = value
 
     @property
     def power(self):
         """Get the power (dBm)"""
-        self._power = float(self.ask('POWE?'))
+        self._power = float(self.query('POWE?'))
         return self._power
 
-    @power.setter # TODO assuming power ranges same; check this!
+    @power.setter
     def power(self, value):
         """Set the power (dBm)"""
         assert type(value) is float or int
-        if value > -5 or value < -80:
-            raise Exception('Power should be between -10 and -80 dBm')
-        rangenum = min(math.floor((-value + 5)/5)-1, 11)
-        print(self.ask('POWE?'))
-        print("float val", str(float(value)))
-        self.write('POWR%02d' %rangenum)  # first change power range
-        print("Setting power range to %d..." % rangenum)
-        time.sleep(8)
-        self.write('POWE%f' %value)  # then can change power
-        print("Setting power to ", value)
-        print(self.ask('POWE?'))
-        self._power = value
+        if value < -80.0 or -10.0 < value:
+            raise ValueError('Power should be between -10 and -80 dBm')
+
+        r = self.power_range
+        Pmin, Pmax = self.range_powers[r]
+        if self.power_range_auto or (Pmin <= value and value <= Pmax):
+            self.write('POWE %f' %value)
+            self._power = value
+        else:
+            raise ValueError('Cannot set power to {} dBm with range {} ({} to {} dBm)' \
+                    .format(value, r, Pmin, Pmax))
 
     @property
     def sweepmode(self):
         """Get the sweep mode"""
-        if self.ask('LINFREQ?') == '1':
+        if self.query('LINFREQ?') == '1':
             self._sweepmode = "LIN"
-        elif self.ask('LOGFREQ?') == '1':
+        elif self.query('LOGFREQ?') == '1':
             self._sweepmode = "LOG"
-        elif self.ask('LISFREQ?') == '1':
+        elif self.query('LISFREQ?') == '1':
             self._sweepmode = "LIST"
-        elif self.ask('CWTIME?') == '1':
+        elif self.query('CWTIME?') == '1':
             self._sweepmode = "CW"
         else:
-            print(''' This driver can only handle linear, log, list sweeps.
+            raise NotImplementedError('''
+            This driver can only handle linear, log, list sweeps.
             If need to use other sweep modes, will have to write the code
-            for it''')
+            for it.
+            ''')
         return self._sweepmode
 
     @sweepmode.setter
@@ -124,17 +133,16 @@ class VNA8753D(Instrument):
         '''
         if value == 'LIN':
             value = 'LINFREQ'
-            self._sweeptime = 1 # setting sweep time to 1 second by default
         elif value == 'LOG':
             value = 'LOGFREQ'
-            self._sweeptime = 1
         elif value == 'LIST':
             value = 'LISTFREQ'
-            self._sweeptime = 1
         elif value == 'CW':
             value = 'CWTIME'
         else:
-            print('Driver currently only handles linear, log, list, wave (CW)')
+            raise NotImplementedError('''
+            Driver currently only handles linear, log, list, wave (CW).
+            ''')
         self._sweepmode = value
 
     @property
@@ -142,7 +150,7 @@ class VNA8753D(Instrument):
         """
         Get the min/start frequency of the sweep
         """
-        self._minfreq = float(self.ask('STAR?'))
+        self._minfreq = float(self.query('STAR?'))
         return self._minfreq
 
     @minfreq.setter
@@ -159,7 +167,7 @@ class VNA8753D(Instrument):
     @property
     def maxfreq(self):
         """Get the stop frequency"""
-        self._maxfreq = float(self.ask('STOP?'))
+        self._maxfreq = float(self.query('STOP?'))
         return self._maxfreq
 
     @maxfreq.setter
@@ -174,7 +182,7 @@ class VNA8753D(Instrument):
     @property
     def numpoints(self):
         """Get the number of points in sweep"""
-        self._numpoints = int(self.ask('POIN?'))
+        self._numpoints = int(float(self.query('POIN?')))
         return self._numpoints
 
     @numpoints.setter
@@ -184,22 +192,21 @@ class VNA8753D(Instrument):
         if value in vals:
             self.write('OPC?;POIN %f;' % value)
             self._numpoints = value
-            if self._sweepmode != "CW":
+            if self.sweepmode != "CW" and self.sweeptime < 1.0:
                 self.write('SWET 1')  # set sweep time to 1 second; slower causes problems
-                time.sleep(2)
                 print("Setting manual sweep time to 1 second")
         else:
-            print("invalid number of points, not doing anything")
+            raise ValueError('numpoints {} not in {}'.format(value, vals))
 
     @property
     def sweeptime(self):
-        self._sweeptime = float(self.ask('SWET?'))
+        self._sweeptime = float(self.query('SWET?'))
         return self._sweeptime
 
     @sweeptime.setter
     def sweeptime(self, value):
         """Set sweep time"""
-        if self._sweepmode != "CW" and value < 1:
+        if self.sweepmode != "CW" and value < 1:
             print("Setting sweep time to 1")
             self.write('SWET 1')
             self._sweeptime = 1
@@ -210,7 +217,7 @@ class VNA8753D(Instrument):
     @property
     def cw_freq(self):
         """Get the frequency used for cw mode"""
-        self._cw_freq = float(self.ask('CWFREQ?'))
+        self._cw_freq = float(self.query('CWFREQ?'))
         return self._cw_freq
 
     @cw_freq.setter
@@ -224,7 +231,7 @@ class VNA8753D(Instrument):
         """
         Get averaging state (on/off 1/0)
         """
-        self._averaging_state = int(self.ask('AVERO?'))
+        self._averaging_state = int(self.query('AVERO?'))
         return self._averaging_state
 
     @averaging_state.setter
@@ -242,7 +249,7 @@ class VNA8753D(Instrument):
     @property
     def averaging_factor(self):
         '''Get averaging factor'''
-        self._averaging_factor = int(float(self.ask('AVERFACT?')))
+        self._averaging_factor = int(float(self.query('AVERFACT?')))
         return self._averaging_factor
 
     @averaging_factor.setter
@@ -258,7 +265,7 @@ class VNA8753D(Instrument):
     @property
     def smoothing_state(self):
         """Get smoothing state"""
-        self._smoothing_state = int(self.ask('SMOOO?'))
+        self._smoothing_state = int(self.query('SMOOO?'))
         return self._smoothing_state
 
     @smoothing_state.setter
@@ -272,7 +279,7 @@ class VNA8753D(Instrument):
     @property
     def smoothing_factor(self):
         """Get smoothing factor"""
-        self._smoothing_factor = float(self.ask('SMOOAPER?'))
+        self._smoothing_factor = float(self.query('SMOOAPER?'))
         return self._smoothing_factor
 
     @smoothing_factor.setter
@@ -285,51 +292,64 @@ class VNA8753D(Instrument):
     @property
     def networkparam(self):
         """Get which network parameter is being measured"""
-        if self.ask('S11') == '1':
-            self._networkparam = 'S11'
-        elif self.ask('S21') == '1':
-            self._networkparam = 'S21'
-        elif self.ask('S12') == '1':
-            self._networkparam = 'S12'
-        elif self.ask('S22') == '1':
-            self._networkparam = 'S22'
-        return self._networkparam
+        networkparams = ['S11', 'S21', 'S12', 'S22']
+        for param in networkparams:
+            if self.query('{}?'.format(param)) == '1':
+                self._networkparam = param
+                return self._networkparam
+        raise RuntimeError('No network parameters are being measured')
 
     @networkparam.setter
     def networkparam(self, value):
-        nplist = ['S11', 'S21', 'S12', 'S22']
-        assert value in nplist, "Network parameter should be one of " + str(nplist)
+        networkparams = ['S11', 'S21', 'S12', 'S22']
+        assert value in networkparams, "Network parameter should be one of " + str(networkparams)
         if value == 'S12' or value == 'S22':
-            raise Exception('''Don\'t send current thru amplifer backwards
-            (just for cold amplifer testing, remove this in code if
-            situation changes)''')
+            raise ValueError('''
+            Don't send current thru amplifer backwards.
+            (For cold amplifer testing, remove this in code if situation changes.)
+            ''')
         self.write(value)
 
+    @property
+    def IF_bandwidth(self):
+        'The IF bandwidth in Hz.'
+        return float(self.query('IFBW?')) #Hz
 
+    @IF_bandwidth.setter
+    def IF_bandwidth(self, value):
+        v = int(value) # So the user can say 3e3 instead of 3000
+        bandwidths = [10, 30, 100, 300, 1000, 3000]
+        assert v in bandwidths, "IF bandwidth should be one of " + str(bandwidths)
+        self.write('IFBW %dHZ' %v)
 
-    def save_dB(self):
-        """
+    def frequencies(self):
+        return np.linspace(self.minfreq, self.maxfreq, num=self.numpoints)
+
+    def log_magnitude(self):
+        '''
         Return attenuation data (units are dB) in 1D np array by querying VNA
         through GPIB commands shape of array: 1x(number of frequency
         sweep points)
-        """
+        '''
 
         self.write('FORM4')  # Prepare to output correct data format
             # TODO description from programming guide
         self.write('LOGM')  # Temporarily set VNA to log magnitude display
         # to enable saving log magnitude
 
-        self.averaging_restart()
-        self.sleep_until_finish_averaging()
+        if self.averaging_state == 1:
+            self.write('NUMG %d' %self.averaging_factor)
+        else:
+            self.write('SING')
+        while self.query('HOLD?') != '1':
+            pass
 
-        rm = visa.ResourceManager()
-        '''Important:not actually initializing another instance of this class
-        (i.e. VNA class) because that would temporarily
-        set power too high when factory resets.'''
-        instrument_for_saving = rm.get_instrument('GPIB0::16')
-        instrument_for_saving.write('OUTPFORM')
+        self.write('OUTPFORM')
         # todo description from programming guide
-        rawdata = instrument_for_saving.read(termination='~')
+        rawdata = None
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category = UserWarning)
+            rawdata = self.read(termination='~')
         # i.e. character that will never be found in the raw data
         split_rawdata = rawdata.split('\n')
         # split into lines, with two values
@@ -343,7 +363,7 @@ class VNA8753D(Instrument):
             split_line = split_rawdata[i].split(',')
             dB_array[0, i] = float(split_line[0])
             # split_line[1] not used in dB case
-        return dB_array
+        return dB_array[0]
 
     def savePhase(self):
         """Not yet implemented; see save_phase in VNA8722ES"""
@@ -370,36 +390,9 @@ class VNA8753D(Instrument):
         self.write('OPC?;PRES;')
         print("VNA set to factory preset")
 
-    def sleep_until_finish_averaging(self):
-        """Sleeps for number of seconds <VNA sweep time>*<averaging factor+2>
-        (2 extra sweeps for safety)"""
-        sleep_length = float(self.ask('SWET?'))*(self.averaging_factor + 2)
-        time.sleep(sleep_length)
-
-    def ask(self, msg, tryagain=True):
-        """
-        Send GIPB ask command
-        """
-        '''commented-out; was only applicable to 8722ES, I believe; check
-        programming guides if interested
-        if msg == 'POWR?' or msg == 'PRAN?':
-             print("Note: POWR and PRAN do not have query response (i.e. will return 0)")
-        try:
-            return self._visa_handle.query(msg)  # changed from .ask to .query
-        except Exception as e:
-            print('Communication error with VNA: ')
-            print(e)
-            self.close()
-            self.__init__(self.gpib_address)
-            if tryagain:
-                self.ask(msg, False)
-        '''
-
-    def write(self, msg):
-        '''write the gpib command "msg" to the VNA'''
-        self._visa_handle.write(msg)
-
-    def close(self):
-        self._visa_handle.close()
-        del(self._visa_handle)
+    def sleep_until_finish_averaging(self, extra = 0.0):
+        """Sleeps for number of seconds <VNA sweep time>*<averaging factor+extra>
+        (<extra> extra sweep for safety)"""
+        sleep_length = self.sweeptime * (self.averaging_factor + extra)
+        time.sleep(sleep_length) #s
 
