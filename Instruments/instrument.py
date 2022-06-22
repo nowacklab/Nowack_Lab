@@ -87,7 +87,7 @@ class VISAInstrument(Instrument):
             self._visa_handle.close()
             del(self._visa_handle)
 
-    def read(self, strip=''):
+    def read(self, rstrip=True, strip=None, **kwargs):
         '''
         Read from VISA.
         Strip: terminating characters to strip from the response. None = default for class.
@@ -95,8 +95,11 @@ class VISAInstrument(Instrument):
         if strip is None:
             strip = self._strip
 
-        data = self._visa_handle.read()
-        return data.rstrip(strip)
+        data = self._visa_handle.read(**kwargs)
+        if rstrip:
+            return data.rstrip(strip)
+        else:
+            return data
 
     def write(self, cmd):
         '''
