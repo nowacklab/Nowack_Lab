@@ -394,11 +394,11 @@ class Keithley2450(Keithley2400):
     def __getstate__(self):
         if self.source == 'V':
             self._save_dict = {
-                'output current': self.I,
+                'output current': self.Iout,
                 'current compliance': self.I_compliance,
                 'output voltage setpoint': self.Vout,
                 'output voltage range': self.Vout_range,
-                'actual voltage output': self.V
+                'actual voltage output': self.V,
             }
         elif self.source == 'I':
             self._save_dict = {
@@ -406,7 +406,7 @@ class Keithley2450(Keithley2400):
                 'voltage compliance': self.V_compliance,
                 'output current setpoint': self.Iout,
                 'output current range': self.Iout_range,
-                'actual current output': self.I
+                #'actual current output': self.I, # errors
             }
         return self._save_dict
 
