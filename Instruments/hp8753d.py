@@ -21,6 +21,7 @@ class VNA8753D(VISAInstrument):
         self._gpib_address = gpib_address
         self._init_visa('GPIB::%02i::INSTR' %gpib_address)
         self.source_power_on = False
+        self.power_range_auto = True
 
     @property
     def power_range_auto(self):
@@ -338,11 +339,9 @@ class VNA8753D(VISAInstrument):
         # to enable saving log magnitude
 
         if self.averaging_state == 1:
-            self.write('NUMG %d' %self.averaging_factor)
+            self.query('OPC?;NUMG%d;' %self.averaging_factor, timeout = None)
         else:
-            self.write('SING')
-        while self.query('HOLD?') != '1':
-            pass
+            self.query('OPC?;SING;', timeout = None)
 
         self.write('OUTPFORM')
         # todo description from programming guide
@@ -369,8 +368,29 @@ class VNA8753D(VISAInstrument):
         """Not yet implemented; see save_phase in VNA8722ES"""
         pass
 
-    def saveReIm(self):
-        """Not yet implemented; see save_Re_Im in VNA8722ES"""
+    def reim(self):
+        '''
+        Return attenuation data (units are dB) in 1D np array by querying VNA
+        through GPIB commands shape of array: 1x(number of frequency
+        sweep points)
+        '''
+
+        # Output an array of float32's, like '#A' <size> [f, f, ...]
+        self.write('FORM2')
+        # Temporarily set VNA to Smith chart display to enable saving real and
+        # imaginary parts of the network parameter like [re, im, re, im, ...]
+        self.write('SMIC') 
+
+        if self.averaging_state == 1:
+            self.query('OPC?;NUMG%d;' %self.averaging_factor, timeout = None)
+        else:
+            self.query('OPC?;SING;', timeout = None)
+
+        self.write('OUTPFORM')
+        outlen = int.from_bytes(self._visa_handle.read_bytes(4)[-2:], 'big')
+        reims = np.frombuffer(self._visa_handle.read_bytes(outlen),
+                dtype = np.dtype('float32').newbyteorder('>')) # Big-endian
+        return np.vstack((reims[::2], reims[1::2]))
 
     @staticmethod
     def Re_Im_to_dB(self):

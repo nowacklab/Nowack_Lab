@@ -384,7 +384,6 @@ class Keithley2450(Keithley2400):
 
     def __init__(self, resource='USB0::0x05E6::0x2450::04305323::INSTR', maxramp = 5):
         super().__init__(resource, maxramp = maxramp)
-        self.I # trigger reading to update screen
 
     def setup(self):
         # self.write('*LANG SCPI2400') # for Keithley2400 compatibility mode
