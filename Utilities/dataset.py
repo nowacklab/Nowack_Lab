@@ -48,7 +48,7 @@ class Dataset():
         loc = False
         if isinstance(f[pathtoget],h5py._hl.dataset.Dataset):
             #is the thing you asked for a dataset, or a group?
-            if not isinstance(slc, bool):
+            if slc:
                 toreturn = f[pathtoget][slc]
             else:
                 toreturn = f[pathtoget][...]
@@ -70,6 +70,17 @@ class Dataset():
         array, or a nested dict. If a nested dict, leaves must be strings,
         numbers or numpy arrays. Data may not overwrite, however, dicts can be
         used that go through HDF5 groups that already exist.
+
+        Arguments:
+        pathtowrite (string):
+            Path to write data to, each node seperated by '/', beginning
+            with a slash as well, but not ending with one.
+
+        datatowrite (multiple types):
+            Data to write, will be sanitized.
+        slc (slice object):
+            python slice() object
+
         '''
         self.slc = slc
         cleandatatowrite = self.sanitize(datatowrite)
@@ -85,13 +96,13 @@ class Dataset():
                 h5path = pathtowrite + sep.join([str(place) for place in path])
                 if not isinstance(obj, dict):
                     if isinstance(obj, (np.ndarray, list) +
-                                      tuple(self.allowedtypes))  and not isinstance(self.slc, bool):
+                                      tuple(self.allowedtypes))  and self.slc:
                         self._appenddatah5(self.filename, obj, h5path,self.slc)
                     else:
                         self._writetoh5(data = obj, path = h5path)
             self.dictvisititems(cleandatatowrite, _loadhdf5)
         elif isinstance(cleandatatowrite, (np.ndarray, list) +
-                                            tuple(self.allowedtypes))  and not isinstance(self.slc, bool):
+                                            tuple(self.allowedtypes))  and slc:
                     self._appenddatah5(self.filename, cleandatatowrite,
                                                              pathtowrite,slc)
         else:
