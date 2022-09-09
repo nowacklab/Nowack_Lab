@@ -48,7 +48,7 @@ class Dataset():
         loc = False
         if isinstance(f[pathtoget],h5py._hl.dataset.Dataset):
             #is the thing you asked for a dataset, or a group?
-            if slc:
+            if not isinstance(slc, bool):
                 toreturn = f[pathtoget][slc]
             else:
                 toreturn = f[pathtoget][...]
@@ -85,13 +85,13 @@ class Dataset():
                 h5path = pathtowrite + sep.join([str(place) for place in path])
                 if not isinstance(obj, dict):
                     if isinstance(obj, (np.ndarray, list) +
-                                      tuple(self.allowedtypes))  and self.slc:
+                                      tuple(self.allowedtypes))  and not isinstance(self.slc, bool):
                         self._appenddatah5(self.filename, obj, h5path,self.slc)
                     else:
                         self._writetoh5(data = obj, path = h5path)
             self.dictvisititems(cleandatatowrite, _loadhdf5)
         elif isinstance(cleandatatowrite, (np.ndarray, list) +
-                                            tuple(self.allowedtypes))  and slc:
+                                            tuple(self.allowedtypes))  and not isinstance(self.slc, bool):
                     self._appenddatah5(self.filename, cleandatatowrite,
                                                              pathtowrite,slc)
         else:
