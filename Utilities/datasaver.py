@@ -10,8 +10,9 @@ class Saver():
     This is a wrapper for dataset that adds the functionality for saving
     and getting using a savelocationinstructionfile.
     '''
-    _savelocationinstructionfile = ('C:\\ProgramData\\Datasaver\\'
-                                        +'jba5962\\path_do_not_modify.json')
+    _saveconfigfilename = 'save-locations.json'
+    _savelocationinstructionfile = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), _saveconfigfilename))
 
     @staticmethod
     def getsavepaths():
@@ -58,8 +59,10 @@ class Saver():
     def savefigure(self, figure, name):
         paths = getsavepaths
         for key in paths.keys():
-            figure.savefig(paths[key]['exppath'] + '\\' + make_timestamp +
-                                                            'figure_' + name)
+            figure.savefig(os.path.join(
+                paths[key]['exppath'],
+                make_timestamp + 'figure_' + name))
+
     def generatefullfilenameandpath(self, name = '', addtimestamp = True):
         '''
         Returns a dict of filenames with full paths, generated from the
@@ -75,9 +78,9 @@ class Saver():
         else:
             timecomp = ''
         for key in paths.keys():
-            filenames[key] = (paths[key]['exppath']
-                                    +  '\\' + timecomp
-                                    + name + '.hdf5')
+            filenames[key] = os.path.join(
+                    paths[key]['exppath'],
+                    timecomp + name + '.hdf5')
         return filenames
 
     def append(self,*args, **kwargs):

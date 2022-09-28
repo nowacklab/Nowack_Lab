@@ -9,15 +9,13 @@ def set_experiment_data_path():
     from Nowack_Lab.Utilities import save
 
     ## Set experiment data path
-    try:
-        paths = Saver.getsavepaths()
-        print('Current experimental save paths:')
-        for key in paths.keys():
-            print(paths[key]['exppath'])
-        print('Current experiment: %s' %save.get_experiment_data_dir())
+    # try:
+    paths = Saver.getsavepaths()
+    print('Current experimental save paths:')
+    for key in paths.keys():
+        print(paths[key]['exppath'])
+    # print('Current experiment: %s' %save.get_experiment_data_dir())
 
-    except:
-        pass
     inp = input('New experiment? y/(n): ')
     if inp in ('y', 'Y'):
         while True:
@@ -32,6 +30,9 @@ def set_experiment_data_path():
                                 + Saver.make_timestamp(subday = False) +inp2)
         Saver.setsavepaths(paths)
         save.set_experiment_data_dir(inp2)
+
+    # except:
+    #     pass
 
 def check_remote_data_server_connection():
     from Nowack_Lab.Utilities import save

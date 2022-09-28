@@ -5,13 +5,13 @@ home = os.path.expanduser('~')
 site_packages = os.path.dirname(os.path.abspath(os.path.join(matplotlib.__file__, '..'))) #we know matplotlib is in site-packages
 
 ## Add utility to save jupyter notebook to HTML
-package_path = os.path.join(os.getcwd(),'Utilities','notebook','jupyter_notebook_config.py')
-jupyter_path = os.path.join(home, '.jupyter', 'jupyter_notebook_config.py')
+# package_path = os.path.join(os.getcwd(),'Utilities','notebook','jupyter_notebook_config.py')
+# jupyter_path = os.path.join(home, '.jupyter', 'jupyter_notebook_config.py')
 
-if not os.path.exists(jupyter_path):
-    os.makedirs(os.path.dirname(jupyter_path))
-    open(jupyter_path, 'w').close() # make empty file
-shutil.copyfile(package_path, jupyter_path)
+# if not os.path.exists(jupyter_path):
+#     os.makedirs(os.path.dirname(jupyter_path))
+#     open(jupyter_path, 'w').close() # make empty file
+# shutil.copyfile(package_path, jupyter_path)
 
 ## Add github.pth file to enable "from Nowack_Lab import *"
 anaconda_path = os.path.join(site_packages,'github.pth')
@@ -29,7 +29,7 @@ packages = [
     'pyvisa',
     'setuptools',
     'tornado==4.5.3',
-    'peakutils',
+    # 'peakutils',
     'gtts',
     'urllib3',
     'https://github.com/nowacklab/Instrumental/tarball/master',
@@ -42,12 +42,12 @@ for package in packages:
         print(e)
 
 # Add custom.css file to add padding to bottom of the notebook
-package_path = os.path.join(os.getcwd(),'Utilities','notebook', 'custom.css')
-notebook_path = os.path.join(os.path.expanduser('~'), '.jupyter', 'custom', 'custom.css')
+# package_path = os.path.join(os.getcwd(),'Utilities','notebook', 'custom.css')
+# notebook_path = os.path.join(os.path.expanduser('~'), '.jupyter', 'custom', 'custom.css')
 
-if not os.path.exists(os.path.dirname(notebook_path)):
-    os.makedirs(os.path.dirname(notebook_path))
-shutil.copyfile(package_path, notebook_path)
+# if not os.path.exists(os.path.dirname(notebook_path)):
+#     os.makedirs(os.path.dirname(notebook_path))
+# shutil.copyfile(package_path, notebook_path)
 
 # ## Set default notebook template for scanning
 # package_path = os.path.join(os.getcwd(),'Utilities','nbbase.py')
