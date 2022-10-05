@@ -19,8 +19,11 @@ class zurichInstrument(Instrument):
     not call this class, call it's subclasses.
     '''
 
-    def __init__(self, server_address = 'localhost', server_port = 8005 ,
-                device_serial = ''):
+    def __init__(self,
+            server_address = 'localhost',
+            server_port = 8004,
+            api_level = 1,
+            device_serial = ''):
         '''
         Creates the HF2LI object. By choosing server address, can connection
         to HF2LI on remote (local network) computer.
@@ -32,7 +35,7 @@ class zurichInstrument(Instrument):
                             the computer the python kernel is running on.
 
         server_port (int, optional) = Port of Zurich HF2LI. For local is
-                            always 8005 (default), usually 8006 for remote.
+                            always 8004 (default), usually 8006 for remote.
 
         device_serial (str, optional) = Serial number of prefered zurich
                             hf2li. If empty string or does not exist,
@@ -40,34 +43,37 @@ class zurichInstrument(Instrument):
 
         '''
         # Accesses the DAQServer at the instructed address and port.
-        self.daq = zhinst.ziPython.ziDAQServer(server_address, server_port)
+        self.daq = zhinst.core.ziDAQServer(server_address, server_port, api_level)
         self.zurichformatnodes = {}
         self.auxnames = {'auxin0':'auxin0', 'auxin1':'auxin1'}
-        self.daq.unsubscribe('/')
+        # self.daq.unsubscribe('*')
         # Gets the list of ZI devices connected to the Zurich DAQServer
-        deviceList = zhinst.utils.devices(self.daq)
+        # deviceList = zhinst.utils.devices(self.daq)
+
+        self.device_id = device_serial
 
         # Checks if the device serial number you asked for is in the list
-        if device_serial in deviceList :
-            # Sets class variable device_id to the serial number
-            self.device_id = device_serial
-            # Tells the user that the ZI they asked for was found
-            print('Using Zurich lock-in with serial %s' % self.device_id)
+        # if device_serial in deviceList :
+        #     # Sets class variable device_id to the serial number
+        #     self.device_id = device_serial
+        #     # Tells the user that the ZI they asked for was found
+        #     print('Using Zurich lock-in with serial %s' % self.device_id)
 
-        # Checks if you actually asked for a specific serial
-        elif device_serial != '' :
-            # Tells user ZI wasn't found.
-            print('Requested device not found.')
-            # Sets device_id to the first avaliable. Prints SN.
-            self.device_id = zhinst.utils.autoDetect(self.daq)
-        else:
-            # Sets device_id to the first avaliable. Prints SN.
-            self.device_id = zhinst.utils.autoDetect(self.daq)
+        # # Checks if you actually asked for a specific serial
+        # elif device_serial != '' :
+        #     # Tells user ZI wasn't found.
+        #     print('Requested device not found.')
+        #     # Sets device_id to the first avaliable. Prints SN.
+        #     self.device_id = zhinst.utils.autoDetect(self.daq)
+        # else:
+        #     # Sets device_id to the first avaliable. Prints SN.
+        #     self.device_id = zhinst.utils.autoDetect(self.daq)
         #Sets the default name of the zurich object. It can, of course,
         #be changed later.
         self.name = 'zurich ' + self.device_id
         #Retrieve all the nodes on the zurich
-        allNodes = self.daq.listNodes(self.device_id, 0x07)
+        # allNodes = self.daq.listNodes(self.device_id, 0x07)
+        allNodes = self.daq.listNodes('/', 0x07)
         #Index through nodes
         for elem in allNodes:
             #generates the name of the attribute, simply replacing the
