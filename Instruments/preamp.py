@@ -121,7 +121,7 @@ class SR5113(Instrument):
         '''
         rm = visa.ResourceManager()
         self._inst = rm.open_resource(port)
-        self._inst.timeout = 5000
+        self._inst.timeout = 10000
 
 
     def id(self):

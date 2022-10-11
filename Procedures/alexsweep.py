@@ -453,15 +453,22 @@ class Delayer(Measurement):
     '''
 
     def __init__(self, delay, multidelayorder = 1):
-        self.delay = delay
-        self.name = 'Delayer, delays for ' + str(delay) + ' sec'
+        self.delay_value = delay
+        self.name = 'Delayer, delays for ' + str(self.delay_value) + ' sec'
         self.returns = False
 
     def __call__(self, n):
-        if isinstance(self.delay, (np.ndarray,list)):
-            time.sleep(self.delay[n])
+        if isinstance(self.delay_value, (np.ndarray,list)):
+            time.sleep(self.delay_value[n])
         else:
-            time.sleep(self.delay)
+            time.sleep(self.delay_value)
+    @property
+    def delay(self):
+        return self.delay_value
+    @delay.setter
+    def delay(self, val):
+        self.delay_value = val
+        self.name = 'Delayer, delays for ' + str(val) + ' sec'
 
 class Wait(Measurement):
 

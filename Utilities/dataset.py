@@ -70,6 +70,17 @@ class Dataset():
         array, or a nested dict. If a nested dict, leaves must be strings,
         numbers or numpy arrays. Data may not overwrite, however, dicts can be
         used that go through HDF5 groups that already exist.
+
+        Arguments:
+        pathtowrite (string):
+            Path to write data to, each node seperated by '/', beginning
+            with a slash as well, but not ending with one.
+
+        datatowrite (multiple types):
+            Data to write, will be sanitized.
+        slc (slice object):
+            python slice() object
+
         '''
         self.slc = slc
         cleandatatowrite = self.sanitize(datatowrite)

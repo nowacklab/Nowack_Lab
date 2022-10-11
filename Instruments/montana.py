@@ -13,7 +13,7 @@ class Montana(Instrument):
     _label = 'montana'
     _temperature = {}
     cryo = None
-    def __init__(self, ip='192.168.100.237', port=7773):
+    def __init__(self, ip='192.168.100.125', port=7773):
         directory_of_this_module = os.path.dirname(os.path.realpath(__file__))
         sys.path.append(directory_of_this_module) # so CryostationComm is discoverable
 
