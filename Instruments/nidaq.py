@@ -3,17 +3,16 @@ import sys, os
 home = os.path.expanduser("~")
 sys.path.append(os.path.join(home,'Documents','GitHub','Instrumental'))
 
-try:
-    from instrumental.drivers.daq import ni
-    from instrumental import u
-except:
-    print('instrumental not imported in nidaq.py!')
+from instrumental.drivers.daq import ni
+from instrumental import u
 import numpy as np
 try:
     import PyDAQmx as mx
 except:
     print('PyDAQmx not imported in nidaq.py!')
 import time
+from copy import copy
+from ..Utilities import logging
 from .instrument import Instrument
 
 class NIDAQ(Instrument):
@@ -31,28 +30,49 @@ class NIDAQ(Instrument):
         self._input_range = input_range
         self._output_range = output_range
 
-        self.setup_inputs()
-        self.setup_outputs()
+        self._ins = self._daq.get_AI_channels()
+        self._outs = self._daq.get_AO_channels()
+
+        for chan in self._ins:
+            setattr(self, chan, InputChannel(self._daq, name=chan))
+
+        for chan in self._outs:
+            setattr(self, chan, OutputChannel(self._daq, name=chan))
 
         if zero:
             self.zero()
 
 
     def __getstate__(self):
-        if self._loaded:
-            return super().__getstate__() # Do not attempt to read new values
         self._save_dict = {}
         # for chan in self._ins + self._outs:
         #     self._save_dict[chan] = getattr(self, chan).V
         self._save_dict.update({
-            '_device_name': self._dev_name,
-            '_input_range': self._input_range,
-            '_output_range': self._output_range,
-            '_inputs': self.inputs,
-            '_outputs': self.outputs,
+            'device name': self._dev_name,
+            'input range': self._input_range,
+            'output range': self._output_range
         })
 
         return self._save_dict
+
+
+    def __setstate__(self, state):
+        self._daq = ni.NIDAQ(state['device name'], state['input range'], state['output range'])
+
+
+    def accel_function(self, start,end, numpts):
+        """ Does an x**2-like ramp. Code looks weird but test it if you want! ^_^ """
+        '''
+        NO THIS IS ACTUALLY CRAP DON'T USE THIS <-- LOL
+        '''
+        if start == end:
+            return [start]*numpts*2 # just return array of the same value
+        part1arg = np.linspace(start, (end-start)/2+start, numpts)
+        part2arg = np.linspace((end-start)/2+start, end, numpts)
+        part1 = start+ (part1arg-start)**2/((end-start)/2)**2*(end-start)/2
+        part2 = end-(part2arg-end)**2/((end-start)/2)**2*(end-start)/2
+        return list(part1)+list(part2[1:])
+
 
     def all(self):
         '''
@@ -169,7 +189,8 @@ class NIDAQ(Instrument):
         # and tell the DAQ to output that value of ao0 for every data
         # point.
         numsteps = int(duration*sample_rate)
-        data = {'t': np.array([0]*numsteps)}  ## HACK: This data is not used and just converted back to a duration in send_receive
+        current_ao0 = self.ao0.V
+        data = {'ao0': np.array([current_ao0]*numsteps)}
 
         received = self.send_receive(data, chan_in=chan_in, sample_rate=sample_rate)
 
@@ -181,113 +202,87 @@ class NIDAQ(Instrument):
         Send data to daq outputs and receive data on input channels.
         Data should be a dictionary with keys that are output channel labels or names
         and values can be float, list, or np.ndarray.
-        Key can also be time, in which case the data will be converted to a
-        duration using len(data['t'])/sample_rate = num_seconds
         Arrays should be equally sized for all output channels.
         chan_in is a list of all input channel labels or names you wish to monitor.
         '''
-        try:
-            # Make everything a numpy array
-            data = data.copy() # so we don't modify original data
 
-            no_output = False
-            if 't' in data:
-                no_output = True  # sending "t" suggests we do not want to write to output channels
-                len_data = len(data.pop('t'))
 
-            for key, value in data.items():
-                value = value.copy() # so we don't modify original data
-                if np.isscalar(value):
-                    value = np.array([value])
-                elif type(value) is list:
-                    value = np.array(value)
+        # Make everything a numpy array
+        data = data.copy() # so we don't modify original data
+        for key, value in data.items():
+            value = value.copy() # so we don't modify original data
+            if np.isscalar(value):
+                value = np.array([value])
+            elif type(value) is list:
+                value = np.array(value)
 
-                # Make sure daq does not go out of range
-                absmax = abs(value).max()
-                if absmax > self._output_range:
-                    value = np.clip(value, -self._output_range, self._output_range)
-                    print('%s is out of range for DAQ with output range %s! Set to max output.' %(absmax,self._output_range))
+            # Make sure daq does not go out of range
+            absmax = abs(value).max()
+            if absmax > self._output_range:
+                value = np.clip(value, -self._output_range, self._output_range)
+                print('%s is out of range for DAQ with output range %s! Set to max output.' %(absmax,self._output_range))
 
-                # Repeat the last data point.
-                # The DAQ for some reason gives data points late by 1. (see later)
-                value = np.append(value, value[-1])
+            # Repeat the last data point.
+            # The DAQ for some reason gives data points late by 1. (see later)
+            value = np.append(value, value[-1])
 
-                # Add units for Instrumental
-                value = value * u.V
+            # Add units for Instrumental
+            value = value * u.V
 
-                data[key] = value
+            data[key] = value
 
-            # Make sure there's at least one input channel (or DAQmx complains)
-            if chan_in is None:
-                chan_in = ['ai23'] # just a random channel
-            elif np.isscalar(chan_in):
-                chan_in = [chan_in]
 
-            # Need to copy chan_in to ensure names don't change!
-            chan_in = chan_in.copy()
+        # Make sure there's at least one input channel (or DAQmx complains)
+        if chan_in is None:
+            chan_in = ['ai23'] # just a random channel
+        elif np.isscalar(chan_in):
+            chan_in = [chan_in]
 
-            # Convert to real channel names
-            output_labels = list(data.keys())
-            for label in output_labels:
-                if label in self.output_names: # this means we've labeled it something other than the channel name
-                    data[self.output_names[label]] = data.pop(label) # replaces custom label with real channel name
+        # Need to copy chan_in to ensure names don't change!
+        chan_in = chan_in.copy()
 
-            input_labels = chan_in.copy()
-            for label in input_labels:
-                if label in self.input_names: # this means we've used a custom label
-                    chan_in.remove(label)
-                    chan_in.append(self.input_names[label])
+        # Convert to real channel names
+        output_labels = list(data.keys())
+        for label in output_labels:
+            if label in self.output_names: # this means we've labeled it something other than the channel name
+                data[self.output_names[label]] = data.pop(label) # replaces custom label with real channel name
 
-            # prepare a NIDAQ Task
-            taskargs = tuple([getattr(self._daq, ch) for ch in list(data.keys()) + chan_in])
-            task = ni.Task(*taskargs)
-            if no_output:
-                task.set_timing(n_samples = len_data, fsamp='%fHz' %sample_rate)  ## HACK
+        input_labels = chan_in.copy()
+        for label in input_labels:
+            if label in self.input_names: # this means we've used a custom label
+                chan_in.remove(label)
+                chan_in.append(self.input_names[label])
+
+        # prepare a NIDAQ Task
+        taskargs = tuple([getattr(self._daq, ch) for ch in list(data.keys()) + chan_in])
+        task = ni.Task(*taskargs)
+        some_data = next(iter(data.values())) # All data must be equal length, so just choose one.
+        task.set_timing(n_samples = len(some_data), fsamp='%fHz' %sample_rate)
+
+        ## run the task and remove units
+        received = task.run(data)
+        for key, value in received.items():
+            received[key] = value.magnitude
+
+        ## Undo added data point
+        ## The daq gives data late by one.
+        ## This only happens on the lowest numbered input channel.
+        ## the nowacklab branch of Instrumental is modified so that channels
+        ## are ordered, and in this case it's the lowest numbered channel.
+        # First we find the input channel numbers as ints, then find the min.
+        ch_nums = [int(''.join(x for x in y if x.isdigit())) for y in chan_in]
+        min_chan = 'ai%i' %min(ch_nums)
+
+        for chan, value in received.items():
+            if chan == min_chan:
+                received[chan] = np.delete(value, 0) #removes first data point, which is wrong
             else:
-                some_data = next(iter(data.values())) # All data must be equal length, so just choose one.  ## HACK
-                task.set_timing(n_samples = len(some_data), fsamp='%fHz' %sample_rate)  ## HACK:
+                received[chan] = np.delete(value,-1) #removes last data point, a duplicate
+        for chan, value in received.items():
+            if chan not in input_labels and chan is not 't':
+                received[getattr(self, chan).label] = received.pop(chan) # change back to the given channel labels if different from the real channel names
 
-            # run the task and remove units
-            received = task.run(data)
-            for key, value in received.items():
-                received[key] = value.magnitude
-
-            # Undo added data point
-            # The daq gives data late by one.
-            # This only happens on the lowest numbered input channel.
-            # the nowacklab branch of Instrumental is modified so that channels
-            # are ordered, and in this case it's the lowest numbered channel.
-            # First we find the input channel numbers as ints, then find the min.
-            ch_nums = [int(''.join(x for x in y if x.isdigit())) for y in chan_in]
-            min_chan = 'ai%i' %min(ch_nums)
-
-            for chan, value in received.items():
-                if chan == min_chan:
-                    received[chan] = np.delete(value, 0)  # removes first data point, which is wrong
-                else:
-                    received[chan] = np.delete(value,-1)  # removes last data point, a duplicate
-
-            received2 = received.copy()
-            for chan, value in received2.items():
-                if chan not in input_labels and chan is not 't':
-                    received[getattr(self, chan).label] = received.pop(chan)  # change back to the given channel labels if different from the real channel names
-
-            return received
-        except Exception as e:
-            print('Daq send_receive failed! Make sure your version of nowacklab/Instrumental is current!')
-            raise e
-
-
-    def setup_inputs(self):
-        self._ins = self._daq.get_AI_channels()
-        for chan in self._ins:
-            setattr(self, chan, InputChannel(self._daq, name=chan))
-
-
-    def setup_outputs(self):
-        self._outs = self._daq.get_AO_channels()
-        for chan in self._outs:
-            setattr(self, chan, OutputChannel(self._daq, name=chan))
+        return received
 
 
     def sweep(self, Vstart, Vend, chan_in=None, sample_rate=100, numsteps=1000):
@@ -302,14 +297,7 @@ class NIDAQ(Instrument):
         for k in Vstart.keys():
             output_data[k] = np.linspace(Vstart[k], Vend[k], numsteps)
 
-        sent = '%s' %output_data.keys()
-
         received = self.send_receive(output_data, chan_in, sample_rate=sample_rate)
-
-        if chan_in is not None:
-            for k in received.keys():
-                if k not in chan_in and k != 't':
-                    raise Exception('DAQ channel name error! Sent keys: %s, Expected keys: %s, Received: %s' %(sent, chan_in, received.keys()))
 
         return output_data, received
 
@@ -328,9 +316,10 @@ class NIDAQ(Instrument):
         for chan in self.outputs.values(): # loop over output channel objects
             self.sweep({chan.label: chan.V}, {chan.label: 0}, sample_rate=rate, numsteps=numsteps)
         print('Zeroed DAQ outputs.')
+        logging.log('Zeroed DAQ outputs.')
 
 
-class Channel(Instrument):
+class Channel():
     _V = 0
     _conversion = 1 # build in conversion factor?
     def __init__(self, daq, name):
@@ -344,13 +333,11 @@ class Channel(Instrument):
 
 
     def __getstate__(self):
-        if self._loaded:
-            return super().__getstate__() # Do not attempt to read new values
         self._save_dict = {}
         self._save_dict.update({
-            '_V': self._V,
-            '_label': self.label,
-            '_name': self._name
+            'V': self._V,
+            'label': self.label,
+            'name': self._name
         })
 
         return self._save_dict
@@ -383,3 +370,26 @@ class OutputChannel(Channel):
     def V(self, value):
         self._V = value
         getattr(self._daq,  self._name).write('%sV' %value) # V is for pint units used in Instrumental package
+
+
+if __name__ == '__main__':
+    '''
+    Out of date 11/3/2016
+    '''
+    nidaq = NIDAQ()
+
+    out_data = []
+    in_data = []
+    num = 100
+    vmax = 5
+    for i in range(num):
+        nidaq.ao3 = vmax*i/num
+        out_data.append(nidaq.ao3)
+        in_data.append(nidaq.ai3)
+    for i in range(num):
+        nidaq.ao3 = vmax-vmax*i/num
+        out_data.append(nidaq.ao3)
+        in_data.append(nidaq.ai3)
+    import matplotlib.pyplot as plt
+    plt.plot(in_data)
+    plt.show()
