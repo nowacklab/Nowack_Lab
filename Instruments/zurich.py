@@ -43,7 +43,8 @@ class zurichInstrument(Instrument):
 
         '''
         # Accesses the DAQServer at the instructed address and port.
-        self.daq = zhinst.core.ziDAQServer(server_address, server_port, api_level)
+        # May be zhinst.core.ziDAQServer on a new version of zhinst
+        self.daq = zhinst.ziPython.ziDAQServer(server_address, server_port, api_level)
         self.zurichformatnodes = {}
         self.auxnames = {'auxin0':'auxin0', 'auxin1':'auxin1'}
         # self.daq.unsubscribe('*')
