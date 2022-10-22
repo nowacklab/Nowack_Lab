@@ -20,5 +20,8 @@ Instruments/squidarray_params.json
 # Ephemeral dumping ground #
 tmp
 
+# Virtualenv so that the weird setup does not interfere with the user python
+venv
+
 # Testing data
 Notebooks/Nowack_Lab_data/
