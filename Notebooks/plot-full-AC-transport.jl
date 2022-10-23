@@ -42,7 +42,7 @@ layout = @layout [
 ]
 
 latestdata = readdir(datadir)[end]
-# latestdata = "2022-10-21_183305_PPMS-AC-resistance.hdf5"
+# latestdata = "2022-10-22_152630_PPMS-AC-resistance.hdf5"
 datafile = joinpath(datadir, latestdata)
 start_time = ""
 
@@ -84,7 +84,7 @@ h5open(datafile, "r"; swmr=true) do f
     title = join([latestdata, "$(freq) Hz"], "\n")
     # title = latestdata
 
-    Ts = T.(aux0; Tmax=12.0)
+    Ts = T.(aux0, Tmax=310.0)
 
     pRT = plot(Ts, R;
         xlabel = "T (K)",
@@ -95,7 +95,7 @@ h5open(datafile, "r"; swmr=true) do f
 end
 # -
 
-savefig("ns2-sheet-resistance-warming-transition.png")
+savefig("bare-Nb-sheet-resistance-warming-roomtemp.png")
 
 tt = "2022-10-21T15:05:42.637056 ± 80466 μs"
 

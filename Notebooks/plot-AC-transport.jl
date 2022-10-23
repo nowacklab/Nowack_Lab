@@ -17,6 +17,7 @@
 using HDF5
 using Statistics
 using Measurements
+using Dates
 
 using Plots
 gr(
@@ -78,16 +79,17 @@ layout = @layout [
         
         t = (ts .- t0) ./ tb
         A = 100 # SR560 gain
+        G = 100.0 # HF2TA V/A
         # Vr = sqrt.(Vx.^2 .+ Vy.^2)
         # Ir = sqrt.(Ix.^2 .+ Iy.^2) ./ Rb
         # R = real.(1e-3 .* Rb .* (Vx .+ im .* Vy) ./ (Ix .+ im .* Iy))
-        R = (π/log(2)) .* (Vx / A) ./ (-Ix ./ 100.0) # 100 V/A TA
+        R = (π/log(2)) .* (Vx ./ A) ./ (-Ix ./ G)
         
         freq = f["/data/zurich/dev505/demods/0/sample/frequency"][end]
-        title = join([latestdata, "$(freq) Hz"], "\n")
+        title = join([latestdata, "$(freq) Hz", "$(now())"], "\n")
         # title = latestdata
         
-        Ts = T.(aux0; Tmax=12.0)
+        Ts = T.(aux0; Tmax=310.0)
         
         pRt = plot(t, R;
             xlabel = "t (s)",
@@ -115,4 +117,5 @@ layout = @layout [
             plot_titlefontsize = 12,
         )
     end
+    sleep(1.0)
 end
