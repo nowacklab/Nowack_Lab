@@ -3,8 +3,7 @@
 *.m~
 Equipment_Drivers/__pycache__
 Utilities/__pycache__
-Utilities/test.csv
-Utilities/.test.txt
+Utilities/save-locations.json
 *.pyc
 Procedures/__pycache__/planefit.cpython-35.pyc
 *.pyc
