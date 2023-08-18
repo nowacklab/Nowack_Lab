@@ -220,7 +220,7 @@ class Keithley2400(VISAInstrument):
         '''
         current_value = self.V
         deltaV = abs(value - self.V)
-        timetosweep = deltaV/(self.maxramp)
+        timetosweep = int(deltaV/(self.maxramp))
         volts = np.linspace(current_value, value, 5*timetosweep)
         for v in volts:
             self.Vout = v

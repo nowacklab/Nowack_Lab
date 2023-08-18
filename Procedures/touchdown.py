@@ -19,19 +19,17 @@ from ..Utilities.utilities import AttrDict
 
 _Z_PIEZO_STEP = 4  # V piezo
 _Z_PIEZO_STEP_SLOW = 4  # V piezo
-_CAPACITANCE_THRESHOLD = .3  # fF
+_CAPACITANCE_THRESHOLD = -.3  # fF
 _ATTO_TOWARDS_SAMPLE = 1
 
 def piecewise_linear(x, x0, y0, m1, m2):
         '''A continuous piecewise linear function
-
         Args
         x (array-like): the domain of the function.
         x0 (float): the x-coordinate where the function changes slope.
         y0 (float): the y-coordinage where the function changes slope.
         m1 (float): the slope of the function for x < x0.
         m2 (float): the slope of the function for x > x0.
-
         Returns
         '''
         return np.piecewise(x,
@@ -84,18 +82,14 @@ class Touchdown(Measurement):
     def __init__(self, instruments={}, planescan=False, Vz_max=None, runonce=False):
         '''Approach the sample to the SQUID while recording the capacitance
         of the cantelever in a lockin measurement to detect touchdown.
-
         Arguments:
         instruments -- dictionary containing instruments for the touchdown.
         planescan -- if set to True the attocubes will not move.
         Vz_max -- the maximum voltage that can be applied to the Z piezo.
-
         Required instruments:
         daq, lockin_cap, attocubes, piezos, montana
-
         Required daq inputs:
         'cap', 'capx', 'capy' 'theta'
-
         Required daq ouputs:
         'x', 'y', 'z'
         '''
@@ -152,12 +146,10 @@ class Touchdown(Measurement):
 
     def check_touchdown(self):
         '''Checks for a touchdown.
-
         If the last numfit points are monotically increasing and the
         capacitance increases by an ammount larger than
         _CAPACITANCE_THRESHOLD over the last numfit points then a
         touchdown is detected
-
         Returns:
         bool : True when touchdown is detected
         '''
@@ -169,10 +161,10 @@ class Touchdown(Measurement):
             if np.var(self.C[~np.isnan(self.C)]) > self._VAR_THRESHOLD:
                 return True
             # Check if the capacitance has been high enough (above 3 fF)
-            if self.C[i - self.numfit] > _CAPACITANCE_THRESHOLD:
+            if self.C[i - self.numfit] < _CAPACITANCE_THRESHOLD:
                 # Check that the last numfit points are monotonically increasing
                 for j in range(i - self.numfit, i):
-                    if self.C[j + 1] - self.C[j] < 0:
+                    if self.C[j + 1] - self.C[j] > 0:
                         return False
                 # If the for loop passed, then touchdown
                 print("level condition")
@@ -197,7 +189,6 @@ class Touchdown(Measurement):
         Helper function for do():
         Copied directly from do() at 2017-05-30 by dhl88
         to make code prettier
-
         Reset capacitance and correlation coefficient values
         '''
         self.C = np.array([np.nan] * self.numsteps)
@@ -219,13 +210,11 @@ class Touchdown(Measurement):
         Helper function for do():
         Copied directly from do() at 2017-05-30 by dhl88
         to make code prettier
-
         1) Wait for capacitance to stabilize
         2) read with daq from lockin
         3) convert V to C
         4) set capacitance offset (using Cap if not the first point)
         5) record X,Y,theta capacitance
-
         '''
         # Get capacitance
         if self.C0 == None:
@@ -253,7 +242,6 @@ class Touchdown(Measurement):
         Helper Function for do():
         Copied directly from do() at 2017-05-30 by dhl88
         to make code prettier
-
         When taking the slow touchdowns, we start at some piezo voltage.
         The data for this touchdown at lower piezo voltages must be replaced
         with something.  We choose ... dhl88 is not sure why we do this each
@@ -272,16 +260,13 @@ class Touchdown(Measurement):
         Helper function for do():
         Copied directly from do() at 2017-05-30 by dhl88
         to make code prettier
-
         Determines the piezo voltage to set before doing another touchdown.
         The goal is to move the attocubes into a position where the z bender
         can easily bring the sample and squid into contact.
-
         If the touchdown voltage is within the bender range (set by
         constants inside this function), then nothing is done.  Else,
         sets start to the lowest possible value and sets the self.attoshift
         to the best guess as to where the scanner should be.
-
         Returns [slow_scan, start]
         '''
         # Specify a percentage of the peizo range that the
@@ -317,14 +302,12 @@ class Touchdown(Measurement):
         Helper function for do():
         Copied directly from do() at 2017-05-30 by dhl88
         to make code prettier
-
         1) moves piezos to the lowest possible value
         2) sets start to that value (-self.Vz_max)
         3) check balance, make sure we didn't crash
         4) move attocubes to the position self.attoshift
         5) sleep until capacitance settles
         6) if capacitance is overloading, backoff
-
         returns start = -self.Vz_max
         '''
         # before moving attos, make sure we're far away from the sample!
@@ -371,7 +354,6 @@ class Touchdown(Measurement):
         Does the touchdown.
         Timestamp is determined at the beginning of this function.
         Can specify a voltage from which to start the sweep
-
         Args:
         start (float) -- Starting position (in voltage) of Z peizo.
         user (bool) -- If True, the user is asked to determine the
@@ -503,11 +485,9 @@ class Touchdown(Measurement):
 
     def get_td_v(self):
         '''Determine the touchdown voltage
-
         Fit a continuous piecewise linear function to the capacitance trace. The
         point where the function transitions between the two lines is recorded
         as the touchdown voltage.
-
         Returns
         p (array): Best fit parameters x0, y0, m1 and m2 (see piecewise_linear)
         '''
@@ -519,7 +499,6 @@ class Touchdown(Measurement):
     def get_touchdown_voltage(self):
         '''
         Determines the touchdown voltage.
-
         1. Finds the best fit for the touchdown curve fitting from i to
         the last point.
         2. Finds the best fit for the approach curve fitting from j to

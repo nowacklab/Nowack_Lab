@@ -284,12 +284,12 @@ class Planefit(Measurement):
         self.fig = plt.figure(figsize=(numX*2,numY*2))
         axes = []
         for i in range(numX*numY):
-            ax = self.fig.add_subplot(numX, numY, i+1)
+            ax = self.fig.add_subplot(numY, numX, i+1)
             ax.set_xticks([])
             ax.set_yticks([])
             axes.append(ax)
         self.fig.subplots_adjust(wspace=0, hspace=0)
-        self.axes = np.reshape(axes, self.numpts)
+        self.axes = np.reshape(axes, np.flip(self.numpts))
         self.fig.suptitle(self.filename #+
                           #'\n atto: X={0:2.2f}, Y={1:2.2f}, Z={2:2.2f}'.format(
                             #  self.atto.x.pos,

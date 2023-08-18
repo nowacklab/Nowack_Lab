@@ -1,6 +1,5 @@
 """
-Nowack_Lab high level driver for Zurich HF2LI
-
+Nowack_Lab high level driver for Zurich MFLI
 Needs: zhinst, numpy, .instrument, time and _future_
 """
 
@@ -24,20 +23,15 @@ class zurichInstrument(Instrument):
         '''
         Creates the HF2LI object. By choosing server address, can connection
         to HF2LI on remote (local network) computer.
-
         Arguments:
-
         server_address (str,optional) = Private IPV4 address of the computer
                             hosting the zurich. Defults to 'localhost',
                             the computer the python kernel is running on.
-
         server_port (int, optional) = Port of Zurich HF2LI. For local is
                             always 8005 (default), usually 8006 for remote.
-
         device_serial (str, optional) = Serial number of prefered zurich
                             hf2li. If empty string or does not exist,
                             uses first avaliable ZI.
-
         '''
         # Accesses the DAQServer at the instructed address and port.
         self.daq = zhinst.ziPython.ziDAQServer(server_address, server_port)
@@ -86,7 +80,7 @@ class zurichInstrument(Instrument):
                 setattr(self.__class__, nameofattr, property(fget=eval(
                 "lambda self: {'x': self.daq.getSample('%s')['x'][0]," % elem
                             + "'y':self.daq.getSample('%s')['y'][0]}" % elem)))
-
+    
     def __getstate__(self):
         zdict = self.daq.get('/'+ self.device_id + '/', flat = True, all = True)
         self._save_dict = {}
@@ -119,7 +113,6 @@ class zurichInstrument(Instrument):
             return the data.
             nodes (dictionary):keys are names of attributes of the
                                 zurich., items are user specified names.
-
                                 A special use case is to rename auxins as user
                                 defined strings in the demod returns. In this
                                 use case, the keys are 'auxin#', and the items
@@ -160,7 +153,6 @@ class zurichInstrument(Instrument):
     def poll(self):
             '''
             Returns stored data in all buffers.
-
             returns (dict): keys are the names you specified in subscribe for
                             the data. Values are 1D arrays of data.
             '''
@@ -223,8 +215,196 @@ class HF2LI2(zurichInstrument):
 class HF2LI3(zurichInstrument):
       pass
 class MFLI1(zurichInstrument):
-      pass
+    def __init__(self, device_serial = '', api_level = 6):
+        '''
+        Creates the MFLI object.
+        Arguments:
+        device_serial (str, optional) = Serial number of prefered zurich
+                            MFLI. If empty string or does not exist,
+                            uses first avaliable ZI.
+        api_level (int, optional) = api level of Zurich MFLI. Usually 6.
+        '''
+        
+        # Check if the device you asked for is available.
+        self.d = zhinst.ziPython.ziDiscovery()
+        deviceList = self.d.findAll()
+        if device_serial.upper() in deviceList:
+            # Sets class variable device_id to the serial number
+            self.device_id = device_serial.upper()
+        
+        # Checks if you actually asked for a specific serial
+        elif device_serial != '' :
+            # Tells user ZI wasn't found.
+            print('Requested device not found.')
+            # Sets device_id to the first avaliable.
+            self.device_id = deviceList[0]
+        else:
+            # Sets device_id to the first avaliable.
+            self.device_id = deviceList[0]
+        
+        #Gather infomation about the device for connection
+        devProp = self.d.get(self.device_id)
+        # Accesses the DAQServer at the address and port.
+        self.daq = zhinst.ziPython.ziDAQServer(devProp['serveraddress'], devProp['serverport'], api_level)
+        self.zurichformatnodes = {}
+        self.auxnames = {'auxin0':'auxin0', 'auxin1':'auxin1'}
+        self.daq.unsubscribe('/' + self.device_id + '/')
+        
+        print('Using Zurich lock-in with serial %s' % self.device_id)
+
+        #Retrieve all the nodes on the zurich
+        allNodes = self.daq.listNodes(self.device_id, 0x07)
+        #Index through nodes
+        for elem in allNodes:
+            #generates the name of the attribute, simply replacing the
+            # / of the the zurich path with underscores. Removes the "dev1056"
+            nameofattr  = '_'.join(elem.split('/')[2:])
+            # Checks that the node is not a special high speed streaming node
+            if not 'SAMPLE' == elem[-6:]:
+                #Sets an attribute of the class, specifically a property
+                #with getters and setters going to elem
+                setattr(self.__class__, nameofattr, property(
+               fget=eval("lambda self: self.daq.getDouble('%s')" %elem),
+               fset=eval("lambda self, value: self.daq.setDouble('%s', value)"
+                                                                        %elem)))
+            else:
+                #If it is a high speed streaming node, use getsample.
+                setattr(self.__class__, nameofattr, property(fget=eval(
+                "lambda self: {'x': self.daq.getSample('%s')['x'][0]," % elem
+                            + "'y':self.daq.getSample('%s')['y'][0]}" % elem)))
+    def __getstate__(self):
+        zdict = self.daq.get('/'+ self.device_id + '/', True, True)
+        self._save_dict = {}
+        for key in zdict.keys():
+            self._save_dict['_'.join(key.split('/')).upper()]= zdict[key]
+        return self._save_dict
+
 class MFLI2(zurichInstrument):
-      pass
+    def __init__(self, device_serial = '', api_level = 6):
+        '''
+        Creates the MFLI object.
+        Arguments:
+        device_serial (str, optional) = Serial number of prefered zurich
+                            MFLI. If empty string or does not exist,
+                            uses first avaliable ZI.
+        api_level (int, optional) = api level of Zurich MFLI. Usually 6.
+        '''
+        
+        # Check if the device you asked for is available.
+        self.d = zhinst.ziPython.ziDiscovery()
+        deviceList = self.d.findAll()
+        if device_serial.upper() in deviceList:
+            # Sets class variable device_id to the serial number
+            self.device_id = device_serial.upper()
+        
+        # Checks if you actually asked for a specific serial
+        elif device_serial != '' :
+            # Tells user ZI wasn't found.
+            print('Requested device not found.')
+            # Sets device_id to the first avaliable.
+            self.device_id = deviceList[0]
+        else:
+            # Sets device_id to the first avaliable.
+            self.device_id = deviceList[0]
+        
+        #Gather infomation about the device for connection
+        devProp = self.d.get(self.device_id)
+        # Accesses the DAQServer at the address and port.
+        self.daq = zhinst.ziPython.ziDAQServer(devProp['serveraddress'], devProp['serverport'], api_level)
+        self.zurichformatnodes = {}
+        self.auxnames = {'auxin0':'auxin0', 'auxin1':'auxin1'}
+        self.daq.unsubscribe('/' + self.device_id + '/')
+        
+        print('Using Zurich lock-in with serial %s' % self.device_id)
+
+        #Retrieve all the nodes on the zurich
+        allNodes = self.daq.listNodes(self.device_id, 0x07)
+        #Index through nodes
+        for elem in allNodes:
+            #generates the name of the attribute, simply replacing the
+            # / of the the zurich path with underscores. Removes the "dev1056"
+            nameofattr  = '_'.join(elem.split('/')[2:])
+            # Checks that the node is not a special high speed streaming node
+            if not 'SAMPLE' == elem[-6:]:
+                #Sets an attribute of the class, specifically a property
+                #with getters and setters going to elem
+                setattr(self.__class__, nameofattr, property(
+               fget=eval("lambda self: self.daq.getDouble('%s')" %elem),
+               fset=eval("lambda self, value: self.daq.setDouble('%s', value)"
+                                                                        %elem)))
+            else:
+                #If it is a high speed streaming node, use getsample.
+                setattr(self.__class__, nameofattr, property(fget=eval(
+                "lambda self: {'x': self.daq.getSample('%s')['x'][0]," % elem
+                            + "'y':self.daq.getSample('%s')['y'][0]}" % elem)))
+    def __getstate__(self):
+        zdict = self.daq.get('/'+ self.device_id + '/', True, True)
+        self._save_dict = {}
+        for key in zdict.keys():
+            self._save_dict['_'.join(key.split('/')).upper()]= zdict[key]
+        return self._save_dict
+
 class MFLI3(zurichInstrument):
-      pass
+    def __init__(self, device_serial = '', api_level = 6):
+        '''
+        Creates the MFLI object.
+        Arguments:
+        device_serial (str, optional) = Serial number of prefered zurich
+                            MFLI. If empty string or does not exist,
+                            uses first avaliable ZI.
+        api_level (int, optional) = api level of Zurich MFLI. Usually 6.
+        '''
+        
+        # Check if the device you asked for is available.
+        self.d = zhinst.ziPython.ziDiscovery()
+        deviceList = self.d.findAll()
+        if device_serial.upper() in deviceList:
+            # Sets class variable device_id to the serial number
+            self.device_id = device_serial.upper()
+        
+        # Checks if you actually asked for a specific serial
+        elif device_serial != '' :
+            # Tells user ZI wasn't found.
+            print('Requested device not found.')
+            # Sets device_id to the first avaliable.
+            self.device_id = deviceList[0]
+        else:
+            # Sets device_id to the first avaliable.
+            self.device_id = deviceList[0]
+        
+        #Gather infomation about the device for connection
+        devProp = self.d.get(self.device_id)
+        # Accesses the DAQServer at the address and port.
+        self.daq = zhinst.ziPython.ziDAQServer(devProp['serveraddress'], devProp['serverport'], api_level)
+        self.zurichformatnodes = {}
+        self.auxnames = {'auxin0':'auxin0', 'auxin1':'auxin1'}
+        self.daq.unsubscribe('/' + self.device_id + '/')
+        
+        print('Using Zurich lock-in with serial %s' % self.device_id)
+
+        #Retrieve all the nodes on the zurich
+        allNodes = self.daq.listNodes(self.device_id, 0x07)
+        #Index through nodes
+        for elem in allNodes:
+            #generates the name of the attribute, simply replacing the
+            # / of the the zurich path with underscores. Removes the "dev1056"
+            nameofattr  = '_'.join(elem.split('/')[2:])
+            # Checks that the node is not a special high speed streaming node
+            if not 'SAMPLE' == elem[-6:]:
+                #Sets an attribute of the class, specifically a property
+                #with getters and setters going to elem
+                setattr(self.__class__, nameofattr, property(
+               fget=eval("lambda self: self.daq.getDouble('%s')" %elem),
+               fset=eval("lambda self, value: self.daq.setDouble('%s', value)"
+                                                                        %elem)))
+            else:
+                #If it is a high speed streaming node, use getsample.
+                setattr(self.__class__, nameofattr, property(fget=eval(
+                "lambda self: {'x': self.daq.getSample('%s')['x'][0]," % elem
+                            + "'y':self.daq.getSample('%s')['y'][0]}" % elem)))
+    def __getstate__(self):
+        zdict = self.daq.get('/'+ self.device_id + '/', True, True)
+        self._save_dict = {}
+        for key in zdict.keys():
+            self._save_dict['_'.join(key.split('/')).upper()]= zdict[key]
+        return self._save_dict

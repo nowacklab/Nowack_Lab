@@ -11,12 +11,13 @@ class Dataset():
     allowedtypes = [float, int,complex]
     allowednonlisttypes = [str, float, int, complex]
 
-    def __init__(self, filename):
+    def __init__(self, filename, printfilename = True):
         '''
         Creates the hdf5 file for saving.
         '''
         self.filename = filename
-        print(self.filename)
+        if printfilename:
+            print(self.filename)
 
     def get(self, pathtoget,slc = False):
         '''
