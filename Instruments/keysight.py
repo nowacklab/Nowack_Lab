@@ -6,7 +6,7 @@ from .instrument import Instrument, VISAInstrument
 class Keysight34461A(VISAInstrument):
     _label = 'keysight'
     '''
-    Instrument driver for Keithley 2400 Source Meter
+    Instrument driver for Keysight bench DMM
     '''
     Irange = 'AUTO'
     Vrange = 'AUTO'
@@ -21,7 +21,9 @@ class Keysight34461A(VISAInstrument):
         self._save_dict = {
             'current range': self.I_range,
             'voltage range': self.V_range,
-            'trigger type': self.trigger
+            'trigger type': self.trigger,
+            'current': self.I,
+            'voltage': self.V
         }
         return self._save_dict
 
@@ -84,9 +86,9 @@ class Keysight34461A(VISAInstrument):
     def trigger(self, triggertype):
         '''
         Set the trigger type
-        IMM: trigger immediately once the instrument is put in 'wait-for-trigger' state
-        BUS: triggered when sending '*TRG' over the interface after the instrument is put in 'wait-for-trigger' state
-        EXT: triggered by external trigger. If a trigger is sent to the instrument before it is ready, it buffers a trigger.
+        :param triggertype: IMM, trigger immediately once the instrument is put in 'wait-for-trigger' state;
+        BUS, triggered when sending '*TRG' over the interface after the instrument is put in 'wait-for-trigger' state;
+        EXT, triggered by external trigger. If a trigger is sent to the instrument before it is ready, it buffers a trigger.
         '''
         self.write('TRIG:SOUR '+triggertype)
 
@@ -115,7 +117,7 @@ class Keysight34461A(VISAInstrument):
     def triggerslope(self, slope):
         '''
         Set the trigger slope.
-        slope = 'POS', 'NEG'
+        :param slope: 'POS' or 'NEG'
         '''
         self.write('TRIG:SLOP '+slope)
 
@@ -185,21 +187,26 @@ class Keysight34461A(VISAInstrument):
         return self.ask('CONF?')
 
     @measurement.setter
-    def measurement(self, function, range = 'DEF', resolution = 'DEF'):
+    def measurement(self, function, measurementrange = 'DEF', resolution = 'DEF'):
         '''
         Set the measurement configuration
-        function = CAP, CURR:AC/DC, RES/FRES, VOLT:AC/DC, VOLT:DC:RATio
+        :param function: CAP, CURR:AC/DC, RES/FRES, VOLT:AC/DC, VOLT:DC:RATio
+        :param measurementrange: specify measurement range, default is auto range
+        :param resolution: specify measurement resolution, default is auto
         '''
-        towrite = 'CONF:'+function+' '+str(range)+' '+str(resolution)
+        towrite = 'CONF:'+function+' '+str(measurementrange)+' '+str(resolution)
         self.write(towrite)
 
     @property
-    def I(self, type = 'DC', range = Irange, resolution = 'none'):
+    def I(self, measurementtype = 'DC', measurementrange = Irange, resolution = 'none'):
         '''
         Measure current.
+        :param measurementtype: AC or DC
+        :param measurementrange: specify measurement range
+        :param resolution: specify measurement resolution
         '''
-        self.Irange = range
-        towrite = 'MEAS:CURR:'+type+' '+str(range)
+        self.Irange = measurementrange
+        towrite = 'MEAS:CURR:'+measurementtype+'? '+str(measurementrange)
         if resolution != 'none':
             towrite = towrite+' '+str(resolution)
         return float(self.ask(towrite))
@@ -219,12 +226,15 @@ class Keysight34461A(VISAInstrument):
         self.Irange = value
 
     @property
-    def V(self, type = 'DC', range = Vrange, resolution = 'none'):
+    def V(self, measurementtype = 'DC', measurementrange = Vrange, resolution = 'none'):
         '''
         Measure current.
+        :param measurementtype: AC or DC
+        :param measurementrange: specify measurement range
+        :param resolution: specify measurement resolution
         '''
-        self.Vrange = range
-        towrite = 'MEAS:VOLT:'+type+' '+str(range)
+        self.Vrange = measurementrange
+        towrite = 'MEAS:VOLT:'+measurementtype+'? '+str(measurementrange)
         if resolution != 'none':
             towrite = towrite+' '+str(resolution)
         return float(self.ask(towrite))

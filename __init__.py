@@ -91,7 +91,7 @@ if (DisableInits.disable_all_inits is False):
     # Workaround for scipy altering KeyboardInterrupt behavior
     os.environ['FOR_DISABLE_CONSOLE_CTRL_HANDLER'] = '1'
 
-    set_experiment_data_path()
+    #set_experiment_data_path()
     check_remote_data_server_connection()
 
     from matplotlib import rcParams

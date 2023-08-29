@@ -27,8 +27,8 @@ class Razorbill(VISAInstrument):
             up = 120
         else:
             T = self.montana.temperature['platform']
-            low = np.piecewise(T, [T < 250, T >= 250], [-200-4*180/246+180/246*T, -20])
-            up = np.piecewise(T, [T < 100, T >= 100], [320/96+200-80/96*T, 120])
+            low = np.piecewise(T, [T < 10, ((T<100)&(T>10)), ((T<250)&(T>100)), T >= 250], [-200, -200+5/3*(T-10), -50+(T-100)/5, -20])
+            up = np.piecewise(T, [T < 10, ((T<100)&(T>10)), T >= 100], [200, 200-8/9*(T-10), 120])
         if V>up:
             return up
         elif V<low:

@@ -79,6 +79,10 @@ class Saver():
                                     +  '\\' + timecomp
                                     + name + '.hdf5')
         return filenames
+    
+    def resize_append(self,*args, **kwargs):
+        for dataset_name in self.datasets.keys():
+            self.datasets[dataset_name].append(*args, **kwargs)
 
     def append(self,*args, **kwargs):
         '''
