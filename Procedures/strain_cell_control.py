@@ -3,25 +3,26 @@ import time
 from numpy import array as array
 import ast
 from scipy.interpolate import interp1d
+from ..Utilities.save import Measurement
 
-class strain(Measurment):
+class strain(Measurement):
     '''
     Control the strain put out by the strain cell.
     '''
-    def __init__(self, instruments = {}, temp = montana.temperature['platform'], cap = cb.single, strain = 0):
+    def __init__(self, instruments = {}, temp = 0, cap = 0, strain = 0):
         '''
         Initializes the strain controller.
         
         temp (float), cap (float), strain (float): temperature, capacitance and strain value (in um) at one moment used to calculate capacitance offset.
         '''
         self.drt = 8.85418781*5.24/(1.24-0.15)
-        with open('razorbill_capacitor_vs_temp.txt', 'r') as f:
+        with open(r'C:\Users\Hemlock\Documents\GitHub\Nowack_Lab\Procedures\razorbill_capacitor_vs_temp.txt', 'r') as f:
             a = f.read()
         a = ast.literal_eval(a)
         c0_calib = 1.24-0.15+a['capacitance'][0]
         a['d0'] = [8.85418781*5.24/(c-c0_calib) for c in a['capacitance']]
         self.ttod0 = interp1d(a['temp'][::-1], a['d0'][::-1], bounds_error=False, fill_value = (a['d0'][-1], a['d0'][0]))
-        self.c0 = cap-8.85418781*5.24/(strain+self.ttod0[temp])
+        self.c0 = cap-8.85418781*5.24/(strain+self.ttod0(temp))
         self.instruments = instruments
         self.cb = self.instruments['cb']
         self.razorbill = self.instruments['razorbill']
@@ -29,21 +30,21 @@ class strain(Measurment):
         self.razorbill.output = 1
 
 
-    def update_c0(self, cap = cb.single, strain = 0, temp = monata.temperature['platform']):
+    def update_c0(self, cap, strain, temp):
         '''
         Update the capacitance offset using new values of capacitance, strain and temperature
         '''
-        self.c0 = cap-8.85418781*5.24/(strain+self.ttod0[temp])
+        self.c0 = cap-8.85418781*5.24/(strain+self.ttod0(temp))
     
     
-    def captostrain(self, cap, c0 = self.c0, d0 = self.ttod0[self.montana.temperature['platform']]):
+    def captostrain(self, cap, c0, d0):
         '''
         Covert capacitance to strain.
         '''
         return 8.85418781*5.24/(cap-c0)-d0
     
     
-    def straintocap(self, strain, c0 = self.c0, d0 = self.ttod0[self.montana.temperature['platform']]):
+    def straintocap(self, strain, c0, d0):
         '''
         Convert strain to anticipated capacitance value. Positive for tension strain.
         '''
@@ -55,27 +56,27 @@ class strain(Measurment):
         Measure capacitance. Try to read five times in case GPIB throw random errors.
         '''
         try:
-            cnow = cb.single
+            cnow = self.cb.single
             return cnow
         except:
             time.sleep(2)
             try:
-                cnow = cb.single
+                cnow = self.cb.single
                 return cnow
             except:
                 time.sleep(2)
                 try:
-                    cnow = cb.single
+                    cnow = self.cb.single
                     return cnow
                 except:
                     time.sleep(2)
                     try:
-                        cnow = cb.single
+                        cnow = self.cb.single
                         return cnow
                     except:
                         time.sleep(2)
                         try:
-                            cnow = cb.single
+                            cnow = self.cb.single
                             return cnow
                         except:
                             print('Cannot read capacitance from capacitance bridge. Check connection!')
@@ -86,7 +87,7 @@ class strain(Measurment):
         Return the current strain.
         '''
         cnow = self.getc()
-        return self.captostrain(cnow)
+        return self.captostrain(cnow, self.c0, self.ttod0(self.montana.temperature['platform']))
     
     
     def moveonevolt(self, cnow, cto, upperV, lowerV):
@@ -107,25 +108,25 @@ class strain(Measurment):
         if cnow<cto:
             if Vc>=0:
                 if (Vc/upperV)<=(Vt/lowerV):
-                    self.razorbill.Vcompression = int(Vc+1)
+                    Vc = round(Vc)+1
                 else:
-                    self.razorbill.Vtension = int(Vt-1)
+                    Vt = round(Vt)-1
             else:
                 if (Vc/lowerV)<=(Vt/upperV):
-                    self.razorbill.Vtension = int(Vt-1)
+                    Vt = round(Vt)-1
                 else:
-                    self.razorbill.Vcompression = int(Vc+1)
+                    Vc = round(Vc)+1
         if cnow>cto:
             if Vt>=0:
                 if (Vt/upperV)<=(Vc/lowerV):
-                    self.razorbill.Vtension = int(Vt+1)
+                    Vt = round(Vt)+1
                 else:
-                    self.razorbill.Vcompression = int(Vc-1)
+                    Vc = round(Vc)-1
             else:
                 if (Vt/lowerV)<=(Vc/upperV):
-                    self.razorbill.Vcompression = int(Vc-1)
+                    Vc = round(Vc)-1
                 else:
-                    self.razorbill.Vtension = int(Vt+1)
+                    Vt = round(Vt)+1
         return Vc, Vt
     
     
@@ -136,11 +137,11 @@ class strain(Measurment):
         
         strainto (float): desired strain in um, positive for tension strain.
         '''
-        cto = self.straintocap(strainto)
+        cto = self.straintocap(strainto, self.c0, self.ttod0(self.montana.temperature['platform']))
         Vc = self.razorbill.Vcompression
         Vt = self.razorbill.Vtension
-        upperV = razorbill.checkV(200)
-        lowerV = razorbill.checkV(-200)
+        upperV = self.razorbill.checkV(200)
+        lowerV = self.razorbill.checkV(-200)
         threshold = 0.002
         n = 0
         cnow = self.getc()
@@ -158,6 +159,7 @@ class strain(Measurment):
                 Vc, Vt = self.moveonevolt(cnow, cto, upperV, lowerV)
                 self.razorbill.Vcompression = Vc
                 self.razorbill.Vtension = Vt
+                print(Vc, Vt)
                 time.sleep(1)
             n = n+1
     
@@ -167,13 +169,14 @@ class strain(Measurment):
         Change the strain. Then keep the strain at the value for a user defined time period.
         This function is used to stablize the strain when piezo stacks creep.
         '''
+        self.setstrain(strainto)
         t0 = time.time()
         while time.time()-t0<t:
             self.setstrain(strainto)
             time.sleep(5)
     
     
-    def keepstrainrecording(self, temp_threshold, strainto, period, channelstomonitor = {}, otheraquired = {}, name = 'Cooldown'):
+    def keepstrainrecording(self, temp_threshold, strainto, period, channelstomonitor, otheraquired, name):
         '''
         Keep strain at one value while changing temperature. This function also allows to record data during the process.
         
@@ -188,7 +191,7 @@ class strain(Measurment):
         '''
         self.saver = Saver(name)
         self.channelstomonitor = channelstomonitor
-        self.trigaquired = trigaquired
+        self.otheraquired = otheraquired
         self.interrupt = False
         
         self.setupsave()
@@ -202,19 +205,19 @@ class strain(Measurment):
         for node in self.channelstomonitor.items():
             data = self.instruments['daq'].node[1]
             self.saver.append('/DAQ/'+str(node[0])+'/', data)
-        self.saver.append('/Razorbill/tension_set/', self.razorbill.Vtension)
-        self.saver.append('/Razorbill/compression_set/', self.razorbill.Vcompression)
-        self.saver.append('/Razorbill/tension/', self.razorbill.Vtension_measured)
-        self.saver.append('/Razorbill/compression/', self.razorbill.Vcompression_measured)
+        self.saver.append('/Razorbill/tension_set/', array([self.razorbill.Vtension]))
+        self.saver.append('/Razorbill/compression_set/', array([self.razorbill.Vcompression]))
+        self.saver.append('/Razorbill/tension/', array([self.razorbill.Vtension_measured]))
+        self.saver.append('/Razorbill/compression/', array([self.razorbill.Vcompression_measured]))
         capacitance = self.getc()
-        self.saver.append('/capacitance/', capacitance)
-        self.saver.append('/temperature/', montana.temperature['platform'])
-        self.saver.append('/time/', array[time.time()-t0])
+        self.saver.append('/capacitance/', array([capacitance]))
+        self.saver.append('/temperature/', array([self.montana.temperature['platform']]))
+        self.saver.append('/time/', array([time.time()-t0]))
         while self.montana.temperature['platform']>temp_threshold:
             timecount = timecount+1
             self.setstrain(strainto)
             while timecount*period>time.time()-t0:
-                time.sleep(1):
+                time.sleep(1)
             for inst in self.otheraquired:
                 [obj, attrs] = inst
                 for node in attrs.items():
@@ -223,14 +226,14 @@ class strain(Measurment):
             for node in self.channelstomonitor.items():
                 data = self.instruments['daq'].node[1]
                 self.saver.resize_append('/DAQ/'+str(node[0])+'/', data)
-            self.saver.resize_append('/Razorbill/tension_set/', self.razorbill.Vtension)
-            self.saver.resize_append('/Razorbill/compression_set/', self.razorbill.Vcompression)
-            self.saver.resize_append('/Razorbill/tension/', self.razorbill.Vtension_measured)
-            self.saver.resize_append('/Razorbill/compression/', self.razorbill.Vcompression_measured)
+            self.saver.resize_append('/Razorbill/tension_set/', array([self.razorbill.Vtension]))
+            self.saver.resize_append('/Razorbill/compression_set/', array([self.razorbill.Vcompression]))
+            self.saver.resize_append('/Razorbill/tension/', array([self.razorbill.Vtension_measured]))
+            self.saver.resize_append('/Razorbill/compression/', array([self.razorbill.Vcompression_measured]))
             capacitance = self.getc()
-            self.saver.append('/capacitance/', capacitance)
-            self.saver.append('/temperature/', montana.temperature['platform'])
-            self.saver.resize_append('/time/', array[time.time()-t0])
+            self.saver.resize_append('/capacitance/', array([capacitance]))
+            self.saver.resize_append('/temperature/', array([self.montana.temperature['platform']]))
+            self.saver.resize_append('/time/', array([time.time()-t0]))
     
     
     def setupsave(self):
@@ -241,7 +244,7 @@ class strain(Measurment):
             self.saver.append('config/instruments/%s/' % instrument,
                 self.instruments[instrument].__getstate__())
 
-        for oneinst in self.trigaquired:
+        for oneinst in self.otheraquired:
             dictofnodes = oneinst[1]
             if not oneinst[0]  in self.instruments.values():
                 self.saver.append('config/triginstruments/%s/' %

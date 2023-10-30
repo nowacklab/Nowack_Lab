@@ -170,7 +170,12 @@ class Dataset():
             kwargs['path']=newpath
             self._writetoh5(**kwargs)
         except KeyError:
-            f.create_dataset(kwargs['path'], data = kwargs['data'], maxshape = tuple((None for i in range(len(kwargs['data'])))))
+            if type(kwargs['data']) != np.ndarray:
+                f.create_dataset(kwargs['path'], data = kwargs['data'])
+            elif type(kwargs['data'][0]) != np.ndarray:
+                f.create_dataset(kwargs['path'], data = kwargs['data'], maxshape = (None,))
+            else:
+                f.create_dataset(kwargs['path'], data = kwargs['data'], maxshape = tuple((None for i in range(len(np.shape(kwargs['data']))))))
             f.close()
 
 

@@ -82,7 +82,7 @@ class Saver():
     
     def resize_append(self,*args, **kwargs):
         for dataset_name in self.datasets.keys():
-            self.datasets[dataset_name].append(*args, **kwargs)
+            self.datasets[dataset_name].resize_append(*args, **kwargs)
 
     def append(self,*args, **kwargs):
         '''

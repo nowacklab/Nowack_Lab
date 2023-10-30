@@ -46,6 +46,7 @@ class SR5113(Instrument):
             self._filter = (FILTER[int(low)], FILTER[int(high)])
         except:
             print('Couldn\'t communicate with SR5113; filter may be wrong!')
+            self._filter = (0, 0) # no communication, default filter
         return self._filter
 
     @filter.setter
