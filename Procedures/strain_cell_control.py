@@ -19,8 +19,8 @@ class strain(Measurement):
         with open(r'C:\Users\Hemlock\Documents\GitHub\Nowack_Lab\Procedures\razorbill_capacitor_vs_temp.txt', 'r') as f:
             a = f.read()
         a = ast.literal_eval(a)
-        c0_calib = 1.24-0.15+a['capacitance'][0]
-        a['d0'] = [8.85418781*5.24/(c-c0_calib) for c in a['capacitance']]
+        c0_calib = 1.24-a['capacitance'][0]
+        a['d0'] = [8.85418781*5.24/(c+c0_calib-0.15) for c in a['capacitance']]
         self.ttod0 = interp1d(a['temp'][::-1], a['d0'][::-1], bounds_error=False, fill_value = (a['d0'][-1], a['d0'][0]))
         self.c0 = cap-8.85418781*5.24/(strain+self.ttod0(temp))
         self.instruments = instruments
@@ -51,6 +51,7 @@ class strain(Measurement):
         return 8.85418781*5.24/(strain+d0)+c0
     
     
+    @property
     def getc(self):
         '''
         Measure capacitance. Try to read five times in case GPIB throw random errors.
@@ -81,14 +82,49 @@ class strain(Measurement):
                         except:
                             print('Cannot read capacitance from capacitance bridge. Check connection!')
     
-    
-    def currentstrain(self):
+    @property
+    def strain(self):
         '''
         Return the current strain.
         '''
-        cnow = self.getc()
+        cnow = self.getc
         return self.captostrain(cnow, self.c0, self.ttod0(self.montana.temperature['platform']))
+
     
+    @strain.setter
+    def strain(self, strainto):
+        '''
+        Set strain. Move piezos by one volt each time until capacitance is within a threshold
+        of 0.002pF or the measured capacitance changes to the other side of the desired capacitance.
+        
+        strainto (float): desired strain in um, positive for tension strain.
+        '''
+        cto = self.straintocap(strainto, self.c0, self.ttod0(self.montana.temperature['platform']))
+        Vc = self.razorbill.Vcompression
+        Vt = self.razorbill.Vtension
+        upperV = self.razorbill.checkV(200)
+        lowerV = self.razorbill.checkV(-200)
+        threshold = 0.002
+        n = 0
+        cnow = self.getc
+        while n<400:
+            diff = cnow-cto
+            cnow = self.getc
+            if diff*(cnow-cto)<0:
+                self.razorbill.Vcompression = Vc
+                self.razorbill.Vtension = Vt
+                time.sleep(1)
+                break
+            elif abs(cnow-cto)<threshold:
+                break
+            else:
+                Vc, Vt = self.moveonevolt(cnow, cto, upperV, lowerV)
+                self.razorbill.Vcompression = Vc
+                self.razorbill.Vtension = Vt
+                print(Vc, Vt)
+                time.sleep(1)
+            n = n+1
+            
     
     def moveonevolt(self, cnow, cto, upperV, lowerV):
         '''
@@ -130,49 +166,15 @@ class strain(Measurement):
         return Vc, Vt
     
     
-    def setstrain(self, strainto):
-        '''
-        Set strain. Move piezos by one volt each time until capacitance is within a threshold
-        of 0.002pF or the measured capacitance changes to the other side of the desired capacitance.
-        
-        strainto (float): desired strain in um, positive for tension strain.
-        '''
-        cto = self.straintocap(strainto, self.c0, self.ttod0(self.montana.temperature['platform']))
-        Vc = self.razorbill.Vcompression
-        Vt = self.razorbill.Vtension
-        upperV = self.razorbill.checkV(200)
-        lowerV = self.razorbill.checkV(-200)
-        threshold = 0.002
-        n = 0
-        cnow = self.getc()
-        while n<400:
-            diff = cnow-cto
-            cnow = self.getc()
-            if diff*(cnow-cto)<0:
-                self.razorbill.Vcompression = Vc
-                self.razorbill.Vtension = Vt
-                time.sleep(1)
-                break
-            elif abs(cnow-cto)<threshold:
-                break
-            else:
-                Vc, Vt = self.moveonevolt(cnow, cto, upperV, lowerV)
-                self.razorbill.Vcompression = Vc
-                self.razorbill.Vtension = Vt
-                print(Vc, Vt)
-                time.sleep(1)
-            n = n+1
-    
-    
     def keepstrain(self, t, strainto):
         '''
         Change the strain. Then keep the strain at the value for a user defined time period.
         This function is used to stablize the strain when piezo stacks creep.
         '''
-        self.setstrain(strainto)
+        self.strain = strainto
         t0 = time.time()
         while time.time()-t0<t:
-            self.setstrain(strainto)
+            self.strain = strainto
             time.sleep(5)
     
     
@@ -209,13 +211,13 @@ class strain(Measurement):
         self.saver.append('/Razorbill/compression_set/', array([self.razorbill.Vcompression]))
         self.saver.append('/Razorbill/tension/', array([self.razorbill.Vtension_measured]))
         self.saver.append('/Razorbill/compression/', array([self.razorbill.Vcompression_measured]))
-        capacitance = self.getc()
+        capacitance = self.getc
         self.saver.append('/capacitance/', array([capacitance]))
         self.saver.append('/temperature/', array([self.montana.temperature['platform']]))
         self.saver.append('/time/', array([time.time()-t0]))
         while self.montana.temperature['platform']>temp_threshold:
             timecount = timecount+1
-            self.setstrain(strainto)
+            self.strain = strainto
             while timecount*period>time.time()-t0:
                 time.sleep(1)
             for inst in self.otheraquired:
@@ -230,7 +232,7 @@ class strain(Measurement):
             self.saver.resize_append('/Razorbill/compression_set/', array([self.razorbill.Vcompression]))
             self.saver.resize_append('/Razorbill/tension/', array([self.razorbill.Vtension_measured]))
             self.saver.resize_append('/Razorbill/compression/', array([self.razorbill.Vcompression_measured]))
-            capacitance = self.getc()
+            capacitance = self.getc
             self.saver.resize_append('/capacitance/', array([capacitance]))
             self.saver.resize_append('/temperature/', array([self.montana.temperature['platform']]))
             self.saver.resize_append('/time/', array([time.time()-t0]))
@@ -254,4 +256,53 @@ class strain(Measurement):
                 self.saver.append('config/'+ nodename + '/node',
                                                         dictofnodes[nodename])
                 self.saver.append('config/'+ nodename + '/device',
-                                                          oneinst[0].device_id)        
+                                                          oneinst[0].device_id)
+
+
+
+class strain_plot(Measurement):
+    '''
+    Control the strain put out by the strain cell.
+    '''
+    def __init__(self, temp = 0, cap = 0, strain = 0):
+        '''
+        Initializes the strain controller.
+        
+        temp (float), cap (float), strain (float): temperature, capacitance and strain value (in um) at one moment used to calculate capacitance offset.
+        '''
+        self.drt = 8.85418781*5.24/(1.24-0.15)
+        with open(r'C:\Users\Hemlock\Documents\GitHub\Nowack_Lab\Procedures\razorbill_capacitor_vs_temp.txt', 'r') as f:
+            a = f.read()
+        a = ast.literal_eval(a)
+        c0_calib = 1.24-a['capacitance'][0]
+        a['d0'] = [8.85418781*5.24/(c+c0_calib-0.15) for c in a['capacitance']]
+        self.ttod0 = interp1d(a['temp'][::-1], a['d0'][::-1], bounds_error=False, fill_value = (a['d0'][-1], a['d0'][0]))
+        self.c0 = cap-8.85418781*5.24/(strain+self.ttod0(temp))
+
+
+    def update_c0(self, cap, strain, temp):
+        '''
+        Update the capacitance offset using new values of capacitance, strain and temperature
+        '''
+        self.c0 = cap-8.85418781*5.24/(strain+self.ttod0(temp))
+    
+    
+    def captostrain(self, cap, c0, d0):
+        '''
+        Covert capacitance to strain.
+        '''
+        return 8.85418781*5.24/(cap-c0)-d0
+    
+    
+    def straintocap(self, strain, c0, d0):
+        '''
+        Convert strain to anticipated capacitance value. Positive for tension strain.
+        '''
+        return 8.85418781*5.24/(strain+d0)+c0
+    
+    def strain(self, temperature):
+        '''
+        Return the current strain.
+        '''
+        cnow = self.getc
+        return self.captostrain(cnow, self.c0, self.ttod0(temperature))
