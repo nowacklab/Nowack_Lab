@@ -1,4 +1,4 @@
-import visa
+import pyvisa as visa
 import numpy as np
 import time
 from .instrument import Instrument, VISAInstrument
@@ -32,14 +32,14 @@ class powersupply(VISAInstrument):
         '''
         Get the input current.
         '''
-        return float(self.ask(':FETC:CURR?'))
+        return float(self.query(':FETC:CURR?'))
 
     @property
     def Iout(self):
         '''
         Get the output current.
         '''
-        self._Iout = float(self.ask(':SOUR:CURR:LEV:IMM:AMPL?'))
+        self._Iout = float(self.query(':SOUR:CURR:LEV:IMM:AMPL?'))
 
         return self._Iout
 
@@ -59,14 +59,14 @@ class powersupply(VISAInstrument):
         '''
         Get the input voltage.
         '''
-        return float(self.ask('FETC:VOLT?'))
+        return float(self.query('FETC:VOLT?'))
 
     @property
     def Vout(self):
         '''
         Get the output voltage (if in voltage source mode).
         '''
-        self._Vout = float(self.ask(':SOUR:VOLT:LEV:IMM:AMPL?'))
+        self._Vout = float(self.query(':SOUR:VOLT:LEV:IMM:AMPL?'))
         return self._Vout
 
     @Vout.setter
@@ -84,7 +84,7 @@ class powersupply(VISAInstrument):
         '''
         Get the output max.
         '''
-        self._Vout_min = float(self.ask('VOLT:LIMI?'))
+        self._Vout_min = float(self.query('VOLT:LIMI?'))
         return self._Vout_max
 
     @Vout_range.setter
@@ -100,7 +100,7 @@ class powersupply(VISAInstrument):
         '''
         Check whether or not output is enabled
         '''
-        self._output = {0: 'off', 1:'on'}[int(self.ask('OUTP?'))]
+        self._output = {0: 'off', 1:'on'}[int(self.query('OUTP?'))]
         return self._output
 
     @output.setter

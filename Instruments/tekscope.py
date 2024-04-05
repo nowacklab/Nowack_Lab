@@ -1,4 +1,4 @@
-import visa
+import pyvisa as visa
 import numpy as np
 import time
 from .instrument import Instrument, VISAInstrument
@@ -14,15 +14,15 @@ class MDO3024(VISAInstrument):
         else:
             self.usb_address = 'USB0::0x0699::0x0408::C030594::INSTR'
         self._init_visa(self.usb_address, termination='\n')
-        self.numpoints =  (float(self.ask('DATA:STOP?')) -
-                                        float(self.ask('DATA:START?')))
+        self.numpoints =  (float(self.query('DATA:STOP?')) -
+                                        float(self.query('DATA:START?')))
         self.write('DATA:ENCDG ASCII')
     @property
     def activechannel(self):
         '''
         Get the active channel
         '''
-        return self.ask(':DATA:SOURCE?')
+        return self.query(':DATA:SOURCE?')
 
     @activechannel.setter
     def activechannel(self, value):
@@ -37,7 +37,7 @@ class MDO3024(VISAInstrument):
         '''
         Gets the portion of the waveform to be acquired
         '''
-        return [int(self.ask('DATA:START?')), int(self.ask('DATA:STOP?'))]
+        return [int(self.query('DATA:START?')), int(self.query('DATA:STOP?'))]
 
     @tracerange.setter
     def tracerange(self,value):
@@ -53,7 +53,7 @@ class MDO3024(VISAInstrument):
         '''
         Gets the current MATH definition
         '''
-        return self.ask('MATH:TYPE?')
+        return self.query('MATH:TYPE?')
 
     @math_type.setter
     def math_type(self, value):
@@ -70,7 +70,7 @@ class MDO3024(VISAInstrument):
         '''
         Gets the math definition.
         '''
-        return self.ask('MATH:DEF?')
+        return self.query('MATH:DEF?')
     @math_define.setter
     def math_define(self, value):
         '''
@@ -83,7 +83,7 @@ class MDO3024(VISAInstrument):
         '''
         Gets whether channel 1 is on or off
         '''
-        return self.ask('SELECT:CH1?')
+        return self.query('SELECT:CH1?')
 
     @ch1.setter
     def ch1(self, value):
@@ -99,7 +99,7 @@ class MDO3024(VISAInstrument):
         '''
         Gets the scale of channel 1
         '''
-        return self.ask('CH1:SCALE?')
+        return self.query('CH1:SCALE?')
 
     @ch1scale.setter
     def ch1scale(self,value):
@@ -112,7 +112,7 @@ class MDO3024(VISAInstrument):
         '''
         Gets whether channel 2 is on or off
         '''
-        return self.ask('SELECT:CH2?')
+        return self.query('SELECT:CH2?')
 
     @ch2.setter
     def ch2(self, value):
@@ -128,7 +128,7 @@ class MDO3024(VISAInstrument):
         '''
         Gets the scale of channel 21
         '''
-        return self.ask('CH2:SCALE?')
+        return self.query('CH2:SCALE?')
 
     @ch2scale.setter
     def ch2scale(self,value):
@@ -142,7 +142,7 @@ class MDO3024(VISAInstrument):
         '''
         Gets whether channel 3 is on or off
         '''
-        return self.ask('SELECT:CH3?')
+        return self.query('SELECT:CH3?')
 
     @ch3.setter
     def ch3(self, value):
@@ -158,7 +158,7 @@ class MDO3024(VISAInstrument):
         '''
         Gets the scale of channel 3
         '''
-        return self.ask('CH3:SCALE?')
+        return self.query('CH3:SCALE?')
 
     @ch3scale.setter
     def ch3scale(self,value):
@@ -172,7 +172,7 @@ class MDO3024(VISAInstrument):
         '''
         Gets whether channel 4 is on or off
         '''
-        return self.ask('SELECT:CH4?')
+        return self.query('SELECT:CH4?')
 
     @ch4.setter
     def ch4(self, value):
@@ -188,7 +188,7 @@ class MDO3024(VISAInstrument):
         '''
         Gets the scale of channel 4
         '''
-        return self.ask('CH4:SCALE?')
+        return self.query('CH4:SCALE?')
 
     @ch4scale.setter
     def ch4scale(self,value):
@@ -202,7 +202,7 @@ class MDO3024(VISAInstrument):
         '''
         Gets whether channel MATH is on or off
         '''
-        return self.ask('SELECT:MATH?')
+        return self.query('SELECT:MATH?')
 
     @chmath.setter
     def chmath(self, value):
@@ -218,21 +218,21 @@ class MDO3024(VISAInstrument):
         '''
         Gets the scale of math
         '''
-        return self.ask('MATH:SCALE?')
+        return self.query('MATH:SCALE?')
 
     @chmathscale.setter
     def chmathscale(self,value):
         '''
         Sets the scale of MATH in volts
         '''
-        self.ask('MATH:SCALE ' + str(value))
+        self.query('MATH:SCALE ' + str(value))
 
     @property
     def hscale(self):
         '''
         Gets the horizontal scale of the axes
         '''
-        return self.ask('HORIZONTAL:SCALE?')
+        return self.query('HORIZONTAL:SCALE?')
 
     @hscale.setter
     def hscale(self,value):
@@ -246,7 +246,7 @@ class MDO3024(VISAInstrument):
         '''
         Gets the byte depth of each sample
         '''
-        return  self.ask('BYT_NR?')
+        return  self.query('BYT_NR?')
     @bytedepth.setter
     def bytedepth(self,value):
         '''
@@ -258,7 +258,7 @@ class MDO3024(VISAInstrument):
         '''
         Get the encoding
         '''
-        return self.ask('DATA:ENC?')
+        return self.query('DATA:ENC?')
     @encoding.setter
     def encoding(self,value):
         '''
@@ -270,18 +270,18 @@ class MDO3024(VISAInstrument):
         '''
         Gets the waveform settings string
         '''
-        return self.ask('WFMOUTPRE?')
+        return self.query('WFMOUTPRE?')
     @property
     def getdata(self):
         '''
         Gets the curve data
         '''
         self.write('HEADER 0')
-        ymult = float(self.ask('WFMPRE:YMULT?'))
-        yzero = float(self.ask('WFMPRE:YZERO?'))
-        yoff = float(self.ask('WFMPRE:YOFF?'))
-        xincrt = float(self.ask('WFMPRE:XINCR?'))
-        response = self.ask(':CURVE?')
+        ymult = float(self.query('WFMPRE:YMULT?'))
+        yzero = float(self.query('WFMPRE:YZERO?'))
+        yoff = float(self.query('WFMPRE:YOFF?'))
+        xincrt = float(self.query('WFMPRE:XINCR?'))
+        response = self.query(':CURVE?')
         volts = ymult*(np.array([int(num) for num in response.split(',')])
                         - yoff) + yzero
         return np.array([np.arange(0,(self.numpoints + 1)*xincrt, xincrt),

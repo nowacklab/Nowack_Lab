@@ -1,7 +1,7 @@
 '''
 Instrument base classes.
 '''
-import visa
+import pyvisa as visa
 import numpy as np
 
 class Instrument:

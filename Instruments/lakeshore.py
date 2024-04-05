@@ -1,6 +1,6 @@
 from .instrument import VISAInstrument
 import numpy as np
-import visa
+import pyvisa as visa
 
 class LakeshoreChannel(VISAInstrument):
     '''
@@ -74,7 +74,7 @@ class LakeshoreChannel(VISAInstrument):
         These are channel settings in an array:
             [enabled/disabled, dwell, pause, curve number, tempco]
         '''
-        inset = self.ask('INSET? %i' %self._num)
+        inset = self.query('INSET? %i' %self._num)
         inset = [int(x) for x in inset.split(',')]
         inset[0] = bool(inset[0]) # make enabled True/False
         for i, var in enumerate(self._insets):
@@ -113,7 +113,7 @@ class LakeshoreChannel(VISAInstrument):
         Get the power (W) of this input channel.
         '''
         if self.status == 'OK':
-            self._P = float(self.ask('RDGPWR? %i' %self._num))
+            self._P = float(self.query('RDGPWR? %i' %self._num))
         else:
             self._P = np.nan
         return self._P
@@ -124,7 +124,7 @@ class LakeshoreChannel(VISAInstrument):
         Get the resistance (R) of this input channel.
         '''
         if self.status == 'OK':
-            self._R = float(self.ask('RDGR? %i' %self._num))
+            self._R = float(self.query('RDGR? %i' %self._num))
         else:
             self._R = np.nan
         return self._R
@@ -136,7 +136,7 @@ class LakeshoreChannel(VISAInstrument):
         Returns True/False
         '''
         # SCAN? returns ##,#. The first number is channel being scanned
-        scan = self.ask('SCAN?')
+        scan = self.query('SCAN?')
         scan = int(scan.split(',')[0])
         self._scanned = (scan == self._num) # True or False
         return self._scanned
@@ -166,7 +166,7 @@ class LakeshoreChannel(VISAInstrument):
             'VCM OVL',
             'CS OVL'
         ]
-        b = int(self.ask('RDGST? %i' %self._num)) # "ReaDinG STatus"
+        b = int(self.query('RDGST? %i' %self._num)) # "ReaDinG STatus"
 
         status_message = ''
         binlist = [int(x) for x in '{:08b}'.format(b)] # to list of 1s and 0s
@@ -184,7 +184,7 @@ class LakeshoreChannel(VISAInstrument):
         Get the temperature (K) reading of input channels as a dictionary.
         '''
         if self.status == 'OK':
-            self._T = float(self.ask('RDGK? %i' %self._num))
+            self._T = float(self.query('RDGK? %i' %self._num))
         else:
             self._T = np.nan
         return self._T
@@ -294,7 +294,7 @@ class Lakeshore372(VISAInstrument):
         '''
         Get setpoint for PID
         '''
-        return float(self.ask('SETP? 0')) #0 is sample heater
+        return float(self.query('SETP? 0')) #0 is sample heater
 
     @pid_setpoint.setter
     def pid_setpoint(self, setpoint):
@@ -316,7 +316,7 @@ class Lakeshore372(VISAInstrument):
 
     @property
     def sample_heater(self):
-        s = self.ask('OUTMODE? 0').split(',')
+        s = self.query('OUTMODE? 0').split(',')
         return self._MODE_LOOKUP[int(s[0])]
 
     @sample_heater.setter
@@ -335,7 +335,7 @@ class Lakeshore372(VISAInstrument):
             print(self._MODE_LOOKUP)
             return
 
-        settings = self.ask("OUTMODE? 0").split(',')
+        settings = self.query("OUTMODE? 0").split(',')
         self.write("OUTMODE 0,{0},{1},{2},{3},{4},{5}".format(
                     mode,
                     settings[1],
@@ -347,12 +347,12 @@ class Lakeshore372(VISAInstrument):
         return
     @property
     def sample_heater_ch(self):
-        return int(self.ask('OUTMODE? 0').split(',')[1])
+        return int(self.query('OUTMODE? 0').split(',')[1])
 
     @sample_heater_ch.setter
     def sample_heater_ch(self, ch):
         if type(ch) == int and ch>=1 and ch<=16:
-            settings = self.ask("OUTMODE? 0").split(',')
+            settings = self.query("OUTMODE? 0").split(',')
             self.write("OUTMODE 0,{0},{1},{2},{3},{4},{5}".format(
                         settings[0],
                         ch,
@@ -378,7 +378,7 @@ class Lakeshore372(VISAInstrument):
     }
     @property
     def heater_range(self):
-        s = self.ask('RANGE? 0').split(',')
+        s = self.query('RANGE? 0').split(',')
         return self._RANGE_LOOKUP[int(s[0])]
 
     @heater_range.setter
@@ -403,7 +403,7 @@ class Lakeshore372(VISAInstrument):
     @property
     def ramp(self):
         """Ramp rate for temperature control."""
-        return self.ask("RAMP? 0").splot(",")
+        return self.query("RAMP? 0").splot(",")
 
 
     @ramp.setter
@@ -424,7 +424,7 @@ class Lakeshore330(VISAInstrument):
         self.gpib_address = gpib_address
         self.init_visa()
         self._visa_handle.timeout = 3000 #
-        if int(self.ask('RANG?')) > 1:
+        if int(self.query('RANG?')) > 1:
             print("WARNING, HEATER IS NOT IN LOW RANGE!")
 
 
@@ -439,7 +439,7 @@ class Lakeshore330(VISAInstrument):
     @property
     def heater_status(self):
         '''Returns the status of the heater'''
-        rtrn = self.ask('RANG?')
+        rtrn = self.query('RANG?')
         if rtrn == 3:
             rtrn = 'HIGH'
         elif rtrn == 2:
@@ -467,7 +467,7 @@ class Lakeshore330(VISAInstrument):
         '''
         Get the units of the readout
         '''
-        return self.ask('SUNI?')
+        return self.query('SUNI?')
 
     @units.setter
     def units(self, unit):
@@ -484,7 +484,7 @@ class Lakeshore330(VISAInstrument):
         '''
         Get the current curve number
         '''
-        return int(self.ask('BCUR?'))
+        return int(self.query('BCUR?'))
 
 
     @curve_number.setter
@@ -498,7 +498,7 @@ class Lakeshore330(VISAInstrument):
         '''
         Get the current curve data
         '''
-        a = self.ask('CURV? %i' % curvenum)
+        a = self.query('CURV? %i' % curvenum)
         a2 = np.array([float(i) for i in a.split(',')[4:]])
         return  a2.reshape((int(len(a2)/2),2))
 
@@ -521,7 +521,7 @@ class Lakeshore330(VISAInstrument):
         '''
         Get whether the controller is set to ramp between temperatures
         '''
-        return bool(self.ask('RAMP?'))
+        return bool(self.query('RAMP?'))
 
     @ramp.setter
     def ramp(self, toramp):
@@ -535,7 +535,7 @@ class Lakeshore330(VISAInstrument):
         '''
         Get the current ramp rate in kelvin per minute
         '''
-        return float(self.ask('RAMPR?'))
+        return float(self.query('RAMPR?'))
 
     @ramp_rate.setter
     def ramp_rate(self, rate):
@@ -549,14 +549,14 @@ class Lakeshore330(VISAInstrument):
         '''
         Get whether the controller is currently ramping
         '''
-        return bool(self.ask('RAMPS?'))
+        return bool(self.query('RAMPS?'))
 
     @property
     def temperature(self):
         '''
         Get the current temperature
         '''
-        return float(self.ask('SDAT?')[1:])
+        return float(self.query('SDAT?')[1:])
 
     @temperature.setter
     def temperature(self, temp):
@@ -569,7 +569,7 @@ class Lakeshore330(VISAInstrument):
         '''
         Get the current setpoint
         '''
-        return float(self.ask('SETP?')[1:])
+        return float(self.query('SETP?')[1:])
 
     @setpoint.setter
     def setpoint(self, stp):
@@ -594,7 +594,7 @@ class Lakeshore335(VISAInstrument):
         self.init_visa()
         self._visa_handle.read_termination = '\r\n'
         self._visa_handle.timeout = 3000 #
-        #if int(self.ask('RANGE? 1')) > 1:
+        #if int(self.query('RANGE? 1')) > 1:
         #    print("WARNING, HEATER IS NOT IN LOW RANGE!")
 
 
@@ -609,7 +609,7 @@ class Lakeshore335(VISAInstrument):
     @property
     def heater_status(self):
         '''Returns the status of the heater'''
-        rtrn = self.ask('RANGE? 2')
+        rtrn = self.query('RANGE? 2')
         if rtrn == 3:
             rtrn = 'HIGH'
         elif rtrn == 2:
@@ -637,7 +637,7 @@ class Lakeshore335(VISAInstrument):
         '''
         Get whether the controller is set to ramp between temperatures
         '''
-        return bool(float(self.ask('RAMP? 2')[0]))
+        return bool(float(self.query('RAMP? 2')[0]))
 
     @ramp.setter
     def ramp(self, toramp):
@@ -645,7 +645,7 @@ class Lakeshore335(VISAInstrument):
         Set whether the controller should ramp
         '''
         #get current ramp rate
-        currentrate = float(self.ask('RAMP? 2')[3:])
+        currentrate = float(self.query('RAMP? 2')[3:])
         self.write('RAMP 2,%i,+%.04f' % (int(toramp), currentrate))
 
     @property
@@ -653,7 +653,7 @@ class Lakeshore335(VISAInstrument):
         '''
         Get the current ramp rate in kelvin per minute
         '''
-        return float(self.ask('RAMP? 2')[3:])
+        return float(self.query('RAMP? 2')[3:])
 
     @ramp_rate.setter
     def ramp_rate(self, rate):
@@ -661,7 +661,7 @@ class Lakeshore335(VISAInstrument):
         Set the ramp rate in kelvin per minute
         '''
         #get current ramp status
-        currentramp = int(self.ask('RAMP? 2')[0])
+        currentramp = int(self.query('RAMP? 2')[0])
         self.write('RAMP 2,%i,+%.04f' % (currentramp, rate))
 
     @property
@@ -669,14 +669,14 @@ class Lakeshore335(VISAInstrument):
         '''
         Get whether the controller is currently ramping
         '''
-        return bool(self.ask('RAMPS?'))
+        return bool(self.query('RAMPS?'))
 
     @property
     def temperature(self):
         '''
         Get the current temperature
         '''
-        return float(self.ask('KRDG? A')[1:])
+        return float(self.query('KRDG? A')[1:])
 
     @temperature.setter
     def temperature(self, temp):
@@ -690,13 +690,13 @@ class Lakeshore335(VISAInstrument):
         '''
         Gets the reading in sensor units
         '''
-        return float(self.ask('SRDG?')[1:])
+        return float(self.query('SRDG?')[1:])
     @property
     def setpoint(self):
         '''
         Get the current setpoint
         '''
-        return float(self.ask('SETP? 2')[1:])
+        return float(self.query('SETP? 2')[1:])
 
     @setpoint.setter
     def setpoint(self, stp):

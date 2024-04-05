@@ -10,7 +10,7 @@ import numpy as np
 from tabulate import tabulate
 from .instrument import Instrument, VISAInstrument
 
-import visa
+import pyvisa as visa
 
 class E8241a(VISAInstrument):
     '''

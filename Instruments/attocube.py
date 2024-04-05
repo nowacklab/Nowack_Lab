@@ -1,4 +1,4 @@
-import visa
+import pyvisa as visa
 import atexit
 import time
 import telnetlib

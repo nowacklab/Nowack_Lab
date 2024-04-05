@@ -1,4 +1,4 @@
-import visa, time, numpy as np
+import pyvisa as visa, time, numpy as np
 from .instrument import Instrument
 from pyvisa.constants import StopBits
 
@@ -217,7 +217,7 @@ if __name__ == '__main__':
     #preamp.filter_mode('high', 6)
 
     # try:
-        # import visa
+        # import pyvisa as visa
         # rm = visa.ResourceManager()
         # rm.list_resources()
         # inst = rm.open_resource('COM1')
@@ -228,7 +228,7 @@ if __name__ == '__main__':
         # # inst.close()
         # # rm.close()
     # except:
-        # import visa
+        # import pyvisa as visa
         # rm = visa.ResourceManager()
         # rm.list_resources()
         # inst = rm.open_resource('COM1')

@@ -1,4 +1,4 @@
-import visa
+import pyvisa as visa
 import numpy as np
 import time
 import math
@@ -53,9 +53,9 @@ class VNA8722ES(Instrument):
         self._sweepmode = 'LINFREQ' # mode is linear frequency sweep
         self._freqmin = .05e9   # set to max range
         self._freqmax = 40.05e9
-        self._numpoints = int(float(self.ask('POIN?')))  # necessary because number of points doesn't reset
+        self._numpoints = int(float(self.query('POIN?')))  # necessary because number of points doesn't reset
         self._sweeptime = 1  # sweep time to 1 second
-        self._sweeptime = float(self.ask('SWET?'))
+        self._sweeptime = float(self.query('SWET?'))
         self._averaging_state = 0
         self._averaging_factor = 16
 
@@ -97,7 +97,7 @@ class VNA8722ES(Instrument):
     @property
     def powerstate(self):
         """Get whether power is on/off 1/0"""
-        self._power_state = int(float(self.ask('SOUP?')))
+        self._power_state = int(float(self.query('SOUP?')))
         return self._power_state
 
     @powerstate.setter
@@ -116,7 +116,7 @@ class VNA8722ES(Instrument):
     @property
     def power(self):
         """Get the power (dBm)"""
-        self._power = float(self.ask('POWE?'))
+        self._power = float(self.query('POWE?'))
         return self._power
 
     @power.setter
@@ -126,13 +126,13 @@ class VNA8722ES(Instrument):
             rangenum = 0
         else:
             rangenum = min(math.floor((-value + 5)/5)-1, 11)
-        # print(self.ask('POWE?'))
+        # print(self.query('POWE?'))
         self.write('POWR%02d' % rangenum)  # first change power range
         print("Setting power range to %d..." % rangenum)
         time.sleep(8)
         self.write('POWE%f' % value)  # then can change power
         print("Setting power to ", value)
-        # print(self.ask('POWE?'))
+        # print(self.query('POWE?'))
         self._power = value
 
     @property
@@ -140,13 +140,13 @@ class VNA8722ES(Instrument):
         """
         Get the sweep mode
         """
-        if self.ask('LINFREQ?') == '1':
+        if self.query('LINFREQ?') == '1':
             self._sweepmode = "LIN"
-        elif self.ask('LOGFREQ?') == '1':
+        elif self.query('LOGFREQ?') == '1':
             self._sweepmode = "LOG"
-        elif self.ask('LISFREQ?') == '1':
+        elif self.query('LISFREQ?') == '1':
             self._sweepmode = "LIST"
-        elif self.ask('CWTIME?') == '1':
+        elif self.query('CWTIME?') == '1':
             self._sweepmode = "CW"
         else:
             print('Driver can only handle linear, log, list sweeps')
@@ -179,7 +179,7 @@ class VNA8722ES(Instrument):
         """
         Get the min frequency
         """
-        self._freqmin = float(self.ask('STAR?'))
+        self._freqmin = float(self.query('STAR?'))
         return self._freqmin
 
     @freqmin.setter
@@ -194,7 +194,7 @@ class VNA8722ES(Instrument):
     @property
     def freqmax(self):
         """Get the stop frequency"""
-        self._freqmax = float(self.ask('STOP?'))
+        self._freqmax = float(self.query('STOP?'))
         return self._freqmax
 
     @freqmax.setter
@@ -207,7 +207,7 @@ class VNA8722ES(Instrument):
     @property
     def numpoints(self):
         """Get the number of points in sweep"""
-        self._numpoints = int(float(self.ask('POIN?')))
+        self._numpoints = int(float(self.query('POIN?')))
         return self._numpoints
 
     @numpoints.setter
@@ -224,7 +224,7 @@ class VNA8722ES(Instrument):
 
     @property
     def sweeptime(self):
-        self._sweeptime = float(self.ask('SWET?'))
+        self._sweeptime = float(self.query('SWET?'))
         return self._sweeptime
 
     @sweeptime.setter
@@ -241,7 +241,7 @@ class VNA8722ES(Instrument):
     @property
     def cw_freq(self):
         """Get the frequency used for cw mode"""
-        self._cw_freq = float(self.ask('CWFREQ?'))
+        self._cw_freq = float(self.query('CWFREQ?'))
         return self._cw_freq
 
     @cw_freq.setter
@@ -253,7 +253,7 @@ class VNA8722ES(Instrument):
     @property
     def averaging_state(self):
         """Get averaging state (on/off 1/0)"""
-        self._averaging_state = int(float(self.ask('AVERO?')))
+        self._averaging_state = int(float(self.query('AVERO?')))
         return self._averaging_state
 
     @averaging_state.setter
@@ -271,7 +271,7 @@ class VNA8722ES(Instrument):
     @property
     def averaging_factor(self):
         """Get averaging factor"""
-        self._averaging_factor = int(float(self.ask('AVERFACT?')))
+        self._averaging_factor = int(float(self.query('AVERFACT?')))
         return self._averaging_factor
 
     @averaging_factor.setter
@@ -287,7 +287,7 @@ class VNA8722ES(Instrument):
     @property
     def smoothing_state(self):
         """Get smoothing state"""
-        self._smoothing_state = int(float(self.ask('SMOOO?')))
+        self._smoothing_state = int(float(self.query('SMOOO?')))
         return self._smoothing_state
 
     @smoothing_state.setter
@@ -301,7 +301,7 @@ class VNA8722ES(Instrument):
     @property
     def smoothing_factor(self):
         """Get smoothing factor"""
-        self._smoothing_factor = float(self.ask('SMOOAPER?'))
+        self._smoothing_factor = float(self.query('SMOOAPER?'))
         return self._smoothing_factor
 
     @smoothing_factor.setter
@@ -315,13 +315,13 @@ class VNA8722ES(Instrument):
     def networkparam(self):
         """Get which network parameter is being measured"""
         #
-        if self.ask('S11') == '1':
+        if self.query('S11') == '1':
             self._networkparam = 'S11'
-        elif self.ask('S21') == '1':
+        elif self.query('S21') == '1':
             self._networkparam = 'S21'
-        elif self.ask('S12') == '1':
+        elif self.query('S12') == '1':
             self._networkparam = 'S12'
-        elif self.ask('S22') == '1':
+        elif self.query('S22') == '1':
             self._networkparam = 'S22'
         return self._networkparam
 
@@ -336,7 +336,7 @@ class VNA8722ES(Instrument):
     @property
     def if_bandwidth(self):
         """Get the IF bandwidth"""
-        self._if_bandwidth = int(self.ask('IFBW?'))
+        self._if_bandwidth = int(self.query('IFBW?'))
         return self._if_bandwidth
 
     @if_bandwidth.setter
@@ -455,21 +455,21 @@ class VNA8722ES(Instrument):
     def sleep_until_finish_averaging(self):
         """Sleeps for number of seconds <VNA sweep time>*<averaging factor+2>
         (2 extra sweeps for safety)"""
-        sleep_length = float(self.ask('SWET?'))*(self.averaging_factor + 2)
+        sleep_length = float(self.query('SWET?'))*(self.averaging_factor + 2)
         time.sleep(sleep_length)
 
     def ask(self, msg, tryagain=True):
         if msg == 'POWR?' or msg == 'PRAN?':
             print("Note: POWR and PRAN do not have query response (i.e. will return 0)")
         try:
-            return self._visa_handle.query(msg)  # changed from .ask to .query
+            return self._visa_handle.query(msg)  # changed from .query to .query
         except Exception as e:
             print('Communication error with VNA: ')
             print(e)
             self.close()
             self.__init__(self.gpib_address)
             if tryagain:
-                self.ask(msg, False)
+                self.query(msg, False)
 
     def write(self, msg):
         self._visa_handle.write(msg)

@@ -1,4 +1,4 @@
-import visa
+import pyvisa as visa
 import time
 import numpy as np
 import re
@@ -83,7 +83,7 @@ class AMI430(VISAInstrument):
         '''
         Read the field in Tesla.
         '''
-        self._B = float(self.ask('FIELD:MAG?'))
+        self._B = float(self.query('FIELD:MAG?'))
         return self._B
 
     @B.setter
@@ -98,7 +98,7 @@ class AMI430(VISAInstrument):
         '''
         Get the field setpoint.
         '''
-        self._Bset = float(self.ask('FIELD:TARG?'))
+        self._Bset = float(self.query('FIELD:TARG?'))
         return self._Bset
 
     @Bset.setter
@@ -117,7 +117,7 @@ class AMI430(VISAInstrument):
         '''
         Get the field ramp rate (T/min)
         '''
-        s = self.ask('RAMP:RATE:FIELD:1?') # returns 'Brate,Bmax'
+        s = self.query('RAMP:RATE:FIELD:1?') # returns 'Brate,Bmax'
         s = s.split(',') # now we have ['Brate','Bmax']
         self._Brate = float(s[0])
         return self._Brate
@@ -138,7 +138,7 @@ class AMI430(VISAInstrument):
         '''
         Read the current in Amperes.
         '''
-        self._I = float(self.ask('CURR:MAG?'))
+        self._I = float(self.query('CURR:MAG?'))
         return self._I
 
     @property
@@ -146,7 +146,7 @@ class AMI430(VISAInstrument):
         '''
         Get the current setpoint.
         '''
-        self._Iset = float(self.ask('CURR:TARG?'))
+        self._Iset = float(self.query('CURR:TARG?'))
         return self._Iset
 
     @property
@@ -154,7 +154,7 @@ class AMI430(VISAInstrument):
         '''
         Get the current ramp rate (A/s)
         '''
-        s = self.ask('RAMP:RATE:CURR:1?') # returns 'Irate,Imax'
+        s = self.query('RAMP:RATE:CURR:1?') # returns 'Irate,Imax'
         s = s.split(',') # now we have ['Irate','Imax']
         self._Irate = float(s[0])
         return self._Irate
@@ -175,7 +175,7 @@ class AMI430(VISAInstrument):
         '''
         Get the power supply current (A)
         '''
-        self._Isupply = self.ask('CURR:SUPP?')
+        self._Isupply = self.query('CURR:SUPP?')
         return self._Isupply
 
     @property
@@ -183,7 +183,7 @@ class AMI430(VISAInstrument):
         '''
         Is persistent switch enabled? True/False
         '''
-        self._p_switch = bool(self.ask('PSwitch?'))
+        self._p_switch = bool(self.query('PSwitch?'))
         return self._p_switch
 
     @p_switch.setter
@@ -198,7 +198,7 @@ class AMI430(VISAInstrument):
         '''
         Get the present status of the system.
         '''
-        state = int(self.ask('STATE?'))
+        state = int(self.query('STATE?'))
         self._status = _STATES[state]
         return self._status
 
@@ -288,7 +288,7 @@ class AMI420(VISAInstrument):
         '''
         Read the field in Tesla.
         '''
-        self._B = float(self.ask('FIELD:MAG?'))
+        self._B = float(self.query('FIELD:MAG?'))
         return self._B
 
     @property
@@ -296,7 +296,7 @@ class AMI420(VISAInstrument):
         '''
         Get the field setpoint.
         '''
-        self._Bset = float(self.ask('FIELD:PROG?'))
+        self._Bset = float(self.query('FIELD:PROG?'))
         return self._Bset
 
     @Bset.setter
@@ -315,7 +315,7 @@ class AMI420(VISAInstrument):
         '''
         Get the current setpoint.
         '''
-        self._Iset = float(self.ask('CURR:PROG?'))
+        self._Iset = float(self.query('CURR:PROG?'))
         return self._Iset
 
     @property
@@ -323,7 +323,7 @@ class AMI420(VISAInstrument):
         '''
         Get the field ramp rate (T/min)
         '''
-        self._Brate = float(self.ask('RAMP:RATE:FIELD?') )
+        self._Brate = float(self.query('RAMP:RATE:FIELD?') )
         return self._Brate
 
     @Brate.setter
@@ -342,7 +342,7 @@ class AMI420(VISAInstrument):
         '''
         Get the current ramp rate (A/s)
         '''
-        self._Irate = float(self.ask('RAMP:RATE:CURR?') )
+        self._Irate = float(self.query('RAMP:RATE:CURR?') )
         return self._Irate
 
     @Irate.setter
@@ -389,7 +389,7 @@ class AMI420(VISAInstrument):
             9: 'At zero current'
         }
 
-        state_num = int(self.ask('STATE?'))
+        state_num = int(self.query('STATE?'))
         self._status = states[state_num]
         return self._status
 
@@ -398,7 +398,7 @@ class AMI420(VISAInstrument):
         '''
         Is persistent switch enabled? True/False
         '''
-        self._p_switch = bool(self.ask('PSwitch?'))
+        self._p_switch = bool(self.query('PSwitch?'))
         return self._p_switch
 
     @p_switch.setter

@@ -49,12 +49,12 @@ class Montana(Instrument):
 
     @property
     def pressure(self):
-        self._pressure = self.ask('GCP')
+        self._pressure = self.query('GCP')
         return self._pressure
 
     @property
     def temperature(self):
-        temps = self.ask('GPT', 'GS1T', 'GS2T', 'GST', 'GUT', 'GTSP')
+        temps = self.query('GPT', 'GS1T', 'GS2T', 'GST', 'GUT', 'GTSP')
         self._temperature['platform'] = temps['GPT']
         self._temperature['stage 1'] = temps['GS1T']
         self._temperature['stage 2'] = temps['GS2T']
@@ -67,12 +67,12 @@ class Montana(Instrument):
     @temperature.setter
     def temperature(self, value):
         self._temperature['setpoint'] = value
-        response = self.ask('STSP'+str(value), to_float=False)
+        response = self.query('STSP'+str(value), to_float=False)
         print(response)
 
     @property
     def temperature_stability(self):
-        stabs = self.ask('GPS', 'GSS', 'GUS')
+        stabs = self.query('GPS', 'GSS', 'GUS')
         self._temperature_stability['platform'] = stabs['GPS']
         self._temperature_stability['sample'] = stabs['GSS']
         self._temperature_stability['user'] = stabs['GUS']
@@ -100,7 +100,7 @@ class Montana(Instrument):
             raise Exception('Problem connecting to Montana! Try again.')
 
     def cooldown(self):
-        resp = self.ask('SCD', to_float = False)
+        resp = self.query('SCD', to_float = False)
         print(resp)
 
     def connect(self):
@@ -133,11 +133,11 @@ class Montana(Instrument):
         return tabulate(table)
 
     def standby(self):
-        resp = self.ask('SSB', to_float = False)
+        resp = self.query('SSB', to_float = False)
         print(resp)
 
     def warmup(self):
-        resp = self.ask('SWU', to_float = False)
+        resp = self.query('SWU', to_float = False)
         print(resp)
 
 if __name__ == '__main__':

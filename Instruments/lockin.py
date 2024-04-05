@@ -2,7 +2,7 @@ import time, numpy as np
 from tabulate import tabulate
 from .instrument import Instrument
 
-import visa
+import pyvisa as visa
 
 
 
@@ -98,7 +98,7 @@ class SR830(Instrument):
     @property
     def sensitivity(self):
         '''Get the lockin sensitivity'''
-        value = self._sensitivity_options[int(self.ask('SENS?'))]
+        value = self._sensitivity_options[int(self.query('SENS?'))]
         if 'I' in self.input_mode:
             value *= 1e-6 # if we're in a current mode
         self._sensitivity = value
@@ -116,12 +116,12 @@ class SR830(Instrument):
         '''
 
         if value == 'up':
-            index = int(self.ask('SENS?')) + 1 # take current sensitivity and increase it
+            index = int(self.query('SENS?')) + 1 # take current sensitivity and increase it
             if index == len(self._sensitivity_options):
                 index -= 1 # highest sensitivity
             value = self._sensitivity_options[index]
         elif value == 'down':
-            index = int(self.ask('SENS?')) - 1
+            index = int(self.query('SENS?')) - 1
             if index == -1:
                 index += 1 # lowest sensitivity
             value = self._sensitivity_options[index]
@@ -142,7 +142,7 @@ class SR830(Instrument):
     @property
     def amplitude(self):
         '''Get the output amplitude'''
-        self._amplitude = float(self.ask('SLVL?'))
+        self._amplitude = float(self.query('SLVL?'))
         return self._amplitude
 
     @amplitude.setter
@@ -156,7 +156,7 @@ class SR830(Instrument):
 
     @property
     def frequency(self):
-        self._frequency = float(self.ask('FREQ?'))
+        self._frequency = float(self.query('FREQ?'))
         return self._frequency
 
     @frequency.setter
@@ -165,7 +165,7 @@ class SR830(Instrument):
 
     @property
     def input_mode(self):
-        self._input_mode = self._input_modes[int(self.ask('ISRC?'))]
+        self._input_mode = self._input_modes[int(self.query('ISRC?'))]
         return self._input_mode
 
     @input_mode.setter
@@ -178,7 +178,7 @@ class SR830(Instrument):
         '''
         Get the detection harmonic
         '''
-        self._harmonic = int(self.ask('HARM?'))
+        self._harmonic = int(self.query('HARM?'))
         return self._harmonic
 
     @harmonic.setter
@@ -194,7 +194,7 @@ class SR830(Instrument):
         '''
         Get the reference phase shift (degrees)
         '''
-        self._phase = float(self.ask('PHAS?'))
+        self._phase = float(self.query('PHAS?'))
         return self._phase
 
     @phase.setter
@@ -207,35 +207,35 @@ class SR830(Instrument):
 
     @property
     def X(self):
-        self._X = float(self.ask('OUTP?1'))
+        self._X = float(self.query('OUTP?1'))
         if self._X == 0:
             self._X = self.sensitivity/1e12 # so we don't have zeros
         return self._X
 
     @property
     def Y(self):
-        self._Y = float(self.ask('OUTP?2'))
+        self._Y = float(self.query('OUTP?2'))
         if self._Y == 0:
             self._Y = self.sensitivity/1e12 # so we don't have zeros
         return self._Y
 
     @property
     def R(self):
-        self._R = float(self.ask('OUTP?3'))
+        self._R = float(self.query('OUTP?3'))
         if self._R == 0:
             self._R = self.sensitivity/1e12 # so we don't have zeros
         return self._R
 
     @property
     def theta(self):
-        self._theta = float(self.ask('OUTP?4'))
+        self._theta = float(self.query('OUTP?4'))
         return self._theta
 
     @property
     def time_constant(self):
         options = {self.time_constant_options[key]: key for key in self.time_constant_options.keys()}
-        self._time_constant = self._time_constant_values[int(self.ask('OFLT?'))]
-        #return options[int(self.ask('OFLT?'))]
+        self._time_constant = self._time_constant_values[int(self.query('OFLT?'))]
+        #return options[int(self.query('OFLT?'))]
         return self._time_constant
 
     @time_constant.setter
@@ -255,7 +255,7 @@ class SR830(Instrument):
 
     @property
     def reference(self):
-        i = int(self.ask('FMOD?'))
+        i = int(self.query('FMOD?'))
         if i == 0:
             return 'external'
         else:
@@ -272,7 +272,7 @@ class SR830(Instrument):
 
     @property
     def reserve(self):
-        i = int(self.ask('RMOD?'))
+        i = int(self.query('RMOD?'))
         self._reserve = self._reserve_options[i]
         return self._reserve
 
@@ -283,7 +283,7 @@ class SR830(Instrument):
 
     @property
     def lias(self):
-        lias = int(self.ask('LIAS?'));
+        lias = int(self.query('LIAS?'));
         return lias;
 
     def ask(self, cmd, timeout=3000):
@@ -291,7 +291,7 @@ class SR830(Instrument):
         Default timeout 3000 ms. None for infinite timeout
         '''
         self._visa_handle.timeout = timeout
-        return self._visa_handle.ask(cmd);
+        return self._visa_handle.query(cmd);
 
     def ac_coupling(self):
         self.write('ICPL0')
@@ -301,11 +301,11 @@ class SR830(Instrument):
 
     def auto_gain(self):
         self.write('AGAN')
-        self.ask('*STB?', None) # let it finish
+        self.query('*STB?', None) # let it finish
 
     def auto_phase(self):
         self.write('APHS')
-        self.ask('*STB?', None) # let it finish
+        self.query('*STB?', None) # let it finish
 
     def dc_coupling(self):
         self.write('ICPL1')
@@ -341,7 +341,7 @@ class SR830(Instrument):
         table = []
         for name in ['sensitivity', 'amplitude', 'frequency', 'time_constant']:
             table.append([name, getattr(self, name)])
-        snapped = self.ask('SNAP?1,2,3,4')
+        snapped = self.query('SNAP?1,2,3,4')
         snapped = snapped.split(',')
         table.append(['X', snapped[0]])
         table.append(['Y', snapped[1]])
@@ -388,12 +388,12 @@ class SR830(Instrument):
         '''
 
         self.write('PAUS')
-        numpoints = self.ask('SPTS?')
+        numpoints = self.query('SPTS?')
         returneddata = {}
         returneddata[self.dataname] = {}
         if int(numpoints) > 0:
-            xdatastr = self.ask('TRCA? 1,0, %i' % int(numpoints), timeout = 2e4)
-            ydatastr = self.ask('TRCA? 2,0, %i' % int(numpoints), timeout = 2e4)
+            xdatastr = self.query('TRCA? 1,0, %i' % int(numpoints), timeout = 2e4)
+            ydatastr = self.query('TRCA? 2,0, %i' % int(numpoints), timeout = 2e4)
             xdata = list(map(float, xdatastr.split(sep=',')[0:-1]))
             ydata = list(map(float, ydatastr.split(sep=',')[0:-1]))
             returneddata[self.dataname]['x'] = xdata

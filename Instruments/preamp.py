@@ -1,4 +1,4 @@
-import visa, time, numpy as np
+import pyvisa as visa, time, numpy as np
 from .instrument import Instrument
 
 COARSE_GAIN = [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000]
@@ -14,13 +14,15 @@ class SR5113(Instrument):
 
     #Put the gains as class variable tuples
 
-    def __init__(self, port='COM1'):
+    def __init__(self, port='COM4'):
         '''
         Driver for the Signal Recovery 5113 preamplifier.
         e.g. preamp = SR5113('COM1')
         '''
         if type(port) is int:
             port = 'COM%i' %port
+        # Assume that initially not asleep
+        self._sleeping = False
         self.connect(port)
         self._gain = self.gain
         self._filter = self.filter
@@ -62,12 +64,13 @@ class SR5113(Instrument):
         high = find_nearest(FILTER, high)
 
         if low > high:
-            raise Exception('Low cutoff frequency must be below high cutoff!')
+            raise ValueError('Low cutoff frequency must be below high cutoff!')
         if low == 0:
             self.filter_mode('low',6)
         elif high > 1e6:
             self.filter_mode('high',6)
         self.write('FF0 %i' %FILTER.index(low))
+        time.sleep(0.2)
         self.write('FF1 %i' %FILTER.index(high))
         self._filter = (low, high)
 
@@ -89,12 +92,12 @@ class SR5113(Instrument):
     def gain(self, value):
         if value != self.gain:
             if value > 100000:
-                raise Exception('Max 100000 gain!')
+                raise ValueError('Max 100000 gain!')
             elif value in [1,2,3,4]: #special case, see manual
                 fg = value-5 #-4 for gain of 1, etc.
                 cg = 0
             elif value not in ALL_GAINS:
-                raise Exception('INVALID GAIN')
+                raise ValueError('INVALID GAIN')
             else:
                 for f in FINE_GAIN:
                     for c in COARSE_GAIN:
@@ -105,6 +108,7 @@ class SR5113(Instrument):
                 fg = FINE_GAIN.index(f)
                 cg = COARSE_GAIN.index(c)
             self.write('CG%i' %cg)
+            time.sleep(0.2)
             self.write('FG%i' %fg)
             self._gain = value
 
@@ -121,7 +125,11 @@ class SR5113(Instrument):
         '''
         rm = visa.ResourceManager()
         self._inst = rm.open_resource(port)
-        self._inst.timeout = 5000
+        self._inst.write_termination = '\r'
+        self._inst.timeout = 500
+        self._inst.write("ID")
+        self._inst.read_bytes(0)
+        time.sleep(0.1)
 
 
     def id(self):
@@ -161,9 +169,9 @@ class SR5113(Instrument):
         PASS = ['flat','band','low', 'low','low','high','high','high']
         ROLLOFF = [0, 0, 6, 12, 612, 6, 12, 612]
         if pass_type not in PASS:
-            raise Exception('flat, band, low, or high pass')
+            raise ValueError('flat, band, low, or high pass')
         if rolloff not in ROLLOFF:
-            raise Exception('for 6dB should be 6, for 12 dB should be 12, for 6/12 dB should be 612')
+            raise ValueError('for 6dB should be 6, for 12 dB should be 12, for 6/12 dB should be 612')
         pass_indices = [i for i, x in enumerate(PASS) if x==pass_type] # indices with correct pass type
         roll_indices = [i for i, x in enumerate(ROLLOFF) if x==rolloff]
         index = (set(pass_indices) & set(roll_indices)).pop() #finds which index is the same
@@ -178,6 +186,19 @@ class SR5113(Instrument):
     def time_const(self, tensec):
         self.write('TC%i' %(tensec)) # 0 = 1s, 1 = 10s
 
+    def sleep(self):
+        if self._sleeping:
+            return
+        self._inst.write('SLEEP') # No read
+        self._sleeping = True
+
+    def wake(self):
+        if not self._sleeping:
+            return
+        self._inst.query("")
+        time.sleep(1.0)
+        self._sleeping = False
+
     def write(self, cmd, read=False):
         '''
         Will write commands to SR5113 preamp via serial port.
@@ -189,12 +210,12 @@ class SR5113(Instrument):
         e.g. preamp.write('ID', True)
         '''
 
-        time.sleep(0.1) # Make sure we've had enough time to make connection.
-        self._inst.write(cmd+'\r')
+        # time.sleep(0.1) # Make sure we've had enough time to make connection.
+        self._inst.write(cmd)
         self._inst.read()
         if read:
             response = self._inst.read()
-        self._inst.read()
+        #self._inst.read()
 
         if read:
             return response.rstrip() #rstrip gets rid of \n
@@ -263,7 +284,7 @@ if __name__ == '__main__':
     #preamp.filter_mode('high', 6)
 
     # try:
-        # import visa
+        # import pyvisa as visa
         # rm = visa.ResourceManager()
         # rm.list_resources()
         # inst = rm.open_resource('COM1')
@@ -274,12 +295,11 @@ if __name__ == '__main__':
         # # inst.close()
         # # rm.close()
     # except:
-        # import visa
+        # import pyvisa as visa
         # rm = visa.ResourceManager()
         # rm.list_resources()
         # inst = rm.open_resource('COM1')
-        # inst.write('ID\r')
-        # print(inst.read())
+        # inst.write('ID\r') # print(inst.read())
         # print(inst.read())
         # inst.read()
         # inst.close()
