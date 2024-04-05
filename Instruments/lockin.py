@@ -286,7 +286,7 @@ class SR830(Instrument):
         lias = int(self.query('LIAS?'));
         return lias;
 
-    def ask(self, cmd, timeout=3000):
+    def query(self, cmd, timeout=3000):
         '''
         Default timeout 3000 ms. None for infinite timeout
         '''

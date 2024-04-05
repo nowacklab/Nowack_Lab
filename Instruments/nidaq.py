@@ -3,8 +3,8 @@ import sys, os
 home = os.path.expanduser("~")
 sys.path.append(os.path.join(home,'Documents','GitHub','Instrumental'))
 
-from instrumental.drivers.daq import ni
-from instrumental import u
+from Instrumental.instrumental.drivers.daq import ni
+from Instrumental.instrumental import u
 import numpy as np
 try:
     import PyDAQmx as mx
