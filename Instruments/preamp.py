@@ -22,7 +22,7 @@ class SR5113(Instrument):
         if type(port) is int:
             port = 'COM%i' %port
         # Assume that initially not asleep
-        self._sleeping = False
+        self._sleeping = True
         self.connect(port)
         self._gain = self.gain
         self._filter = self.filter
@@ -42,12 +42,9 @@ class SR5113(Instrument):
 
     @property
     def filter(self):
-        try:
-            low = self.write('FF0', True)
-            high = self.write('FF1', True)
-            self._filter = (FILTER[int(low)], FILTER[int(high)])
-        except:
-            print('Couldn\'t communicate with SR5113; filter may be wrong!')
+        low = self.write('FF0', True)
+        high = self.write('FF1', True)
+        self._filter = (FILTER[int(low)], FILTER[int(high)])
         return self._filter
 
     @filter.setter
@@ -76,16 +73,12 @@ class SR5113(Instrument):
 
     @property
     def gain(self):
-        try:
-            cg = self.write('CG', True) #gets coarse gain index
-            fg = self.write('FG', True) #gets fine gain index
-            if int(fg) < 0:
-                self._gain = 5+int(fg)
-            else:
-                self._gain = int(COARSE_GAIN[int(cg)]*FINE_GAIN[int(fg)])
-        except:
-            print('Couldn\'t communicate with SR5113! Gain may be wrong!')
-            self._gain=1 # no communication, default 1 gain?
+        cg = self.write('CG', True) #gets coarse gain index
+        fg = self.write('FG', True) #gets fine gain index
+        if int(fg) < 0:
+            self._gain = 5+int(fg)
+        else:
+            self._gain = int(COARSE_GAIN[int(cg)]*FINE_GAIN[int(fg)])
         return self._gain
 
     @gain.setter
@@ -127,9 +120,7 @@ class SR5113(Instrument):
         self._inst = rm.open_resource(port)
         self._inst.write_termination = '\r'
         self._inst.timeout = 500
-        self._inst.write("ID")
-        self._inst.read_bytes(0)
-        time.sleep(0.1)
+        self.wake()
 
 
     def id(self):
@@ -189,14 +180,32 @@ class SR5113(Instrument):
     def sleep(self):
         if self._sleeping:
             return
-        self._inst.write('SLEEP') # No read
+        # Unassert RTS (which powers the instrument's serial optoisolator),
+        # so that whatever happens when VISA does viClose on our serial resource,
+        # these signals will not cause the instrument to wake up.
+        # That is, without this,
+        # things other than you sending commands can mess with the serial connection,
+        # which wakes up the preamp.
+        self._inst.set_visa_attribute(visa.constants.ResourceAttribute.asrl_rts_state, visa.constants.LineState.unasserted)
+        time.sleep(0.1)
+        self._inst.write('') # Empirical hack to make sleep work with RTS unasserted
+        time.sleep(0.1)
+        self._inst.write('SLEEP')
+        time.sleep(0.1)
         self._sleeping = True
 
     def wake(self):
         if not self._sleeping:
             return
-        self._inst.query("")
+        self._inst.set_visa_attribute(visa.constants.ResourceAttribute.asrl_rts_state, visa.constants.LineState.asserted)
+        time.sleep(0.1)
+        self._inst.write('')
         time.sleep(1.0)
+        self._inst.write('ID')
+        r = self._inst.read()
+        if "ID" not in r: # We did not wake, so r is the response to "", not "ID"
+            self._inst.read() # Finish reading the "" command
+        self._inst.read() # Finish reading the ID command
         self._sleeping = False
 
     def write(self, cmd, read=False):
@@ -210,12 +219,10 @@ class SR5113(Instrument):
         e.g. preamp.write('ID', True)
         '''
 
-        # time.sleep(0.1) # Make sure we've had enough time to make connection.
         self._inst.write(cmd)
-        self._inst.read()
+        r = self._inst.read()
         if read:
             response = self._inst.read()
-        #self._inst.read()
 
         if read:
             return response.rstrip() #rstrip gets rid of \n
@@ -294,7 +301,7 @@ if __name__ == '__main__':
         # inst.read()
         # # inst.close()
         # # rm.close()
-    # except:
+    # except Exception:
         # import pyvisa as visa
         # rm = visa.ResourceManager()
         # rm.list_resources()
