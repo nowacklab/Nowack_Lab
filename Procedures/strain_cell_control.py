@@ -299,10 +299,3 @@ class strain_plot(Measurement):
         Convert strain to anticipated capacitance value. Positive for tension strain.
         '''
         return 8.85418781*5.24/(strain+d0)+c0
-    
-    def strain(self, temperature):
-        '''
-        Return the current strain.
-        '''
-        cnow = self.getc
-        return self.captostrain(cnow, self.c0, self.ttod0(temperature))

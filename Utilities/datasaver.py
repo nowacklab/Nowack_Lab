@@ -49,6 +49,7 @@ class Saver():
 
 
     def __init__(self, name = '', addtimestamp = True):
+        self.filename = ''
         filestowrite = self.generatefullfilenameandpath(name = name,
                                                     addtimestamp=addtimestamp)
         self.datasets = {}
@@ -78,6 +79,7 @@ class Saver():
             filenames[key] = (paths[key]['exppath']
                                     +  '\\' + timecomp
                                     + name + '.hdf5')
+        self.filename = timecomp+name+'.hdf5'
         return filenames
     
     def resize_append(self,*args, **kwargs):

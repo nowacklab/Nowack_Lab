@@ -7,11 +7,11 @@ import os
 import contextlib
 import subprocess
 
-class Scanplane():
+class para_Scanplane():
 
 
-    def __init__(self, instruments={}, plane=None, xrange=[-400, 400],
-                 yrange = [-400,400], numpts=[20, 20],
+    def __init__(self, instruments={}, plane=None, bl = [-400, -400],
+                 tl = [-400,400], tr = [400, 400], numpts=[20, 20],
                  scan_height=35, line_time = 10, scan_pause = 1, fast_axis = 'x',
                  toplot = False, name = 'Scanplane', channelstomonitor = {},
                  trigaquired = {}, saveconfig = True, configfile = None):
@@ -36,8 +36,16 @@ class Scanplane():
         self.channelstomonitor = channelstomonitor
         self.trigaquired = trigaquired
         self.plane = plane
-        self.xrange=xrange
-        self.yrange=yrange
+        self.bl=bl
+        self.tl=tl
+        self.tr=tr
+        self.br=[self.bl[0]+self.tr[0]-self.tl[0], self.bl[1]+self.tr[1]-self.tl[1]]
+        self.xmin = min(self.bl[0], self.tl[0], self.tr[0], self.br[0])
+        self.xmax = max(self.bl[0], self.tl[0], self.tr[0], self.br[0])
+        self.ymin = min(self.bl[1], self.tl[1], self.tr[1], self.br[1])
+        self.ymax = max(self.bl[1], self.tl[1], self.tr[1], self.br[1])
+        self.xrange = [self.xmin, self.xmax]
+        self.yrange = [self.ymin, self.ymax]
         self.numpts=numpts
         self.scan_height=scan_height
         self.line_time = line_time
@@ -57,6 +65,9 @@ class Scanplane():
         '''
 
         self.saver.append('config/isFinished', [np.nan, np.nan])
+        self.saver.append('config/bottomleft', self.bl)
+        self.saver.append('config/topleft', self.tl)
+        self.saver.append('config/topright', self.tr)
         self.saver.append('config/xrange', self.xrange)
         self.saver.append('config/yrange', self.yrange)
         self.saver.append('config/numpts', self.numpts)
@@ -120,28 +131,44 @@ class Scanplane():
         Vstart and Vend. Each of them has three elements, X, Y, Z, with the
         starting and ending voltages (respectively) of each.
         '''
-        xstep = (self.xrange[1]-self.xrange[0])/(self.numpts[0]-1)
-        ystep = (self.yrange[1]-self.yrange[0])/(self.numpts[1]-1)
         lines = []
+        if self.fast_axis == 'x':
+            leftlinex = np.linspace(self.bl[0], self.tl[0], self.numpts[1])
+            leftliney = np.linspace(self.bl[1], self.tl[1], self.numpts[1])
+            leftlinez = np.linspace(self.plane.plane(self.bl[0], self.bl[1]), self.plane.plane(self.tl[0], self.tl[1]), self.numpts[1])
+            rightlinex = np.linspace(self.br[0], self.tr[0], self.numpts[1])
+            rightliney = np.linspace(self.br[1], self.tr[1], self.numpts[1])
+            rightlinez = np.linspace(self.plane.plane(self.br[0], self.br[1]), self.plane.plane(self.tr[0], self.tr[1]), self.numpts[1])
+        elif self.fast_axis == 'y':
+            toplinex = np.linspace(self.tl[0], self.tr[0], self.numpts[0])
+            topliney = np.linspace(self.tl[1], self.tr[1], self.numpts[0])
+            toplinez = np.linspace(self.plane.plane(self.tl[0], self.tl[1]), self.plane.plane(self.tr[0], self.tr[1]), self.numpts[0])
+            bottomlinex = np.linspace(self.bl[0], self.br[0], self.numpts[0])
+            bottomliney = np.linspace(self.bl[1], self.br[1], self.numpts[0])
+            bottomlinez = np.linspace(self.plane.plane(self.bl[0], self.bl[1]), self.plane.plane(self.br[0], self.br[1]), self.numpts[0])
+        else:
+            raise Exception('Fast axis not recognized')
         for i in range(self.numpts[int(self.fast_axis == 'x')]):
             if self.fast_axis == 'x':
-                xstart = self.xrange[0]
-                ystart = self.yrange[0]+ystep*i
-                xend = self.xrange[1]
-                yend = self.yrange[0]+ystep*i
-                zend = self.plane.plane(xend, yend)
-            elif self.fast_axis == 'y':
-                xstart = self.xrange[0]+xstep*i
-                ystart = self.yrange[1]
-                xend = self.xrange[0]+xstep*i
-                yend = self.yrange[0]
-            else:
-                raise Exception('Fast axis not recognized')
-            zstart = self.plane.plane(xstart,ystart) - self.scan_height
-            zend = self.plane.plane(xend, yend) - self.scan_height
-            vstart = {'x': xstart,'y': ystart,'z': zstart}
-            vend = {'x': xend,'y': yend,'z': zend}
-            lines.append({'Vstart': vstart, 'Vend': vend})
+                xstart = leftlinex[i]
+                ystart = leftliney[i]
+                zstart = leftlinez[i]-self.scan_height
+                xend = rightlinex[i]
+                yend = rightliney[i]
+                zend = rightlinez[i]-self.scan_height
+                vstart = {'x': xstart,'y': ystart,'z': zstart}
+                vend = {'x': xend,'y': yend,'z': zend}
+                lines.append({'Vstart': vstart, 'Vend': vend})
+            if self.fast_axis == 'y':
+                xstart = toplinex[i]
+                ystart = topliney[i]
+                zstart = toplinez[i]-self.scan_height
+                xend = bottomlinex[i]
+                yend = bottomliney[i]
+                zend = bottomlinez[i]-self.scan_height
+                vstart = {'x': xstart,'y': ystart,'z': zstart}
+                vend = {'x': xend,'y': yend,'z': zend}
+                lines.append({'Vstart': vstart, 'Vend': vend})
 
             self.instruments['piezos'].x.check_lim([xstart,xend])
             self.instruments['piezos'].y.check_lim([ystart,yend])

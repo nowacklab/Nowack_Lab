@@ -12,7 +12,9 @@ class kepcoBOP(VISAInstrument):
 
     def __init__(self, address = ''):
         if address == '':
-            self.address = 'TCPIP0::192.168.69.191::5025::SOCKET'
+            self.address = 'TCPIP0::10.40.41.108::5025::SOCKET'
+        else:
+            self.address = address
         self._init_visa(self.address, termination='\r\n')
         #self._inst.timeout = 10000
 

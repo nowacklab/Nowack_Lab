@@ -36,6 +36,15 @@ daq.sweep(vstart,vend)
 s = SquidArray()
 s.zero()
 
+from Nowack_Lab.Instruments import razorbill
+try:
+    razorbill = razorbill.Razorbill(gpib_address = 'ASRL6::INSTR', montana = None)
+    razorbill.Vcompression = 0
+    razorbill.Vtension = 0
+    razorbill.output = 0
+except:
+    pass
+
 # Steps the attos down to 500.
 
 atto = Attocube()
