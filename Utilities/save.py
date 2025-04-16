@@ -529,7 +529,7 @@ def get_data_server_path():
     Returns full path of the data server's main directory, formatted based on OS.
     '''
     if platform.system() == 'Windows':
-        return r'\\SAMBASHARE\labshare\data'
+        return r'Z:\\labshare\\data'
     elif platform.system() == 'Darwin': # Mac
         return '/Volumes/labshare/data/'
     elif platform.system() == 'Linux':

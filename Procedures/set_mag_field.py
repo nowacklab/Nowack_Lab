@@ -5,7 +5,8 @@ from Nowack_Lab.Instruments import keysight
 
 alpha = 681.949*1e-6
 beta = 689.544*1e-6
-delta = -1.6349038503275133e-07
+delta = 2.6534184507883917e-09
+
 
 kepco = KEPCO.kepcoBOP()
 kepco.source = 'I'
@@ -13,6 +14,7 @@ kepco.Iout = 0
 kepco.Vout = 70
 kepco.output = 'on'
 magnetps = keysight.Keysight34461A(gpib_address='USB0::0x2A8D::0x1401::MY60046284::INSTR')
+magnetps.Irange = 1
 folder = r'F:\data\Hemlock\experiments\logging'
 currentfilename = folder + '\\' + 'current' + '.txt'
 
@@ -46,7 +48,6 @@ def switchfield(target):
     i = magnetps.I
     b = fieldnow()
     I = targetI(target, b, i)
-    kepco.Iout = I
     n = 0
     while abs(magnetps.I-I)>3e-5 and n<50:
         currentiout = kepco.Iout
@@ -56,7 +57,7 @@ def switchfield(target):
             kepco.Iout = Iout
         else:
             kepco.Iout = 0.5*np.copysign(1, Iout)
-        time.sleep(0.1)
+        time.sleep(0.2)
         n = n+1
 #This function keeps reading the target field value from file and check if the current field is at the target field. If not, change the field to target.
 def checkfield():
@@ -66,6 +67,9 @@ def checkfield():
     currentfield = measurecurrentB()
     if abs(targetfield-currentfield)>0.025*1e-6:
         time.sleep(4)
+        currentfield = measurecurrentB()
+        with open(targetfilename) as f:
+            targetfield = float(f.readline())
         if abs(targetfield-currentfield)>0.025*1e-6:
             switchfield(targetfield)
     writestring = str(magnetps.I)

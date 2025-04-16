@@ -8,14 +8,14 @@ class Keysight34461A(VISAInstrument):
     '''
     Instrument driver for Keysight bench DMM
     '''
-    Irange = 'AUTO'
-    Vrange = 'AUTO'
 
     def __init__(self, gpib_address=''):
         if type(gpib_address) is int:
             gpib_address = 'GPIB::%02i::INSTR' %gpib_address
         self.gpib_address= gpib_address
         self._init_visa(gpib_address, termination='\n')
+        self.Irange = 'AUTO'
+        self.Vrange = 'AUTO'
 
     def __getstate__(self):
         self._save_dict = {
@@ -198,15 +198,14 @@ class Keysight34461A(VISAInstrument):
         self.write(towrite)
 
     @property
-    def I(self, measurementtype = 'DC', measurementrange = Irange, resolution = 'none'):
+    def I(self, measurementtype = 'DC', resolution = 'none'):
         '''
         Measure current.
         :param measurementtype: AC or DC
         :param measurementrange: specify measurement range
         :param resolution: specify measurement resolution
         '''
-        self.Irange = measurementrange
-        towrite = 'MEAS:CURR:'+measurementtype+'? '+str(measurementrange)
+        towrite = 'MEAS:CURR:'+measurementtype+'? '+str(self.Irange)
         if resolution != 'none':
             towrite = towrite+' '+str(resolution)
         return float(self.ask(towrite))
@@ -226,15 +225,14 @@ class Keysight34461A(VISAInstrument):
         self.Irange = value
 
     @property
-    def V(self, measurementtype = 'DC', measurementrange = Vrange, resolution = 'none'):
+    def V(self, measurementtype = 'DC', resolution = 'none'):
         '''
         Measure current.
         :param measurementtype: AC or DC
         :param measurementrange: specify measurement range
         :param resolution: specify measurement resolution
         '''
-        self.Vrange = measurementrange
-        towrite = 'MEAS:VOLT:'+measurementtype+'? '+str(measurementrange)
+        towrite = 'MEAS:VOLT:'+measurementtype+'? '+str(self.Vrange)
         if resolution != 'none':
             towrite = towrite+' '+str(resolution)
         return float(self.ask(towrite))
