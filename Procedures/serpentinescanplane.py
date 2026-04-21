@@ -7,12 +7,12 @@ import os
 import contextlib
 import subprocess
 
-class Scanplane():
+class Serpentine_scanplane():
 
 
     def __init__(self, instruments={}, plane=None, xrange=[-400, 400],
-                 yrange = [-400,400], numpts=[20, 20],
-                 scan_height=35, line_time = 10, scan_pause = 1, fast_axis = 'x',
+                 yrange = [-400,400], numpts=[20, 20], scan_pause = 0, print_pause = False,
+                 scan_height=35, line_time = 10, fast_axis = 'x',
                  toplot = False, name = 'Scanplane', channelstomonitor = {},
                  trigaquired = {}, saveconfig = True, configfile = None):
         '''
@@ -40,8 +40,9 @@ class Scanplane():
         self.yrange=yrange
         self.numpts=numpts
         self.scan_height=scan_height
+        self.scan_pause=scan_pause
+        self.print_pause = print_pause
         self.line_time = line_time
-        self.scan_pause =scan_pause
         self.fast_axis = fast_axis
         self.name = name
         self.toplot = toplot
@@ -61,7 +62,6 @@ class Scanplane():
         self.saver.append('config/yrange', self.yrange)
         self.saver.append('config/numpts', self.numpts)
         self.saver.append('config/scan_height', self.scan_height)
-        self.saver.append('config/scan_pause', self.scan_pause)
         self.saver.append('config/fast_axis', self.fast_axis)
         planeconfig = {'a' : self.plane.a,'b' : self.plane.b,'c' : self.plane.c}
         self.saver.append('config/plane', planeconfig)
@@ -216,7 +216,7 @@ class Scanplane():
                 if (isinstance(obj, zurichInstrument)
                     and  'DEMODS' == node[1][:6]):
                     dump = obj.poll()
-
+        t0 = time.time()
         try:
             for i in np.arange(len(self.lines)):
                 if self.interrupt:
@@ -230,23 +230,35 @@ class Scanplane():
                 else:
                     pos = i + 1
                     dataslice = (slice(0, self.numpts[1]), slice(pos-1,pos))
+                if i%2 == 0:
+                    linestart = line['Vstart']
+                    lineend = line['Vend']
+                else:
+                    linestart = line['Vend']
+                    lineend = line['Vstart']
                 #go to beginning of line
-
-                self.instruments['piezos'].sweep(self.instruments['piezos'].V,
-                                                 line['Vstart'])
-                self.instruments['squidarray'].reset()
-                time.sleep(self.scan_pause)
+                self.instruments['piezos'].sweep(self.instruments['piezos'].V,linestart)
+                while time.time()-t0<self.scan_pause:
+                    pass
+                if self.print_pause:
+                    print(time.time()-t0)
                 output_data, received = self.instruments['piezos'].newsweep(
-                            line['Vstart'], line['Vend'], chan_in=
+                            linestart, lineend, chan_in=
                             list(self.channelstomonitor.values()), numcollect =
                             self.numpts[int(self.fast_axis == 'y')],
                                         linetime = self.line_time, trigger = 'ao3')
+                t0 = time.time()
                 for inputchan in received.keys():
                     for chan in self.channelstomonitor.items():
                         if chan[1] == inputchan:
-                            self.saver.append('/DAQ/'+ chan[0], received[inputchan],
-                                                                slc = dataslice)
-                            break
+                            if i%2 == 0:
+                                self.saver.append('/DAQ/'+ chan[0], received[inputchan],
+                                                                    slc = dataslice)
+                                break
+                            else:
+                                self.saver.append('/DAQ/'+ chan[0], received[inputchan][::-1],
+                                                                    slc = dataslice)
+                                break
                 for inst in self.trigaquired:
                     [obj, attrs] = inst
                     polleddata = obj.poll()
@@ -256,8 +268,12 @@ class Scanplane():
                             if datakey == name:
                                 if i == 0: # is this the first loop?
                                     self.setuptrigsave('/%s/' % datakey, polleddata[datakey])
-                                self.saver.append('/%s/' % datakey, polleddata[datakey],
-                                                           slc = dataslice)
+                                if i%2 == 0:
+                                    self.saver.append('/%s/' % datakey, polleddata[datakey],
+                                                               slc = dataslice)
+                                else:
+                                    self.saver.append('/%s/' % datakey, polleddata[datakey][::-1],
+                                                               slc = dataslice)
                 if i== 0:
                     self.launchplotters()
         except KeyboardInterrupt:

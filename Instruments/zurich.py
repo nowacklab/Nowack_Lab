@@ -173,6 +173,7 @@ class zurichInstrument(Instrument):
                     else:
                         formatteddata[name] = returned_data[key]
                 else:
+                    print(key.upper())
                     raise Exception('Unrecognized data returned')
             return formatteddata
 

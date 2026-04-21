@@ -3,9 +3,9 @@ import numpy as np
 from Nowack_Lab.Instruments import KEPCO
 from Nowack_Lab.Instruments import keysight
 
-alpha = 681.949*1e-6
+alpha = 833.824*1e-6
 beta = 689.544*1e-6
-delta = 2.6534184507883917e-09
+delta = 3.464*1e-6
 
 
 kepco = KEPCO.kepcoBOP()

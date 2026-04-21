@@ -173,6 +173,7 @@ class Planefit(Measurement):
                 n = 0
                 while td.flagged is True and n < 5:
                     print("Redo")
+                    print(n) #Added line Jan. 9, 2026
                     td = Touchdown(self.instruments,
                                    Vz_max = self.Vz_max, planescan=True,
                                    runonce=self.runonce)

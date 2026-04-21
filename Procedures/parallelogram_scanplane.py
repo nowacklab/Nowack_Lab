@@ -240,6 +240,9 @@ class para_Scanplane():
                     setattr(obj, node[1][:9]+'TRIGGER',1)
                     time.sleep(.1)
                 obj.subscribe({node[1]:node[0]})
+                if (isinstance(obj, zurichInstrument)
+                    and  'DEMODS' == node[1][:6]):
+                    dump = obj.poll()
         try:
             for i in np.arange(len(self.lines)):
                 if self.interrupt:

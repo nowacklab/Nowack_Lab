@@ -19,7 +19,7 @@ from ..Utilities.utilities import AttrDict
 
 _Z_PIEZO_STEP = 4  # V piezo
 _Z_PIEZO_STEP_SLOW = 4  # V piezo
-_CAPACITANCE_THRESHOLD = -.3  # fF
+_CAPACITANCE_THRESHOLD = -0.3  # fF
 _ATTO_TOWARDS_SAMPLE = 1
 
 def piecewise_linear(x, x0, y0, m1, m2):
@@ -75,7 +75,7 @@ class Touchdown(Measurement):
 
     numsteps = 100
     numfit = 5       # number of points to fit line to while collecting data
-    attoshift = _ATTO_TOWARDS_SAMPLE*40 # move 20 um if no touchdown detected
+    attoshift = _ATTO_TOWARDS_SAMPLE*40 # move 20 µm if no touchdown detected
     Vz_max = 400
     start_offset = 0
 
@@ -269,7 +269,7 @@ class Touchdown(Measurement):
         to the best guess as to where the scanner should be.
         Returns [slow_scan, start]
         '''
-        # Specify a percentage of the peizo range that the
+        # Specify a percentage of the piezo range that the
         # touchdown must fall within.
         if slow_scan:
             u = 0.55 # percentages of the total voltage range to aim touchdown to be within
@@ -320,7 +320,7 @@ class Touchdown(Measurement):
         self.check_balance()
 
         msg = input(
-                "Ok to move {0} ums? q to quit, m to move automatically".format(
+                "Ok to move {0} µm? q to quit, m to move automatically".format(
                     self.attoshift));
         if (msg is 'q'):
             raise KeyboardInterrupt;
@@ -468,11 +468,11 @@ class Touchdown(Measurement):
                 start = self._move_attocubes();
 
             # Do a slow scan next
-            if (self.touchdown is True and  # this is a true touchdown
-                self.planescan is False and # this is not a planescan
-                slow_scan      is False ):  # we have not done a slow scan
-                slow_scan = True
-                self.touchdown = False
+            #if (self.touchdown is True and  # this is a true touchdown
+            #    self.planescan is False and # this is not a planescan
+            #    slow_scan      is False ):  # we have not done a slow scan
+            #    slow_scan = True
+            #    self.touchdown = False
 
         # Ask the user to confirm the touchdown voltage
         if user:

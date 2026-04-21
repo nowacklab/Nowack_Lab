@@ -26,7 +26,7 @@ class Piezos(Instrument):
     _bipolar = [2, 2, 2]
     _V = {}
     _daq = None
-    _max_sweep_rate = 180 # Vpiezo/s
+    _max_sweep_rate = 330 # Vpiezo/s
     _max_step_size = 0.2 #Vpiezo = 0.0025 Vdaq * 2 * 40, assuming these are typical values for bipolar and gain.
                         # 0.0025 V is approximately the resolution of the daq, so it doesn't make sense to go much slower than that.
                         # 0.2 is a nice number
@@ -114,7 +114,7 @@ class Piezos(Instrument):
             getattr(self,p)._daq = daq
 
 
-    def sweep(self, Vstart, Vend, chan_in=None, sweep_rate=180, meas_rate=900):
+    def sweep(self, Vstart, Vend, chan_in=None, sweep_rate=320, meas_rate=1600):
         '''
         Sweeps piezos from a starting voltage (dictionary) to an ending voltage
          (dictionary).
@@ -153,7 +153,7 @@ class Piezos(Instrument):
         # Figure out the step size demanded by sweep_rate and meas_rate
         step_size = sweep_rate/meas_rate # default: 0.2 V
         if step_size > self._max_step_size:
-            raise Exception('Sweeping piezos too choppily! Decrease sweep_rate or increase meas_rate to increase the step size!')
+            raise Exception('Sweeping piezos too choppily! Decrease sweep_rate or increase meas_rate to decrease the step size!')
 
         msg = 'Sweeping piezos! '
         for key in all_keys:
@@ -288,15 +288,16 @@ class Piezos(Instrument):
             output_data[trigger] =  list(map(squarewave,
                                             np.arange((numcollect+1)*
                                                                 oversample-1)))
-        #plus one is to provide one last rising edge.
+            self._daq.sweep({trigger:0}, {trigger:0}, numsteps = 1)
+            #plus one is to provide one last rising edge.
         sample_rate = numcollect*oversample/(linetime)
-        self._daq.sweep({trigger:0}, {trigger:0}, numsteps = 1)
         # lower the trigger for the line.
-        time.sleep(.2)
+        # time.sleep(.2)
         received = self._daq.send_receive(output_data,
                                                 chan_in = chan_in,
                                                 sample_rate=sample_rate)
-        output_data.pop(trigger)
+        if trigger:
+            output_data.pop(trigger)
         for k in output_data:
             self._V[k] = Vend[k] # end of sweep, for keeping track of voltage
         gain_applied_output = {}
@@ -526,7 +527,7 @@ class Piezos(Instrument):
 class Piezo(Instrument):
     _V = None
     def __init__(self, daq, label=None, gain=15, Vmax=200, bipolar=2,
-                 max_sweep_rate=180, max_step_size=.2):
+                 max_sweep_rate=330, max_step_size=.2):
         self._daq = daq
         self.label = label
         self.gain = gain
@@ -613,7 +614,7 @@ class Piezo(Instrument):
             raise Exception('Voltage out of range for %s piezo! Max is %s' %(self.label, self.Vmax))
 
 
-    def sweep(self, Vstart, Vend, chan_in=None, sweep_rate=180, meas_rate=900):
+    def sweep(self, Vstart, Vend, chan_in=None, sweep_rate=320, meas_rate=1600):
         '''
         Sweeps piezos linearly from a starting voltage to an ending voltage.
         Specify a list of input channels you want to monitor.

@@ -663,6 +663,14 @@ class Lakeshore335(VISAInstrument):
         #get current ramp status
         currentramp = int(self.ask('RAMP? 2')[0])
         self.write('RAMP 2,%i,+%.04f' % (currentramp, rate))
+        for i in range(10):
+            currentsetting = self.ask('ZONE? 2,'+str(i+1))
+            currentsetting = [float(j) for j in currentsetting.split(',')]
+            currentsetting[-1] = rate
+            towrite = ''
+            for j in [str(k) for k in currentsetting]:
+                towrite = towrite+','+j
+            self.write('ZONE 2,'+str(i+1)+towrite)
 
     @property
     def is_ramping(self):

@@ -9,7 +9,7 @@ import matplotlib.dates as datefmt
 import serial
 
 
-fitfile = 'F:\\data\\Hemlock\\experiments\\2024-06-19_Arduino_fluxgate_readout_calibration\\2024-06-20_124011_coilcurrent_vs_fluxgatesensor.hdf5'
+fitfile = 'G:\\data\\Hemlock\\experiments\\2024-06-19_Arduino_fluxgate_readout_calibration\\2024-06-20_124011_coilcurrent_vs_fluxgatesensor.hdf5'
 
 fss = []
 fss1 = []

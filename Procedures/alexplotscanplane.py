@@ -16,7 +16,15 @@ for i in range(len(toplot)):
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
         data = f[toplot[i]]
-        im = ax.imshow(data, cmap = 'magma', extent = np.concatenate(
+        if toplot[i] in ['DAQ/DC_SQUID_SIGNAL_V', 'DAQ/squid_vibration_signal_V_x']:
+            colormap = 'viridis'
+        elif toplot[i] in ['DAQ/capacitance_x']:
+            colormap = 'inferno'
+        elif toplot[i] in ['DAQ/ac_squid_signal_V_x']:
+            colormap = 'magma'
+        else:
+            colormap = 'plasma'
+        im = ax.imshow(data, cmap = colormap, extent = np.concatenate(
                          (f['/config/xrange'],f['/config/yrange'])))
         figs.append(fig)
         ims.append(im)
